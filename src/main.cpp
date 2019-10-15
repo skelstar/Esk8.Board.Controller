@@ -19,6 +19,20 @@ void packet_cb( uint16_t from ) {
   Serial.printf("packet_cb(%d)\n", from);
 }
 
+void sendToServer() {
+  nrf.controllerPacket.throttle += 1;
+  if (nrf.controllerPacket.throttle > 127) {
+    nrf.controllerPacket.throttle = -127;
+  }
+  bool success = nrf.sendPacket(nrf.RF24_SERVER);
+  if (success) {
+    Serial.printf("Sent OK\n");
+  }
+  else {
+    Serial.printf("Failed to send\n");
+  }
+}
+//------------------------------------------------------------------
 void setup() {
 
   Serial.begin(115200);
@@ -31,7 +45,16 @@ void setup() {
   // WiFi.mode( WIFI_OFF );	// WIFI_MODE_NULL
 	// btStop();   // turn bluetooth module off
 }
+//------------------------------------------------------------------
+
+long now = 0;
 
 void loop() {
   nrf.update();
+
+  if (millis() - now > 2000) {
+    now = millis();
+    sendToServer();
+  }
 }
+//------------------------------------------------------------------
