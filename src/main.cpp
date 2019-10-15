@@ -9,19 +9,14 @@
 
 NRF24L01Lib nrf;
 
-#define SPI_CE        5 	//33    // white/purple
-#define SPI_CS        13	//26  // green
+#define SPI_CE        33    	// white/purple
+#define SPI_CS        26  	// green
 
 RF24 radio(SPI_CE, SPI_CS);    // ce pin, cs pinRF24Network network();
 RF24Network network(radio); 
 
-
 void packet_cb( uint16_t from ) {
-	// lastAckFromBoard = millis();
-	// debug.print(COMMUNICATION, "Rx from Board: batt voltage %.1f, vescOnline: %d \n", 
-	// 	esk8.boardPacket.batteryVoltage, 
-	// 	esk8.boardPacket.vescOnline);
-	// updateDisplay();
+  Serial.printf("packet_cb(%d)\n", from);
 }
 
 void setup() {
