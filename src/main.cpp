@@ -11,8 +11,19 @@ NRF24L01Lib nrf;
 RF24 radio(SPI_CE, SPI_CS);    // ce pin, cs pinRF24Network network();
 RF24Network network(radio); 
 
+bool idFromBoardExpected(long id);
+
+#define NO_PACKET_RECEIVED_FROM_BOARD  -1
+long lastIdFromBoard = NO_PACKET_RECEIVED_FROM_BOARD;
+
 void sendToServer() {
+
+  if (!idFromBoardExpected(nrf.boardPacket.id)) {
+    Serial.printf("Id from board not expected: %u\n", nrf.controllerPacket.id);
+  }
+  
   nrf.controllerPacket.id = nrf.boardPacket.id;
+  lastIdFromBoard = nrf.boardPacket.id;
   bool success = nrf.sendPacket(nrf.RF24_SERVER);
   if (success) {
     Serial.printf("Replied to %u OK (with %u)\n", 
@@ -22,6 +33,11 @@ void sendToServer() {
   else {
     Serial.printf("Failed to send\n");
   }
+}
+
+bool idFromBoardExpected(long id) {
+  return lastIdFromBoard == NO_PACKET_RECEIVED_FROM_BOARD 
+      || id == lastIdFromBoard + 1;
 }
 
 void packet_cb( uint16_t from ) {
