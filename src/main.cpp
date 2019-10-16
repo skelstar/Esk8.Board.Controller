@@ -15,22 +15,22 @@ NRF24L01Lib nrf;
 RF24 radio(SPI_CE, SPI_CS);    // ce pin, cs pinRF24Network network();
 RF24Network network(radio); 
 
-void packet_cb( uint16_t from ) {
-  Serial.printf("packet_cb(%d)\n", from);
-}
-
 void sendToServer() {
-  nrf.controllerPacket.throttle += 1;
-  if (nrf.controllerPacket.throttle > 127) {
-    nrf.controllerPacket.throttle = -127;
-  }
+  nrf.controllerPacket.id = nrf.boardPacket.id;
   bool success = nrf.sendPacket(nrf.RF24_SERVER);
   if (success) {
-    Serial.printf("Sent OK\n");
+    Serial.printf("Sent OK (%u, %u)\n", 
+      nrf.boardPacket.id, 
+      nrf.controllerPacket.id);
   }
   else {
     Serial.printf("Failed to send\n");
   }
+}
+
+void packet_cb( uint16_t from ) {
+  // Serial.printf("packet_cb(%d)\n", from);
+  sendToServer();
 }
 //------------------------------------------------------------------
 void setup() {
@@ -50,11 +50,8 @@ void setup() {
 long now = 0;
 
 void loop() {
+
   nrf.update();
 
-  if (millis() - now > 2000) {
-    now = millis();
-    sendToServer();
-  }
 }
 //------------------------------------------------------------------
