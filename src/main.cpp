@@ -3,7 +3,7 @@
 #include <SPI.h>
 #include <NRF24L01Library.h>
 
-NRF24L01Lib nrf;
+NRF24L01Lib nrf24;
 
 #define SPI_CE        33    // white/purple
 #define SPI_CS        26  	// green
@@ -18,17 +18,17 @@ long lastIdFromBoard = NO_PACKET_RECEIVED_FROM_BOARD;
 
 void sendToServer() {
 
-  if (!idFromBoardExpected(nrf.boardPacket.id)) {
-    Serial.printf("Id from board not expected: %u\n", nrf.controllerPacket.id);
+  if (!idFromBoardExpected(nrf24.boardPacket.id)) {
+    Serial.printf("Id from board not expected: %u\n", nrf24.controllerPacket.id);
   }
   
-  nrf.controllerPacket.id = nrf.boardPacket.id;
-  lastIdFromBoard = nrf.boardPacket.id;
-  bool success = nrf.sendPacket(nrf.RF24_SERVER);
+  nrf24.controllerPacket.id = nrf24.boardPacket.id;
+  lastIdFromBoard = nrf24.boardPacket.id;
+  bool success = nrf24.sendPacket(nrf24.RF24_SERVER);
   if (success) {
     Serial.printf("Replied to %u OK (with %u)\n", 
-      nrf.boardPacket.id, 
-      nrf.controllerPacket.id);
+      nrf24.boardPacket.id, 
+      nrf24.controllerPacket.id);
   }
   else {
     Serial.printf("Failed to send\n");
@@ -51,7 +51,7 @@ void setup() {
 
   SPI.begin();
   radio.begin();
-  nrf.begin(&radio, &network, nrf.RF24_CLIENT, packet_cb);
+  nrf24.begin(&radio, &network, nrf24.RF24_CLIENT, packet_cb);
   radio.setAutoAck(true);
 
   // WiFi.mode( WIFI_OFF );	// WIFI_MODE_NULL
@@ -63,7 +63,7 @@ long now = 0;
 
 void loop() {
 
-  nrf.update();
+  nrf24.update();
 
 }
 //------------------------------------------------------------------
