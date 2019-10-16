@@ -1,15 +1,11 @@
-#if (defined(__AVR__))
-    #include <avr\ pgmspace.h> 
-#else
-    #include <pgmspace.h> 
-#endif
+#include <pgmspace.h> 
 #include <Arduino.h>
 #include <SPI.h>
 #include <NRF24L01Library.h>
 
 NRF24L01Lib nrf;
 
-#define SPI_CE        33    	// white/purple
+#define SPI_CE        33    // white/purple
 #define SPI_CS        26  	// green
 
 RF24 radio(SPI_CE, SPI_CS);    // ce pin, cs pinRF24Network network();
@@ -19,7 +15,7 @@ void sendToServer() {
   nrf.controllerPacket.id = nrf.boardPacket.id;
   bool success = nrf.sendPacket(nrf.RF24_SERVER);
   if (success) {
-    Serial.printf("Sent OK (%u, %u)\n", 
+    Serial.printf("Replied to %u OK (with %u)\n", 
       nrf.boardPacket.id, 
       nrf.controllerPacket.id);
   }
