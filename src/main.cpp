@@ -19,14 +19,14 @@ long lastIdFromBoard = NO_PACKET_RECEIVED_FROM_BOARD;
 void sendToServer() {
 
   if (!idFromBoardExpected(nrf24.boardPacket.id)) {
-    Serial.printf("Id from board not expected: %u\n", nrf24.controllerPacket.id);
+    Serial.printf("Id from board not expected: %l\n", nrf24.controllerPacket.id);
   }
   
   nrf24.controllerPacket.id = nrf24.boardPacket.id;
   lastIdFromBoard = nrf24.boardPacket.id;
   bool success = nrf24.sendPacket(nrf24.RF24_SERVER);
   if (success) {
-    Serial.printf("Replied to %u OK (with %u)\n", 
+    Serial.printf("Replied to %l OK (with %l)\n", 
       nrf24.boardPacket.id, 
       nrf24.controllerPacket.id);
   }
