@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <NRF24L01Library.h>
+#include <Wire.h>
+#include "SSD1306.h"
 
 NRF24L01Lib nrf24;
 
@@ -44,6 +46,51 @@ void packet_cb( uint16_t from ) {
   // Serial.printf("packet_cb(%d)\n", from);
   sendToServer();
 }
+
+// void scanFori2cDevice() {
+//   byte error, address;
+//   int nDevices;
+ 
+//   Serial.println("Scanning...");
+ 
+//   nDevices = 0;
+//   for(address = 1; address < 127; address++ )
+//   {
+//     // The i2c_scanner uses the return value of
+//     // the Write.endTransmisstion to see if
+//     // a device did acknowledge to the address.
+//     Wire.beginTransmission(address);
+//     error = Wire.endTransmission();
+ 
+//     if (error == 0)
+//     {
+//       Serial.print("I2C device found at address 0x");
+//       if (address<16)
+//         Serial.print("0");
+//       Serial.print(address,HEX);
+//       Serial.println("  !");
+ 
+//       nDevices++;
+//     }
+//     else if (error==4)
+//     {
+//       Serial.print("Unknown error at address 0x");
+//       if (address<16)
+//         Serial.print("0");
+//       Serial.println(address,HEX);
+//     }    
+//   }
+//   if (nDevices == 0)
+//     Serial.println("No I2C devices found\n");
+//   else
+//     Serial.println("done\n");
+ 
+//   delay(5000);           // wait 5 seconds for next scan
+// }
+
+
+
+
 //------------------------------------------------------------------
 void setup() {
 
@@ -53,6 +100,11 @@ void setup() {
   radio.begin();
   nrf24.begin(&radio, &network, nrf24.RF24_CLIENT, packet_cb);
   radio.setAutoAck(true);
+
+  #ifdef SSD1306
+  Wire.begin();
+  setupLCD();
+  #endif
 
   // WiFi.mode( WIFI_OFF );	// WIFI_MODE_NULL
 	// btStop();   // turn bluetooth module off
