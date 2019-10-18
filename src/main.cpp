@@ -65,12 +65,28 @@ void coreTask(void *pvParameters) {
 
   long other_now = 0;
   while(true){
-    if (millis() - other_now > 2000) {
+    if (millis() - other_now > 200) {
       other_now = millis();
       EventEnum e = EVENT_3;
       xQueueSendToBack(xQueue, &e, xTicksToWait);
     }
+    vTaskDelay(10);
+  }
+  vTaskDelete( NULL );
+}
 
+void encoderTask(void *pvParameters) {
+
+  Serial.printf("Encoder running on core %d\n", xPortGetCoreID());
+
+  long other_now = 0;
+  while(true){
+    if (millis() - other_now > random(2000)) {
+      other_now = millis();
+      EventEnum e = EVENT_2;
+      xQueueSendToBack(xQueue, &e, xTicksToWait);
+    }
+    vTaskDelay(10);
   }
   vTaskDelete( NULL );
 }
@@ -85,13 +101,11 @@ void setup() {
   radio.setAutoAck(true);
 
   xTaskCreatePinnedToCore(coreTask, "coreTask", 10000, NULL, /*priority*/ 0, NULL, OTHER_CORE);
+  xTaskCreatePinnedToCore(encoderTask, "encoderTask", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
 
   xQueue = xQueueCreate(1, sizeof(EventEnum));
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
-
-  // WiFi.mode( WIFI_OFF );	// WIFI_MODE_NULL
-	// btStop();   // turn bluetooth module off
 }
 //------------------------------------------------------------------
 
