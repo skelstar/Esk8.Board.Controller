@@ -7,8 +7,11 @@
 //------------------------------------------------------------------
 NRF24L01Lib nrf24;
 
-#define SPI_CE 33 // white/purple
-#define SPI_CS 26 // green
+#define SPI_MOSI  23  // blue
+#define SPI_MISO  19  // orange
+#define SPI_CLK   18  // yellow
+#define SPI_CE 33     // white/purple
+#define SPI_CS 26     // green
 
 RF24 radio(SPI_CE, SPI_CS); // ce pin, cs pinRF24Network network();
 RF24Network network(radio);
