@@ -5,7 +5,7 @@
 
 #include <U8g2lib.h>
 
-#define SSD1306 1
+#define USING_SSD1306 1
 
 //https://github.com/olikraus/u8g2/wiki/fntgrpiconic#open_iconic_arrow_2x2
 #define 	OLED_ADDR		0x3C

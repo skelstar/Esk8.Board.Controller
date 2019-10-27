@@ -3,10 +3,12 @@
 #include <SPI.h>
 #include <NRF24L01Library.h>
 #include <Wire.h>
+#include <i2cEncoderLib.h>
+// #include <Encoderi2cModulev1Lib.h>
 
 #define 	OLED_SCL		4
 #define 	OLED_SDA		5
-#include "SSD1306.h"
+// #include "SSD1306.h"
 //------------------------------------------------------------------
 NRF24L01Lib nrf24;
 
@@ -28,6 +30,7 @@ uint8_t missedPacketsCounter = 0;
 #include "utils.h"
 //------------------------------------------------------------------
 void updateDisplayWithMissedPacketCount() {
+  #ifdef USING_SSD1306
   u8g2.clearBuffer();
   u8g2.setFontPosTop();
   char buffx[16];
@@ -36,13 +39,14 @@ void updateDisplayWithMissedPacketCount() {
   int width = u8g2.getStrWidth(buffx);
   u8g2.drawStr(LCD_WIDTH/2-width/2, LCD_HEIGHT/2-FONT_SIZE_MED_LINE_HEIGHT/2, buffx);
   u8g2.sendBuffer();
+  #endif
 }
 
 xQueueHandle xThrottleChangeQueue;
 
 enum EventEnum
 {
-  EVENT_THROTTLE_CHANGED,
+  EVENT_THROTTLE_CHANGED = 1,
   EVENT_2,
   EVENT_3
 } event;
@@ -152,14 +156,27 @@ void i2cScanner()
       Serial.println(address, HEX);
     }
   }
-  if (nDevices == 0)
-    Serial.println("No I2C devices found\n");
-  else
-    Serial.println("done\n");
-
-  delay(5000); // wait 5 seconds for next scan
+  Serial.printf("scanner done, devices found: %d\n", nDevices);
 }
 
+//--------------------------------------------------------------------------------
+// #define ENCODER_PWR_PIN 5
+
+void encoderChangedEventCallback(int value) {
+  Serial.printf("Encoder: %d\n", value);
+}
+
+void encoderPressedEventCallback() {
+  Serial.printf("Encoder button pressed!\n");
+}
+
+bool getCanAccelerateCallback() {
+  return true;
+}
+
+#include "encoder.h"
+
+//--------------------------------------------------------------------------------
 void setup()
 {
 
@@ -170,6 +187,17 @@ void setup()
   nrf24.begin(&radio, &network, nrf24.RF24_CLIENT, packet_cb);
   radio.setAutoAck(true);
 
+  Wire.begin();
+  
+  i2cScanner();
+
+  #ifdef USING_ENCODER
+  if (setupEncoder(20, -10) == false) 
+  {
+    Serial.printf("Count not find encoder! \n");
+  }
+  #endif
+
   xTaskCreatePinnedToCore(coreTask, "coreTask", 10000, NULL, /*priority*/ 0, NULL, OTHER_CORE);
   xTaskCreatePinnedToCore(encoderTask, "encoderTask", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
 
@@ -177,11 +205,8 @@ void setup()
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
 
-  #ifdef SSD1306
+  #ifdef USING_SSD1306
   //https://www.aliexpress.com/item/32871318121.html
-  Wire.begin();
-
-  i2cScanner();
 
   setupLCD();
   #endif
@@ -202,6 +227,10 @@ void loop()
 
   nrf24.update();
 
+  #ifdef USING_ENCODER
+  encoderUpdate();
+  #endif
+
   EventEnum e;
   xStatus = xQueueReceive(xThrottleChangeQueue, &e, xTicksToWait);
   if (xStatus == pdPASS)
@@ -209,10 +238,10 @@ void loop()
     switch (e)
     {
     case EVENT_THROTTLE_CHANGED:
-      Serial.printf("Throttle changed!\n");
+      // Serial.printf("Throttle changed!\n");
       break;
     case EVENT_2:
-      Serial.printf("Event %d\n", e);
+      // Serial.printf("Event %d\n", e);
       break;
     case EVENT_3:
       Serial.printf("Event %d\n", e);
