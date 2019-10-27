@@ -8,11 +8,9 @@
 #define SSD1306 1
 
 //https://github.com/olikraus/u8g2/wiki/fntgrpiconic#open_iconic_arrow_2x2
-#define 	OLED_SCL		22
-#define 	OLED_SDA		21
 #define 	OLED_ADDR		0x3C
 #define 	OLED_CONTRAST_HIGH	100		// 256 highest
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, OLED_SCL, OLED_SDA);
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, U8X8_PIN_NONE, OLED_SCL, OLED_SDA);
 
 #define LCD_WIDTH   128
 #define LCD_HEIGHT  64
