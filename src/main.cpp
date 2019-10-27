@@ -3,12 +3,12 @@
 #include <SPI.h>
 #include <NRF24L01Library.h>
 #include <Wire.h>
-#include <i2cEncoderLib.h>
-// #include <Encoderi2cModulev1Lib.h>
+// #include <i2cEncoderLib.h>
 
-#define 	OLED_SCL		4
-#define 	OLED_SDA		5
-// #include "SSD1306.h"
+#define 	OLED_SCL		15
+#define 	OLED_SDA		4
+#define   OLED_RST    16
+#include "SSD1306.h"
 //------------------------------------------------------------------
 NRF24L01Lib nrf24;
 
@@ -174,7 +174,7 @@ bool getCanAccelerateCallback() {
   return true;
 }
 
-#include "encoder.h"
+// #include "encoder.h"
 
 //--------------------------------------------------------------------------------
 void setup()
@@ -189,7 +189,7 @@ void setup()
 
   Wire.begin();
   
-  i2cScanner();
+  // i2cScanner();
 
   #ifdef USING_ENCODER
   if (setupEncoder(20, -10) == false) 

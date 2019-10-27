@@ -10,7 +10,8 @@
 //https://github.com/olikraus/u8g2/wiki/fntgrpiconic#open_iconic_arrow_2x2
 #define 	OLED_ADDR		0x3C
 #define 	OLED_CONTRAST_HIGH	100		// 256 highest
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, U8X8_PIN_NONE, OLED_SCL, OLED_SDA);
+U8G2_SSD1306_128X64_NONAME_1_SW_I2C u8g2(U8G2_R2, OLED_SCL, OLED_SDA, OLED_RST);
+// U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, U8X8_PIN_NONE, OLED_SCL, OLED_SDA);
 
 #define LCD_WIDTH   128
 #define LCD_HEIGHT  64
@@ -139,7 +140,7 @@ void setupLCD() {
 	int width = u8g2.getStrWidth("ready!");
 	u8g2.drawStr((LCD_WIDTH/2)-(width/2), (LCD_HEIGHT/2) + (26/2),"ready!");
 	u8g2.sendBuffer();
-  Serial.printf("ready\n");
+  Serial.printf("lcd ready\n");
 }
 //--------------------------------------------------------------------------------
 void chunky_draw_digit(
