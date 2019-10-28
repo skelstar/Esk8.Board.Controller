@@ -76,9 +76,9 @@ void encoder_min(i2cEncoderLibV2 *obj)
 
 void encoder_push(i2cEncoderLibV2 *obj)
 {
-	updateCanAccelerate(!canAccelerate);
-	Serial.printf("Encoder is pushed! Can Accel: %d\n", canAccelerate);
-	updateMaxCounter(canAccelerate);
+	// updateCanAccelerate(!canAccelerate);
+	// Serial.printf("Encoder is pushed! Can Accel: %d\n", canAccelerate);
+	// updateMaxCounter(canAccelerate);
 }
 //-------------------------------------------------------
 bool setupEncoder(int32_t maxCounts, int32_t minCounts)

@@ -3,10 +3,21 @@
 #include <SPI.h>
 #include <NRF24L01Library.h>
 #include <Wire.h>
+#include <myPushButton.h>
 
 #define 	OLED_SCL		15
 #define 	OLED_SDA		4
 #define   OLED_RST    16
+
+#define ENCODER_PWR_PIN 5
+#define ENCODER_GND_PIN 17
+
+#define RF24_PWR_PIN    27
+#define RF24_GND_PIN    25
+
+#define DEADMAN_INPUT_PIN   14
+#define DEADMAN_GND_PIN     12
+
 #include "SSD1306.h"
 //------------------------------------------------------------------
 NRF24L01Lib nrf24;
@@ -24,7 +35,33 @@ RF24Network network(radio);
 long lastIdFromBoard = NO_PACKET_RECEIVED_FROM_BOARD;
 uint8_t missedPacketsCounter = 0;
 
+bool canAccelerate = false;
+
 #include "utils.h"
+
+//------------------------------------------------------------------
+
+void deadmanSwitchCb(int eventCode, int eventPin, int eventParam);
+myPushButton deadman(DEADMAN_INPUT_PIN, /*pullup*/true, /*offstate*/LOW, /*callback*/deadmanSwitchCb);
+
+void deadmanSwitchCb(int eventCode, int eventPin, int eventParam) {
+    
+	switch (eventCode) {
+		case deadman.EV_BUTTON_PRESSED:
+      updateCanAccelerate(false);
+			break;
+		case deadman.EV_RELEASED:
+      updateCanAccelerate(true);
+			break;
+		case deadman.EV_DOUBLETAP:
+			break;
+		case deadman.EV_HELD_SECONDS:
+			break;
+    }
+}
+
+
+
 //------------------------------------------------------------------
 void updateDisplayWithMissedPacketCount() {
   #ifdef USING_SSD1306
@@ -157,17 +194,6 @@ void i2cScanner()
 }
 
 //--------------------------------------------------------------------------------
-#define ENCODER_PWR_PIN 5
-
-bool canAccelerate = true;
-
-void updateCanAccelerate(bool newState) {
-  canAccelerate = !canAccelerate;
-}
-
-bool getCanAccelerateCallback() {
-  return canAccelerate;
-}
 
 #include "encoder.h"
 
@@ -177,10 +203,20 @@ void setup()
 
   Serial.begin(115200);
 
+  pinMode(RF24_GND_PIN, OUTPUT);
+  digitalWrite(RF24_GND_PIN, LOW);
+  pinMode(RF24_PWR_PIN, OUTPUT);
+  digitalWrite(RF24_PWR_PIN, HIGH);
+  delay(5);
+
   SPI.begin();
   radio.begin();
   nrf24.begin(&radio, &network, nrf24.RF24_CLIENT, packet_cb);
   radio.setAutoAck(true);
+
+  // pinMode(DEADMAN_INPUT_PIN, INPUT);
+  pinMode(DEADMAN_GND_PIN, OUTPUT);
+  digitalWrite(DEADMAN_GND_PIN, LOW);
 
   Wire.begin();
   
@@ -188,8 +224,10 @@ void setup()
 
   pinMode(ENCODER_PWR_PIN, OUTPUT);
   digitalWrite(ENCODER_PWR_PIN, HIGH);
+  pinMode(ENCODER_GND_PIN, OUTPUT);
+  digitalWrite(ENCODER_GND_PIN, LOW);
   delay(10);
-  
+    
   i2cScanner();
 
   if (setupEncoder(20, -10) == false) 
@@ -226,6 +264,8 @@ void loop()
 {
 
   nrf24.update();
+
+  deadman.serviceEvents();
 
   #ifdef USING_ENCODER
   encoderUpdate();
