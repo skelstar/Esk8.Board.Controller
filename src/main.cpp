@@ -3,7 +3,6 @@
 #include <SPI.h>
 #include <NRF24L01Library.h>
 #include <Wire.h>
-// #include <i2cEncoderLib.h>
 
 #define 	OLED_SCL		15
 #define 	OLED_SDA		4
@@ -20,8 +19,6 @@ NRF24L01Lib nrf24;
 
 RF24 radio(SPI_CE, SPI_CS); // ce pin, cs pinRF24Network network();
 RF24Network network(radio);
-
-bool idFromBoardExpected(long id);
 
 #define NO_PACKET_RECEIVED_FROM_BOARD -1
 long lastIdFromBoard = NO_PACKET_RECEIVED_FROM_BOARD;
@@ -160,21 +157,19 @@ void i2cScanner()
 }
 
 //--------------------------------------------------------------------------------
-// #define ENCODER_PWR_PIN 5
+#define ENCODER_PWR_PIN 5
 
-void encoderChangedEventCallback(int value) {
-  Serial.printf("Encoder: %d\n", value);
-}
+bool canAccelerate = true;
 
-void encoderPressedEventCallback() {
-  Serial.printf("Encoder button pressed!\n");
+void updateCanAccelerate(bool newState) {
+  canAccelerate = !canAccelerate;
 }
 
 bool getCanAccelerateCallback() {
-  return true;
+  return canAccelerate;
 }
 
-// #include "encoder.h"
+#include "encoder.h"
 
 //--------------------------------------------------------------------------------
 void setup()
@@ -189,9 +184,14 @@ void setup()
 
   Wire.begin();
   
-  // i2cScanner();
-
   #ifdef USING_ENCODER
+
+  pinMode(ENCODER_PWR_PIN, OUTPUT);
+  digitalWrite(ENCODER_PWR_PIN, HIGH);
+  delay(10);
+  
+  i2cScanner();
+
   if (setupEncoder(20, -10) == false) 
   {
     Serial.printf("Count not find encoder! \n");
