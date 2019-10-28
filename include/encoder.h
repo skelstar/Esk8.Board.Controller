@@ -3,6 +3,8 @@
 
 #define USING_ENCODER 1
 
+// https://github.com/Fattoresaimon/ArduinoDuPPaLib/blob/master/examples/I2CEncoderV2/README.md
+
 // i2cEncoderLib encoder(0x30); 	// v1
 i2cEncoderLibV2 encoder(0x01); // v2
 
