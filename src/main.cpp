@@ -19,33 +19,44 @@
 #define RF24_PWR_PIN 27
 #define RF24_GND_PIN 25
 
-#define DEADMAN_INPUT_PIN 14
+#define DEADMAN_INPUT_PIN 0
 #define DEADMAN_GND_PIN 12
 
 #include "SSD1306.h"
 //------------------------------------------------------------------
 
-bool canAccelerate = false;
-
-
-
 VescData vescdata, initialVescData;
 
-
 #include "utils.h"
+
+xQueueHandle xThrottleChangeQueue;
+xQueueHandle xDeadmanChangedQueue;
 
 //------------------------------------------------------------------
 
 Button2 deadman(DEADMAN_INPUT_PIN);
 
-void deadmanPressed(Button2& btn)
+void deadmanPressed(Button2 &btn)
 {
-  updateCanAccelerate(false);
+  const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
+  bool pressed = true;
+  xQueueSendToFront(xDeadmanChangedQueue, &pressed, xTicksToWait);
 }
 
-void deadmanReleased(Button2& btn)
+void deadmanReleased(Button2 &btn)
 {
-  updateCanAccelerate(true);
+  const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
+  bool pressed = false;
+  xQueueSendToFront(xDeadmanChangedQueue, &pressed, xTicksToWait);
+}
+
+bool canAccelerate(int8_t throttle)
+{
+  // bool deadmanpressed =  throttle >= 0 && deadman.isPressed();
+  bool able = throttle <= 0 ||
+         (throttle >= 0 && deadman.isPressed());
+  DEBUGVAL("canAccelerate", throttle, able);
+  return able;
 }
 
 //------------------------------------------------------------------
@@ -62,8 +73,6 @@ void updateDisplayWithMissedPacketCount()
   u8g2.sendBuffer();
 #endif
 }
-
-xQueueHandle xThrottleChangeQueue;
 
 enum EventEnum
 {
@@ -102,13 +111,22 @@ void sendToServer()
 //   sendToServer();
 // }
 //------------------------------------------------------------------
-#define OTHER_CORE 0
 
-void coreTask(void *pvParameters)
+//--------------------------------------------------------------------------------
+
+#include "encoder.h"
+
+//--------------------------------------------------------------------------------
+
+#define OTHER_CORE 0
+SemaphoreHandle_t xCore0Semaphore;
+
+void coreTask_0(void *pvParameters)
 {
 
   Serial.printf("Task running on core %d\n", xPortGetCoreID());
   const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
+  xCore0Semaphore = xSemaphoreCreateMutex();
 
   long other_now = 0;
   while (true)
@@ -124,22 +142,40 @@ void coreTask(void *pvParameters)
   vTaskDelete(NULL);
 }
 
-void encoderTask(void *pvParameters)
+void encoderTask_0(void *pvParameters)
 {
-
   Serial.printf("Encoder running on core %d\n", xPortGetCoreID());
 
-  const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
-  long other_now = 0;
   while (true)
   {
-    bool encoderChanged = millis() - other_now > random(2000);
-    if (encoderChanged)
+    bool accel_enabled = false;
+    BaseType_t xStatus;
+    const TickType_t xTicksToWait = pdMS_TO_TICKS(20);
+
+    xStatus = xQueueReceive(xDeadmanChangedQueue, &accel_enabled, xTicksToWait);
+    if (xStatus == pdPASS)
     {
-      other_now = millis();
-      EventEnum e = EVENT_THROTTLE_CHANGED;
-      xQueueSendToFront(xThrottleChangeQueue, &e, xTicksToWait);
+      DEBUG("xDeadmanChangedQueue");
+      updateEncoderMaxCount(accel_enabled);
     }
+
+    if (xCore0Semaphore != NULL &&
+        xSemaphoreTake(xCore0Semaphore, (TickType_t)10) == pdTRUE)
+    {
+      encoderUpdate();
+      xSemaphoreGive(xCore0Semaphore);
+    }
+    else
+    {
+      DEBUG("Can't take semaphore!");
+    }
+    // bool encoderChanged = millis() - other_now > random(2000);
+    // if (encoderChanged)
+    // {
+    //   other_now = millis();
+    //   EventEnum e = EVENT_THROTTLE_CHANGED;
+    //   xQueueSendToFront(xThrottleChangeQueue, &e, xTicksToWait);
+    // }
     vTaskDelay(10);
   }
   vTaskDelete(NULL);
@@ -182,7 +218,7 @@ void i2cScanner()
   Serial.printf("scanner done, devices found: %d\n", nDevices);
 }
 
-void powerpins_init() 
+void powerpins_init()
 {
   // deadman
   pinMode(DEADMAN_GND_PIN, OUTPUT);
@@ -240,15 +276,10 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
   lastPacketId = rxdata.id;
 }
 
-void packetSent() {
+void packetSent()
+{
   // DEBUGFN("");
 }
-
-//--------------------------------------------------------------------------------
-
-#include "encoder.h"
-
-//--------------------------------------------------------------------------------
 
 void setup()
 {
@@ -257,10 +288,10 @@ void setup()
   powerpins_init();
   button_init();
 
-  client.setOnConnectedEvent([]{
+  client.setOnConnectedEvent([] {
     Serial.printf("Connected!\n");
   });
-  client.setOnDisconnectedEvent([]{
+  client.setOnDisconnectedEvent([] {
     Serial.println("ESPNow Init Failed, restarting...");
   });
   client.setOnNotifyEvent(packetReceived);
@@ -276,10 +307,11 @@ void setup()
     Serial.printf("Count not find encoder! \n");
   }
 
-  xTaskCreatePinnedToCore(coreTask, "coreTask", 10000, NULL, /*priority*/ 0, NULL, OTHER_CORE);
-  xTaskCreatePinnedToCore(encoderTask, "encoderTask", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
+  xTaskCreatePinnedToCore(coreTask_0, "coreTask_0", 10000, NULL, /*priority*/ 0, NULL, OTHER_CORE);
+  xTaskCreatePinnedToCore(encoderTask_0, "encoderTask_0", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
 
   xThrottleChangeQueue = xQueueCreate(1, sizeof(EventEnum));
+  xDeadmanChangedQueue = xQueueCreate(1, sizeof(bool));
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
 
@@ -300,8 +332,6 @@ void loop()
 {
   deadman.loop();
 
-  encoderUpdate();
-
   EventEnum e;
   xStatus = xQueueReceive(xThrottleChangeQueue, &e, xTicksToWait);
   if (xStatus == pdPASS)
@@ -309,13 +339,13 @@ void loop()
     switch (e)
     {
     case EVENT_THROTTLE_CHANGED:
-      Serial.printf("Throttle changed!\n");
+      Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", currentCounter);
       break;
     case EVENT_2:
-      Serial.printf("Event %d\n", e);
+      // Serial.printf("Event %d\n", e);
       break;
     case EVENT_3:
-      Serial.printf("Event %d\n", e);
+      // Serial.printf("Event %d\n", e);
       break;
     default:
       Serial.printf("Unhandled event code: %d \n", e);

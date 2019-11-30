@@ -5,12 +5,3 @@ bool idFromBoardExpected(long id) {
   //     || id == lastIdFromBoard + 1;
   return true;
 }
-
-void updateCanAccelerate(bool newState) {
-  Serial.printf("canAccelerate changed: %d\n", newState);
-  canAccelerate = newState;
-}
-
-bool getCanAccelerateCallback() {
-  return canAccelerate;
-}

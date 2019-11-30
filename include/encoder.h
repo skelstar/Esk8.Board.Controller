@@ -10,7 +10,6 @@ i2cEncoderLibV2 encoder(0x01); // v2
 int32_t _maxCounts = 0;
 int32_t _minCounts = 0;
 
-bool oldCanAccelerate = false;
 int _oldCounter = 0;
 
 //-------------------------------------------------------
@@ -18,51 +17,79 @@ int _oldCounter = 0;
 int mapCounterTo127to255(int counter);
 
 //-------------------------------------------------------
-void updateMaxCounter(bool to)
+
+void updateEncoderMaxCount(bool accelerateable) 
 {
-	if (to == true)
+	DEBUGVAL("updateEncoderMaxCount", accelerateable);
+	if (accelerateable) 
 	{
 		encoder.writeMax(_maxCounts); //Set maximum threshold
-		Serial.printf("Max updated to: %u\n", _maxCounts);
 	}
-	else
+	else 
 	{
-		int prevMax = encoder.readMax();
-		encoder.writeMax(0); //Set maximum threshold
-		if (prevMax > 0)
-		{
-			encoder.writeCounter(0);
-			Serial.printf("Max updated to: %u (counter: 0)\n", _maxCounts);
-		}
+		encoder.writeMax(0); 
 	}
 }
+
+// void updateMaxCounter(bool to)
+// {
+// 	if (to == true)
+// 	{
+// 		encoder.writeMax(_maxCounts); //Set maximum threshold
+// 		Serial.printf("Max updated to: %u\n", _maxCounts);
+// 	}
+// 	else
+// 	{
+// 		int prevMax = encoder.readMax();
+// 		encoder.writeMax(0); //Set maximum threshold
+// 		if (prevMax > 0)
+// 		{
+// 			encoder.writeCounter(0);
+// 			Serial.printf("Max updated to: %u (counter: 0)\n", _maxCounts);
+// 		}
+// 	}
+// }
 //-------------------------------------------------------
+
+int8_t currentCounter = 0;
+
 void encoder_increment(i2cEncoderLibV2 *obj)
 {
+	const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
+	EventEnum e = EVENT_THROTTLE_CHANGED;
+
 	int8_t counter = encoder.readCounterByte();
 
-	if (counter < 0)
+	if (currentCounter != counter)
 	{
-		int8_t counter = encoder.readCounterByte();
-		Serial.printf("Throttle: %d (%d)\n", mapCounterTo127to255(counter), counter);
+		currentCounter = counter;
+		if (canAccelerate(counter))
+		{
+			// updateEncoderMaxCount(true);
+			xQueueSendToFront(xThrottleChangeQueue, &e, xTicksToWait);
+		}
+		else
+		{
+			// updateEncoderMaxCount(false);
+			// updateMaxCounter(/*to*/ false);
+			int8_t counter = encoder.readCounterByte();
+			Serial.printf("Throttle: %d (%d)\n", mapCounterTo127to255(counter), counter);
+		}
 	}
-	else if (counter >= 0 && canAccelerate)
-	{
-		int8_t counter = encoder.readCounterByte();
-		Serial.printf("Throttle: %d (%d)\n", mapCounterTo127to255(counter), counter);
-	}
-	else
-	{
-		updateMaxCounter(/*to*/ false);
-		int8_t counter = encoder.readCounterByte();
-		Serial.printf("Throttle: %d (%d)\n", mapCounterTo127to255(counter), counter);
-	}
+	// Serial.printf("Throttle: %d   |    %d)\n", counter, mapCounterTo127to255(counter));
 }
 
 void encoder_decrement(i2cEncoderLibV2 *obj)
 {
-		int8_t counter = encoder.readCounterByte();
-		Serial.printf("Throttle: %d (%d)\n", mapCounterTo127to255(counter), counter);
+	const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
+	EventEnum e = EVENT_THROTTLE_CHANGED;
+
+	int8_t counter = encoder.readCounterByte();
+	if (counter != currentCounter) {
+		currentCounter = counter;
+		xQueueSendToFront(xThrottleChangeQueue, &e, xTicksToWait);
+	}
+	// Serial.printf("Throttle: %d   |    %d)\n", counter, mapCounterTo127to255(counter));
 }
 
 void encoder_max(i2cEncoderLibV2 *obj)
