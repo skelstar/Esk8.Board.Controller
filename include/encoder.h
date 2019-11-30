@@ -1,4 +1,3 @@
-// #include "i2cEncoderLib.h"
 #include <i2cEncoderLibV2.h>
 
 #define USING_ENCODER 1

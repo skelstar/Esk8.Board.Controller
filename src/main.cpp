@@ -1,79 +1,66 @@
-#include <pgmspace.h>
-#include <Arduino.h>
-#include <SPI.h>
-#include <NRF24L01Library.h>
-#include <Wire.h>
-#include <myPushButton.h>
+#define DEBUG_OUT Serial
+#define PRINTSTREAM_FALLBACK
+#include "Debug.hpp"
 
-#define 	OLED_SCL		15
-#define 	OLED_SDA		4
-#define   OLED_RST    16
+#include <Button2.h>
+#include <Fsm.h>
+#include <Wire.h>
+#include <TaskScheduler.h>
+#include <VescData.h>
+#include <espNowClient.h>
+
+#define OLED_SCL 15
+#define OLED_SDA 4
+#define OLED_RST 16
 
 #define ENCODER_PWR_PIN 5
 #define ENCODER_GND_PIN 17
 
-#define RF24_PWR_PIN    27
-#define RF24_GND_PIN    25
+#define RF24_PWR_PIN 27
+#define RF24_GND_PIN 25
 
-#define DEADMAN_INPUT_PIN   14
-#define DEADMAN_GND_PIN     12
+#define DEADMAN_INPUT_PIN 14
+#define DEADMAN_GND_PIN 12
 
 #include "SSD1306.h"
 //------------------------------------------------------------------
-NRF24L01Lib nrf24;
-
-#define SPI_MOSI  23  // blue
-#define SPI_MISO  19  // orange
-#define SPI_CLK   18  // yellow
-#define SPI_CE 33     // white/purple
-#define SPI_CS 26     // green
-
-RF24 radio(SPI_CE, SPI_CS); // ce pin, cs pinRF24Network network();
-RF24Network network(radio);
-
-#define NO_PACKET_RECEIVED_FROM_BOARD -1
-long lastIdFromBoard = NO_PACKET_RECEIVED_FROM_BOARD;
-uint8_t missedPacketsCounter = 0;
 
 bool canAccelerate = false;
+
+
+
+VescData vescdata, initialVescData;
+
 
 #include "utils.h"
 
 //------------------------------------------------------------------
 
-void deadmanSwitchCb(int eventCode, int eventPin, int eventParam);
-myPushButton deadman(DEADMAN_INPUT_PIN, /*pullup*/true, /*offstate*/LOW, /*callback*/deadmanSwitchCb);
+Button2 deadman(DEADMAN_INPUT_PIN);
 
-void deadmanSwitchCb(int eventCode, int eventPin, int eventParam) {
-    
-	switch (eventCode) {
-		case deadman.EV_BUTTON_PRESSED:
-      updateCanAccelerate(false);
-			break;
-		case deadman.EV_RELEASED:
-      updateCanAccelerate(true);
-			break;
-		case deadman.EV_DOUBLETAP:
-			break;
-		case deadman.EV_HELD_SECONDS:
-			break;
-    }
+void deadmanPressed(Button2& btn)
+{
+  updateCanAccelerate(false);
 }
 
-
+void deadmanReleased(Button2& btn)
+{
+  updateCanAccelerate(true);
+}
 
 //------------------------------------------------------------------
-void updateDisplayWithMissedPacketCount() {
-  #ifdef USING_SSD1306
+void updateDisplayWithMissedPacketCount()
+{
+#ifdef USING_SSD1306
   u8g2.clearBuffer();
   u8g2.setFontPosTop();
   char buffx[16];
-  sprintf(buffx, "Missed: %d", missedPacketsCounter);
+  // sprintf(buffx, "Missed: %d", missedPacketsCounter);
   u8g2.setFont(FONT_SIZE_MED); // full
   int width = u8g2.getStrWidth(buffx);
-  u8g2.drawStr(LCD_WIDTH/2-width/2, LCD_HEIGHT/2-FONT_SIZE_MED_LINE_HEIGHT/2, buffx);
+  u8g2.drawStr(LCD_WIDTH / 2 - width / 2, LCD_HEIGHT / 2 - FONT_SIZE_MED_LINE_HEIGHT / 2, buffx);
   u8g2.sendBuffer();
-  #endif
+#endif
 }
 
 xQueueHandle xThrottleChangeQueue;
@@ -88,29 +75,32 @@ enum EventEnum
 //------------------------------------------------------------------
 void sendToServer()
 {
-  if (!idFromBoardExpected(nrf24.boardPacket.id)) {
-    Serial.printf("Id '%u' from board not expected\n", nrf24.controllerPacket.id);
-    missedPacketsCounter++;
-    updateDisplayWithMissedPacketCount();
-  }
+  // if (!idFromBoardExpected(nrf24.boardPacket.id))
+  // {
+  //   Serial.printf("Id '%u' from board not expected\n", nrf24.controllerPacket.id);
+  //   // missedPacketsCounter++;
+  //   updateDisplayWithMissedPacketCount();
+  // }
 
-  nrf24.controllerPacket.id = nrf24.boardPacket.id;
-  lastIdFromBoard = nrf24.boardPacket.id;
-  bool success = nrf24.sendPacket(nrf24.RF24_SERVER);
-  if (success) {
-    Serial.printf("Replied to %u OK (with %u)\n", 
-      nrf24.boardPacket.id, 
-      nrf24.controllerPacket.id);
-  }
-  else
-  {
-    Serial.printf("Failed to send\n");
-  }
+  // nrf24.controllerPacket.id = nrf24.boardPacket.id;
+  // lastIdFromBoard = nrf24.boardPacket.id;
+  // bool success = nrf24.sendPacket(nrf24.RF24_SERVER);
+  // if (success)
+  // {
+  //   Serial.printf("Replied to %u OK (with %u)\n",
+  //                 nrf24.boardPacket.id,
+  //                 nrf24.controllerPacket.id);
+  // }
+  // else
+  // {
+  //   Serial.printf("Failed to send\n");
+  // }
 }
 
-void packet_cb( uint16_t from ) {
-  sendToServer();
-}
+// void packet_cb(uint16_t from)
+// {
+//   sendToServer();
+// }
 //------------------------------------------------------------------
 #define OTHER_CORE 0
 
@@ -123,12 +113,12 @@ void coreTask(void *pvParameters)
   long other_now = 0;
   while (true)
   {
-    if (millis() - other_now > 200)
-    {
-      other_now = millis();
-      EventEnum e = EVENT_2;
-      xQueueSendToBack(xThrottleChangeQueue, &e, xTicksToWait);
-    }
+    // if (millis() - other_now > 200)
+    // {
+    //   other_now = millis();
+    //   EventEnum e = EVENT_2;
+    //   xQueueSendToBack(xThrottleChangeQueue, &e, xTicksToWait);
+    // }
     vTaskDelay(10);
   }
   vTaskDelete(NULL);
@@ -143,7 +133,6 @@ void encoderTask(void *pvParameters)
   long other_now = 0;
   while (true)
   {
-
     bool encoderChanged = millis() - other_now > random(2000);
     if (encoderChanged)
     {
@@ -193,48 +182,99 @@ void i2cScanner()
   Serial.printf("scanner done, devices found: %d\n", nDevices);
 }
 
+void powerpins_init() 
+{
+  // deadman
+  pinMode(DEADMAN_GND_PIN, OUTPUT);
+  digitalWrite(DEADMAN_GND_PIN, LOW);
+  // encoder
+  pinMode(ENCODER_PWR_PIN, OUTPUT);
+  digitalWrite(ENCODER_PWR_PIN, HIGH);
+  pinMode(ENCODER_GND_PIN, OUTPUT);
+  digitalWrite(ENCODER_GND_PIN, LOW);
+}
+
+void button_init()
+{
+  deadman.setPressedHandler(deadmanPressed);
+  deadman.setReleasedHandler(deadmanReleased);
+  deadman.setDoubleClickHandler([](Button2 &b) {
+    Serial.printf("deadman.setDoubleClickHandler([](Button2 &b)\n");
+  });
+  deadman.setTripleClickHandler([](Button2 &b) {
+    Serial.printf("deadman.setTripleClickHandler([](Button2 &b)\n");
+  });
+}
+
+//--------------------------------------------------------------------------------
+
+unsigned long lastPacketRxTime = 0;
+unsigned long lastPacketId = 0;
+float missedPacketCounter = 0.0;
+unsigned long sendCounter = 0;
+bool syncdWithServer = false;
+
+void packetReceived(const uint8_t *data, uint8_t data_len)
+{
+  VescData rxdata;
+  memcpy(/*dest*/ &rxdata, /*src*/ data, data_len);
+
+  DEBUGVAL(rxdata.id, sendCounter, lastPacketId, rxdata.batteryVoltage);
+
+  if (lastPacketId != rxdata.id - 1)
+  {
+    if (syncdWithServer)
+    {
+      uint8_t lost = (rxdata.id - 1) - lastPacketId;
+      missedPacketCounter = missedPacketCounter + lost;
+      Serial.printf("Missed %d packets! (%.0f total)\n", lost, missedPacketCounter);
+      vescdata.ampHours = missedPacketCounter;
+      // fsm.trigger(EV_RECV_PACKET);
+    }
+  }
+  else
+  {
+    syncdWithServer = true;
+  }
+
+  lastPacketId = rxdata.id;
+}
+
+void packetSent() {
+  // DEBUGFN("");
+}
+
 //--------------------------------------------------------------------------------
 
 #include "encoder.h"
 
 //--------------------------------------------------------------------------------
+
 void setup()
 {
-
   Serial.begin(115200);
 
-  pinMode(RF24_GND_PIN, OUTPUT);
-  digitalWrite(RF24_GND_PIN, LOW);
-  pinMode(RF24_PWR_PIN, OUTPUT);
-  digitalWrite(RF24_PWR_PIN, HIGH);
-  delay(5);
+  powerpins_init();
+  button_init();
 
-  SPI.begin();
-  radio.begin();
-  nrf24.begin(&radio, &network, nrf24.RF24_CLIENT, packet_cb);
-  radio.setAutoAck(true);
-
-  // pinMode(DEADMAN_INPUT_PIN, INPUT);
-  pinMode(DEADMAN_GND_PIN, OUTPUT);
-  digitalWrite(DEADMAN_GND_PIN, LOW);
+  client.setOnConnectedEvent([]{
+    Serial.printf("Connected!\n");
+  });
+  client.setOnDisconnectedEvent([]{
+    Serial.println("ESPNow Init Failed, restarting...");
+  });
+  client.setOnNotifyEvent(packetReceived);
+  client.setOnSentEvent(packetSent);
+  initESPNow();
 
   Wire.begin();
-  
-  #ifdef USING_ENCODER
-
-  pinMode(ENCODER_PWR_PIN, OUTPUT);
-  digitalWrite(ENCODER_PWR_PIN, HIGH);
-  pinMode(ENCODER_GND_PIN, OUTPUT);
-  digitalWrite(ENCODER_GND_PIN, LOW);
   delay(10);
-    
   i2cScanner();
 
-  if (setupEncoder(20, -10) == false) 
+  if (setupEncoder(20, -10) == false)
   {
     Serial.printf("Count not find encoder! \n");
   }
-  #endif
 
   xTaskCreatePinnedToCore(coreTask, "coreTask", 10000, NULL, /*priority*/ 0, NULL, OTHER_CORE);
   xTaskCreatePinnedToCore(encoderTask, "encoderTask", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
@@ -243,16 +283,12 @@ void setup()
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
 
-  #ifdef USING_SSD1306
+#ifdef USING_SSD1306
   //https://www.aliexpress.com/item/32871318121.html
-
   setupLCD();
-  #endif
+#endif
 
-  // WiFi.mode( WIFI_OFF );	// WIFI_MODE_NULL
-	// btStop();   // turn bluetooth module off
-
-  updateDisplayWithMissedPacketCount();
+  // updateDisplayWithMissedPacketCount();
 }
 //------------------------------------------------------------------
 
@@ -262,14 +298,9 @@ const TickType_t xTicksToWait = pdMS_TO_TICKS(50);
 
 void loop()
 {
+  deadman.loop();
 
-  nrf24.update();
-
-  deadman.serviceEvents();
-
-  #ifdef USING_ENCODER
   encoderUpdate();
-  #endif
 
   EventEnum e;
   xStatus = xQueueReceive(xThrottleChangeQueue, &e, xTicksToWait);
@@ -278,10 +309,10 @@ void loop()
     switch (e)
     {
     case EVENT_THROTTLE_CHANGED:
-      // Serial.printf("Throttle changed!\n");
+      Serial.printf("Throttle changed!\n");
       break;
     case EVENT_2:
-      // Serial.printf("Event %d\n", e);
+      Serial.printf("Event %d\n", e);
       break;
     case EVENT_3:
       Serial.printf("Event %d\n", e);
