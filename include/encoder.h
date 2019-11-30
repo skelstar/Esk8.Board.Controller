@@ -1,14 +1,15 @@
 #include <i2cEncoderLibV2.h>
 
-#define USING_ENCODER 1
-
 // https://github.com/Fattoresaimon/ArduinoDuPPaLib/blob/master/examples/I2CEncoderV2/README.md
 
 // i2cEncoderLib encoder(0x30); 	// v1
 i2cEncoderLibV2 encoder(0x01); // v2
 
-int32_t _maxCounts = 0;
-int32_t _minCounts = 0;
+#define ACCEL_MAX_ENCODER_COUNTS	20
+#define BRAKE_MIN_ENCODER_COUNTS	-10
+
+// int32_t _maxCounts = 0;
+// int32_t _minCounts = 0;
 
 int _oldCounter = 0;
 
@@ -20,10 +21,10 @@ int mapCounterTo127to255(int counter);
 
 void updateEncoderMaxCount(bool accelerateable) 
 {
-	DEBUGVAL("updateEncoderMaxCount", accelerateable);
+	DEBUGVAL("updateEncoderMaxCount()", accelerateable);
 	if (accelerateable) 
 	{
-		encoder.writeMax(_maxCounts); //Set maximum threshold
+		encoder.writeMax(ACCEL_MAX_ENCODER_COUNTS); //Set maximum threshold
 	}
 	else 
 	{
@@ -31,24 +32,6 @@ void updateEncoderMaxCount(bool accelerateable)
 	}
 }
 
-// void updateMaxCounter(bool to)
-// {
-// 	if (to == true)
-// 	{
-// 		encoder.writeMax(_maxCounts); //Set maximum threshold
-// 		Serial.printf("Max updated to: %u\n", _maxCounts);
-// 	}
-// 	else
-// 	{
-// 		int prevMax = encoder.readMax();
-// 		encoder.writeMax(0); //Set maximum threshold
-// 		if (prevMax > 0)
-// 		{
-// 			encoder.writeCounter(0);
-// 			Serial.printf("Max updated to: %u (counter: 0)\n", _maxCounts);
-// 		}
-// 	}
-// }
 //-------------------------------------------------------
 
 int8_t currentCounter = 0;
@@ -63,20 +46,9 @@ void encoder_increment(i2cEncoderLibV2 *obj)
 	if (currentCounter != counter)
 	{
 		currentCounter = counter;
-		if (canAccelerate(counter))
-		{
-			// updateEncoderMaxCount(true);
-			xQueueSendToFront(xThrottleChangeQueue, &e, xTicksToWait);
-		}
-		else
-		{
-			// updateEncoderMaxCount(false);
-			// updateMaxCounter(/*to*/ false);
-			int8_t counter = encoder.readCounterByte();
-			Serial.printf("Throttle: %d (%d)\n", mapCounterTo127to255(counter), counter);
-		}
+		xQueueSendToFront(xEncoderChangeQueue, &e, xTicksToWait);
+		Serial.printf("Throttle: %d (%d)\n", mapCounterTo127to255(counter), counter);
 	}
-	// Serial.printf("Throttle: %d   |    %d)\n", counter, mapCounterTo127to255(counter));
 }
 
 void encoder_decrement(i2cEncoderLibV2 *obj)
@@ -87,32 +59,17 @@ void encoder_decrement(i2cEncoderLibV2 *obj)
 	int8_t counter = encoder.readCounterByte();
 	if (counter != currentCounter) {
 		currentCounter = counter;
-		xQueueSendToFront(xThrottleChangeQueue, &e, xTicksToWait);
+		xQueueSendToFront(xEncoderChangeQueue, &e, xTicksToWait);
 	}
-	// Serial.printf("Throttle: %d   |    %d)\n", counter, mapCounterTo127to255(counter));
-}
-
-void encoder_max(i2cEncoderLibV2 *obj)
-{
-}
-
-void encoder_min(i2cEncoderLibV2 *obj)
-{
 }
 
 void encoder_push(i2cEncoderLibV2 *obj)
 {
-	// updateCanAccelerate(!canAccelerate);
-	// Serial.printf("Encoder is pushed! Can Accel: %d\n", canAccelerate);
-	// updateMaxCounter(canAccelerate);
+	Serial.printf("Encoder is pushed!\n");
 }
 //-------------------------------------------------------
 bool setupEncoder(int32_t maxCounts, int32_t minCounts)
 {
-
-	_maxCounts = maxCounts;
-	_minCounts = minCounts;
-
 	encoder.reset();
 	encoder.begin(i2cEncoderLibV2::INT_DATA |
 								i2cEncoderLibV2::WRAP_DISABLE |
@@ -121,8 +78,8 @@ bool setupEncoder(int32_t maxCounts, int32_t minCounts)
 								i2cEncoderLibV2::RMOD_X1 |
 								i2cEncoderLibV2::STD_ENCODER);
 	encoder.writeCounter(0);
-	encoder.writeMax(_maxCounts); //Set maximum threshold
-	encoder.writeMin(_minCounts); //Set minimum threshold
+	encoder.writeMax(maxCounts); //Set maximum threshold
+	encoder.writeMin(minCounts); //Set minimum threshold
 	encoder.writeStep((int32_t)1);
 	encoder.writeAntibouncingPeriod(20); /* Set an anti-bouncing of 200ms */
 	encoder.writeDoublePushPeriod(50);	 /*Set a period for the double push of 500ms */
@@ -132,11 +89,11 @@ bool setupEncoder(int32_t maxCounts, int32_t minCounts)
 	// Definition of the events
 	encoder.onIncrement = encoder_increment;
 	encoder.onDecrement = encoder_decrement;
-	encoder.onMax = encoder_max;
-	encoder.onMin = encoder_min;
+	// encoder.onMax = [](i2cEncoderLibV2 *obj){ DEBUG("Encoder max"); };
+	// encoder.onMin = [](i2cEncoderLibV2 *obj){ DEBUG("Encoder min"); };
 	encoder.onButtonPush = encoder_push;
-	// encoder.onButtonRelease = encoder_released;
-	// encoder.onButtonDoublePush = encoder_double_push;
+	// encoder.onButtonRelease = [](i2cEncoderLibV2 *obj){ DEBUG("Encoder release"); };
+	// encoder.onButtonDoublePush = [](i2cEncoderLibV2 *obj){ DEBUG("Encoder double push"); };
 	encoder.autoconfigInterrupt();
 
 	Serial.printf("Status = 0x%x \n", encoder.readStatus());
@@ -161,9 +118,9 @@ int mapCounterTo127to255(int counter)
 
 	if (counter >= rawMiddle)
 	{
-		return map(counter, rawMiddle, (int)_maxCounts, 127, 255);
+		return map(counter, rawMiddle, (int)ACCEL_MAX_ENCODER_COUNTS, 127, 255);
 	}
-	return map(counter, (int)_minCounts, rawMiddle, 0, 127);
+	return map(counter, (int)BRAKE_MIN_ENCODER_COUNTS, rawMiddle, 0, 127);
 }
 
 void encoderUpdate()

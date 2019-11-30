@@ -29,7 +29,7 @@ VescData vescdata, initialVescData;
 
 #include "utils.h"
 
-xQueueHandle xThrottleChangeQueue;
+xQueueHandle xEncoderChangeQueue;
 xQueueHandle xDeadmanChangedQueue;
 
 //------------------------------------------------------------------
@@ -49,6 +49,8 @@ void deadmanReleased(Button2 &btn)
   bool pressed = false;
   xQueueSendToFront(xDeadmanChangedQueue, &pressed, xTicksToWait);
 }
+
+//------------------------------------------------------------------
 
 bool canAccelerate(int8_t throttle)
 {
@@ -135,7 +137,7 @@ void coreTask_0(void *pvParameters)
     // {
     //   other_now = millis();
     //   EventEnum e = EVENT_2;
-    //   xQueueSendToBack(xThrottleChangeQueue, &e, xTicksToWait);
+    //   xQueueSendToBack(xEncoderChangeQueue, &e, xTicksToWait);
     // }
     vTaskDelay(10);
   }
@@ -174,7 +176,7 @@ void encoderTask_0(void *pvParameters)
     // {
     //   other_now = millis();
     //   EventEnum e = EVENT_THROTTLE_CHANGED;
-    //   xQueueSendToFront(xThrottleChangeQueue, &e, xTicksToWait);
+    //   xQueueSendToFront(xEncoderChangeQueue, &e, xTicksToWait);
     // }
     vTaskDelay(10);
   }
@@ -302,7 +304,7 @@ void setup()
   delay(10);
   i2cScanner();
 
-  if (setupEncoder(20, -10) == false)
+  if (setupEncoder(0, BRAKE_MIN_ENCODER_COUNTS) == false)
   {
     Serial.printf("Count not find encoder! \n");
   }
@@ -310,7 +312,7 @@ void setup()
   xTaskCreatePinnedToCore(coreTask_0, "coreTask_0", 10000, NULL, /*priority*/ 0, NULL, OTHER_CORE);
   xTaskCreatePinnedToCore(encoderTask_0, "encoderTask_0", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
 
-  xThrottleChangeQueue = xQueueCreate(1, sizeof(EventEnum));
+  xEncoderChangeQueue = xQueueCreate(1, sizeof(EventEnum));
   xDeadmanChangedQueue = xQueueCreate(1, sizeof(bool));
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
@@ -333,7 +335,7 @@ void loop()
   deadman.loop();
 
   EventEnum e;
-  xStatus = xQueueReceive(xThrottleChangeQueue, &e, xTicksToWait);
+  xStatus = xQueueReceive(xEncoderChangeQueue, &e, xTicksToWait);
   if (xStatus == pdPASS)
   {
     switch (e)
