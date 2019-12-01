@@ -34,8 +34,6 @@ void updateEncoderMaxCount(bool accelerateable)
 
 //-------------------------------------------------------
 
-int8_t currentCounter = 0;
-
 void encoder_increment(i2cEncoderLibV2 *obj)
 {
 	const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
@@ -43,9 +41,9 @@ void encoder_increment(i2cEncoderLibV2 *obj)
 
 	int8_t counter = encoder.readCounterByte();
 
-	if (currentCounter != counter)
+	if (controller_packet.throttle != counter)
 	{
-		currentCounter = counter;
+		controller_packet.throttle = counter;
 		xQueueSendToFront(xEncoderChangeQueue, &e, xTicksToWait);
 		Serial.printf("Throttle: %d (%d)\n", mapCounterTo127to255(counter), counter);
 	}
@@ -57,8 +55,8 @@ void encoder_decrement(i2cEncoderLibV2 *obj)
 	EventEnum e = EVENT_THROTTLE_CHANGED;
 
 	int8_t counter = encoder.readCounterByte();
-	if (counter != currentCounter) {
-		currentCounter = counter;
+	if (counter != controller_packet.throttle) {
+		controller_packet.throttle = counter;
 		xQueueSendToFront(xEncoderChangeQueue, &e, xTicksToWait);
 	}
 }

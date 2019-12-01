@@ -26,6 +26,7 @@
 //------------------------------------------------------------------
 
 VescData vescdata, initialVescData;
+ControllerData controller_packet;
 
 #include "utils.h"
 
@@ -56,7 +57,7 @@ bool canAccelerate(int8_t throttle)
 {
   // bool deadmanpressed =  throttle >= 0 && deadman.isPressed();
   bool able = throttle <= 0 ||
-         (throttle >= 0 && deadman.isPressed());
+              (throttle >= 0 && deadman.isPressed());
   DEBUGVAL("canAccelerate", throttle, able);
   return able;
 }
@@ -108,12 +109,6 @@ void sendToServer()
   // }
 }
 
-// void packet_cb(uint16_t from)
-// {
-//   sendToServer();
-// }
-//------------------------------------------------------------------
-
 //--------------------------------------------------------------------------------
 
 #include "encoder.h"
@@ -133,12 +128,6 @@ void coreTask_0(void *pvParameters)
   long other_now = 0;
   while (true)
   {
-    // if (millis() - other_now > 200)
-    // {
-    //   other_now = millis();
-    //   EventEnum e = EVENT_2;
-    //   xQueueSendToBack(xEncoderChangeQueue, &e, xTicksToWait);
-    // }
     vTaskDelay(10);
   }
   vTaskDelete(NULL);
@@ -326,7 +315,7 @@ void setup()
 }
 //------------------------------------------------------------------
 
-long now = 0;
+long timeout = 0;
 BaseType_t xStatus;
 const TickType_t xTicksToWait = pdMS_TO_TICKS(50);
 
@@ -334,23 +323,58 @@ void loop()
 {
   deadman.loop();
 
+  if (millis() - timeout > 500)
+  {
+    timeout = millis();
+    const uint8_t *addr = peer.peer_addr;
+    controller_packet.id = sendCounter;
+    uint8_t bs[sizeof(controller_packet)];
+    memcpy(bs, &controller_packet, sizeof(controller_packet));
+    esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
+    if (result == ESP_OK)
+    {
+      DEBUG("Sent timeout packet");
+      sendCounter++;
+    }
+    else {
+      DEBUG("Some issue with sending timeout packet");
+    }
+  }
+
   EventEnum e;
   xStatus = xQueueReceive(xEncoderChangeQueue, &e, xTicksToWait);
   if (xStatus == pdPASS)
   {
     switch (e)
     {
-    case EVENT_THROTTLE_CHANGED:
-      Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", currentCounter);
-      break;
-    case EVENT_2:
-      // Serial.printf("Event %d\n", e);
-      break;
-    case EVENT_3:
-      // Serial.printf("Event %d\n", e);
-      break;
-    default:
-      Serial.printf("Unhandled event code: %d \n", e);
+      case EVENT_THROTTLE_CHANGED:
+        {
+          timeout = millis(); // refresh timeout
+
+          const uint8_t *addr = peer.peer_addr;
+          controller_packet.id = sendCounter;
+          uint8_t bs[sizeof(controller_packet)];
+          memcpy(bs, &controller_packet, sizeof(controller_packet));
+          esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
+
+          printStatus(result);
+
+          if (result == ESP_OK) 
+          {
+            DEBUGVAL("Sent to Board", controller_packet.id);
+            sendCounter++;
+          }
+          Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
+        }
+        break;
+      case EVENT_2:
+        Serial.printf("Event %d\n", e);
+        break;
+      case EVENT_3:
+        Serial.printf("Event %d\n", e);
+        break;
+      default:
+        Serial.printf("Unhandled event code: %d \n", e);
     }
   }
 }
