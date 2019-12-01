@@ -18,6 +18,22 @@ int _oldCounter = 0;
 int mapCounterTo127to255(int counter);
 
 //-------------------------------------------------------
+int8_t current_counter = 0;
+
+void encoder_handler(i2cEncoderLibV2 *obj) 
+{
+	int8_t counter = encoder.readCounterByte();
+	if (current_counter != counter)
+	{
+		EventEnum e = EVENT_THROTTLE_CHANGED;
+		xQueueSendToFront(xEncoderChangeQueue, &e, pdMS_TO_TICKS(100));
+		controller_packet.throttle =  mapCounterTo127to255(counter);
+		Serial.printf("Throttle: %d (%d)\n", controller_packet.throttle, counter);
+		current_counter = counter;
+	}
+}
+
+//-------------------------------------------------------
 
 void updateEncoderMaxCount(bool accelerateable) 
 {
@@ -29,35 +45,8 @@ void updateEncoderMaxCount(bool accelerateable)
 	else 
 	{
 		encoder.writeMax(0); 
-	}
-}
-
-//-------------------------------------------------------
-
-void encoder_increment(i2cEncoderLibV2 *obj)
-{
-	const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
-	EventEnum e = EVENT_THROTTLE_CHANGED;
-
-	int8_t counter = encoder.readCounterByte();
-
-	if (controller_packet.throttle != counter)
-	{
-		controller_packet.throttle = counter;
-		xQueueSendToFront(xEncoderChangeQueue, &e, xTicksToWait);
-		Serial.printf("Throttle: %d (%d)\n", mapCounterTo127to255(counter), counter);
-	}
-}
-
-void encoder_decrement(i2cEncoderLibV2 *obj)
-{
-	const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
-	EventEnum e = EVENT_THROTTLE_CHANGED;
-
-	int8_t counter = encoder.readCounterByte();
-	if (counter != controller_packet.throttle) {
-		controller_packet.throttle = counter;
-		xQueueSendToFront(xEncoderChangeQueue, &e, xTicksToWait);
+		encoder.writeCounter(0);
+		encoder_handler(NULL);
 	}
 }
 
@@ -85,8 +74,8 @@ bool setupEncoder(int32_t maxCounts, int32_t minCounts)
 	Serial.printf("Max: %d, Min: %d \n", encoder.readMax(), encoder.readMin());
 
 	// Definition of the events
-	encoder.onIncrement = encoder_increment;
-	encoder.onDecrement = encoder_decrement;
+	encoder.onIncrement = encoder_handler;
+	encoder.onDecrement = encoder_handler;
 	// encoder.onMax = [](i2cEncoderLibV2 *obj){ DEBUG("Encoder max"); };
 	// encoder.onMin = [](i2cEncoderLibV2 *obj){ DEBUG("Encoder min"); };
 	encoder.onButtonPush = encoder_push;

@@ -39,43 +39,18 @@ Button2 deadman(DEADMAN_INPUT_PIN);
 
 void deadmanPressed(Button2 &btn)
 {
-  const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
+  // const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
   bool pressed = true;
-  xQueueSendToFront(xDeadmanChangedQueue, &pressed, xTicksToWait);
+  xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
 }
 
 void deadmanReleased(Button2 &btn)
 {
-  const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
   bool pressed = false;
-  xQueueSendToFront(xDeadmanChangedQueue, &pressed, xTicksToWait);
+  xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
 }
 
 //------------------------------------------------------------------
-
-bool canAccelerate(int8_t throttle)
-{
-  // bool deadmanpressed =  throttle >= 0 && deadman.isPressed();
-  bool able = throttle <= 0 ||
-              (throttle >= 0 && deadman.isPressed());
-  DEBUGVAL("canAccelerate", throttle, able);
-  return able;
-}
-
-//------------------------------------------------------------------
-void updateDisplayWithMissedPacketCount()
-{
-#ifdef USING_SSD1306
-  u8g2.clearBuffer();
-  u8g2.setFontPosTop();
-  char buffx[16];
-  // sprintf(buffx, "Missed: %d", missedPacketsCounter);
-  u8g2.setFont(FONT_SIZE_MED); // full
-  int width = u8g2.getStrWidth(buffx);
-  u8g2.drawStr(LCD_WIDTH / 2 - width / 2, LCD_HEIGHT / 2 - FONT_SIZE_MED_LINE_HEIGHT / 2, buffx);
-  u8g2.sendBuffer();
-#endif
-}
 
 enum EventEnum
 {
@@ -83,31 +58,6 @@ enum EventEnum
   EVENT_2,
   EVENT_3
 } event;
-
-//------------------------------------------------------------------
-void sendToServer()
-{
-  // if (!idFromBoardExpected(nrf24.boardPacket.id))
-  // {
-  //   Serial.printf("Id '%u' from board not expected\n", nrf24.controllerPacket.id);
-  //   // missedPacketsCounter++;
-  //   updateDisplayWithMissedPacketCount();
-  // }
-
-  // nrf24.controllerPacket.id = nrf24.boardPacket.id;
-  // lastIdFromBoard = nrf24.boardPacket.id;
-  // bool success = nrf24.sendPacket(nrf24.RF24_SERVER);
-  // if (success)
-  // {
-  //   Serial.printf("Replied to %u OK (with %u)\n",
-  //                 nrf24.boardPacket.id,
-  //                 nrf24.controllerPacket.id);
-  // }
-  // else
-  // {
-  //   Serial.printf("Failed to send\n");
-  // }
-}
 
 //--------------------------------------------------------------------------------
 
@@ -141,17 +91,17 @@ void encoderTask_0(void *pvParameters)
   {
     bool accel_enabled = false;
     BaseType_t xStatus;
-    const TickType_t xTicksToWait = pdMS_TO_TICKS(20);
 
-    xStatus = xQueueReceive(xDeadmanChangedQueue, &accel_enabled, xTicksToWait);
+    /* deadman read */
+    xStatus = xQueueReceive(xDeadmanChangedQueue, &accel_enabled, pdMS_TO_TICKS(20));
     if (xStatus == pdPASS)
     {
       DEBUG("xDeadmanChangedQueue");
       updateEncoderMaxCount(accel_enabled);
     }
 
-    if (xCore0Semaphore != NULL &&
-        xSemaphoreTake(xCore0Semaphore, (TickType_t)10) == pdTRUE)
+    /* read encoder */
+    if (xCore0Semaphore != NULL && xSemaphoreTake(xCore0Semaphore, (TickType_t) 10) == pdTRUE)
     {
       encoderUpdate();
       xSemaphoreGive(xCore0Semaphore);
@@ -160,13 +110,6 @@ void encoderTask_0(void *pvParameters)
     {
       DEBUG("Can't take semaphore!");
     }
-    // bool encoderChanged = millis() - other_now > random(2000);
-    // if (encoderChanged)
-    // {
-    //   other_now = millis();
-    //   EventEnum e = EVENT_THROTTLE_CHANGED;
-    //   xQueueSendToFront(xEncoderChangeQueue, &e, xTicksToWait);
-    // }
     vTaskDelay(10);
   }
   vTaskDelete(NULL);
@@ -246,7 +189,8 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
   VescData rxdata;
   memcpy(/*dest*/ &rxdata, /*src*/ data, data_len);
 
-  DEBUGVAL(rxdata.id, sendCounter, lastPacketId, rxdata.batteryVoltage);
+  // DEBUGVAL(rxdata.id);
+  Serial.printf(".");
 
   if (lastPacketId != rxdata.id - 1)
   {
@@ -287,7 +231,7 @@ void setup()
   });
   client.setOnNotifyEvent(packetReceived);
   client.setOnSentEvent(packetSent);
-  initESPNow();
+  initESPNow(/*master*/ false);
 
   Wire.begin();
   delay(10);
@@ -310,8 +254,6 @@ void setup()
   //https://www.aliexpress.com/item/32871318121.html
   setupLCD();
 #endif
-
-  // updateDisplayWithMissedPacketCount();
 }
 //------------------------------------------------------------------
 
@@ -333,7 +275,7 @@ void loop()
     esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
     if (result == ESP_OK)
     {
-      DEBUG("Sent timeout packet");
+      // DEBUG("Sent timeout packet");
       sendCounter++;
     }
     else {
