@@ -7,7 +7,6 @@
 #include <Wire.h>
 #include <TaskScheduler.h>
 #include <VescData.h>
-#include <state_machine.h>
 
 #define OLED_SCL 15
 #define OLED_SDA 4
@@ -21,8 +20,6 @@
 
 #define DEADMAN_INPUT_PIN 0
 #define DEADMAN_GND_PIN 12
-
-#include "SSD1306.h"
 //------------------------------------------------------------------
 
 VescData vescdata, initialVescData;
@@ -31,6 +28,8 @@ bool serverOnline = false;
 
 #include <espNowClient.h>
 #include "utils.h"
+#include "SSD1306.h"
+#include <state_machine.h>
 
 // prototypes
 void checkConnected();
@@ -146,55 +145,6 @@ void stateMachineTask_1(void *pvParameters)
   vTaskDelete(NULL);
 }
 
-void i2cScanner()
-{
-  byte error, address;
-  int nDevices;
-
-  Serial.println("Scanning...");
-
-  nDevices = 0;
-  for (address = 1; address < 127; address++)
-  {
-    // The i2c_scanner uses the return value of
-    // the Write.endTransmisstion to see if
-    // a device did acknowledge to the address.
-    Wire.beginTransmission(address);
-    error = Wire.endTransmission();
-
-    if (error == 0)
-    {
-      Serial.print("I2C device found at address 0x");
-      if (address < 16)
-        Serial.print("0");
-      Serial.print(address, HEX);
-      Serial.println("  !");
-
-      nDevices++;
-    }
-    else if (error == 4)
-    {
-      Serial.print("Unknown error at address 0x");
-      if (address < 16)
-        Serial.print("0");
-      Serial.println(address, HEX);
-    }
-  }
-  Serial.printf("scanner done, devices found: %d\n", nDevices);
-}
-
-void powerpins_init()
-{
-  // deadman
-  pinMode(DEADMAN_GND_PIN, OUTPUT);
-  digitalWrite(DEADMAN_GND_PIN, LOW);
-  // encoder
-  pinMode(ENCODER_PWR_PIN, OUTPUT);
-  digitalWrite(ENCODER_PWR_PIN, HIGH);
-  pinMode(ENCODER_GND_PIN, OUTPUT);
-  digitalWrite(ENCODER_GND_PIN, LOW);
-}
-
 void button_init()
 {
   deadman.setPressedHandler(deadmanPressed);
@@ -246,7 +196,6 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 
 void packetSent()
 {
-  // DEBUGFN("");
 }
 
 void setup()
@@ -270,7 +219,6 @@ void setup()
 
   Wire.begin();
   delay(10);
-  i2cScanner();
 
   if (setupEncoder(0, BRAKE_MIN_ENCODER_COUNTS) == false)
   {
@@ -363,7 +311,7 @@ void checkConnected()
 {
   if (serverOnline == true) 
   {
-    if (millis() - lastPacketRxTime > 2000)
+    if (millis() - lastPacketRxTime > 4000)
     {    
       DEBUG("disconnected");
       serverOnline = false;
@@ -373,7 +321,7 @@ void checkConnected()
   }
   else 
   {
-    if (millis() - lastPacketRxTime < 2000)
+    if (millis() - lastPacketRxTime < 4000)
     {
       DEBUG("connected");
       serverOnline = true;

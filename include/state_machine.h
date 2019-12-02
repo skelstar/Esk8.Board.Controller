@@ -22,16 +22,31 @@ State state_connecting(
 State state_connected(
   [] {
     DEBUG("state_connected");
+    u8g2.clearBuffer();
+    lcd_line_text(5, 64/2, "connected", /*centered*/ true);
+    u8g2.sendBuffer();
   },
-  [] {
-
-  }, 
+  NULL, 
   NULL
 );
 //-------------------------------
-State state_server_disconnected(
+State state_disconnected(
   [] {
-    DEBUG("state_server_disconnected");
+    DEBUG("state_disconnected");
+    u8g2.clearBuffer();
+    lcd_line_text(5, 64/2, "disconnected", /*centered*/ true);
+    u8g2.sendBuffer();
+  },
+  NULL, 
+  NULL
+);
+//-------------------------------
+State state_ready(
+  [] {
+    DEBUG("state_ready");
+    u8g2.clearBuffer();
+    lcd_line_text(5, 64/2, "ready", /*centered*/ true);
+    u8g2.sendBuffer();
   },
   NULL, 
   NULL
@@ -43,11 +58,13 @@ Fsm fsm(&state_connecting);
 void addFsmTransitions() {
 
   fsm_event = EV_SERVER_DISCONNECTED;
-  fsm.add_transition(&state_connected, &state_server_disconnected, fsm_event, NULL);
+  fsm.add_transition(&state_connected, &state_disconnected, fsm_event, NULL);
+  fsm.add_transition(&state_ready, &state_disconnected, fsm_event, NULL);
 
   fsm_event = EV_SERVER_CONNECTED;
   fsm.add_transition(&state_connecting, &state_connected, fsm_event, NULL);
-  fsm.add_transition(&state_server_disconnected, &state_connected, fsm_event, NULL);
+  fsm.add_timed_transition(&state_connected, &state_ready, 1000, NULL);
+  fsm.add_transition(&state_disconnected, &state_connected, fsm_event, NULL);
 
   fsm_event = EV_BUTTON_CLICK;
 
