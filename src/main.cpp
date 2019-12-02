@@ -7,6 +7,7 @@
 #include <Wire.h>
 #include <TaskScheduler.h>
 #include <VescData.h>
+#include <elapsedMillis.h>
 
 #define OLED_SCL 15
 #define OLED_SDA 4
@@ -24,7 +25,9 @@
 
 VescData vescdata, initialVescData;
 ControllerData controller_packet;
+
 bool serverOnline = false;
+elapsedMillis sinceSentLast;
 
 #include <espNowClient.h>
 #include "utils.h"
@@ -194,6 +197,24 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
   lastPacketId = rxdata.id;
 }
 
+void sendPacket()
+{
+  const uint8_t *addr = peer.peer_addr;
+  controller_packet.id = sendCounter;
+  uint8_t bs[sizeof(controller_packet)];
+  memcpy(bs, &controller_packet, sizeof(controller_packet));
+  esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
+
+  printStatus(result);
+
+  if (result == ESP_OK)
+  {
+    sinceSentLast = 0;
+    DEBUGVAL("Sent to Board", controller_packet.id);
+    sendCounter++;
+  }
+}
+
 void packetSent()
 {
 }
@@ -241,7 +262,6 @@ void setup()
 #endif
 }
 //------------------------------------------------------------------
-long timeout = 0;
 
 void loop()
 {
@@ -249,9 +269,9 @@ void loop()
 
   checkConnected();
 
-  if (millis() - timeout > 500)
+  if (sinceSentLast > 500)
   {
-    timeout = millis();
+    sinceSentLast = 0;
     const uint8_t *addr = peer.peer_addr;
     controller_packet.id = sendCounter;
     uint8_t bs[sizeof(controller_packet)];
@@ -277,21 +297,7 @@ void loop()
     {
     case EVENT_THROTTLE_CHANGED:
     {
-      timeout = millis(); // refresh timeout
-
-      const uint8_t *addr = peer.peer_addr;
-      controller_packet.id = sendCounter;
-      uint8_t bs[sizeof(controller_packet)];
-      memcpy(bs, &controller_packet, sizeof(controller_packet));
-      esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
-
-      printStatus(result);
-
-      if (result == ESP_OK)
-      {
-        DEBUGVAL("Sent to Board", controller_packet.id);
-        sendCounter++;
-      }
+      sendPacket();
       Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
     }
     break;
@@ -307,19 +313,19 @@ void loop()
   }
 }
 //------------------------------------------------------------------
-void checkConnected() 
+void checkConnected()
 {
-  if (serverOnline == true) 
+  if (serverOnline == true)
   {
     if (millis() - lastPacketRxTime > 4000)
-    {    
+    {
       DEBUG("disconnected");
       serverOnline = false;
       StateMachineEventEnum ev = EV_SERVER_DISCONNECTED;
       xQueueSendToFront(xStateMachineQueue, &ev, pdMS_TO_TICKS(10));
-    }  
+    }
   }
-  else 
+  else
   {
     if (millis() - lastPacketRxTime < 4000)
     {

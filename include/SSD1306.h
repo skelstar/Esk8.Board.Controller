@@ -133,6 +133,7 @@ const bool FONT_DIGITS_3x5[11][5][3] = {
 void setupLCD() {
   u8g2.begin();
 	u8g2.setContrast(OLED_CONTRAST_HIGH);
+  u8g2.setDisplayRotation(U8G2_R2);
 
 	u8g2.clearBuffer();
 	u8g2.setFont(u8g2_font_logisoso26_tf);
