@@ -266,7 +266,7 @@ void setup()
   });
   client.setOnNotifyEvent(packetReceived);
   client.setOnSentEvent(packetSent);
-  initESPNow(/*master*/ false);
+  initESPNow();
 
   Wire.begin();
   delay(10);
