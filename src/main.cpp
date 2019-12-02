@@ -9,10 +9,6 @@
 #include <VescData.h>
 #include <elapsedMillis.h>
 
-#define OLED_SCL 15
-#define OLED_SDA 4
-#define OLED_RST 16
-
 #define ENCODER_PWR_PIN 5
 #define ENCODER_GND_PIN 17
 

@@ -22,9 +22,7 @@ State state_connecting(
 State state_connected(
   [] {
     DEBUG("state_connected");
-    u8g2.clearBuffer();
-    lcd_line_text(5, 64/2, "connected", /*centered*/ true);
-    u8g2.sendBuffer();
+    lcdMessage("connected");
   },
   NULL, 
   NULL
@@ -34,7 +32,7 @@ State state_disconnected(
   [] {
     DEBUG("state_disconnected");
     u8g2.clearBuffer();
-    lcd_line_text(5, 64/2, "disconnected", /*centered*/ true);
+    lcd_line_text(5, 64/2, "disconnected", /*vertical*/ true, /*horizontal*/ true);
     u8g2.sendBuffer();
   },
   NULL, 
@@ -44,9 +42,7 @@ State state_disconnected(
 State state_ready(
   [] {
     DEBUG("state_ready");
-    u8g2.clearBuffer();
-    lcd_line_text(5, 64/2, "ready", /*centered*/ true);
-    u8g2.sendBuffer();
+    lcdMessage("ready");
   },
   NULL, 
   NULL
