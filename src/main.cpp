@@ -7,7 +7,6 @@
 #include <Wire.h>
 #include <TaskScheduler.h>
 #include <VescData.h>
-#include <espNowClient.h>
 #include <state_machine.h>
 
 #define OLED_SCL 15
@@ -30,8 +29,13 @@ VescData vescdata, initialVescData;
 ControllerData controller_packet;
 bool serverOnline = false;
 
+#include <espNowClient.h>
 #include "utils.h"
 
+// prototypes
+void checkConnected();
+
+// queues
 xQueueHandle xEncoderChangeQueue;
 xQueueHandle xDeadmanChangedQueue;
 xQueueHandle xStateMachineQueue;
@@ -131,7 +135,7 @@ void stateMachineTask_1(void *pvParameters)
     xStatus = xQueueReceive(xStateMachineQueue, &ev, pdMS_TO_TICKS(20));
     if (xStatus == pdPASS)
     {
-      // DEBUG("xStateMachineQueue");
+      DEBUG("xStateMachineQueue");
       fsm.trigger(ev);
     }
 
@@ -252,6 +256,8 @@ void setup()
   powerpins_init();
   button_init();
 
+  addFsmTransitions();
+
   client.setOnConnectedEvent([] {
     Serial.printf("Connected!\n");
   });
@@ -287,34 +293,13 @@ void setup()
 #endif
 }
 //------------------------------------------------------------------
-
 long timeout = 0;
-BaseType_t xStatus;
-const TickType_t xTicksToWait = pdMS_TO_TICKS(50);
 
 void loop()
 {
   deadman.loop();
 
-  if (serverOnline == true) 
-  {
-    if (millis() - lastPacketRxTime > 2000)
-    {    
-      serverOnline = false;
-      StateMachineEventEnum ev = EV_SERVER_DISCONNECTED;
-      xQueueSendToFront(xStateMachineQueue, &ev, pdMS_TO_TICKS(10));
-    }  
-  }
-  else 
-  {
-    if (millis() - lastPacketRxTime < 2000)
-    {
-      DEBUG("connected");
-      serverOnline = true;
-      StateMachineEventEnum ev = EV_SERVER_CONNECTED;
-      xQueueSendToFront(xStateMachineQueue, &ev, pdMS_TO_TICKS(10));
-    }
-  }
+  checkConnected();
 
   if (millis() - timeout > 500)
   {
@@ -335,8 +320,9 @@ void loop()
     }
   }
 
+  BaseType_t xStatus;
   EventEnum e;
-  xStatus = xQueueReceive(xEncoderChangeQueue, &e, xTicksToWait);
+  xStatus = xQueueReceive(xEncoderChangeQueue, &e, pdMS_TO_TICKS(50));
   if (xStatus == pdPASS)
   {
     switch (e)
@@ -373,3 +359,26 @@ void loop()
   }
 }
 //------------------------------------------------------------------
+void checkConnected() 
+{
+  if (serverOnline == true) 
+  {
+    if (millis() - lastPacketRxTime > 2000)
+    {    
+      DEBUG("disconnected");
+      serverOnline = false;
+      StateMachineEventEnum ev = EV_SERVER_DISCONNECTED;
+      xQueueSendToFront(xStateMachineQueue, &ev, pdMS_TO_TICKS(10));
+    }  
+  }
+  else 
+  {
+    if (millis() - lastPacketRxTime < 2000)
+    {
+      DEBUG("connected");
+      serverOnline = true;
+      StateMachineEventEnum ev = EV_SERVER_CONNECTED;
+      xQueueSendToFront(xStateMachineQueue, &ev, pdMS_TO_TICKS(10));
+    }
+  }
+}
