@@ -12,46 +12,59 @@ enum StateMachineEventEnum
 
 //-------------------------------
 State state_connecting(
-  [] { 
-    DEBUG("state_connecting");
-  }, 
-  NULL, 
-  NULL
-);
+    [] {
+      DEBUG("state_connecting");
+    },
+    NULL,
+    NULL);
 //-------------------------------
 State state_connected(
-  [] {
-    DEBUG("state_connected");
-    lcdMessage("connected");
-  },
-  NULL, 
-  NULL
-);
+    [] {
+      DEBUG("state_connected");
+      lcdMessage("connected");
+    },
+    NULL,
+    NULL);
 //-------------------------------
 State state_disconnected(
-  [] {
-    DEBUG("state_disconnected");
-    u8g2.clearBuffer();
-    lcd_line_text(5, 64/2, "disconnected", /*vertical*/ true, /*horizontal*/ true);
-    u8g2.sendBuffer();
-  },
-  NULL, 
-  NULL
-);
+    [] {
+      DEBUG("state_disconnected");
+      u8g2.clearBuffer();
+      lcd_line_text(5, 64 / 2, "disconnected", /*vertical*/ true, /*horizontal*/ true);
+      u8g2.sendBuffer();
+    },
+    NULL,
+    NULL);
 //-------------------------------
 State state_ready(
-  [] {
-    DEBUG("state_ready");
-    lcdMessage("ready");
-  },
-  NULL, 
-  NULL
-);
+    [] {
+      DEBUG("state_ready");
+      lcdMessage("ready");
+    },
+    NULL,
+    NULL);
+//-------------------------------
+State state_missing_packets(
+    [] {
+      DEBUG("state_missing_packets");
+      char buff[3];
+      getIntString(buff, 23);
+      u8g2.clearBuffer();
+      uint8_t pixelSize = 6;
+      uint8_t spacing = 4;
+      int width = strlen(buff) * 3 + (strlen(buff) * (spacing-1));
+      chunkyDrawFloat(LCD_WIDTH/2-width/2, LCD_HEIGHT/2 - (pixelSize*5)/2, buff, "pkts", spacing, pixelSize);
+      u8g2.sendBuffer();
+    },
+    [] {
+    },
+    NULL);
 //-------------------------------
 
 Fsm fsm(&state_connecting);
 
-void addFsmTransitions() {
+void addFsmTransitions()
+{
 
   fsm_event = EV_SERVER_DISCONNECTED;
   fsm.add_transition(&state_connected, &state_disconnected, fsm_event, NULL);
@@ -60,6 +73,7 @@ void addFsmTransitions() {
   fsm_event = EV_SERVER_CONNECTED;
   fsm.add_transition(&state_connecting, &state_connected, fsm_event, NULL);
   fsm.add_timed_transition(&state_connected, &state_ready, 1000, NULL);
+  fsm.add_timed_transition(&state_ready, &state_missing_packets, 1000, NULL);
   fsm.add_transition(&state_disconnected, &state_connected, fsm_event, NULL);
 
   fsm_event = EV_BUTTON_CLICK;
@@ -70,6 +84,6 @@ void addFsmTransitions() {
 
   fsm_event = EV_HELD_DOWN_WAIT;
 
-  fsm_event = EV_NO_HELD_OPTION_SELECTED;  // no option selected
+  fsm_event = EV_NO_HELD_OPTION_SELECTED; // no option selected
 }
 /* ---------------------------------------------- */

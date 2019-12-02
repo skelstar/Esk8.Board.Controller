@@ -196,6 +196,12 @@ void clearScreen()
   u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
+char *getIntString(char *buff, int val)
+{
+  itoa(val, buff, 10);
+  return buff;
+}
+//--------------------------------------------------------------------------------
 char *getFloatString(char *buff, float val, uint8_t upper, uint8_t lower)
 {
   dtostrf(val, upper, lower, buff);
