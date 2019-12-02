@@ -8,9 +8,6 @@ i2cEncoderLibV2 encoder(0x01); // v2
 #define ACCEL_MAX_ENCODER_COUNTS	20
 #define BRAKE_MIN_ENCODER_COUNTS	-10
 
-// int32_t _maxCounts = 0;
-// int32_t _minCounts = 0;
-
 int _oldCounter = 0;
 
 //-------------------------------------------------------

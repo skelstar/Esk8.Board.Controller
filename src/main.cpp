@@ -8,6 +8,7 @@
 #include <TaskScheduler.h>
 #include <VescData.h>
 #include <espNowClient.h>
+#include <state_machine.h>
 
 #define OLED_SCL 15
 #define OLED_SDA 4
@@ -27,11 +28,13 @@
 
 VescData vescdata, initialVescData;
 ControllerData controller_packet;
+bool serverOnline = false;
 
 #include "utils.h"
 
 xQueueHandle xEncoderChangeQueue;
 xQueueHandle xDeadmanChangedQueue;
+xQueueHandle xStateMachineQueue;
 
 //------------------------------------------------------------------
 
@@ -66,11 +69,11 @@ enum EventEnum
 //--------------------------------------------------------------------------------
 
 #define OTHER_CORE 0
+#define NORMAL_CORE 1
 SemaphoreHandle_t xCore0Semaphore;
 
 void coreTask_0(void *pvParameters)
 {
-
   Serial.printf("Task running on core %d\n", xPortGetCoreID());
   const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
   xCore0Semaphore = xSemaphoreCreateMutex();
@@ -101,7 +104,7 @@ void encoderTask_0(void *pvParameters)
     }
 
     /* read encoder */
-    if (xCore0Semaphore != NULL && xSemaphoreTake(xCore0Semaphore, (TickType_t) 10) == pdTRUE)
+    if (xCore0Semaphore != NULL && xSemaphoreTake(xCore0Semaphore, (TickType_t)10) == pdTRUE)
     {
       encoderUpdate();
       xSemaphoreGive(xCore0Semaphore);
@@ -110,6 +113,30 @@ void encoderTask_0(void *pvParameters)
     {
       DEBUG("Can't take semaphore!");
     }
+    vTaskDelay(10);
+  }
+  vTaskDelete(NULL);
+}
+
+void stateMachineTask_1(void *pvParameters)
+{
+  Serial.printf("stateMachineTask_1 running on core %d\n", xPortGetCoreID());
+
+  while (true)
+  {
+    BaseType_t xStatus;
+    StateMachineEventEnum ev;
+
+    /* deadman read */
+    xStatus = xQueueReceive(xStateMachineQueue, &ev, pdMS_TO_TICKS(20));
+    if (xStatus == pdPASS)
+    {
+      // DEBUG("xStateMachineQueue");
+      fsm.trigger(ev);
+    }
+
+    fsm.run_machine();
+
     vTaskDelay(10);
   }
   vTaskDelete(NULL);
@@ -192,6 +219,8 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
   // DEBUGVAL(rxdata.id);
   Serial.printf(".");
 
+  lastPacketRxTime = millis();
+
   if (lastPacketId != rxdata.id - 1)
   {
     if (syncdWithServer)
@@ -244,9 +273,11 @@ void setup()
 
   xTaskCreatePinnedToCore(coreTask_0, "coreTask_0", 10000, NULL, /*priority*/ 0, NULL, OTHER_CORE);
   xTaskCreatePinnedToCore(encoderTask_0, "encoderTask_0", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
+  xTaskCreatePinnedToCore(stateMachineTask_1, "stateMachineTask_1", 10000, NULL, 1, NULL, NORMAL_CORE);
 
   xEncoderChangeQueue = xQueueCreate(1, sizeof(EventEnum));
   xDeadmanChangedQueue = xQueueCreate(1, sizeof(bool));
+  xStateMachineQueue = xQueueCreate(1, sizeof(StateMachineEventEnum));
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
 
@@ -265,6 +296,26 @@ void loop()
 {
   deadman.loop();
 
+  if (serverOnline == true) 
+  {
+    if (millis() - lastPacketRxTime > 2000)
+    {    
+      serverOnline = false;
+      StateMachineEventEnum ev = EV_SERVER_DISCONNECTED;
+      xQueueSendToFront(xStateMachineQueue, &ev, pdMS_TO_TICKS(10));
+    }  
+  }
+  else 
+  {
+    if (millis() - lastPacketRxTime < 2000)
+    {
+      DEBUG("connected");
+      serverOnline = true;
+      StateMachineEventEnum ev = EV_SERVER_CONNECTED;
+      xQueueSendToFront(xStateMachineQueue, &ev, pdMS_TO_TICKS(10));
+    }
+  }
+
   if (millis() - timeout > 500)
   {
     timeout = millis();
@@ -278,7 +329,8 @@ void loop()
       // DEBUG("Sent timeout packet");
       sendCounter++;
     }
-    else {
+    else
+    {
       DEBUG("Some issue with sending timeout packet");
     }
   }
@@ -289,34 +341,34 @@ void loop()
   {
     switch (e)
     {
-      case EVENT_THROTTLE_CHANGED:
-        {
-          timeout = millis(); // refresh timeout
+    case EVENT_THROTTLE_CHANGED:
+    {
+      timeout = millis(); // refresh timeout
 
-          const uint8_t *addr = peer.peer_addr;
-          controller_packet.id = sendCounter;
-          uint8_t bs[sizeof(controller_packet)];
-          memcpy(bs, &controller_packet, sizeof(controller_packet));
-          esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
+      const uint8_t *addr = peer.peer_addr;
+      controller_packet.id = sendCounter;
+      uint8_t bs[sizeof(controller_packet)];
+      memcpy(bs, &controller_packet, sizeof(controller_packet));
+      esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
 
-          printStatus(result);
+      printStatus(result);
 
-          if (result == ESP_OK) 
-          {
-            DEBUGVAL("Sent to Board", controller_packet.id);
-            sendCounter++;
-          }
-          Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
-        }
-        break;
-      case EVENT_2:
-        Serial.printf("Event %d\n", e);
-        break;
-      case EVENT_3:
-        Serial.printf("Event %d\n", e);
-        break;
-      default:
-        Serial.printf("Unhandled event code: %d \n", e);
+      if (result == ESP_OK)
+      {
+        DEBUGVAL("Sent to Board", controller_packet.id);
+        sendCounter++;
+      }
+      Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
+    }
+    break;
+    case EVENT_2:
+      Serial.printf("Event %d\n", e);
+      break;
+    case EVENT_3:
+      Serial.printf("Event %d\n", e);
+      break;
+    default:
+      Serial.printf("Unhandled event code: %d \n", e);
     }
   }
 }
