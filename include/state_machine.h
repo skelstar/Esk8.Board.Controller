@@ -8,6 +8,7 @@ enum StateMachineEventEnum
   EV_STOPPED_MOVING,
   EV_HELD_DOWN_WAIT,
   EV_NO_HELD_OPTION_SELECTED,
+  EV_RECV_PACKET,
 } fsm_event;
 
 //-------------------------------
@@ -48,7 +49,7 @@ State state_missing_packets(
     [] {
       DEBUG("state_missing_packets");
       char buff[3];
-      getIntString(buff, 23);
+      getIntString(buff, missedPacketCounter);
       u8g2.clearBuffer();
       uint8_t pixelSize = 6;
       uint8_t spacing = 4;
@@ -77,6 +78,9 @@ void addFsmTransitions()
   fsm.add_transition(&state_disconnected, &state_connected, fsm_event, NULL);
 
   fsm_event = EV_BUTTON_CLICK;
+
+  fsm_event = EV_RECV_PACKET;
+  fsm.add_transition(&state_missing_packets, &state_missing_packets, fsm_event, NULL);
 
   fsm_event = EV_MOVING;
 

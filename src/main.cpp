@@ -22,6 +22,7 @@
 VescData vescdata, initialVescData;
 ControllerData controller_packet;
 
+uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
 elapsedMillis sinceSentLast;
 
@@ -77,10 +78,8 @@ SemaphoreHandle_t xCore0Semaphore;
 void coreTask_0(void *pvParameters)
 {
   Serial.printf("Task running on core %d\n", xPortGetCoreID());
-  const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
   xCore0Semaphore = xSemaphoreCreateMutex();
 
-  long other_now = 0;
   while (true)
   {
     vTaskDelay(10);
@@ -160,37 +159,30 @@ void button_init()
 
 unsigned long lastPacketRxTime = 0;
 unsigned long lastPacketId = 0;
-float missedPacketCounter = 0.0;
 unsigned long sendCounter = 0;
-bool syncdWithServer = false;
+bool syncdWithServer = true;
 
 void packetReceived(const uint8_t *data, uint8_t data_len)
 {
-  VescData rxdata;
-  memcpy(/*dest*/ &rxdata, /*src*/ data, data_len);
+  memcpy(/*dest*/ &vescdata, /*src*/ data, data_len);
 
-  // DEBUGVAL(rxdata.id);
-  Serial.printf(".");
+  DEBUGVAL(sendCounter, vescdata.id);
 
   lastPacketRxTime = millis();
 
-  if (lastPacketId != rxdata.id - 1)
+  if (vescdata.id != sendCounter - 1)
   {
-    if (syncdWithServer)
-    {
-      uint8_t lost = (rxdata.id - 1) - lastPacketId;
-      missedPacketCounter = missedPacketCounter + lost;
-      Serial.printf("Missed %d packets! (%.0f total)\n", lost, missedPacketCounter);
-      vescdata.ampHours = missedPacketCounter;
-      // fsm.trigger(EV_RECV_PACKET);
-    }
+    uint8_t lost = (vescdata.id - 1) - lastPacketId;
+    missedPacketCounter = missedPacketCounter + lost;
+    Serial.printf("Missed %d packets! (%.0f total)\n", lost, missedPacketCounter);
+    fsm.trigger(EV_RECV_PACKET);
   }
   else
   {
     syncdWithServer = true;
   }
 
-  lastPacketId = rxdata.id;
+  lastPacketId = vescdata.id;
 }
 
 void sendPacket()
@@ -206,8 +198,12 @@ void sendPacket()
   if (result == ESP_OK)
   {
     sinceSentLast = 0;
-    DEBUGVAL("Sent to Board", controller_packet.id);
+    DEBUGVAL("Sent to Server", controller_packet.id);
     sendCounter++;
+  }
+  else 
+  {
+    DEBUGVAL("Error", sendCounter++);
   }
 }
 
@@ -267,21 +263,7 @@ void loop()
 
   if (sinceSentLast > 500)
   {
-    sinceSentLast = 0;
-    const uint8_t *addr = peer.peer_addr;
-    controller_packet.id = sendCounter;
-    uint8_t bs[sizeof(controller_packet)];
-    memcpy(bs, &controller_packet, sizeof(controller_packet));
-    esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
-    if (result == ESP_OK)
-    {
-      // DEBUG("Sent timeout packet");
-      sendCounter++;
-    }
-    else
-    {
-      DEBUG("Some issue with sending timeout packet");
-    }
+    sendPacket();
   }
 
   BaseType_t xStatus;
