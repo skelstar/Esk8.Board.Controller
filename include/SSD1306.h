@@ -8,9 +8,13 @@
 #define USING_SSD1306 1
 
 //https://github.com/olikraus/u8g2/wiki/fntgrpiconic#open_iconic_arrow_2x2
+
+#define   OLED_SCL 15
+#define   OLED_SDA 4
+#define   OLED_RST 16
 #define 	OLED_ADDR		0x3C
 #define 	OLED_CONTRAST_HIGH	100		// 256 highest
-U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0, /* clock=*/ OLED_SCL, /* data=*/ OLED_SDA, /* reset=*/ OLED_RST);
+U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R2, /* clock=*/ OLED_SCL, /* data=*/ OLED_SDA, /* reset=*/ OLED_RST);
 // U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, U8X8_PIN_NONE, OLED_SCL, OLED_SDA);
 
 #define LCD_WIDTH   128
@@ -133,12 +137,7 @@ const bool FONT_DIGITS_3x5[11][5][3] = {
 void setupLCD() {
   u8g2.begin();
 	u8g2.setContrast(OLED_CONTRAST_HIGH);
-
 	u8g2.clearBuffer();
-	u8g2.setFont(u8g2_font_logisoso26_tf);
-	int width = u8g2.getStrWidth("ready!");
-	u8g2.drawStr((LCD_WIDTH/2)-(width/2), (LCD_HEIGHT/2) + (26/2),"ready!");
-	u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
 void chunky_draw_digit(
@@ -197,8 +196,10 @@ void clearScreen()
   u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
-void lcdMovingScreen(float current)
+char *getIntString(char *buff, int val)
 {
+  itoa(val, buff, 10);
+  return buff;
 }
 //--------------------------------------------------------------------------------
 char *getFloatString(char *buff, float val, uint8_t upper, uint8_t lower)
@@ -244,9 +245,9 @@ void lcd_paramText(uint8_t x, uint8_t y, char *paramtext, float val1, float val2
   u8g2.drawStr(x, y, buffx);
 }
 //--------------------------------------------------------------------------------
-void lcd_line_text(uint8_t x, uint8_t y, char *text, bool centered)
+void lcd_line_text(uint8_t x, uint8_t y, char *text, bool vertical_centered, bool horizontal_centered)
 {
-  if (centered)
+  if (vertical_centered)
   {
     u8g2.setFontPosCenter();
   }
@@ -255,6 +256,11 @@ void lcd_line_text(uint8_t x, uint8_t y, char *text, bool centered)
     u8g2.setFontPosTop();
   }
   u8g2.setFont(FONT_SIZE_MED); // full
+  if (horizontal_centered) 
+  {
+    int width = u8g2.getStrWidth(text);
+    x = u8g2.getWidth()/2 - width/2;
+  }
   u8g2.drawStr(x, y, text);
 }
 //--------------------------------------------------------------------------------
@@ -346,9 +352,9 @@ void lcdMessage(char *message)
 {
   u8g2.clearBuffer();
   u8g2.setFontPosCenter(); // vertical center
-  u8g2.setFont(u8g2_font_tenthinnerguys_tf);
+  u8g2.setFont(u8g2_font_logisoso18_tr);
   int width = u8g2.getStrWidth(message);
-  u8g2.drawStr(LCD_HEIGHT / 2 - width / 2, LCD_WIDTH / 2, message);
+  u8g2.drawStr(LCD_WIDTH / 2 - width / 2, LCD_HEIGHT / 2, message);
   u8g2.sendBuffer();
 }
 
