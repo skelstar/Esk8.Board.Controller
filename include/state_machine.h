@@ -51,7 +51,9 @@ State state_missing_packets(
       DEBUG("state_missing_packets");
       char buff[6];
       // getIntString(buff, missedPacketCounter);
-      getFloatString(buff, (missedPacketCounter*1.0)/sendCounter, 2, 1);
+      float pctMissed = ((missedPacketCounter*1.0)/sendCounter)*100;
+      getFloatString(buff, pctMissed, 2, 1);
+      Serial.printf("(missedPacketCounter*1.0)/sendCounter %.1f\n", pctMissed);
       u8g2.clearBuffer();
       uint8_t pixelSize = 6;
       uint8_t spacing = 4;
