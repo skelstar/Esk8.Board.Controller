@@ -26,6 +26,11 @@ uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
 elapsedMillis sinceSentLast;
 
+unsigned long lastPacketRxTime = 0;
+unsigned long lastPacketId = 0;
+unsigned long sendCounter = 0;
+bool syncdWithServer = false;
+
 #include <espNowClient.h>
 #include "utils.h"
 #include "SSD1306.h"
@@ -157,11 +162,6 @@ void button_init()
 
 //--------------------------------------------------------------------------------
 
-unsigned long lastPacketRxTime = 0;
-unsigned long lastPacketId = 0;
-unsigned long sendCounter = 0;
-bool syncdWithServer = true;
-
 void packetReceived(const uint8_t *data, uint8_t data_len)
 {
   memcpy(/*dest*/ &vescdata, /*src*/ data, data_len);
@@ -170,16 +170,19 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 
   lastPacketRxTime = millis();
 
-  if (vescdata.id != sendCounter - 1)
+  if (lastPacketId > 1)
   {
-    uint8_t lost = (vescdata.id - 1) - lastPacketId;
-    missedPacketCounter = missedPacketCounter + lost;
-    Serial.printf("Missed %d packets! (%.0f total)\n", lost, missedPacketCounter);
-    fsm.trigger(EV_RECV_PACKET);
-  }
-  else
-  {
-    syncdWithServer = true;
+    if (vescdata.id > lastPacketId + 1)
+    {
+      uint8_t lost = (vescdata.id - 1) - lastPacketId;
+      missedPacketCounter = missedPacketCounter + lost;
+      Serial.printf("Missed %d packets! (%.0f total)\n", lost, missedPacketCounter);
+      fsm.trigger(EV_PACKET_MISSED);
+    }
+    else
+    {
+      syncdWithServer = true;
+    }
   }
 
   lastPacketId = vescdata.id;
@@ -193,15 +196,15 @@ void sendPacket()
   memcpy(bs, &controller_packet, sizeof(controller_packet));
   esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
 
-  printStatus(result);
+  printStatus(result, /*printSuccess*/ false);
 
   if (result == ESP_OK)
   {
     sinceSentLast = 0;
-    DEBUGVAL("Sent to Server", controller_packet.id);
+    // DEBUGVAL("Sent to Server", controller_packet.id);
     sendCounter++;
   }
-  else 
+  else
   {
     DEBUGVAL("Error", sendCounter++);
   }

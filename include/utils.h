@@ -1,11 +1,4 @@
 
-
-bool idFromBoardExpected(long id) {
-  // return lastIdFromBoard == NO_PACKET_RECEIVED_FROM_BOARD 
-  //     || id == lastIdFromBoard + 1;
-  return true;
-}
-
 void powerpins_init()
 {
   // deadman
@@ -16,4 +9,9 @@ void powerpins_init()
   digitalWrite(ENCODER_PWR_PIN, HIGH);
   pinMode(ENCODER_GND_PIN, OUTPUT);
   digitalWrite(ENCODER_GND_PIN, LOW);
+}
+
+bool boardOnline() 
+{
+  return lastPacketId + 1 >= sendCounter;
 }

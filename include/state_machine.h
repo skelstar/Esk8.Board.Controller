@@ -9,6 +9,7 @@ enum StateMachineEventEnum
   EV_HELD_DOWN_WAIT,
   EV_NO_HELD_OPTION_SELECTED,
   EV_RECV_PACKET,
+  EV_PACKET_MISSED,
 } fsm_event;
 
 //-------------------------------
@@ -48,13 +49,14 @@ State state_ready(
 State state_missing_packets(
     [] {
       DEBUG("state_missing_packets");
-      char buff[3];
-      getIntString(buff, missedPacketCounter);
+      char buff[6];
+      // getIntString(buff, missedPacketCounter);
+      getFloatString(buff, (missedPacketCounter*1.0)/sendCounter, 2, 1);
       u8g2.clearBuffer();
       uint8_t pixelSize = 6;
       uint8_t spacing = 4;
       int width = strlen(buff) * 3 + (strlen(buff) * (spacing-1));
-      chunkyDrawFloat(LCD_WIDTH/2-width/2, LCD_HEIGHT/2 - (pixelSize*5)/2, buff, "pkts", spacing, pixelSize);
+      chunkyDrawFloat(30, LCD_HEIGHT/2 - (pixelSize*5)/2, buff, "pkts", spacing, pixelSize);
       u8g2.sendBuffer();
     },
     [] {
@@ -79,7 +81,7 @@ void addFsmTransitions()
 
   fsm_event = EV_BUTTON_CLICK;
 
-  fsm_event = EV_RECV_PACKET;
+  fsm_event = EV_PACKET_MISSED;
   fsm.add_transition(&state_missing_packets, &state_missing_packets, fsm_event, NULL);
 
   fsm_event = EV_MOVING;
