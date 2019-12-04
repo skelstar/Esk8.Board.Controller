@@ -43,6 +43,7 @@ void checkConnected();
 xQueueHandle xEncoderChangeQueue;
 xQueueHandle xDeadmanChangedQueue;
 xQueueHandle xStateMachineQueue;
+xQueueHandle xSendPacketQueue;
 
 //------------------------------------------------------------------
 
@@ -79,6 +80,7 @@ enum EventEnum
 #define OTHER_CORE 0
 #define NORMAL_CORE 1
 SemaphoreHandle_t xCore0Semaphore;
+SemaphoreHandle_t xCore1Semaphore;
 
 void coreTask_0(void *pvParameters)
 {
@@ -148,6 +150,20 @@ void stateMachineTask_1(void *pvParameters)
   vTaskDelete(NULL);
 }
 
+//--------------------------------------------------------------------------------
+
+Scheduler runner;
+
+#define SEND_TO_BOARD_INTERVAL 500
+
+Task t_SendToBoard(
+    SEND_TO_BOARD_INTERVAL,
+    TASK_FOREVER,
+    [] {
+      uint8_t e = 1;
+      xQueueSendToFront(xSendPacketQueue, &e, pdMS_TO_TICKS(10));
+    });
+//--------------------------------------------------------------------------------
 void button_init()
 {
   deadman.setPressedHandler(deadmanPressed);
@@ -166,7 +182,7 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 {
   memcpy(/*dest*/ &vescdata, /*src*/ data, data_len);
 
-  DEBUGVAL(sendCounter, vescdata.id);
+  DEBUGVAL("rx", sendCounter, vescdata.id);
 
   lastPacketRxTime = millis();
 
@@ -190,11 +206,18 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 
 void sendPacket()
 {
+  esp_err_t result;
   const uint8_t *addr = peer.peer_addr;
-  controller_packet.id = sendCounter;
   uint8_t bs[sizeof(controller_packet)];
-  memcpy(bs, &controller_packet, sizeof(controller_packet));
-  esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
+  
+  if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
+  {
+    controller_packet.id = sendCounter;
+    memcpy(bs, &controller_packet, sizeof(controller_packet));
+
+    result = esp_now_send(addr, bs, sizeof(bs));
+    xSemaphoreGive(xCore1Semaphore);
+  }
 
   printStatus(result, /*printSuccess*/ false);
 
@@ -248,8 +271,17 @@ void setup()
   xEncoderChangeQueue = xQueueCreate(1, sizeof(EventEnum));
   xDeadmanChangedQueue = xQueueCreate(1, sizeof(bool));
   xStateMachineQueue = xQueueCreate(1, sizeof(StateMachineEventEnum));
+  xSendPacketQueue = xQueueCreate(1, sizeof(uint8_t));
+
+  xCore1Semaphore = xSemaphoreCreateMutex();
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
+
+  
+  runner.startNow();
+  runner.addTask(t_SendToBoard);
+  t_SendToBoard.enable();
+
 
 #ifdef USING_SSD1306
   //https://www.aliexpress.com/item/32871318121.html
@@ -264,10 +296,12 @@ void loop()
 
   checkConnected();
 
-  if (sinceSentLast > 500)
-  {
-    sendPacket();
-  }
+  runner.execute();
+
+  // if (sinceSentLast > 500)
+  // {
+  //   sendPacket();
+  // }
 
   BaseType_t xStatus;
   EventEnum e;
@@ -279,6 +313,7 @@ void loop()
     case EVENT_THROTTLE_CHANGED:
     {
       sendPacket();
+      t_SendToBoard.restart();
       Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
     }
     break;
@@ -291,6 +326,13 @@ void loop()
     default:
       Serial.printf("Unhandled event code: %d \n", e);
     }
+  }
+
+  uint8_t e2;
+  xStatus = xQueueReceive(xSendPacketQueue, &e2, pdMS_TO_TICKS(50));
+  if (xStatus == pdPASS)
+  {
+    sendPacket();
   }
 }
 //------------------------------------------------------------------
