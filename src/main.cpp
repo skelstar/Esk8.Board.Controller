@@ -30,6 +30,7 @@ unsigned long lastPacketRxTime = 0;
 unsigned long lastPacketId = 0;
 unsigned long sendCounter = 0;
 bool syncdWithServer = false;
+uint8_t rxCorrectCount = 0;
 
 #include <espNowClient.h>
 #include "utils.h"
@@ -51,7 +52,6 @@ Button2 deadman(DEADMAN_INPUT_PIN);
 
 void deadmanPressed(Button2 &btn)
 {
-  // const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
   bool pressed = true;
   xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
 }
@@ -164,6 +164,7 @@ Task t_SendToBoard(
       xQueueSendToFront(xSendPacketQueue, &e, pdMS_TO_TICKS(10));
     });
 //--------------------------------------------------------------------------------
+
 void button_init()
 {
   deadman.setPressedHandler(deadmanPressed);
@@ -175,14 +176,26 @@ void button_init()
     Serial.printf("deadman.setTripleClickHandler([](Button2 &b)\n");
   });
 }
-
 //--------------------------------------------------------------------------------
+
+uint8_t dotsPrinted = 0;
 
 void packetReceived(const uint8_t *data, uint8_t data_len)
 {
-  memcpy(/*dest*/ &vescdata, /*src*/ data, data_len);
+  if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
+  {
+    memcpy(/*dest*/ &vescdata, /*src*/ data, data_len);
+    xSemaphoreGive(xCore1Semaphore);
+  }
 
-  DEBUGVAL("rx", sendCounter, vescdata.id);
+  // DEBUGVAL("rx", sendCounter, vescdata.id);
+  if (dotsPrinted++ < 60) {
+    Serial.printf(".");
+  }
+  else {
+    Serial.printf(".\n");
+    dotsPrinted = 0;
+  }
 
   lastPacketRxTime = millis();
 
@@ -192,17 +205,24 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
     {
       uint8_t lost = (vescdata.id - 1) - lastPacketId;
       missedPacketCounter = missedPacketCounter + lost;
-      Serial.printf("Missed %d packets! (%.0f total)\n", lost, missedPacketCounter);
+      DEBUGVAL("Missed packets!", lost, missedPacketCounter, lastPacketId, vescdata.id);
       fsm.trigger(EV_PACKET_MISSED);
+      rxCorrectCount = 0;
     }
     else
     {
-      syncdWithServer = true;
+      rxCorrectCount++;
+      if (rxCorrectCount > 10)
+      {
+        syncdWithServer = true;
+        fsm.trigger(EV_SERVER_CONNECTED);
+      }
     }
   }
 
   lastPacketId = vescdata.id;
 }
+//--------------------------------------------------------------------------------
 
 void sendPacket()
 {
@@ -223,8 +243,8 @@ void sendPacket()
 
   if (result == ESP_OK)
   {
+    t_SendToBoard.restart();
     sinceSentLast = 0;
-    // DEBUGVAL("Sent to Server", controller_packet.id);
     sendCounter++;
   }
   else
@@ -243,6 +263,11 @@ void setup()
 
   powerpins_init();
   button_init();
+
+#ifdef USING_SSD1306
+  //https://www.aliexpress.com/item/32871318121.html
+  setupLCD();
+#endif
 
   addFsmTransitions();
 
@@ -281,12 +306,6 @@ void setup()
   runner.startNow();
   runner.addTask(t_SendToBoard);
   t_SendToBoard.enable();
-
-
-#ifdef USING_SSD1306
-  //https://www.aliexpress.com/item/32871318121.html
-  setupLCD();
-#endif
 }
 //------------------------------------------------------------------
 
@@ -294,7 +313,7 @@ void loop()
 {
   deadman.loop();
 
-  checkConnected();
+  // checkConnected();
 
   runner.execute();
 
