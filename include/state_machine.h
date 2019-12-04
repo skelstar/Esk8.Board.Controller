@@ -83,7 +83,7 @@ void addFsmTransitions()
 
   fsm_event = EV_BOARD_TIMEOUT;
   // fsm.add_transition(&state_searching, &state_disconnected, fsm_event, NULL);
-  fsm.add_timed_transition(&state_missing_packets, &state_missing_packets, fsm_event, [] 
+  fsm.add_transition(&state_missing_packets, &state_missing_packets, fsm_event, [] 
     { 
       controller_packet.throttle = 127; 
       DEBUG("EV_BOARD_TIMEOUT");

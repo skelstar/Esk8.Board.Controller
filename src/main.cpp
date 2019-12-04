@@ -24,7 +24,9 @@ ControllerData controller_packet;
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
+
 elapsedMillis sinceSentLast;
+elapsedMillis sinceLastRxFromBoard;
 
 unsigned long lastPacketRxTime = 0;
 unsigned long lastPacketId = 0;
@@ -164,15 +166,15 @@ Task t_SendToBoard(
       xQueueSendToFront(xSendPacketQueue, &e, pdMS_TO_TICKS(10));
     });
 
-Task t_BoardCommsTimeout(
-    BOARD_COMMS_TIMEOUT,
-    TASK_FOREVER,
-    [] {
-      if (syncdWithServer)
-      {
-        // fsm.trigger(EV_BOARD_TIMEOUT);
-      }
-    });
+// Task t_BoardCommsTimeout(
+//     BOARD_COMMS_TIMEOUT,
+//     TASK_FOREVER,
+//     [] {
+//       if (syncdWithServer)
+//       {
+//         // fsm.trigger(EV_BOARD_TIMEOUT);
+//       }
+//     });
 //--------------------------------------------------------------------------------
 
 void button_init()
@@ -194,12 +196,10 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 {
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
   {
+    sinceLastRxFromBoard = 0;
     memcpy(/*dest*/ &vescdata, /*src*/ data, data_len);
     xSemaphoreGive(xCore1Semaphore);
   }
-
-  t_BoardCommsTimeout.restart();
-  runner.execute();
 
   // DEBUGVAL("rx", sendCounter, vescdata.id);
   if (dotsPrinted++ < 60)
@@ -319,9 +319,7 @@ void setup()
 
   runner.startNow();
   runner.addTask(t_SendToBoard);
-  runner.addTask(t_BoardCommsTimeout);
   t_SendToBoard.enable();
-  t_BoardCommsTimeout.enable();
 }
 //------------------------------------------------------------------
 
@@ -330,6 +328,11 @@ void loop()
   deadman.loop();
 
   runner.execute();
+
+  if (sinceLastRxFromBoard > BOARD_COMMS_TIMEOUT) 
+  {
+    fsm.trigger(EV_BOARD_TIMEOUT);
+  }
 
   BaseType_t xStatus;
   EventEnum e;
