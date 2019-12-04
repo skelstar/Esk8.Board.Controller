@@ -10,6 +10,7 @@ enum StateMachineEventEnum
   EV_NO_HELD_OPTION_SELECTED,
   EV_RECV_PACKET,
   EV_PACKET_MISSED,
+  EV_BOARD_TIMEOUT, // havne't heard from the board for a while (BOARD_COMMS_TIMEOUT)
 } fsm_event;
 
 //-------------------------------
@@ -29,9 +30,9 @@ State state_syncing(
     NULL,
     NULL);
 //-------------------------------
-State state_connected(
+State state_searching(
     [] {
-      DEBUG("state_connected");
+      DEBUG("state_searching");
       lcdMessage("connected");
       missedPacketCounter = 0;
     },
@@ -69,16 +70,25 @@ Fsm fsm(&state_connecting);
 void addFsmTransitions()
 {
   fsm_event = EV_SERVER_DISCONNECTED;
-  fsm.add_transition(&state_connected, &state_disconnected, fsm_event, NULL);
+  fsm.add_transition(&state_searching, &state_disconnected, fsm_event, NULL);
 
   fsm_event = EV_PACKET_MISSED;
   fsm.add_transition(&state_connecting, &state_syncing, fsm_event, NULL);
   fsm.add_transition(&state_missing_packets, &state_missing_packets, fsm_event, NULL);
 
   fsm_event = EV_SERVER_CONNECTED;
-  fsm.add_transition(&state_syncing, &state_connected, fsm_event, NULL);
-  fsm.add_timed_transition(&state_connected, &state_missing_packets, 1000, NULL);
-  fsm.add_transition(&state_disconnected, &state_connected, fsm_event, NULL);
+  fsm.add_transition(&state_syncing, &state_searching, fsm_event, NULL);
+  fsm.add_timed_transition(&state_searching, &state_missing_packets, 1000, NULL);
+  fsm.add_transition(&state_disconnected, &state_searching, fsm_event, NULL);
+
+  fsm_event = EV_BOARD_TIMEOUT;
+  // fsm.add_transition(&state_searching, &state_disconnected, fsm_event, NULL);
+  fsm.add_timed_transition(&state_missing_packets, &state_missing_packets, fsm_event, [] 
+    { 
+      controller_packet.throttle = 127; 
+      DEBUG("EV_BOARD_TIMEOUT");
+    });
+
 
   fsm_event = EV_BUTTON_CLICK;
 

@@ -38,7 +38,6 @@ uint8_t rxCorrectCount = 0;
 #include <state_machine.h>
 
 // prototypes
-void checkConnected();
 
 // queues
 xQueueHandle xEncoderChangeQueue;
@@ -155,6 +154,7 @@ void stateMachineTask_1(void *pvParameters)
 Scheduler runner;
 
 #define SEND_TO_BOARD_INTERVAL 500
+#define BOARD_COMMS_TIMEOUT 1000
 
 Task t_SendToBoard(
     SEND_TO_BOARD_INTERVAL,
@@ -162,6 +162,16 @@ Task t_SendToBoard(
     [] {
       uint8_t e = 1;
       xQueueSendToFront(xSendPacketQueue, &e, pdMS_TO_TICKS(10));
+    });
+
+Task t_BoardCommsTimeout(
+    BOARD_COMMS_TIMEOUT,
+    TASK_FOREVER,
+    [] {
+      if (syncdWithServer)
+      {
+        // fsm.trigger(EV_BOARD_TIMEOUT);
+      }
     });
 //--------------------------------------------------------------------------------
 
@@ -188,19 +198,24 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
     xSemaphoreGive(xCore1Semaphore);
   }
 
+  t_BoardCommsTimeout.restart();
+  runner.execute();
+
   // DEBUGVAL("rx", sendCounter, vescdata.id);
-  if (dotsPrinted++ < 60) {
+  if (dotsPrinted++ < 60)
+  {
     Serial.printf(".");
   }
-  else {
+  else
+  {
     Serial.printf(".\n");
     dotsPrinted = 0;
   }
 
   lastPacketRxTime = millis();
 
-  if (lastPacketId > 1)
-  {
+  // if (lastPacketId > 1)
+  // {
     if (vescdata.id > lastPacketId + 1)
     {
       uint8_t lost = (vescdata.id - 1) - lastPacketId;
@@ -218,7 +233,7 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
         fsm.trigger(EV_SERVER_CONNECTED);
       }
     }
-  }
+  // }
 
   lastPacketId = vescdata.id;
 }
@@ -229,7 +244,7 @@ void sendPacket()
   esp_err_t result;
   const uint8_t *addr = peer.peer_addr;
   uint8_t bs[sizeof(controller_packet)];
-  
+
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
   {
     controller_packet.id = sendCounter;
@@ -302,10 +317,11 @@ void setup()
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
 
-  
   runner.startNow();
   runner.addTask(t_SendToBoard);
+  runner.addTask(t_BoardCommsTimeout);
   t_SendToBoard.enable();
+  t_BoardCommsTimeout.enable();
 }
 //------------------------------------------------------------------
 
@@ -313,14 +329,7 @@ void loop()
 {
   deadman.loop();
 
-  // checkConnected();
-
   runner.execute();
-
-  // if (sinceSentLast > 500)
-  // {
-  //   sendPacket();
-  // }
 
   BaseType_t xStatus;
   EventEnum e;
@@ -352,29 +361,5 @@ void loop()
   if (xStatus == pdPASS)
   {
     sendPacket();
-  }
-}
-//------------------------------------------------------------------
-void checkConnected()
-{
-  if (serverOnline == true)
-  {
-    if (millis() - lastPacketRxTime > 4000)
-    {
-      DEBUG("disconnected");
-      serverOnline = false;
-      StateMachineEventEnum ev = EV_SERVER_DISCONNECTED;
-      xQueueSendToFront(xStateMachineQueue, &ev, pdMS_TO_TICKS(10));
-    }
-  }
-  else
-  {
-    if (millis() - lastPacketRxTime < 4000)
-    {
-      DEBUG("connected");
-      serverOnline = true;
-      StateMachineEventEnum ev = EV_SERVER_CONNECTED;
-      xQueueSendToFront(xStateMachineQueue, &ev, pdMS_TO_TICKS(10));
-    }
   }
 }
