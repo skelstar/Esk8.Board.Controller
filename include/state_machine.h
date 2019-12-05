@@ -53,7 +53,7 @@ State state_missing_packets(
     [] {
       DEBUG("state_missing_packets");
       char buff[6];
-      getIntString(buff, missedPacketCounter);
+      getIntString(buff, board.num_missed_packets);
       u8g2.clearBuffer();
       uint8_t pixelSize = 6;
       uint8_t spacing = 4;
