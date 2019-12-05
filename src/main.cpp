@@ -24,6 +24,7 @@ ControllerData controller_packet;
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
+bool boardTimedOut = false;
 
 elapsedMillis sinceSentLast;
 elapsedMillis sinceLastRxFromBoard;
@@ -197,6 +198,11 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
   {
     sinceLastRxFromBoard = 0;
+    if (boardTimedOut) 
+    {
+      fsm.trigger(EV_SERVER_CONNECTED);
+      boardTimedOut = false;
+    }
     memcpy(/*dest*/ &vescdata, /*src*/ data, data_len);
     xSemaphoreGive(xCore1Semaphore);
   }
@@ -329,8 +335,9 @@ void loop()
 
   runner.execute();
 
-  if (sinceLastRxFromBoard > BOARD_COMMS_TIMEOUT) 
+  if (sinceLastRxFromBoard > BOARD_COMMS_TIMEOUT && !boardTimedOut) 
   {
+    boardTimedOut = true;
     fsm.trigger(EV_BOARD_TIMEOUT);
   }
 

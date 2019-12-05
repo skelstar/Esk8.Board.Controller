@@ -64,6 +64,16 @@ State state_missing_packets(
     NULL,    
     NULL);
 //-------------------------------
+State state_board_timedout(
+    [] {
+      DEBUG("state_board_timedout");
+      controller_packet.throttle = 127; 
+      lcdMessage(3, "TIMEDOUT");
+      u8g2.sendBuffer();
+    },
+    NULL,    
+    NULL);
+//-------------------------------
 
 Fsm fsm(&state_connecting);
 
@@ -80,14 +90,11 @@ void addFsmTransitions()
   fsm.add_transition(&state_syncing, &state_searching, fsm_event, NULL);
   fsm.add_timed_transition(&state_searching, &state_missing_packets, 1000, NULL);
   fsm.add_transition(&state_disconnected, &state_searching, fsm_event, NULL);
+  fsm.add_transition(&state_board_timedout, &state_missing_packets, fsm_event, NULL);
+
 
   fsm_event = EV_BOARD_TIMEOUT;
-  // fsm.add_transition(&state_searching, &state_disconnected, fsm_event, NULL);
-  fsm.add_transition(&state_missing_packets, &state_missing_packets, fsm_event, [] 
-    { 
-      controller_packet.throttle = 127; 
-      DEBUG("EV_BOARD_TIMEOUT");
-    });
+  fsm.add_transition(&state_missing_packets, &state_board_timedout, fsm_event, NULL);
 
 
   fsm_event = EV_BUTTON_CLICK;
