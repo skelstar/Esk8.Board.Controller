@@ -68,7 +68,7 @@ State state_board_timedout(
     [] {
       DEBUG("state_board_timedout");
       controller_packet.throttle = 127; 
-      lcdMessage(3, "TIMEDOUT");
+      lcdMessage(3, "TIMED OUT");
       u8g2.sendBuffer();
     },
     NULL,    

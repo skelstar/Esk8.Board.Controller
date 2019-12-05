@@ -24,12 +24,7 @@ ControllerData controller_packet;
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
-bool boardTimedOut = false;
 
-elapsedMillis sinceSentLast;
-elapsedMillis sinceLastRxFromBoard;
-
-// unsigned long board.lastPacketRxTime = 0;
 unsigned long lastPacketId = 0;
 unsigned long sendCounter = 0;
 bool syncdWithServer = false;
@@ -211,7 +206,7 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 
   board.update(vescdata.id);
 
-  if (board.missed_packets) 
+  if (board.missed_packets)
   {
     DEBUGVAL("\nMissed packets!", board.lost_packets, board.num_missed_packets);
     fsm.trigger(EV_PACKET_MISSED);
@@ -249,7 +244,6 @@ void sendPacket()
   if (result == ESP_OK)
   {
     t_SendToBoard.restart();
-    sinceSentLast = 0;
     sendCounter++;
   }
   else
@@ -257,10 +251,26 @@ void sendPacket()
     DEBUGVAL("Error", sendCounter++);
   }
 }
+//--------------------------------------------------------------------------------
 
 void packetSent()
 {
 }
+
+void board_state_change(Board::StateChangeEnum state)
+{
+  switch (state)
+  {
+    case Board::STATE_TIMEOUT:
+      fsm.trigger(EV_BOARD_TIMEOUT);
+      break;
+    case Board::STATE_ONLINE:
+      // fsm.trigger(EV_SERVER_CONNECTED);
+      break;
+  }
+}
+
+//--------------------------------------------------------------------------------
 
 void setup()
 {
@@ -310,6 +320,8 @@ void setup()
   runner.startNow();
   runner.addTask(t_SendToBoard);
   t_SendToBoard.enable();
+
+  board.setOnStateChange(board_state_change);
 }
 //------------------------------------------------------------------
 
@@ -319,11 +331,7 @@ void loop()
 
   runner.execute();
 
-  if (sinceLastRxFromBoard > BOARD_COMMS_TIMEOUT && !boardTimedOut) 
-  {
-    boardTimedOut = true;
-    fsm.trigger(EV_BOARD_TIMEOUT);
-  }
+  board.loop();
 
   BaseType_t xStatus;
   EventEnum e;
