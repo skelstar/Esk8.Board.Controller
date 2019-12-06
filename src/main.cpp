@@ -24,12 +24,15 @@ ControllerData controller_packet;
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
-elapsedMillis sinceSentLast;
 
-unsigned long lastPacketRxTime = 0;
 unsigned long lastPacketId = 0;
 unsigned long sendCounter = 0;
 bool syncdWithServer = false;
+uint8_t rxCorrectCount = 0;
+
+#include "board.h"
+
+Board board;
 
 #include <espNowClient.h>
 #include "utils.h"
@@ -37,12 +40,12 @@ bool syncdWithServer = false;
 #include <state_machine.h>
 
 // prototypes
-void checkConnected();
 
 // queues
 xQueueHandle xEncoderChangeQueue;
 xQueueHandle xDeadmanChangedQueue;
 xQueueHandle xStateMachineQueue;
+xQueueHandle xSendPacketQueue;
 
 //------------------------------------------------------------------
 
@@ -50,7 +53,6 @@ Button2 deadman(DEADMAN_INPUT_PIN);
 
 void deadmanPressed(Button2 &btn)
 {
-  // const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
   bool pressed = true;
   xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
 }
@@ -79,6 +81,7 @@ enum EventEnum
 #define OTHER_CORE 0
 #define NORMAL_CORE 1
 SemaphoreHandle_t xCore0Semaphore;
+SemaphoreHandle_t xCore1Semaphore;
 
 void coreTask_0(void *pvParameters)
 {
@@ -148,6 +151,23 @@ void stateMachineTask_1(void *pvParameters)
   vTaskDelete(NULL);
 }
 
+//--------------------------------------------------------------------------------
+
+Scheduler runner;
+
+#define SEND_TO_BOARD_INTERVAL 500
+// #define BOARD_COMMS_TIMEOUT 1000
+
+Task t_SendToBoard(
+    SEND_TO_BOARD_INTERVAL,
+    TASK_FOREVER,
+    [] {
+      uint8_t e = 1;
+      xQueueSendToFront(xSendPacketQueue, &e, pdMS_TO_TICKS(10));
+    });
+
+//--------------------------------------------------------------------------------
+
 void button_init()
 {
   deadman.setPressedHandler(deadmanPressed);
@@ -159,49 +179,67 @@ void button_init()
     Serial.printf("deadman.setTripleClickHandler([](Button2 &b)\n");
   });
 }
-
 //--------------------------------------------------------------------------------
+
+uint8_t dotsPrinted = 0;
 
 void packetReceived(const uint8_t *data, uint8_t data_len)
 {
-  memcpy(/*dest*/ &vescdata, /*src*/ data, data_len);
-
-  DEBUGVAL(sendCounter, vescdata.id);
-
-  lastPacketRxTime = millis();
-
-  if (lastPacketId > 1)
+  if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
   {
-    if (vescdata.id > lastPacketId + 1)
-    {
-      uint8_t lost = (vescdata.id - 1) - lastPacketId;
-      missedPacketCounter = missedPacketCounter + lost;
-      Serial.printf("Missed %d packets! (%.0f total)\n", lost, missedPacketCounter);
-      fsm.trigger(EV_PACKET_MISSED);
-    }
-    else
-    {
-      syncdWithServer = true;
-    }
+    board.lastPacketRxTime = millis();
+    fsm.trigger(EV_SERVER_CONNECTED);
+    memcpy(/*dest*/ &vescdata, /*src*/ data, data_len);
+    xSemaphoreGive(xCore1Semaphore);
   }
 
-  lastPacketId = vescdata.id;
+  dotsPrinted = printDot(dotsPrinted++);
+
+  board.update(vescdata.id);
+
+  if (board.missed_packets)
+  {
+    DEBUGVAL("\nMissed packets!", board.lost_packets, board.num_missed_packets);
+    fsm.trigger(EV_PACKET_MISSED);
+    rxCorrectCount = 0;
+  }
+  else
+  {
+    rxCorrectCount++;
+    if (rxCorrectCount > 10)
+    {
+      syncdWithServer = true;
+      fsm.trigger(EV_SERVER_CONNECTED);
+    }
+  }
 }
+//--------------------------------------------------------------------------------
 
 void sendPacket()
 {
+  esp_err_t result;
   const uint8_t *addr = peer.peer_addr;
-  controller_packet.id = sendCounter;
   uint8_t bs[sizeof(controller_packet)];
-  memcpy(bs, &controller_packet, sizeof(controller_packet));
-  esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
+
+  if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)50) == pdTRUE)
+  {
+    controller_packet.id = sendCounter;
+    memcpy(bs, &controller_packet, sizeof(controller_packet));
+
+    result = esp_now_send(addr, bs, sizeof(bs));
+    xSemaphoreGive(xCore1Semaphore);
+  }
+  else 
+  {
+    DEBUG("Unable to take sesmaphore");
+    return;
+  }
 
   printStatus(result, /*printSuccess*/ false);
 
   if (result == ESP_OK)
   {
-    sinceSentLast = 0;
-    // DEBUGVAL("Sent to Server", controller_packet.id);
+    t_SendToBoard.restart();
     sendCounter++;
   }
   else
@@ -209,10 +247,26 @@ void sendPacket()
     DEBUGVAL("Error", sendCounter++);
   }
 }
+//--------------------------------------------------------------------------------
 
 void packetSent()
 {
 }
+
+void board_state_change(Board::StateChangeEnum state)
+{
+  switch (state)
+  {
+    case Board::STATE_TIMEOUT:
+      fsm.trigger(EV_BOARD_TIMEOUT);
+      break;
+    case Board::STATE_ONLINE:
+      // fsm.trigger(EV_SERVER_CONNECTED);
+      break;
+  }
+}
+
+//--------------------------------------------------------------------------------
 
 void setup()
 {
@@ -220,6 +274,11 @@ void setup()
 
   powerpins_init();
   button_init();
+
+#ifdef USING_SSD1306
+  //https://www.aliexpress.com/item/32871318121.html
+  setupLCD();
+#endif
 
   addFsmTransitions();
 
@@ -248,13 +307,17 @@ void setup()
   xEncoderChangeQueue = xQueueCreate(1, sizeof(EventEnum));
   xDeadmanChangedQueue = xQueueCreate(1, sizeof(bool));
   xStateMachineQueue = xQueueCreate(1, sizeof(StateMachineEventEnum));
+  xSendPacketQueue = xQueueCreate(1, sizeof(uint8_t));
+
+  xCore1Semaphore = xSemaphoreCreateMutex();
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
 
-#ifdef USING_SSD1306
-  //https://www.aliexpress.com/item/32871318121.html
-  setupLCD();
-#endif
+  runner.startNow();
+  runner.addTask(t_SendToBoard);
+  t_SendToBoard.enable();
+
+  board.setOnStateChange(board_state_change);
 }
 //------------------------------------------------------------------
 
@@ -262,12 +325,9 @@ void loop()
 {
   deadman.loop();
 
-  checkConnected();
+  runner.execute();
 
-  if (sinceSentLast > 500)
-  {
-    sendPacket();
-  }
+  board.loop();
 
   BaseType_t xStatus;
   EventEnum e;
@@ -279,6 +339,7 @@ void loop()
     case EVENT_THROTTLE_CHANGED:
     {
       sendPacket();
+      t_SendToBoard.restart();
       Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
     }
     break;
@@ -292,28 +353,11 @@ void loop()
       Serial.printf("Unhandled event code: %d \n", e);
     }
   }
-}
-//------------------------------------------------------------------
-void checkConnected()
-{
-  if (serverOnline == true)
+
+  uint8_t e2;
+  xStatus = xQueueReceive(xSendPacketQueue, &e2, pdMS_TO_TICKS(50));
+  if (xStatus == pdPASS)
   {
-    if (millis() - lastPacketRxTime > 4000)
-    {
-      DEBUG("disconnected");
-      serverOnline = false;
-      StateMachineEventEnum ev = EV_SERVER_DISCONNECTED;
-      xQueueSendToFront(xStateMachineQueue, &ev, pdMS_TO_TICKS(10));
-    }
-  }
-  else
-  {
-    if (millis() - lastPacketRxTime < 4000)
-    {
-      DEBUG("connected");
-      serverOnline = true;
-      StateMachineEventEnum ev = EV_SERVER_CONNECTED;
-      xQueueSendToFront(xStateMachineQueue, &ev, pdMS_TO_TICKS(10));
-    }
+    sendPacket();
   }
 }
