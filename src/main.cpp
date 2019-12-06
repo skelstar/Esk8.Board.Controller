@@ -193,16 +193,7 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
     xSemaphoreGive(xCore1Semaphore);
   }
 
-  // DEBUGVAL("rx", sendCounter, vescdata.id);
-  if (dotsPrinted++ < 60)
-  {
-    Serial.printf(".");
-  }
-  else
-  {
-    Serial.printf(".\n");
-    dotsPrinted = 0;
-  }
+  dotsPrinted = printDot(dotsPrinted++);
 
   board.update(vescdata.id);
 
@@ -230,13 +221,18 @@ void sendPacket()
   const uint8_t *addr = peer.peer_addr;
   uint8_t bs[sizeof(controller_packet)];
 
-  if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
+  if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)50) == pdTRUE)
   {
     controller_packet.id = sendCounter;
     memcpy(bs, &controller_packet, sizeof(controller_packet));
 
     result = esp_now_send(addr, bs, sizeof(bs));
     xSemaphoreGive(xCore1Semaphore);
+  }
+  else 
+  {
+    DEBUG("Unable to take sesmaphore");
+    return;
   }
 
   printStatus(result, /*printSuccess*/ false);

@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <elapsedMillis.h>
+// #include <elapsedMillis.h>
 
 #define BOARD_COMMS_TIMEOUT 1000
 #define MISSED_PACKETS_THRESHOLD 2
