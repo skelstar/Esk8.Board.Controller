@@ -1,20 +1,16 @@
 #include <Arduino.h>
-// #include <elapsedMillis.h>
-
-#define BOARD_COMMS_TIMEOUT 1000
-#define MISSED_PACKETS_THRESHOLD 2
 
 class Board
 {
 public:
-  typedef enum StateChangeEnum
+  typedef enum BoardEventEnum
   {
-    STATE_ONLINE = 0,
-    STATE_OFFLINE,
-    STATE_TIMEOUT
+    EV_BOARD_ONLINE = 0,
+    EV_BOARD_TIMEOUT,
+    EV_BOARD_MISSED_PACKETS,
   };
 
-  typedef void (*stateChangeCallBack)(StateChangeEnum state);
+  typedef void (*eventCallBack)(BoardEventEnum ev);
 
   Board()
   {
@@ -24,9 +20,9 @@ public:
     lost_packets = 0;
   }
 
-  void setOnStateChange(stateChangeCallBack ptr)
+  void setOnEvent(eventCallBack ptr)
   {
-    _on_state_change_ptr = ptr;
+    _on_event_callback = ptr;
   }
 
   bool timed_out()
@@ -38,21 +34,11 @@ public:
   {
     if (timed_out())
     {
-      if (state != STATE_TIMEOUT)
-      {
-        state = STATE_TIMEOUT;
-        DEBUG("board STATE_TIMEOUT");
-        _on_state_change_ptr(STATE_TIMEOUT);
-      }
+      _on_event_callback(EV_BOARD_TIMEOUT);
     }
     else 
     {
-      if (state == STATE_TIMEOUT)
-      {
-        state = STATE_ONLINE;
-        DEBUG("board STATE_ONLINE");
-        _on_state_change_ptr(STATE_ONLINE);
-      }
+      _on_event_callback(EV_BOARD_ONLINE);
     }
   }
 
@@ -79,6 +65,5 @@ public:
   bool missed_packets = false;
 
 private:
-  stateChangeCallBack _on_state_change_ptr;
-  StateChangeEnum state;
+  eventCallBack _on_event_callback;
 };

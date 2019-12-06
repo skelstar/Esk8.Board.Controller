@@ -17,6 +17,10 @@
 
 #define DEADMAN_INPUT_PIN 0
 #define DEADMAN_GND_PIN 12
+
+#define BOARD_COMMS_TIMEOUT       1000
+#define MISSED_PACKETS_THRESHOLD  2
+
 //------------------------------------------------------------------
 
 VescData vescdata, initialVescData;
@@ -253,15 +257,18 @@ void packetSent()
 {
 }
 
-void board_state_change(Board::StateChangeEnum state)
+void board_event(Board::BoardEventEnum ev)
 {
-  switch (state)
+  switch (ev)
   {
-    case Board::STATE_TIMEOUT:
+    case Board::EV_BOARD_TIMEOUT:
       fsm.trigger(EV_BOARD_TIMEOUT);
       break;
-    case Board::STATE_ONLINE:
-      // fsm.trigger(EV_SERVER_CONNECTED);
+    case Board::EV_BOARD_ONLINE:
+      fsm.trigger(EV_SERVER_CONNECTED);
+      break;
+    case Board::EV_BOARD_MISSED_PACKETS:
+      fsm.trigger(EV_PACKET_MISSED);
       break;
   }
 }
@@ -317,7 +324,7 @@ void setup()
   runner.addTask(t_SendToBoard);
   t_SendToBoard.enable();
 
-  board.setOnStateChange(board_state_change);
+  board.setOnEvent(board_event);
 }
 //------------------------------------------------------------------
 
