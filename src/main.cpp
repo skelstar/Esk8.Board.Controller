@@ -24,7 +24,7 @@
 
 //------------------------------------------------------------------
 
-VescData vescdata, initialVescData;
+VescData vescdata, old_vescdata;
 ControllerData controller_packet;
 
 uint16_t missedPacketCounter = 0;
@@ -192,6 +192,7 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
   {
     fsm.trigger(EV_RECV_PACKET);
     DEBUG("fsm.trigger(EV_RECV_PACKET)");
+    memcpy(&old_vescdata, &vescdata, sizeof(vescdata));
     memcpy(/*dest*/ &vescdata, /*src*/ data, data_len);
     board.received_packet(vescdata.id);
     xSemaphoreGive(xCore1Semaphore);
@@ -199,21 +200,13 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 
   dotsPrinted = printDot(dotsPrinted++);
 
-  // if (board.missed_packets)
-  // {
-  //   DEBUGVAL("\nMissed packets!", board.lost_packets, board.num_missed_packets);
-  //   fsm.trigger(EV_PACKET_MISSED);
-  //   rxCorrectCount = 0;
-  // }
-  // else
-  // {
-  //   rxCorrectCount++;
-  //   if (rxCorrectCount > 10)
-  //   {
-  //     syncdWithServer = true;
-  //     fsm.trigger(EV_SERVER_CONNECTED);
-  //   }
-  // }
+  bool new_missing_packets = vescdata.missing_packets - old_vescdata.missing_packets;
+  if (new_missing_packets > 0) 
+  {
+    board.missed_packets += new_missing_packets;
+    DEBUGVAL("\nMissed packets!", board.missed_packets, new_missing_packets);
+    fsm.trigger(EV_PACKET_MISSED);
+  }
 }
 //--------------------------------------------------------------------------------
 
