@@ -30,6 +30,18 @@ void encoder_handler(i2cEncoderLibV2 *obj)
 	}
 }
 
+void encoder_deadman_pushed(i2cEncoderLibV2 *obj) 
+{
+	bool pushed = true;
+	xQueueSendToFront(xDeadmanChangedQueue, &pushed, pdMS_TO_TICKS(10));
+}
+
+void encoder_deadman_released(i2cEncoderLibV2 *obj) 
+{
+	bool pushed = false;
+	xQueueSendToFront(xDeadmanChangedQueue, &pushed, pdMS_TO_TICKS(10));
+}
+
 //-------------------------------------------------------
 
 void updateEncoderMaxCount(bool accelerateable) 
@@ -68,6 +80,12 @@ bool setupEncoder(int32_t maxCounts, int32_t minCounts)
 	encoder.writeAntibouncingPeriod(20); /* Set an anti-bouncing of 200ms */
 	encoder.writeDoublePushPeriod(50);	 /*Set a period for the double push of 500ms */
 
+	// deadman button
+	encoder.writeGP1conf(
+		i2cEncoderLibV2::GP_IN |
+		i2cEncoderLibV2::GP_PULL_EN |
+		i2cEncoderLibV2::GP_INT_DI);
+
 	Serial.printf("Max: %d, Min: %d \n", encoder.readMax(), encoder.readMin());
 
 	// Definition of the events
@@ -79,6 +97,9 @@ bool setupEncoder(int32_t maxCounts, int32_t minCounts)
 	// encoder.onButtonRelease = [](i2cEncoderLibV2 *obj){ DEBUG("Encoder release"); };
 	// encoder.onButtonDoublePush = [](i2cEncoderLibV2 *obj){ DEBUG("Encoder double push"); };
 	encoder.autoconfigInterrupt();
+
+	encoder.onGP1Fall = encoder_deadman_pushed;
+	encoder.onGP1Rise = encoder_deadman_released;
 
 	Serial.printf("Status = 0x%x \n", encoder.readStatus());
 
