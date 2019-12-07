@@ -49,7 +49,7 @@ void updateEncoderMaxCount(bool accelerateable)
 
 void encoder_push(i2cEncoderLibV2 *obj)
 {
-	// Serial.printf("Encoder is pushed!\n");
+	Serial.printf("Encoder is pushed!\n");
 }
 //-------------------------------------------------------
 bool setupEncoder(int32_t maxCounts, int32_t minCounts)

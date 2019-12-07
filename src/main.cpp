@@ -20,6 +20,7 @@
 
 #define BOARD_COMMS_TIMEOUT       1000
 #define MISSED_PACKETS_THRESHOLD  2
+#define SEND_TO_BOARD_INTERVAL    200
 
 //------------------------------------------------------------------
 
@@ -89,7 +90,7 @@ SemaphoreHandle_t xCore1Semaphore;
 
 void coreTask_0(void *pvParameters)
 {
-  Serial.printf("Task running on core %d\n", xPortGetCoreID());
+  Serial.printf("coreTask_0 running on core %d\n", xPortGetCoreID());
   xCore0Semaphore = xSemaphoreCreateMutex();
 
   while (true)
@@ -101,7 +102,7 @@ void coreTask_0(void *pvParameters)
 
 void encoderTask_0(void *pvParameters)
 {
-  Serial.printf("Encoder running on core %d\n", xPortGetCoreID());
+  Serial.printf("encoderTask_0 running on core %d\n", xPortGetCoreID());
 
   while (true)
   {
@@ -159,8 +160,6 @@ void stateMachineTask_1(void *pvParameters)
 
 Scheduler runner;
 
-#define SEND_TO_BOARD_INTERVAL 500
-// #define BOARD_COMMS_TIMEOUT 1000
 
 Task t_SendToBoard(
     SEND_TO_BOARD_INTERVAL,
@@ -191,31 +190,30 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 {
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
   {
-    board.lastPacketRxTime = millis();
-    fsm.trigger(EV_SERVER_CONNECTED);
+    fsm.trigger(EV_RECV_PACKET);
+    DEBUG("fsm.trigger(EV_RECV_PACKET)");
     memcpy(/*dest*/ &vescdata, /*src*/ data, data_len);
+    board.received_packet(vescdata.id);
     xSemaphoreGive(xCore1Semaphore);
   }
 
   dotsPrinted = printDot(dotsPrinted++);
 
-  board.update(vescdata.id);
-
-  if (board.missed_packets)
-  {
-    DEBUGVAL("\nMissed packets!", board.lost_packets, board.num_missed_packets);
-    fsm.trigger(EV_PACKET_MISSED);
-    rxCorrectCount = 0;
-  }
-  else
-  {
-    rxCorrectCount++;
-    if (rxCorrectCount > 10)
-    {
-      syncdWithServer = true;
-      fsm.trigger(EV_SERVER_CONNECTED);
-    }
-  }
+  // if (board.missed_packets)
+  // {
+  //   DEBUGVAL("\nMissed packets!", board.lost_packets, board.num_missed_packets);
+  //   fsm.trigger(EV_PACKET_MISSED);
+  //   rxCorrectCount = 0;
+  // }
+  // else
+  // {
+  //   rxCorrectCount++;
+  //   if (rxCorrectCount > 10)
+  //   {
+  //     syncdWithServer = true;
+  //     fsm.trigger(EV_SERVER_CONNECTED);
+  //   }
+  // }
 }
 //--------------------------------------------------------------------------------
 
@@ -266,9 +264,6 @@ void board_event(Board::BoardEventEnum ev)
       break;
     case Board::EV_BOARD_ONLINE:
       fsm.trigger(EV_SERVER_CONNECTED);
-      break;
-    case Board::EV_BOARD_MISSED_PACKETS:
-      fsm.trigger(EV_PACKET_MISSED);
       break;
   }
 }
