@@ -24,7 +24,7 @@
 
 //------------------------------------------------------------------
 
-VescData vescdata, initialVescData;
+VescData vescdata, old_vescdata;
 ControllerData controller_packet;
 
 uint16_t missedPacketCounter = 0;
@@ -44,13 +44,22 @@ Board board;
 #include "SSD1306.h"
 #include <state_machine.h>
 
+void TRIGGER(uint8_t x, char* s)
+{
+  if (s != NULL)
+  {
+    Serial.printf("EVENT: %s\n", s);
+  }
+  fsm.trigger(x);
+}
+
 // prototypes
 
 // queues
 xQueueHandle xEncoderChangeQueue;
 xQueueHandle xDeadmanChangedQueue;
 xQueueHandle xStateMachineQueue;
-xQueueHandle xSendPacketQueue;
+xQueueHandle xSendPacketToBoardQueue;
 
 //------------------------------------------------------------------
 
@@ -88,20 +97,10 @@ enum EventEnum
 SemaphoreHandle_t xCore0Semaphore;
 SemaphoreHandle_t xCore1Semaphore;
 
-void coreTask_0(void *pvParameters)
-{
-  Serial.printf("coreTask_0 running on core %d\n", xPortGetCoreID());
-  xCore0Semaphore = xSemaphoreCreateMutex();
-
-  while (true)
-  {
-    vTaskDelay(10);
-  }
-  vTaskDelete(NULL);
-}
-
 void encoderTask_0(void *pvParameters)
 {
+  xCore0Semaphore = xSemaphoreCreateMutex();
+
   Serial.printf("encoderTask_0 running on core %d\n", xPortGetCoreID());
 
   while (true)
@@ -146,7 +145,7 @@ void stateMachineTask_1(void *pvParameters)
     if (xStatus == pdPASS)
     {
       DEBUG("xStateMachineQueue");
-      fsm.trigger(ev);
+      TRIGGER(ev, "xStateMachineQueue");
     }
 
     fsm.run_machine();
@@ -166,7 +165,7 @@ Task t_SendToBoard(
     TASK_FOREVER,
     [] {
       uint8_t e = 1;
-      xQueueSendToFront(xSendPacketQueue, &e, pdMS_TO_TICKS(10));
+      xQueueSendToFront(xSendPacketToBoardQueue, &e, pdMS_TO_TICKS(10));
     });
 
 //--------------------------------------------------------------------------------
@@ -190,40 +189,32 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 {
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
   {
-    fsm.trigger(EV_RECV_PACKET);
-    DEBUG("fsm.trigger(EV_RECV_PACKET)");
-    memcpy(/*dest*/ &vescdata, /*src*/ data, data_len);
+    TRIGGER(EV_RECV_PACKET, NULL);
+    memcpy(&old_vescdata, &vescdata, sizeof(vescdata));
+    memcpy(&vescdata, data, data_len);
+    // DEBUGVAL(vescdata.missing_packets, old_vescdata.missing_packets);
     board.received_packet(vescdata.id);
     xSemaphoreGive(xCore1Semaphore);
   }
 
-  dotsPrinted = printDot(dotsPrinted++);
-
-  // if (board.missed_packets)
-  // {
-  //   DEBUGVAL("\nMissed packets!", board.lost_packets, board.num_missed_packets);
-  //   fsm.trigger(EV_PACKET_MISSED);
-  //   rxCorrectCount = 0;
-  // }
-  // else
-  // {
-  //   rxCorrectCount++;
-  //   if (rxCorrectCount > 10)
-  //   {
-  //     syncdWithServer = true;
-  //     fsm.trigger(EV_SERVER_CONNECTED);
-  //   }
-  // }
+  uint8_t new_missing_packets = vescdata.missing_packets - old_vescdata.missing_packets;
+  if (new_missing_packets > 0) 
+  {
+    DEBUGVAL(new_missing_packets);
+    board.total_missed_packets = board.total_missed_packets + new_missing_packets;
+    DEBUGVAL("--- Missed packets!", board.total_missed_packets, new_missing_packets, vescdata.missing_packets, old_vescdata.missing_packets);
+    TRIGGER(EV_PACKET_MISSED, "EV_PACKET_MISSED");
+  }
 }
 //--------------------------------------------------------------------------------
 
-void sendPacket()
+void send_packet_to_board()
 {
   esp_err_t result;
   const uint8_t *addr = peer.peer_addr;
   uint8_t bs[sizeof(controller_packet)];
 
-  if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)50) == pdTRUE)
+  if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)100) == pdTRUE)
   {
     controller_packet.id = sendCounter;
     memcpy(bs, &controller_packet, sizeof(controller_packet));
@@ -233,7 +224,7 @@ void sendPacket()
   }
   else 
   {
-    DEBUG("Unable to take sesmaphore");
+    DEBUG("Unable to take semaphore");
     return;
   }
 
@@ -255,15 +246,15 @@ void packetSent()
 {
 }
 
-void board_event(Board::BoardEventEnum ev)
+void board_event_cb(Board::BoardEventEnum ev)
 {
   switch (ev)
   {
     case Board::EV_BOARD_TIMEOUT:
-      fsm.trigger(EV_BOARD_TIMEOUT);
+      TRIGGER(EV_BOARD_TIMEOUT, "EV_BOARD_TIMEOUT");
       break;
     case Board::EV_BOARD_ONLINE:
-      fsm.trigger(EV_SERVER_CONNECTED);
+      TRIGGER(EV_BOARD_CONNECTED, NULL);
       break;
   }
 }
@@ -276,11 +267,6 @@ void setup()
 
   powerpins_init();
   button_init();
-
-#ifdef USING_SSD1306
-  //https://www.aliexpress.com/item/32871318121.html
-  setupLCD();
-#endif
 
   addFsmTransitions();
 
@@ -297,19 +283,24 @@ void setup()
   Wire.begin();
   delay(10);
 
+#ifdef USING_SSD1306
+  //https://www.aliexpress.com/item/32871318121.html
+  setupLCD();
+  delay(100);
+#endif
+
   if (setupEncoder(0, BRAKE_MIN_ENCODER_COUNTS) == false)
   {
     Serial.printf("Count not find encoder! \n");
   }
 
-  xTaskCreatePinnedToCore(coreTask_0, "coreTask_0", 10000, NULL, /*priority*/ 0, NULL, OTHER_CORE);
   xTaskCreatePinnedToCore(encoderTask_0, "encoderTask_0", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
   xTaskCreatePinnedToCore(stateMachineTask_1, "stateMachineTask_1", 10000, NULL, 1, NULL, NORMAL_CORE);
 
   xEncoderChangeQueue = xQueueCreate(1, sizeof(EventEnum));
   xDeadmanChangedQueue = xQueueCreate(1, sizeof(bool));
   xStateMachineQueue = xQueueCreate(1, sizeof(StateMachineEventEnum));
-  xSendPacketQueue = xQueueCreate(1, sizeof(uint8_t));
+  xSendPacketToBoardQueue = xQueueCreate(1, sizeof(uint8_t));
 
   xCore1Semaphore = xSemaphoreCreateMutex();
 
@@ -319,7 +310,7 @@ void setup()
   runner.addTask(t_SendToBoard);
   t_SendToBoard.enable();
 
-  board.setOnEvent(board_event);
+  board.setOnEvent(board_event_cb);
 }
 //------------------------------------------------------------------
 
@@ -338,28 +329,28 @@ void loop()
   {
     switch (e)
     {
-    case EVENT_THROTTLE_CHANGED:
-    {
-      sendPacket();
-      t_SendToBoard.restart();
-      Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
-    }
-    break;
-    case EVENT_2:
-      Serial.printf("Event %d\n", e);
+      case EVENT_THROTTLE_CHANGED:
+      {
+        send_packet_to_board();
+        t_SendToBoard.restart();
+        Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
+      }
       break;
-    case EVENT_3:
-      Serial.printf("Event %d\n", e);
-      break;
-    default:
-      Serial.printf("Unhandled event code: %d \n", e);
+      case EVENT_2:
+        Serial.printf("Event %d\n", e);
+        break;
+      case EVENT_3:
+        Serial.printf("Event %d\n", e);
+        break;
+      default:
+        Serial.printf("Unhandled event code: %d \n", e);
     }
   }
 
   uint8_t e2;
-  xStatus = xQueueReceive(xSendPacketQueue, &e2, pdMS_TO_TICKS(50));
+  xStatus = xQueueReceive(xSendPacketToBoardQueue, &e2, pdMS_TO_TICKS(50));
   if (xStatus == pdPASS)
   {
-    sendPacket();
+    send_packet_to_board();
   }
 }
