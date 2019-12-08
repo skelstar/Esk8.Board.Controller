@@ -286,6 +286,7 @@ void setup()
 #ifdef USING_SSD1306
   //https://www.aliexpress.com/item/32871318121.html
   setupLCD();
+  delay(100);
 #endif
 
   if (setupEncoder(0, BRAKE_MIN_ENCODER_COUNTS) == false)
