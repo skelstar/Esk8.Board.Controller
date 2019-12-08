@@ -285,6 +285,8 @@ void loop()
 
   board.loop();
 
+  fsm.run_machine();
+
   BaseType_t xStatus;
   EventEnum e;
   xStatus = xQueueReceive(xEncoderChangeQueue, &e, pdMS_TO_TICKS(50));

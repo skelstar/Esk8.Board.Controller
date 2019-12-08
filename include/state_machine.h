@@ -68,7 +68,8 @@ Fsm fsm(&state_connecting);
 
 void addFsmTransitions()
 {
-  fsm.add_transition(&state_connecting, &state_syncing, EV_BOARD_CONNECTED, NULL);
+  // fsm.add_transition(&state_connecting, &state_syncing, EV_BOARD_CONNECTED, NULL);
+  fsm.add_transition(&state_connecting, &state_syncing, EV_RECV_PACKET, NULL);
   fsm.add_transition(&state_syncing, &state_missing_packets, EV_RECV_PACKET, NULL);
 
   fsm.add_transition(&state_missing_packets, &state_missing_packets, EV_PACKET_MISSED, NULL);

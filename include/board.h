@@ -50,6 +50,7 @@ class Board
     uint8_t received_packet(unsigned long rx_id)
     {
       lastPacketRxTime = millis();
+      _on_event_callback(EV_BOARD_ONLINE);
     }
 
     unsigned long lost_packets;
