@@ -38,16 +38,6 @@ State state_searching(
     NULL,
     NULL);
 //-------------------------------
-State state_disconnected(
-    [] {
-      DEBUG("state_disconnected ----------------------------------------");
-      u8g2.clearBuffer();
-      lcd_line_text(5, 64 / 2, "disconnected", /*vertical*/ true, /*horizontal*/ true);
-      u8g2.sendBuffer();
-    },
-    NULL,
-    NULL);
-//-------------------------------
 State state_missing_packets(
     [] {
       DEBUG("state_missing_packets ----------------------------------------");
