@@ -17,32 +17,49 @@
 
 #define DEADMAN_INPUT_PIN 0
 #define DEADMAN_GND_PIN 12
+
+#define BOARD_COMMS_TIMEOUT       1000
+#define MISSED_PACKETS_THRESHOLD  2
+#define SEND_TO_BOARD_INTERVAL    200
+
 //------------------------------------------------------------------
 
-VescData vescdata, initialVescData;
+VescData vescdata, old_vescdata;
 ControllerData controller_packet;
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
-elapsedMillis sinceSentLast;
 
-unsigned long lastPacketRxTime = 0;
 unsigned long lastPacketId = 0;
 unsigned long sendCounter = 0;
 bool syncdWithServer = false;
+uint8_t rxCorrectCount = 0;
+
+#include "board.h"
+
+Board board;
 
 #include <espNowClient.h>
 #include "utils.h"
 #include "SSD1306.h"
 #include <state_machine.h>
 
+void TRIGGER(uint8_t x, char* s)
+{
+  if (s != NULL)
+  {
+    Serial.printf("EVENT: %s\n", s);
+  }
+  fsm.trigger(x);
+}
+
 // prototypes
-void checkConnected();
 
 // queues
 xQueueHandle xEncoderChangeQueue;
 xQueueHandle xDeadmanChangedQueue;
 xQueueHandle xStateMachineQueue;
+xQueueHandle xSendPacketToBoardQueue;
 
 //------------------------------------------------------------------
 
@@ -50,7 +67,6 @@ Button2 deadman(DEADMAN_INPUT_PIN);
 
 void deadmanPressed(Button2 &btn)
 {
-  // const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
   bool pressed = true;
   xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
 }
@@ -79,22 +95,13 @@ enum EventEnum
 #define OTHER_CORE 0
 #define NORMAL_CORE 1
 SemaphoreHandle_t xCore0Semaphore;
-
-void coreTask_0(void *pvParameters)
-{
-  Serial.printf("Task running on core %d\n", xPortGetCoreID());
-  xCore0Semaphore = xSemaphoreCreateMutex();
-
-  while (true)
-  {
-    vTaskDelay(10);
-  }
-  vTaskDelete(NULL);
-}
+SemaphoreHandle_t xCore1Semaphore;
 
 void encoderTask_0(void *pvParameters)
 {
-  Serial.printf("Encoder running on core %d\n", xPortGetCoreID());
+  xCore0Semaphore = xSemaphoreCreateMutex();
+
+  Serial.printf("encoderTask_0 running on core %d\n", xPortGetCoreID());
 
   while (true)
   {
@@ -138,7 +145,7 @@ void stateMachineTask_1(void *pvParameters)
     if (xStatus == pdPASS)
     {
       DEBUG("xStateMachineQueue");
-      fsm.trigger(ev);
+      TRIGGER(ev, "xStateMachineQueue");
     }
 
     fsm.run_machine();
@@ -147,6 +154,21 @@ void stateMachineTask_1(void *pvParameters)
   }
   vTaskDelete(NULL);
 }
+
+//--------------------------------------------------------------------------------
+
+Scheduler runner;
+
+
+Task t_SendToBoard(
+    SEND_TO_BOARD_INTERVAL,
+    TASK_FOREVER,
+    [] {
+      uint8_t e = 1;
+      xQueueSendToFront(xSendPacketToBoardQueue, &e, pdMS_TO_TICKS(10));
+    });
+
+//--------------------------------------------------------------------------------
 
 void button_init()
 {
@@ -159,49 +181,58 @@ void button_init()
     Serial.printf("deadman.setTripleClickHandler([](Button2 &b)\n");
   });
 }
-
 //--------------------------------------------------------------------------------
+
+uint8_t dotsPrinted = 0;
 
 void packetReceived(const uint8_t *data, uint8_t data_len)
 {
-  memcpy(/*dest*/ &vescdata, /*src*/ data, data_len);
-
-  DEBUGVAL(sendCounter, vescdata.id);
-
-  lastPacketRxTime = millis();
-
-  if (lastPacketId > 1)
+  if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
   {
-    if (vescdata.id > lastPacketId + 1)
-    {
-      uint8_t lost = (vescdata.id - 1) - lastPacketId;
-      missedPacketCounter = missedPacketCounter + lost;
-      Serial.printf("Missed %d packets! (%.0f total)\n", lost, missedPacketCounter);
-      fsm.trigger(EV_PACKET_MISSED);
-    }
-    else
-    {
-      syncdWithServer = true;
-    }
+    TRIGGER(EV_RECV_PACKET, NULL);
+    memcpy(&old_vescdata, &vescdata, sizeof(vescdata));
+    memcpy(&vescdata, data, data_len);
+    // DEBUGVAL(vescdata.missing_packets, old_vescdata.missing_packets);
+    board.received_packet(vescdata.id);
+    xSemaphoreGive(xCore1Semaphore);
   }
 
-  lastPacketId = vescdata.id;
+  uint8_t new_missing_packets = vescdata.missing_packets - old_vescdata.missing_packets;
+  if (new_missing_packets > 0) 
+  {
+    DEBUGVAL(new_missing_packets);
+    board.total_missed_packets = board.total_missed_packets + new_missing_packets;
+    DEBUGVAL("--- Missed packets!", board.total_missed_packets, new_missing_packets, vescdata.missing_packets, old_vescdata.missing_packets);
+    TRIGGER(EV_PACKET_MISSED, "EV_PACKET_MISSED");
+  }
 }
+//--------------------------------------------------------------------------------
 
-void sendPacket()
+void send_packet_to_board()
 {
+  esp_err_t result;
   const uint8_t *addr = peer.peer_addr;
-  controller_packet.id = sendCounter;
   uint8_t bs[sizeof(controller_packet)];
-  memcpy(bs, &controller_packet, sizeof(controller_packet));
-  esp_err_t result = esp_now_send(addr, bs, sizeof(bs));
+
+  if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)100) == pdTRUE)
+  {
+    controller_packet.id = sendCounter;
+    memcpy(bs, &controller_packet, sizeof(controller_packet));
+
+    result = esp_now_send(addr, bs, sizeof(bs));
+    xSemaphoreGive(xCore1Semaphore);
+  }
+  else 
+  {
+    DEBUG("Unable to take semaphore");
+    return;
+  }
 
   printStatus(result, /*printSuccess*/ false);
 
   if (result == ESP_OK)
   {
-    sinceSentLast = 0;
-    // DEBUGVAL("Sent to Server", controller_packet.id);
+    t_SendToBoard.restart();
     sendCounter++;
   }
   else
@@ -209,10 +240,26 @@ void sendPacket()
     DEBUGVAL("Error", sendCounter++);
   }
 }
+//--------------------------------------------------------------------------------
 
 void packetSent()
 {
 }
+
+void board_event_cb(Board::BoardEventEnum ev)
+{
+  switch (ev)
+  {
+    case Board::EV_BOARD_TIMEOUT:
+      TRIGGER(EV_BOARD_TIMEOUT, "EV_BOARD_TIMEOUT");
+      break;
+    case Board::EV_BOARD_ONLINE:
+      TRIGGER(EV_BOARD_CONNECTED, NULL);
+      break;
+  }
+}
+
+//--------------------------------------------------------------------------------
 
 void setup()
 {
@@ -236,25 +283,34 @@ void setup()
   Wire.begin();
   delay(10);
 
+#ifdef USING_SSD1306
+  //https://www.aliexpress.com/item/32871318121.html
+  setupLCD();
+  delay(100);
+#endif
+
   if (setupEncoder(0, BRAKE_MIN_ENCODER_COUNTS) == false)
   {
     Serial.printf("Count not find encoder! \n");
   }
 
-  xTaskCreatePinnedToCore(coreTask_0, "coreTask_0", 10000, NULL, /*priority*/ 0, NULL, OTHER_CORE);
   xTaskCreatePinnedToCore(encoderTask_0, "encoderTask_0", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
   xTaskCreatePinnedToCore(stateMachineTask_1, "stateMachineTask_1", 10000, NULL, 1, NULL, NORMAL_CORE);
 
   xEncoderChangeQueue = xQueueCreate(1, sizeof(EventEnum));
   xDeadmanChangedQueue = xQueueCreate(1, sizeof(bool));
   xStateMachineQueue = xQueueCreate(1, sizeof(StateMachineEventEnum));
+  xSendPacketToBoardQueue = xQueueCreate(1, sizeof(uint8_t));
+
+  xCore1Semaphore = xSemaphoreCreateMutex();
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
 
-#ifdef USING_SSD1306
-  //https://www.aliexpress.com/item/32871318121.html
-  setupLCD();
-#endif
+  runner.startNow();
+  runner.addTask(t_SendToBoard);
+  t_SendToBoard.enable();
+
+  board.setOnEvent(board_event_cb);
 }
 //------------------------------------------------------------------
 
@@ -262,12 +318,9 @@ void loop()
 {
   deadman.loop();
 
-  checkConnected();
+  runner.execute();
 
-  if (sinceSentLast > 500)
-  {
-    sendPacket();
-  }
+  board.loop();
 
   BaseType_t xStatus;
   EventEnum e;
@@ -276,44 +329,28 @@ void loop()
   {
     switch (e)
     {
-    case EVENT_THROTTLE_CHANGED:
-    {
-      sendPacket();
-      Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
-    }
-    break;
-    case EVENT_2:
-      Serial.printf("Event %d\n", e);
+      case EVENT_THROTTLE_CHANGED:
+      {
+        send_packet_to_board();
+        t_SendToBoard.restart();
+        Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
+      }
       break;
-    case EVENT_3:
-      Serial.printf("Event %d\n", e);
-      break;
-    default:
-      Serial.printf("Unhandled event code: %d \n", e);
+      case EVENT_2:
+        Serial.printf("Event %d\n", e);
+        break;
+      case EVENT_3:
+        Serial.printf("Event %d\n", e);
+        break;
+      default:
+        Serial.printf("Unhandled event code: %d \n", e);
     }
   }
-}
-//------------------------------------------------------------------
-void checkConnected()
-{
-  if (serverOnline == true)
+
+  uint8_t e2;
+  xStatus = xQueueReceive(xSendPacketToBoardQueue, &e2, pdMS_TO_TICKS(50));
+  if (xStatus == pdPASS)
   {
-    if (millis() - lastPacketRxTime > 4000)
-    {
-      DEBUG("disconnected");
-      serverOnline = false;
-      StateMachineEventEnum ev = EV_SERVER_DISCONNECTED;
-      xQueueSendToFront(xStateMachineQueue, &ev, pdMS_TO_TICKS(10));
-    }
-  }
-  else
-  {
-    if (millis() - lastPacketRxTime < 4000)
-    {
-      DEBUG("connected");
-      serverOnline = true;
-      StateMachineEventEnum ev = EV_SERVER_CONNECTED;
-      xQueueSendToFront(xStateMachineQueue, &ev, pdMS_TO_TICKS(10));
-    }
+    send_packet_to_board();
   }
 }
