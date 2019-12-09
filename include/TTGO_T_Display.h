@@ -228,6 +228,13 @@ void lcdMessage(char *message)
 }
 //---------------------------------------------------------------
 
+void lcd_bottom_line(char *message)
+{
+  tft.setTextDatum(BC_DATUM);
+  tft.drawString(message, TFT_WIDTH/2, TFT_HEIGHT, 1);
+}
+//---------------------------------------------------------------
+
 void tft_util_draw_digit(
     TFT_eSprite *tft,
     uint8_t digit,

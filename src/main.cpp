@@ -170,6 +170,7 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
     memcpy(&vescdata, data, data_len);
     board.received_packet(vescdata.id);
     xSemaphoreGive(xCore1Semaphore);
+    board.num_times_controller_offline = vescdata.ampHours;
   }
 }
 //--------------------------------------------------------------------------------

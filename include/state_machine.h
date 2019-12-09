@@ -42,13 +42,13 @@ State state_missing_packets(
     [] {
       DEBUG("state_missing_packets ----------------------------------------");
       lcdMessage("ready");
-      char buff[6];
-      // getIntString(buff, board.total_missed_packets);
-      // u8g2.clearBuffer();
-      // uint8_t pixelSize = 6;
-      // uint8_t spacing = 4;
-      // int width = strlen(buff) * 3 + (strlen(buff) * (spacing-1));
-      // chunkyDrawFloat(30, LCD_HEIGHT/2 - (pixelSize*5)/2, buff, "pkts", spacing, pixelSize);
+
+      if (board.num_times_controller_offline > 0)
+      {
+        char buff[20];
+        sprintf(buff, "missed: %d", board.num_times_controller_offline);
+        lcd_bottom_line(buff);
+      }
     },
     NULL,    
     NULL);

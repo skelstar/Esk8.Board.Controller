@@ -57,6 +57,7 @@ class Board
     unsigned long lastPacketRxTime;
     unsigned long lastPacketId;
     unsigned long total_missed_packets = 0;
+    uint8_t num_times_controller_offline = 0;
 
   private:
     eventCallBack _on_event_callback;
