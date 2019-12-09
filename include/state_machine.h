@@ -16,7 +16,7 @@ enum StateMachineEventEnum
 State state_connecting(
     [] {
       DEBUG("state_connecting ----------------------------------------");
-      lcdMessage("searching..");
+      lcd_message("searching..");
     },
     NULL,
     NULL);
@@ -24,7 +24,7 @@ State state_connecting(
 State state_syncing(
     [] {
       DEBUG("state_syncing ----------------------------------------");
-      lcdMessage("syncing");
+      lcd_message("syncing");
     },
     NULL,
     NULL);
@@ -32,7 +32,7 @@ State state_syncing(
 State state_searching(
     [] {
       DEBUG("state_searching ----------------------------------------");
-      lcdMessage("connected");
+      lcd_message("connected");
       missedPacketCounter = 0;
     },
     NULL,
@@ -41,14 +41,11 @@ State state_searching(
 State state_missing_packets(
     [] {
       DEBUG("state_missing_packets ----------------------------------------");
-      lcdMessage("ready");
-
-      if (board.num_times_controller_offline > 0)
-      {
-        char buff[20];
-        sprintf(buff, "missed: %d", board.num_times_controller_offline);
-        lcd_bottom_line(buff);
-      }
+      tft.fillScreen(TFT_BLACK);
+      char buff[4];
+      sprintf(buff, "%03d", board.num_times_controller_offline);
+      DEBUGVAL(buff);
+      chunkyDrawFloat(MC_DATUM, buff, "pkts", 5, 10);
     },
     NULL,    
     NULL);
@@ -57,7 +54,7 @@ State state_board_timedout(
     [] {
       DEBUG("state_board_timedout ----------------------------------------");
       controller_packet.throttle = 127; 
-      lcdMessage("TIMED OUT");
+      lcd_message("TIMED OUT");
     },
     NULL,    
     NULL);
