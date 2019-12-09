@@ -58,7 +58,6 @@ void TRIGGER(uint8_t x, char* s)
 // queues
 xQueueHandle xEncoderChangeQueue;
 xQueueHandle xDeadmanChangedQueue;
-xQueueHandle xStateMachineQueue;
 xQueueHandle xSendPacketToBoardQueue;
 
 //------------------------------------------------------------------
@@ -68,13 +67,13 @@ Button2 deadman(DEADMAN_INPUT_PIN);
 void deadmanPressed(Button2 &btn)
 {
   bool pressed = true;
-  xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
+  // xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
 }
 
 void deadmanReleased(Button2 &btn)
 {
   bool pressed = false;
-  xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
+  // xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
 }
 
 //------------------------------------------------------------------
@@ -112,8 +111,8 @@ void encoderTask_0(void *pvParameters)
     xStatus = xQueueReceive(xDeadmanChangedQueue, &accel_enabled, pdMS_TO_TICKS(20));
     if (xStatus == pdPASS)
     {
-      DEBUG("xDeadmanChangedQueue");
-      updateEncoderMaxCount(accel_enabled);
+      // DEBUG("xDeadmanChangedQueue");
+      //updateEncoderMaxCount(accel_enabled);
     }
 
     /* read encoder */
@@ -126,30 +125,6 @@ void encoderTask_0(void *pvParameters)
     {
       DEBUG("Can't take semaphore!");
     }
-    vTaskDelay(10);
-  }
-  vTaskDelete(NULL);
-}
-
-void stateMachineTask_1(void *pvParameters)
-{
-  Serial.printf("stateMachineTask_1 running on core %d\n", xPortGetCoreID());
-
-  while (true)
-  {
-    BaseType_t xStatus;
-    StateMachineEventEnum ev;
-
-    /* deadman read */
-    xStatus = xQueueReceive(xStateMachineQueue, &ev, pdMS_TO_TICKS(20));
-    if (xStatus == pdPASS)
-    {
-      DEBUG("xStateMachineQueue");
-      TRIGGER(ev, "xStateMachineQueue");
-    }
-
-    fsm.run_machine();
-
     vTaskDelay(10);
   }
   vTaskDelete(NULL);
@@ -192,18 +167,8 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
     TRIGGER(EV_RECV_PACKET, NULL);
     memcpy(&old_vescdata, &vescdata, sizeof(vescdata));
     memcpy(&vescdata, data, data_len);
-    // DEBUGVAL(vescdata.missing_packets, old_vescdata.missing_packets);
     board.received_packet(vescdata.id);
     xSemaphoreGive(xCore1Semaphore);
-  }
-
-  uint8_t new_missing_packets = vescdata.missing_packets - old_vescdata.missing_packets;
-  if (new_missing_packets > 0) 
-  {
-    DEBUGVAL(new_missing_packets);
-    board.total_missed_packets = board.total_missed_packets + new_missing_packets;
-    DEBUGVAL("--- Missed packets!", board.total_missed_packets, new_missing_packets, vescdata.missing_packets, old_vescdata.missing_packets);
-    TRIGGER(EV_PACKET_MISSED, "EV_PACKET_MISSED");
   }
 }
 //--------------------------------------------------------------------------------
@@ -237,7 +202,7 @@ void send_packet_to_board()
   }
   else
   {
-    DEBUGVAL("Error", sendCounter++);
+    //DEBUGVAL("Error", sendCounter++);
   }
 }
 //--------------------------------------------------------------------------------
@@ -295,11 +260,9 @@ void setup()
   }
 
   xTaskCreatePinnedToCore(encoderTask_0, "encoderTask_0", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
-  xTaskCreatePinnedToCore(stateMachineTask_1, "stateMachineTask_1", 10000, NULL, 1, NULL, NORMAL_CORE);
 
   xEncoderChangeQueue = xQueueCreate(1, sizeof(EventEnum));
   xDeadmanChangedQueue = xQueueCreate(1, sizeof(bool));
-  xStateMachineQueue = xQueueCreate(1, sizeof(StateMachineEventEnum));
   xSendPacketToBoardQueue = xQueueCreate(1, sizeof(uint8_t));
 
   xCore1Semaphore = xSemaphoreCreateMutex();
@@ -321,6 +284,8 @@ void loop()
   runner.execute();
 
   board.loop();
+
+  fsm.run_machine();
 
   BaseType_t xStatus;
   EventEnum e;
