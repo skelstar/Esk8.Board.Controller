@@ -219,7 +219,7 @@ void board_event_cb(Board::BoardEventEnum ev)
       TRIGGER(EV_BOARD_TIMEOUT, "EV_BOARD_TIMEOUT");
       break;
     case Board::EV_BOARD_ONLINE:
-      TRIGGER(EV_BOARD_CONNECTED, NULL);
+      // TRIGGER(EV_BOARD_CONNECTED, NULL);
       break;
   }
 }
