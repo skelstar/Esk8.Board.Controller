@@ -41,14 +41,14 @@ State state_searching(
 State state_missing_packets(
     [] {
       DEBUG("state_missing_packets ----------------------------------------");
+      lcdMessage("ready");
       char buff[6];
-      getIntString(buff, board.total_missed_packets);
-      u8g2.clearBuffer();
-      uint8_t pixelSize = 6;
-      uint8_t spacing = 4;
-      int width = strlen(buff) * 3 + (strlen(buff) * (spacing-1));
-      chunkyDrawFloat(30, LCD_HEIGHT/2 - (pixelSize*5)/2, buff, "pkts", spacing, pixelSize);
-      u8g2.sendBuffer();
+      // getIntString(buff, board.total_missed_packets);
+      // u8g2.clearBuffer();
+      // uint8_t pixelSize = 6;
+      // uint8_t spacing = 4;
+      // int width = strlen(buff) * 3 + (strlen(buff) * (spacing-1));
+      // chunkyDrawFloat(30, LCD_HEIGHT/2 - (pixelSize*5)/2, buff, "pkts", spacing, pixelSize);
     },
     NULL,    
     NULL);
@@ -57,8 +57,7 @@ State state_board_timedout(
     [] {
       DEBUG("state_board_timedout ----------------------------------------");
       controller_packet.throttle = 127; 
-      lcdMessage(3, "TIMED OUT");
-      u8g2.sendBuffer();
+      lcdMessage("TIMED OUT");
     },
     NULL,    
     NULL);

@@ -41,7 +41,8 @@ Board board;
 
 #include <espNowClient.h>
 #include "utils.h"
-#include "SSD1306.h"
+// #include "SSD1306.h"
+#include "TTGO_T_Display.h"
 #include <state_machine.h>
 
 void TRIGGER(uint8_t x, char* s)
@@ -253,6 +254,8 @@ void setup()
   setupLCD();
   delay(100);
 #endif
+
+  display_initialise();
 
   if (setupEncoder(0, BRAKE_MIN_ENCODER_COUNTS) == false)
   {
