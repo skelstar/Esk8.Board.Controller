@@ -200,13 +200,16 @@ void chunkyDrawFloat(uint8_t x, uint8_t y, char *number, char *units, uint8_t sp
     }
   }
   // units
-  tft.drawString(units, cursor_x + spacing, y + 10);
+  if (units != NULL)
+  {
+    tft.drawString(units, cursor_x + spacing, y + 10);
+  }
 }
 
-uint8_t get_chunk_digits_width(char* number, uint8_t spacing, uint8_t pixel_size)
+uint8_t get_chunk_digits_width(char *number, uint8_t spacing, uint8_t pixel_size)
 {
   uint8_t width = strlen(number);
-  return width * (pixel_size * 3) + (spacing * (width-1));
+  return width * (pixel_size * 3) + (spacing * (width - 1));
 }
 
 void chunkyDrawFloat(uint8_t datum, char *number, char *units, uint8_t spacing, uint8_t pixel_size = 1)
@@ -218,27 +221,27 @@ void chunkyDrawFloat(uint8_t datum, char *number, char *units, uint8_t spacing, 
 
   switch (datum)
   {
-    case MC_DATUM:
-    {
-      x = (TFT_WIDTH / 2) - (width / 2);
-      y = TFT_HEIGHT / 2 - (height / 2);
-      chunkyDrawFloat(x, y, number, units, spacing, pixel_size);
-    }
-    break;
-    case TL_DATUM:
-    {
-      chunkyDrawFloat(0, 0, number, units, spacing, pixel_size);
-    }
-    break;
-    case BR_DATUM:
-    {
-      x = TFT_WIDTH - width;
-      y = TFT_HEIGHT - height;
-      chunkyDrawFloat(x, y, number, units, spacing, pixel_size);
-    }
-    break;
-    default:
-      DEBUG("Unhandled datum");
+  case MC_DATUM:
+  {
+    x = (TFT_WIDTH / 2) - (width / 2);
+    y = TFT_HEIGHT / 2 - (height / 2);
+    chunkyDrawFloat(x, y, number, units, spacing, pixel_size);
+  }
+  break;
+  case TL_DATUM:
+  {
+    chunkyDrawFloat(0, 0, number, units, spacing, pixel_size);
+  }
+  break;
+  case BR_DATUM:
+  {
+    x = TFT_WIDTH - width;
+    y = TFT_HEIGHT - height;
+    chunkyDrawFloat(x, y, number, units, spacing, pixel_size);
+  }
+  break;
+  default:
+    DEBUG("Unhandled datum");
   }
   return;
 }
@@ -258,11 +261,10 @@ void display_initialise()
 }
 //---------------------------------------------------------------
 
-void lcd_message(char *message)
+void lcd_message(uint8_t datum, char *message, uint8_t x, uint8_t y, uint8_t font)
 {
-  tft.fillScreen(TFT_BLACK);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString(message, TFT_WIDTH / 2, TFT_HEIGHT / 2, 2);
+  tft.setTextDatum(datum);
+  tft.drawString(message, x, y, font);
 }
 //---------------------------------------------------------------
 

@@ -16,7 +16,7 @@ enum StateMachineEventEnum
 State state_connecting(
     [] {
       DEBUG("state_connecting ----------------------------------------");
-      lcd_message("searching..");
+      lcd_message(MC_DATUM, "searching..", TFT_WIDTH/2, TFT_HEIGHT/2, 2);
     },
     NULL,
     NULL);
@@ -24,7 +24,7 @@ State state_connecting(
 State state_syncing(
     [] {
       DEBUG("state_syncing ----------------------------------------");
-      lcd_message("syncing");
+      lcd_message(MC_DATUM, "syncing..", TFT_WIDTH/2, TFT_HEIGHT/2, 2);
     },
     NULL,
     NULL);
@@ -32,7 +32,7 @@ State state_syncing(
 State state_searching(
     [] {
       DEBUG("state_searching ----------------------------------------");
-      lcd_message("connected");
+      lcd_message(MC_DATUM, "connected", TFT_WIDTH/2, TFT_HEIGHT/2, 2);
       missedPacketCounter = 0;
     },
     NULL,
@@ -45,7 +45,8 @@ State state_missing_packets(
       char buff[4];
       sprintf(buff, "%03d", board.num_times_controller_offline);
       DEBUGVAL(buff);
-      chunkyDrawFloat(MC_DATUM, buff, "pkts", 5, 10);
+      chunkyDrawFloat(MC_DATUM, buff, NULL, 5, 10);
+      lcd_message(TC_DATUM, "board missed", TFT_WIDTH/2, (TFT_HEIGHT/2) + 25, 1);
     },
     NULL,    
     NULL);
@@ -54,7 +55,7 @@ State state_board_timedout(
     [] {
       DEBUG("state_board_timedout ----------------------------------------");
       controller_packet.throttle = 127; 
-      lcd_message("TIMED OUT");
+      lcd_message(MC_DATUM, "timed out!", TFT_WIDTH/2, TFT_HEIGHT/2, 2);
     },
     NULL,    
     NULL);
