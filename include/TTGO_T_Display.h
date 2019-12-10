@@ -50,7 +50,7 @@
 #define LOAD_GFXFF // FreeFonts. Include access to the 48 Adafruit_GFX free fonts FF1 to FF48 and custom fonts
 
 #define FONT_1_HEIGHT   27
-
+#define FONT_2_HEIGHT   31
 
 #define SMOOTH_FONT
 

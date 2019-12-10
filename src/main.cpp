@@ -24,12 +24,14 @@
 
 //------------------------------------------------------------------
 
+elapsedMillis since_requested_update = 0;
+
 VescData vescdata, old_vescdata;
 ControllerData controller_packet;
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
-uint8_t board_first_packet_count = 0;
+uint8_t board_first_packet_count = 0, old_board_first_packet_count = 0;
 
 unsigned long lastPacketId = 0;
 unsigned long sendCounter = 0;
@@ -38,12 +40,16 @@ uint8_t rxCorrectCount = 0;
 
 #include "board.h"
 
+// prototypes
+void TRIGGER(uint8_t x, char* s);
+
 Board board;
 
 #include <espNowClient.h>
 #include "utils.h"
 // #include "SSD1306.h"
 #include "TTGO_T_Display.h"
+#include <screens.h>
 #include <state_machine.h>
 
 void TRIGGER(uint8_t x, char* s)
@@ -136,7 +142,6 @@ void encoderTask_0(void *pvParameters)
 
 Scheduler runner;
 
-
 Task t_SendToBoard(
     SEND_TO_BOARD_INTERVAL,
     TASK_FOREVER,
@@ -189,6 +194,10 @@ void send_packet_to_board()
   uint8_t bs[sizeof(controller_packet)];
 
   bool req_update = sendCounter % 50 == 0;
+  if (req_update)
+  {
+    TRIGGER(EV_REQUESTED_UPDATE, NULL);
+  }
   controller_packet.command = req_update ? COMMAND_REQUEST_UPDATE : 0;
 
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)100) == pdTRUE)
