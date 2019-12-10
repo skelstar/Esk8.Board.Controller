@@ -50,12 +50,14 @@ class Board
     uint8_t received_packet(unsigned long rx_id)
     {
       lastPacketRxTime = millis();
+      _on_event_callback(EV_BOARD_ONLINE);
     }
 
     unsigned long lost_packets;
     unsigned long lastPacketRxTime;
     unsigned long lastPacketId;
     unsigned long total_missed_packets = 0;
+    uint8_t num_times_controller_offline = 0;
 
   private:
     eventCallBack _on_event_callback;
