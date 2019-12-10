@@ -49,6 +49,9 @@
 //#define LOAD_FONT8N // Font 8. Alternative to Font 8 above, slightly narrower, so 3 digits fit a 160 pixel TFT
 #define LOAD_GFXFF // FreeFonts. Include access to the 48 Adafruit_GFX free fonts FF1 to FF48 and custom fonts
 
+#define FONT_1_HEIGHT   27
+
+
 #define SMOOTH_FONT
 
 // #define SPI_FREQUENCY  27000000

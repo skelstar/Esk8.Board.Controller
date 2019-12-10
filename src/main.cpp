@@ -29,6 +29,7 @@ ControllerData controller_packet;
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
+uint8_t board_first_packet_count = 0;
 
 unsigned long lastPacketId = 0;
 unsigned long sendCounter = 0;
@@ -172,6 +173,12 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
     xSemaphoreGive(xCore1Semaphore);
     board.num_times_controller_offline = vescdata.ampHours;
   }
+
+  // board's first packet
+  if (vescdata.id == 0)
+  {
+    TRIGGER(EV_BOARD_FIRST_CONNECT, "EV_BOARD_FIRST_CONNECT");
+  }
 }
 //--------------------------------------------------------------------------------
 
@@ -180,6 +187,9 @@ void send_packet_to_board()
   esp_err_t result;
   const uint8_t *addr = peer.peer_addr;
   uint8_t bs[sizeof(controller_packet)];
+
+  bool req_update = sendCounter % 50 == 0;
+  controller_packet.command = req_update ? COMMAND_REQUEST_UPDATE : 0;
 
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)100) == pdTRUE)
   {
