@@ -74,13 +74,13 @@ Button2 deadman(DEADMAN_INPUT_PIN);
 void deadmanPressed(Button2 &btn)
 {
   bool pressed = true;
-  xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
+  // xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
 }
 
 void deadmanReleased(Button2 &btn)
 {
   bool pressed = false;
-  xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
+  // xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
 }
 
 //------------------------------------------------------------------
@@ -119,7 +119,7 @@ void encoderTask_0(void *pvParameters)
     if (xStatus == pdPASS)
     {
       // DEBUG("xDeadmanChangedQueue");
-      //updateEncoderMaxCount(accel_enabled);
+      updateEncoderMaxCount(accel_enabled);
     }
 
     /* read encoder */
