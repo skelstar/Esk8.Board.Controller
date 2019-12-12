@@ -19,7 +19,6 @@
 #define DEADMAN_GND_PIN 12
 
 #define BOARD_COMMS_TIMEOUT       1000
-#define MISSED_PACKETS_THRESHOLD  2
 #define SEND_TO_BOARD_INTERVAL    200
 
 //------------------------------------------------------------------
@@ -75,13 +74,13 @@ Button2 deadman(DEADMAN_INPUT_PIN);
 void deadmanPressed(Button2 &btn)
 {
   bool pressed = true;
-  // xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
+  xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
 }
 
 void deadmanReleased(Button2 &btn)
 {
   bool pressed = false;
-  // xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
+  xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
 }
 
 //------------------------------------------------------------------
@@ -147,7 +146,7 @@ Task t_SendToBoard(
     TASK_FOREVER,
     [] {
       uint8_t e = 1;
-      xQueueSendToFront(xSendPacketToBoardQueue, &e, pdMS_TO_TICKS(10));
+      xQueueSendToFront(xSendPacketToBoardQueue, &e, pdMS_TO_TICKS(5));
     });
 
 //--------------------------------------------------------------------------------
@@ -218,7 +217,6 @@ void send_packet_to_board()
 
   if (result == ESP_OK)
   {
-    t_SendToBoard.restart();
     sendCounter++;
   }
   else
@@ -336,7 +334,7 @@ void loop()
   }
 
   uint8_t e2;
-  xStatus = xQueueReceive(xSendPacketToBoardQueue, &e2, pdMS_TO_TICKS(50));
+  xStatus = xQueueReceive(xSendPacketToBoardQueue, &e2, pdMS_TO_TICKS(0));
   if (xStatus == pdPASS)
   {
     send_packet_to_board();
