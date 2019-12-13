@@ -20,6 +20,10 @@
 #define BOARD_COMMS_TIMEOUT       1000
 #define SEND_TO_BOARD_INTERVAL    200
 
+#define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
+#define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
+#define BATTERY_VOLTAGE_CUTOFF_END 3.1 * 11   // 34.1
+
 //------------------------------------------------------------------
 
 elapsedMillis since_requested_update = 0;

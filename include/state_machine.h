@@ -50,7 +50,7 @@ State state_searching(
 State state_missing_packets(
     [] {
       DEBUG("state_missing_packets ----------------------------------------");
-      draw_missing_packets_screen();
+      draw_missing_packets_screen(/*force*/true);
     },
     NULL,    
     NULL);
@@ -83,6 +83,7 @@ State state_board_timedout(
   State state_show_battery(
     [] {
         DEBUG("state_show_battery ----------------------------------------");
+        drawBattery(getBatteryPercentage(vescdata.batteryVoltage));
     },
     NULL,
     NULL);
