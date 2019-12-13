@@ -93,6 +93,11 @@ void handle_board_first_packet()
   board_first_packet_count++;
 }
 //-------------------------------
+void handle_stopped_moving()
+{
+  last_trip.save(vescdata);
+  DEBUG("saved vesc data");
+}
 
 Fsm fsm(&state_connecting);
 
@@ -108,6 +113,7 @@ void addFsmTransitions()
   fsm.add_transition(&state_waiting_for_update, &state_missing_packets, EV_RECV_PACKET, NULL);
   fsm.add_transition(&state_waiting_for_update, &state_board_timedout, EV_BOARD_TIMEOUT, NULL);
   fsm.add_transition(&state_board_timedout, &state_missing_packets, EV_RECV_PACKET, NULL);
+  fsm.add_transition(&state_missing_packets, &state_missing_packets, EV_STOPPED_MOVING, handle_stopped_moving);
 
   // button 0 pressed
   fsm.add_transition(&state_missing_packets, &state_show_battery, EV_BUTTON_CLICK, NULL);

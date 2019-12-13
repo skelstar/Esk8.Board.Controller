@@ -8,6 +8,7 @@
 #include <TaskScheduler.h>
 #include <VescData.h>
 #include <elapsedMillis.h>
+#include <nvmstorage.h>
 
 #define ENCODER_PWR_PIN 5
 #define ENCODER_GND_PIN 17
@@ -15,10 +16,10 @@
 #define RF24_PWR_PIN 27
 #define RF24_GND_PIN 25
 
-#define BUTTON0_PIN     0
+#define BUTTON0_PIN 0
 
-#define BOARD_COMMS_TIMEOUT       1000
-#define SEND_TO_BOARD_INTERVAL    200
+#define BOARD_COMMS_TIMEOUT 1000
+#define SEND_TO_BOARD_INTERVAL 200
 
 #define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
 #define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
@@ -27,6 +28,8 @@
 //------------------------------------------------------------------
 
 elapsedMillis since_requested_update = 0;
+
+Trip last_trip;
 
 VescData vescdata, old_vescdata;
 ControllerData controller_packet;
@@ -43,7 +46,7 @@ uint8_t rxCorrectCount = 0;
 #include "board.h"
 
 // prototypes
-void TRIGGER(uint8_t x, char* s);
+void TRIGGER(uint8_t x, char *s);
 
 Board board;
 
@@ -54,7 +57,7 @@ Board board;
 #include <screens.h>
 #include <state_machine.h>
 
-void TRIGGER(uint8_t x, char* s)
+void TRIGGER(uint8_t x, char *s)
 {
   if (s != NULL)
   {
@@ -174,8 +177,22 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
     memcpy(&vescdata, data, data_len);
     board.received_packet(vescdata.id);
     xSemaphoreGive(xCore1Semaphore);
-    board.num_times_controller_offline = vescdata.ampHours;
-    TRIGGER(EV_RECV_PACKET, NULL);
+
+    board.num_times_controller_offline = vescdata.ampHours > 0
+      ? vescdata.ampHours
+      : last_trip.recall().ampHours;
+
+    if (vescdata.moving != old_vescdata.moving)
+    {
+      if (vescdata.moving == false)
+      {
+        TRIGGER(EV_STOPPED_MOVING, NULL);
+      }
+    }
+    else
+    {
+      TRIGGER(EV_RECV_PACKET, NULL);
+    }
   }
 
   // board's first packet
@@ -183,9 +200,10 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
   {
     TRIGGER(EV_BOARD_FIRST_CONNECT, "EV_BOARD_FIRST_CONNECT");
   }
-  else 
+  else
   {
-    DEBUGVAL(vescdata.batteryVoltage);
+    Trip::TripType lt = last_trip.recall();
+    DEBUGVAL(vescdata.batteryVoltage, vescdata.odometer, old_vescdata.odometer, vescdata.moving, old_vescdata.moving, lt.odometer);
   }
 }
 //--------------------------------------------------------------------------------
@@ -211,7 +229,7 @@ void send_packet_to_board()
     result = esp_now_send(addr, bs, sizeof(bs));
     xSemaphoreGive(xCore1Semaphore);
   }
-  else 
+  else
   {
     DEBUG("Unable to take semaphore");
     return;
@@ -238,12 +256,12 @@ void board_event_cb(Board::BoardEventEnum ev)
 {
   switch (ev)
   {
-    case Board::EV_BOARD_TIMEOUT:
-      TRIGGER(EV_BOARD_TIMEOUT, "EV_BOARD_TIMEOUT");
-      break;
-    case Board::EV_BOARD_ONLINE:
-      // TRIGGER(EV_BOARD_CONNECTED, NULL);
-      break;
+  case Board::EV_BOARD_TIMEOUT:
+    TRIGGER(EV_BOARD_TIMEOUT, "EV_BOARD_TIMEOUT");
+    break;
+  case Board::EV_BOARD_ONLINE:
+    // TRIGGER(EV_BOARD_CONNECTED, NULL);
+    break;
   }
 }
 
@@ -319,21 +337,21 @@ void loop()
   {
     switch (e)
     {
-      case EVENT_THROTTLE_CHANGED:
-      {
-        send_packet_to_board();
-        t_SendToBoard.restart();
-        Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
-      }
+    case EVENT_THROTTLE_CHANGED:
+    {
+      send_packet_to_board();
+      t_SendToBoard.restart();
+      Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
+    }
+    break;
+    case EVENT_2:
+      Serial.printf("Event %d\n", e);
       break;
-      case EVENT_2:
-        Serial.printf("Event %d\n", e);
-        break;
-      case EVENT_3:
-        Serial.printf("Event %d\n", e);
-        break;
-      default:
-        Serial.printf("Unhandled event code: %d \n", e);
+    case EVENT_3:
+      Serial.printf("Event %d\n", e);
+      break;
+    default:
+      Serial.printf("Unhandled event code: %d \n", e);
     }
   }
 
