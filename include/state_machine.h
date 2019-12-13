@@ -80,10 +80,18 @@ State state_board_timedout(
     NULL,    
     NULL);
 //-------------------------------
+  State state_show_battery(
+    [] {
+        DEBUG("state_show_battery ----------------------------------------");
+    },
+    NULL,
+    NULL);
+//-------------------------------
 void handle_board_first_packet()
 {
   board_first_packet_count++;
 }
+//-------------------------------
 
 Fsm fsm(&state_connecting);
 
@@ -99,5 +107,9 @@ void addFsmTransitions()
   fsm.add_transition(&state_waiting_for_update, &state_missing_packets, EV_RECV_PACKET, NULL);
   fsm.add_transition(&state_waiting_for_update, &state_board_timedout, EV_BOARD_TIMEOUT, NULL);
   fsm.add_transition(&state_board_timedout, &state_missing_packets, EV_RECV_PACKET, NULL);
+
+  // button 0 pressed
+  fsm.add_transition(&state_missing_packets, &state_show_battery, EV_BUTTON_CLICK, NULL);
+  fsm.add_timed_transition(&state_show_battery, &state_missing_packets, 1500, NULL);
 }
 /* ---------------------------------------------- */

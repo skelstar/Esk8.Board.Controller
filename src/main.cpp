@@ -15,8 +15,7 @@
 #define RF24_PWR_PIN 27
 #define RF24_GND_PIN 25
 
-#define DEADMAN_INPUT_PIN 0
-#define DEADMAN_GND_PIN 12
+#define BUTTON0_PIN     0
 
 #define BOARD_COMMS_TIMEOUT       1000
 #define SEND_TO_BOARD_INTERVAL    200
@@ -69,18 +68,15 @@ xQueueHandle xSendPacketToBoardQueue;
 
 //------------------------------------------------------------------
 
-Button2 deadman(DEADMAN_INPUT_PIN);
+Button2 button0(BUTTON0_PIN);
 
-void deadmanPressed(Button2 &btn)
+void button0_pressed(Button2 &btn)
 {
-  bool pressed = true;
-  // xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
+  TRIGGER(EV_BUTTON_CLICK, NULL);
 }
 
-void deadmanReleased(Button2 &btn)
+void button0_released(Button2 &btn)
 {
-  bool pressed = false;
-  // xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
 }
 
 //------------------------------------------------------------------
@@ -153,13 +149,13 @@ Task t_SendToBoard(
 
 void button_init()
 {
-  deadman.setPressedHandler(deadmanPressed);
-  deadman.setReleasedHandler(deadmanReleased);
-  deadman.setDoubleClickHandler([](Button2 &b) {
-    Serial.printf("deadman.setDoubleClickHandler([](Button2 &b)\n");
+  button0.setPressedHandler(button0_pressed);
+  button0.setReleasedHandler(button0_released);
+  button0.setDoubleClickHandler([](Button2 &b) {
+    Serial.printf("button0.setDoubleClickHandler([](Button2 &b)\n");
   });
-  deadman.setTripleClickHandler([](Button2 &b) {
-    Serial.printf("deadman.setTripleClickHandler([](Button2 &b)\n");
+  button0.setTripleClickHandler([](Button2 &b) {
+    Serial.printf("button0.setTripleClickHandler([](Button2 &b)\n");
   });
 }
 //--------------------------------------------------------------------------------
@@ -170,18 +166,22 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 {
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
   {
-    TRIGGER(EV_RECV_PACKET, NULL);
     memcpy(&old_vescdata, &vescdata, sizeof(vescdata));
     memcpy(&vescdata, data, data_len);
     board.received_packet(vescdata.id);
     xSemaphoreGive(xCore1Semaphore);
     board.num_times_controller_offline = vescdata.ampHours;
+    TRIGGER(EV_RECV_PACKET, NULL);
   }
 
   // board's first packet
   if (vescdata.id == 0)
   {
     TRIGGER(EV_BOARD_FIRST_CONNECT, "EV_BOARD_FIRST_CONNECT");
+  }
+  else 
+  {
+    DEBUGVAL(vescdata.batteryVoltage);
   }
 }
 //--------------------------------------------------------------------------------
@@ -300,7 +300,7 @@ void setup()
 
 void loop()
 {
-  deadman.loop();
+  button0.loop();
 
   runner.execute();
 
