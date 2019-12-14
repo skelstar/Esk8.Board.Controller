@@ -197,6 +197,8 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
       case ReasonType::REQUESTED:
         TRIGGER(EV_REQUESTED_RESPONSE, "Reason: REQUESTED");
         break;
+      case ReasonType::LAST_WILL:
+        TRIGGER(EV_BOARD_LAST_WILL, NULL);
       default:
         DEBUGVAL("Unhandled packet reason", vescdata.reason);
         break;

@@ -13,6 +13,7 @@ enum StateMachineEventEnum
   EV_REQUESTED_UPDATE,
   EV_REQUESTED_RESPONSE,
   EV_BOARD_TIMEOUT, // havne't heard from the board for a while (BOARD_COMMS_TIMEOUT)
+  EV_BOARD_LAST_WILL,
 } fsm_event;
 
 
@@ -100,6 +101,12 @@ void handle_stopped_moving()
   last_trip.save(vescdata);
   DEBUG("saved vesc data");
 }
+//-------------------------------
+void handle_last_will() 
+{
+  DEBUG("last will received");
+}
+//-------------------------------
 
 Fsm fsm(&state_connecting);
 
@@ -120,6 +127,9 @@ void addFsmTransitions()
   fsm.add_transition(&state_board_timedout, &state_main_screen, EV_REQUESTED_RESPONSE, NULL);
   
   fsm.add_transition(&state_main_screen, &state_main_screen, EV_STOPPED_MOVING, handle_stopped_moving);
+
+  // last will
+  fsm.add_transition(&state_main_screen, &state_main_screen, EV_BOARD_LAST_WILL, handle_last_will);
 
   // button 0 pressed
   fsm.add_transition(&state_main_screen, &state_show_battery, EV_BUTTON_CLICK, NULL);
