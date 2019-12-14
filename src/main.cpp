@@ -182,28 +182,25 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
       ? vescdata.ampHours
       : last_trip.recall().ampHours;
 
-    if (vescdata.moving != old_vescdata.moving)
+    switch (vescdata.reason)
     {
-      if (vescdata.moving == false)
-      {
+      case ReasonType::BOARD_MOVING:
+        TRIGGER(EV_STARTED_MOVING, NULL);
+        break;
+      case ReasonType::BOARD_STOPPED:
         TRIGGER(EV_STOPPED_MOVING, NULL);
-      }
+        break;
+      case ReasonType::FIRST_PACKET:
+        TRIGGER(EV_RECV_PACKET, NULL);
+        TRIGGER(EV_BOARD_FIRST_CONNECT, "Reason: FIRST_PACKET");
+        break;
+      case ReasonType::REQUESTED:
+        TRIGGER(EV_REQUESTED_RESPONSE, "Reason: REQUESTED");
+        break;
+      default:
+        DEBUGVAL("Unhandled packet reason", vescdata.reason);
+        break;
     }
-    else
-    {
-      TRIGGER(EV_RECV_PACKET, NULL);
-    }
-  }
-
-  // board's first packet
-  if (vescdata.id == 0)
-  {
-    TRIGGER(EV_BOARD_FIRST_CONNECT, "EV_BOARD_FIRST_CONNECT");
-  }
-  else
-  {
-    Trip::TripType lt = last_trip.recall();
-    DEBUGVAL(vescdata.batteryVoltage, vescdata.odometer, old_vescdata.odometer, vescdata.moving, old_vescdata.moving, lt.odometer);
   }
 }
 //--------------------------------------------------------------------------------

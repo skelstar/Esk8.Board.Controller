@@ -3,7 +3,7 @@ enum StateMachineEventEnum
 {
   EV_BUTTON_CLICK,
   EV_BOARD_CONNECTED,
-  EV_MOVING,
+  EV_STARTED_MOVING,
   EV_STOPPED_MOVING,
   EV_HELD_DOWN_WAIT,
   EV_NO_HELD_OPTION_SELECTED,
@@ -11,6 +11,7 @@ enum StateMachineEventEnum
   EV_BOARD_FIRST_CONNECT,
   EV_PACKET_MISSED,
   EV_REQUESTED_UPDATE,
+  EV_REQUESTED_RESPONSE,
   EV_BOARD_TIMEOUT, // havne't heard from the board for a while (BOARD_COMMS_TIMEOUT)
 } fsm_event;
 
@@ -47,9 +48,9 @@ State state_searching(
     NULL,
     NULL);
 //-------------------------------
-State state_missing_packets(
+State state_main_screen(
     [] {
-      DEBUG("state_missing_packets ----------------------------------------");
+      DEBUG("state_main_screen ----------------------------------------");
       draw_missing_packets_screen(/*force*/true);
     },
     NULL,    
@@ -90,6 +91,7 @@ State state_board_timedout(
 //-------------------------------
 void handle_board_first_packet()
 {
+  DEBUG("handle_board_first_packet");
   board_first_packet_count++;
 }
 //-------------------------------
@@ -103,20 +105,24 @@ Fsm fsm(&state_connecting);
 
 void addFsmTransitions()
 {
-  fsm.add_transition(&state_connecting, &state_syncing, EV_RECV_PACKET, NULL);
-  fsm.add_transition(&state_syncing, &state_missing_packets, EV_RECV_PACKET, NULL);
+  // fsm.add_transition(&state_connecting, &state_syncing, EV_RECV_PACKET, NULL);
+  // fsm.add_transition(&state_syncing, &state_main_screen, EV_RECV_PACKET, NULL);
 
-  fsm.add_transition(&state_missing_packets, &state_missing_packets, EV_PACKET_MISSED, NULL);
-  fsm.add_transition(&state_missing_packets, &state_missing_packets, EV_BOARD_FIRST_CONNECT, handle_board_first_packet);
+  fsm.add_transition(&state_connecting, &state_main_screen, EV_BOARD_FIRST_CONNECT, handle_board_first_packet);
+  fsm.add_transition(&state_main_screen, &state_main_screen, EV_BOARD_FIRST_CONNECT, handle_board_first_packet);
   // requested update
-  fsm.add_transition(&state_missing_packets, &state_waiting_for_update, EV_REQUESTED_UPDATE, NULL);
-  fsm.add_transition(&state_waiting_for_update, &state_missing_packets, EV_RECV_PACKET, NULL);
+  fsm.add_transition(&state_main_screen, &state_waiting_for_update, EV_REQUESTED_UPDATE, NULL);
+  fsm.add_transition(&state_waiting_for_update, &state_main_screen, EV_REQUESTED_RESPONSE, NULL);
   fsm.add_transition(&state_waiting_for_update, &state_board_timedout, EV_BOARD_TIMEOUT, NULL);
-  fsm.add_transition(&state_board_timedout, &state_missing_packets, EV_RECV_PACKET, NULL);
-  fsm.add_transition(&state_missing_packets, &state_missing_packets, EV_STOPPED_MOVING, handle_stopped_moving);
+  // timed out
+  fsm.add_transition(&state_board_timedout, &state_main_screen, EV_RECV_PACKET, NULL);
+  fsm.add_transition(&state_board_timedout, &state_main_screen, EV_BOARD_FIRST_CONNECT, NULL);
+  fsm.add_transition(&state_board_timedout, &state_main_screen, EV_REQUESTED_RESPONSE, NULL);
+  
+  fsm.add_transition(&state_main_screen, &state_main_screen, EV_STOPPED_MOVING, handle_stopped_moving);
 
   // button 0 pressed
-  fsm.add_transition(&state_missing_packets, &state_show_battery, EV_BUTTON_CLICK, NULL);
-  fsm.add_timed_transition(&state_show_battery, &state_missing_packets, 1500, NULL);
+  fsm.add_transition(&state_main_screen, &state_show_battery, EV_BUTTON_CLICK, NULL);
+  fsm.add_timed_transition(&state_show_battery, &state_main_screen, 1500, NULL);
 }
 /* ---------------------------------------------- */
