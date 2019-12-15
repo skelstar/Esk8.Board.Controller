@@ -16,79 +16,75 @@ enum StateMachineEventEnum
   EV_BOARD_LAST_WILL,
 } fsm_event;
 
+enum StateId
+{
+  STATE_CONNECTING,
+  STATE_MAIN_SCREEN,
+  STATE_WAITING_FOR_UPDATE,
+  STATE_BOARD_TIMEDOUT,
+  STATE_SHOW_BATTERY,
+};
 
-//prototypes
-void handle_board_first_packet();
+uint8_t get_prev_state();
 
 //-------------------------------
 State state_connecting(
+    STATE_CONNECTING,
     [] {
-      DEBUG("state_connecting ----------------------------------------");
+      DEBUG("state_connecting --------");
       tft.fillScreen(TFT_BLACK);
       lcd_message(MC_DATUM, "searching..", TFT_WIDTH/2, TFT_HEIGHT/2, 2);
     },
     NULL,
     NULL);
 //-------------------------------
-State state_syncing(
-    [] {
-      DEBUG("state_syncing ----------------------------------------");
-      tft.fillScreen(TFT_BLACK);
-      lcd_message(MC_DATUM, "syncing..", TFT_WIDTH/2, TFT_HEIGHT/2, 2);
-    },
-    NULL,
-    NULL);
-//-------------------------------
-State state_searching(
-    [] {
-      DEBUG("state_searching ----------------------------------------");
-      tft.fillScreen(TFT_BLACK);
-      lcd_message(MC_DATUM, "connected", TFT_WIDTH/2, TFT_HEIGHT/2, 2);
-      missedPacketCounter = 0;
-    },
-    NULL,
-    NULL);
-//-------------------------------
+
 State state_main_screen(
-    [] {
-      DEBUG("state_main_screen ----------------------------------------");
-      draw_missing_packets_screen(/*force*/true);
-    },
-    NULL,    
-    NULL);
+  STATE_MAIN_SCREEN,
+  [] {
+    DEBUG("state_main_screen --------");
+    draw_missing_packets_screen(/*force*/true);
+  },
+  NULL,    
+  NULL);
 //-------------------------------
+
+
 State state_waiting_for_update(
-    [] {
-      since_requested_update = 0;
-    },
-    [] {
-      if (since_requested_update > 1000) 
-      {
-        TRIGGER(EV_BOARD_TIMEOUT, "EV_BOARD_TIMEOUT");
-      }
-    },    
-    NULL);
+  STATE_WAITING_FOR_UPDATE,
+  [] {
+    since_requested_update = 0;
+  },
+  [] {
+    if (since_requested_update > 1000)
+    {
+      TRIGGER(EV_BOARD_TIMEOUT, "EV_BOARD_TIMEOUT");
+    }
+  },    
+  NULL);
 //-------------------------------
 State state_board_timedout(
-    [] {
-      DEBUG("state_board_timedout ----------------------------------------");
-      controller_packet.throttle = 127; 
-      // assuming on missing_packet screen
-      tft.fillRect(0, 0, TFT_WIDTH, FONT_2_HEIGHT, TFT_RED);
-      tft.setTextColor(TFT_WHITE, TFT_RED);
-      lcd_message(MC_DATUM, "timed out!", TFT_WIDTH/2, FONT_2_HEIGHT/2, 2);
-      tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    },
-    NULL,    
-    NULL);
+  STATE_BOARD_TIMEDOUT,
+  [] {
+    DEBUG("state_board_timedout --------");
+    controller_packet.throttle = 127; 
+    // assuming on missing_packet screen
+    tft.fillRect(0, 0, TFT_WIDTH, FONT_2_HEIGHT, TFT_RED);
+    tft.setTextColor(TFT_WHITE, TFT_RED);
+    lcd_message(MC_DATUM, "timed out!", TFT_WIDTH/2, FONT_2_HEIGHT/2, 2);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  },
+  NULL,    
+  NULL);
 //-------------------------------
-  State state_show_battery(
-    [] {
-        DEBUG("state_show_battery ----------------------------------------");
-        drawBattery(getBatteryPercentage(vescdata.batteryVoltage));
-    },
-    NULL,
-    NULL);
+State state_show_battery(
+  STATE_SHOW_BATTERY,
+  [] {
+    DEBUG("state_show_battery --------");
+      drawBattery(getBatteryPercentage(vescdata.batteryVoltage));
+  },
+  NULL,
+  NULL);
 //-------------------------------
 void handle_board_first_packet()
 {
@@ -110,11 +106,14 @@ void handle_last_will()
 
 Fsm fsm(&state_connecting);
 
+uint8_t get_prev_state()
+{
+  return fsm.get_from_state();
+}
+
 void addFsmTransitions()
 {
-  // fsm.add_transition(&state_connecting, &state_syncing, EV_RECV_PACKET, NULL);
-  // fsm.add_transition(&state_syncing, &state_main_screen, EV_RECV_PACKET, NULL);
-
+  // first connect
   fsm.add_transition(&state_connecting, &state_main_screen, EV_BOARD_FIRST_CONNECT, handle_board_first_packet);
   fsm.add_transition(&state_main_screen, &state_main_screen, EV_BOARD_FIRST_CONNECT, handle_board_first_packet);
   // requested update
