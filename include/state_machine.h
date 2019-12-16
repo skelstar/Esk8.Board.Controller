@@ -29,14 +29,14 @@ uint8_t get_prev_state();
 
 //-------------------------------
 State state_connecting(
-    STATE_CONNECTING,
-    [] {
-      DEBUG("state_connecting --------");
-      tft.fillScreen(TFT_BLACK);
-      lcd_message(MC_DATUM, "searching..", TFT_WIDTH/2, TFT_HEIGHT/2, 2);
-    },
-    NULL,
-    NULL);
+  STATE_CONNECTING,
+  [] {
+    DEBUG("state_connecting --------");
+    tft.fillScreen(TFT_BLACK);
+    lcd_message(MC_DATUM, "searching..", TFT_WIDTH/2, TFT_HEIGHT/2, 2);
+  },
+  NULL,
+  NULL);
 //-------------------------------
 
 State state_main_screen(
@@ -45,7 +45,7 @@ State state_main_screen(
     DEBUG("state_main_screen --------");
     draw_missing_packets_screen(/*force*/true);
   },
-  NULL,    
+  NULL,
   NULL);
 //-------------------------------
 
@@ -60,7 +60,7 @@ State state_waiting_for_update(
     {
       TRIGGER(EV_BOARD_TIMEOUT, "EV_BOARD_TIMEOUT");
     }
-  },    
+  },
   NULL);
 //-------------------------------
 State state_board_timedout(
@@ -74,7 +74,7 @@ State state_board_timedout(
     lcd_message(MC_DATUM, "timed out!", TFT_WIDTH/2, FONT_2_HEIGHT/2, 2);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
   },
-  NULL,    
+  NULL,
   NULL);
 //-------------------------------
 State state_show_battery(
