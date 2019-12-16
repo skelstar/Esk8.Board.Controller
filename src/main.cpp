@@ -9,6 +9,7 @@
 #include <VescData.h>
 #include <elapsedMillis.h>
 #include <nvmstorage.h>
+#include <EasingLib.h>
 
 #define ENCODER_PWR_PIN 5
 #define ENCODER_GND_PIN 17
@@ -28,6 +29,8 @@
 //------------------------------------------------------------------
 
 elapsedMillis since_requested_update = 0;
+
+Easing easing;
 
 Trip last_trip;
 
@@ -52,7 +55,6 @@ Board board;
 
 #include <espNowClient.h>
 #include "utils.h"
-// #include "SSD1306.h"
 #include "TTGO_T_Display.h"
 #include <screens.h>
 #include <state_machine.h>
@@ -207,7 +209,7 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 }
 //--------------------------------------------------------------------------------
 
-void send_packet_to_board()
+void send_packet_to_board_1()
 {
   esp_err_t result;
   const uint8_t *addr = peer.peer_addr;
@@ -222,11 +224,20 @@ void send_packet_to_board()
 
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)100) == pdTRUE)
   {
+    controller_packet.throttle = easing.GetValue();
     controller_packet.id = sendCounter;
     memcpy(bs, &controller_packet, sizeof(controller_packet));
 
     result = esp_now_send(addr, bs, sizeof(bs));
     xSemaphoreGive(xCore1Semaphore);
+
+    uint8_t diff = abs(target_throttle - controller_packet.throttle);
+    Serial.printf("target: %d t: %d easing: ", target_throttle, controller_packet.throttle);
+    for (int i=127; i<controller_packet.throttle; i++)
+    {
+      Serial.printf("+");
+    }
+    Serial.println();
   }
   else
   {
@@ -288,6 +299,8 @@ void setup()
   Wire.begin();
   delay(10);
 
+  easing.SetMode(LINEAR);
+
 #ifdef USING_SSD1306
   //https://www.aliexpress.com/item/32871318121.html
   setupLCD();
@@ -338,9 +351,9 @@ void loop()
     {
     case EVENT_THROTTLE_CHANGED:
     {
-      send_packet_to_board();
+      send_packet_to_board_1();
       t_SendToBoard.restart();
-      Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
+      // Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
     }
     break;
     case EVENT_2:
@@ -358,6 +371,6 @@ void loop()
   xStatus = xQueueReceive(xSendPacketToBoardQueue, &e2, pdMS_TO_TICKS(0));
   if (xStatus == pdPASS)
   {
-    send_packet_to_board();
+    send_packet_to_board_1();
   }
 }
