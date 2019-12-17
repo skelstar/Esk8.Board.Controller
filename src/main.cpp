@@ -24,12 +24,14 @@
   #define CHECK_FOR_BOARD_TIMEOUT 1
   #define BOARD_COMMS_TIMEOUT 1000
   #define SEND_TO_BOARD_INTERVAL 200
-  #define EASING_TIME_INTERVAL 50
+  #define EASING_ACCEL_TIME_INTERVAL 50
+  #define EASING_ZERO_THROTTLE_PERIOD 200
 #else
   #define CHECK_FOR_BOARD_TIMEOUT 1
   #define BOARD_COMMS_TIMEOUT 1000
   #define SEND_TO_BOARD_INTERVAL 200
-  #define EASING_TIME_INTERVAL 50
+  #define EASING_ACCEL_TIME_INTERVAL 50
+  #define EASING_ZERO_THROTTLE_PERIOD 200
 #endif
 
 #define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
@@ -245,7 +247,7 @@ void send_packet_to_board_1()
     result = esp_now_send(addr, bs, sizeof(bs));
     xSemaphoreGive(xCore1Semaphore);
 
-    // print_throttle(target_throttle);
+    print_throttle(target_throttle);
   }
   else
   {
