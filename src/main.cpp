@@ -23,11 +23,13 @@
 #ifdef USE_TEST_VALUES
   #define CHECK_FOR_BOARD_TIMEOUT 1
   #define BOARD_COMMS_TIMEOUT 1000
-  #define SEND_TO_BOARD_INTERVAL 1000
+  #define SEND_TO_BOARD_INTERVAL 200
+  #define EASING_TIME_INTERVAL 50
 #else
   #define CHECK_FOR_BOARD_TIMEOUT 1
   #define BOARD_COMMS_TIMEOUT 1000
   #define SEND_TO_BOARD_INTERVAL 200
+  #define EASING_TIME_INTERVAL 50
 #endif
 
 #define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
@@ -205,7 +207,7 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
         TRIGGER(EV_BOARD_FIRST_CONNECT, "Reason: FIRST_PACKET");
         break;
       case ReasonType::REQUESTED:
-        TRIGGER(EV_REQUESTED_RESPONSE, "Reason: REQUESTED");
+        TRIGGER(EV_REQUESTED_RESPONSE, NULL);
         break;
       case ReasonType::LAST_WILL:
         TRIGGER(EV_BOARD_LAST_WILL, NULL);
@@ -218,7 +220,6 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 //--------------------------------------------------------------------------------
 
 elapsedMillis since_last_requested_update = 0;
-bool print_throttle = false;
 
 void send_packet_to_board_1()
 {
@@ -244,19 +245,7 @@ void send_packet_to_board_1()
     result = esp_now_send(addr, bs, sizeof(bs));
     xSemaphoreGive(xCore1Semaphore);
 
-    if (target_throttle != controller_packet.throttle || print_throttle)
-    {
-      Serial.printf("target: %d t: %d easing: ", target_throttle, controller_packet.throttle);
-      for (int i=127; i<controller_packet.throttle; i++)
-      {
-        Serial.printf("+");
-      }
-      Serial.println();
-      if (target_throttle == controller_packet.throttle) 
-      {
-        print_throttle = false;
-      }
-    }
+    // print_throttle(target_throttle);
   }
   else
   {

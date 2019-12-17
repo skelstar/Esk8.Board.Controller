@@ -18,12 +18,15 @@ uint8_t target_throttle = 127;
 //-------------------------------------------------------
 int8_t current_counter = 0;
 
+unsigned long get_easing_period(long diff)
+{
+	return diff * EASING_TIME_INTERVAL;
+}
+
 void set_eased_throttle(uint throttle, uint8_t current_throttle)
 {
-	// uint8_t diff = abs(throttle - current_throttle);
-	// Serial.printf("diff: %d ", diff);
-	// uint8_t period = diff * SEND_TO_BOARD_INTERVAL;
-	uint16_t period = 3000;
+	long diff = labs(throttle - current_throttle);
+	unsigned long period = get_easing_period(diff);
 	easing.SetMillisInterval(period);
 	easing.SetSetpoint(throttle);
 }
@@ -38,7 +41,6 @@ void encoder_handler(i2cEncoderLibV2 *obj)
 		target_throttle = mapCounterTo127to255(counter);
 		uint8_t current_throttle = easing.GetValue();
 		set_eased_throttle(target_throttle, current_throttle);
-		// Serial.printf("Throttle: %d (%d)\n", target_throttle, counter);
 		current_counter = counter;
 	}
 }

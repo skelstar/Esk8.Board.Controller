@@ -56,3 +56,22 @@ char* reason_toString(ReasonType reason)
       return "unhandle reason";
   }
 }
+
+bool print_throttle_flag = false;
+void print_throttle(uint8_t target)
+{
+  if (target != controller_packet.throttle || print_throttle_flag)
+  {
+    print_throttle_flag = true;
+    Serial.printf("target: %d t: %d easing: ", target, controller_packet.throttle);
+    for (int i=127; i<controller_packet.throttle; i++)
+    {
+      Serial.printf("+");
+    }
+    Serial.println();
+    if (target == controller_packet.throttle) 
+    {
+      print_throttle_flag = false;
+    }
+  }
+}
