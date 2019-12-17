@@ -20,9 +20,10 @@ int8_t current_counter = 0;
 
 void set_eased_throttle(uint throttle, uint8_t current_throttle)
 {
-	uint8_t diff = abs(throttle - current_throttle);
-	Serial.printf("diff: %d ", diff);
-	uint8_t period = diff * SEND_TO_BOARD_INTERVAL;
+	// uint8_t diff = abs(throttle - current_throttle);
+	// Serial.printf("diff: %d ", diff);
+	// uint8_t period = diff * SEND_TO_BOARD_INTERVAL;
+	uint16_t period = 3000;
 	easing.SetMillisInterval(period);
 	easing.SetSetpoint(throttle);
 }

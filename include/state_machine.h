@@ -56,7 +56,7 @@ State state_waiting_for_update(
     since_requested_update = 0;
   },
   [] {
-    if (since_requested_update > 1000)
+    if (since_requested_update > BOARD_COMMS_TIMEOUT)
     {
       TRIGGER(EV_BOARD_TIMEOUT, "EV_BOARD_TIMEOUT");
     }

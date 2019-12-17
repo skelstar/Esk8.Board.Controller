@@ -19,8 +19,16 @@
 
 #define BUTTON0_PIN 0
 
-#define BOARD_COMMS_TIMEOUT 1000
-#define SEND_TO_BOARD_INTERVAL 200
+#define USE_TEST_VALUES
+#ifdef USE_TEST_VALUES
+  #define CHECK_FOR_BOARD_TIMEOUT 1
+  #define BOARD_COMMS_TIMEOUT 1000
+  #define SEND_TO_BOARD_INTERVAL 1000
+#else
+  #define CHECK_FOR_BOARD_TIMEOUT 1
+  #define BOARD_COMMS_TIMEOUT 1000
+  #define SEND_TO_BOARD_INTERVAL 200
+#endif
 
 #define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
 #define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
@@ -209,35 +217,46 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 }
 //--------------------------------------------------------------------------------
 
+elapsedMillis since_last_requested_update = 0;
+bool print_throttle = false;
+
 void send_packet_to_board_1()
 {
   esp_err_t result;
   const uint8_t *addr = peer.peer_addr;
-  uint8_t bs[sizeof(controller_packet)];
+  controller_packet.command = 0;
 
-  bool req_update = sendCounter % 50 == 0;
-  if (req_update)
+  if (since_last_requested_update > 5000)
   {
+    since_last_requested_update = 0;
     TRIGGER(EV_REQUESTED_UPDATE, NULL);
+    controller_packet.command = COMMAND_REQUEST_UPDATE;
   }
-  controller_packet.command = req_update ? COMMAND_REQUEST_UPDATE : 0;
 
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)100) == pdTRUE)
   {
     controller_packet.throttle = easing.GetValue();
     controller_packet.id = sendCounter;
+    
+    uint8_t bs[sizeof(controller_packet)];
     memcpy(bs, &controller_packet, sizeof(controller_packet));
 
     result = esp_now_send(addr, bs, sizeof(bs));
     xSemaphoreGive(xCore1Semaphore);
 
-    uint8_t diff = abs(target_throttle - controller_packet.throttle);
-    Serial.printf("target: %d t: %d easing: ", target_throttle, controller_packet.throttle);
-    for (int i=127; i<controller_packet.throttle; i++)
+    if (target_throttle != controller_packet.throttle || print_throttle)
     {
-      Serial.printf("+");
+      Serial.printf("target: %d t: %d easing: ", target_throttle, controller_packet.throttle);
+      for (int i=127; i<controller_packet.throttle; i++)
+      {
+        Serial.printf("+");
+      }
+      Serial.println();
+      if (target_throttle == controller_packet.throttle) 
+      {
+        print_throttle = false;
+      }
     }
-    Serial.println();
   }
   else
   {
@@ -280,6 +299,14 @@ void board_event_cb(Board::BoardEventEnum ev)
 void setup()
 {
   Serial.begin(115200);
+  
+  #ifdef USE_TEST_VALUES
+  Serial.printf("\n");
+  Serial.printf("/********************************************************/\n");
+  Serial.printf("/*               WARNING: Using test values!            */\n");
+  Serial.printf("/********************************************************/\n");
+  Serial.printf("\n");
+  #endif
 
   powerpins_init();
   button_init();
@@ -300,6 +327,7 @@ void setup()
   delay(10);
 
   easing.SetMode(LINEAR);
+  easing.SetSetpoint(127);
 
 #ifdef USING_SSD1306
   //https://www.aliexpress.com/item/32871318121.html
