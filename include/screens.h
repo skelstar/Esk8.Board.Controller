@@ -1,11 +1,11 @@
 
 
-void draw_missing_packets_screen()
+void draw_missing_packets_screen(bool force = false)
 {
   bool something_changed = vescdata.ampHours != old_vescdata.ampHours ||
     board_first_packet_count != old_board_first_packet_count;
 
-  if (something_changed)
+  if (something_changed || force)
   {
     tft.fillScreen(TFT_BLACK);
     char buff[4];

@@ -8,6 +8,8 @@
 #include <TaskScheduler.h>
 #include <VescData.h>
 #include <elapsedMillis.h>
+#include <nvmstorage.h>
+#include <EasingLib.h>
 
 #define ENCODER_PWR_PIN 5
 #define ENCODER_GND_PIN 17
@@ -15,16 +17,34 @@
 #define RF24_PWR_PIN 27
 #define RF24_GND_PIN 25
 
-#define DEADMAN_INPUT_PIN 0
-#define DEADMAN_GND_PIN 12
+#define BUTTON0_PIN 0
 
-#define BOARD_COMMS_TIMEOUT       1000
-#define MISSED_PACKETS_THRESHOLD  2
-#define SEND_TO_BOARD_INTERVAL    200
+#define USE_TEST_VALUES
+#ifdef USE_TEST_VALUES
+  #define CHECK_FOR_BOARD_TIMEOUT 1
+  #define BOARD_COMMS_TIMEOUT 1000
+  #define SEND_TO_BOARD_INTERVAL 200
+  #define EASING_ACCEL_TIME_INTERVAL 50
+  #define EASING_ZERO_THROTTLE_PERIOD 200
+#else
+  #define CHECK_FOR_BOARD_TIMEOUT 1
+  #define BOARD_COMMS_TIMEOUT 1000
+  #define SEND_TO_BOARD_INTERVAL 200
+  #define EASING_ACCEL_TIME_INTERVAL 50
+  #define EASING_ZERO_THROTTLE_PERIOD 200
+#endif
+
+#define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
+#define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
+#define BATTERY_VOLTAGE_CUTOFF_END 3.1 * 11   // 34.1
 
 //------------------------------------------------------------------
 
 elapsedMillis since_requested_update = 0;
+
+Easing easing;
+
+Trip last_trip;
 
 VescData vescdata, old_vescdata;
 ControllerData controller_packet;
@@ -41,18 +61,17 @@ uint8_t rxCorrectCount = 0;
 #include "board.h"
 
 // prototypes
-void TRIGGER(uint8_t x, char* s);
+void TRIGGER(uint8_t x, char *s);
 
 Board board;
 
 #include <espNowClient.h>
 #include "utils.h"
-// #include "SSD1306.h"
 #include "TTGO_T_Display.h"
 #include <screens.h>
 #include <state_machine.h>
 
-void TRIGGER(uint8_t x, char* s)
+void TRIGGER(uint8_t x, char *s)
 {
   if (s != NULL)
   {
@@ -70,18 +89,15 @@ xQueueHandle xSendPacketToBoardQueue;
 
 //------------------------------------------------------------------
 
-Button2 deadman(DEADMAN_INPUT_PIN);
+Button2 button0(BUTTON0_PIN);
 
-void deadmanPressed(Button2 &btn)
+void button0_pressed(Button2 &btn)
 {
-  bool pressed = true;
-  // xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
+  TRIGGER(EV_BUTTON_CLICK, NULL);
 }
 
-void deadmanReleased(Button2 &btn)
+void button0_released(Button2 &btn)
 {
-  bool pressed = false;
-  // xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(10));
 }
 
 //------------------------------------------------------------------
@@ -120,7 +136,7 @@ void encoderTask_0(void *pvParameters)
     if (xStatus == pdPASS)
     {
       // DEBUG("xDeadmanChangedQueue");
-      //updateEncoderMaxCount(accel_enabled);
+      updateEncoderMaxCount(accel_enabled);
     }
 
     /* read encoder */
@@ -147,20 +163,20 @@ Task t_SendToBoard(
     TASK_FOREVER,
     [] {
       uint8_t e = 1;
-      xQueueSendToFront(xSendPacketToBoardQueue, &e, pdMS_TO_TICKS(10));
+      xQueueSendToFront(xSendPacketToBoardQueue, &e, pdMS_TO_TICKS(5));
     });
 
 //--------------------------------------------------------------------------------
 
 void button_init()
 {
-  deadman.setPressedHandler(deadmanPressed);
-  deadman.setReleasedHandler(deadmanReleased);
-  deadman.setDoubleClickHandler([](Button2 &b) {
-    Serial.printf("deadman.setDoubleClickHandler([](Button2 &b)\n");
+  button0.setPressedHandler(button0_pressed);
+  button0.setReleasedHandler(button0_released);
+  button0.setDoubleClickHandler([](Button2 &b) {
+    Serial.printf("button0.setDoubleClickHandler([](Button2 &b)\n");
   });
-  deadman.setTripleClickHandler([](Button2 &b) {
-    Serial.printf("deadman.setTripleClickHandler([](Button2 &b)\n");
+  button0.setTripleClickHandler([](Button2 &b) {
+    Serial.printf("button0.setTripleClickHandler([](Button2 &b)\n");
   });
 }
 //--------------------------------------------------------------------------------
@@ -171,44 +187,69 @@ void packetReceived(const uint8_t *data, uint8_t data_len)
 {
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
   {
-    TRIGGER(EV_RECV_PACKET, NULL);
     memcpy(&old_vescdata, &vescdata, sizeof(vescdata));
     memcpy(&vescdata, data, data_len);
     board.received_packet(vescdata.id);
     xSemaphoreGive(xCore1Semaphore);
-    board.num_times_controller_offline = vescdata.ampHours;
-  }
 
-  // board's first packet
-  if (vescdata.id == 0)
-  {
-    TRIGGER(EV_BOARD_FIRST_CONNECT, "EV_BOARD_FIRST_CONNECT");
+    board.num_times_controller_offline = vescdata.ampHours > 0
+      ? vescdata.ampHours
+      : last_trip.recall().ampHours;
+
+    switch (vescdata.reason)
+    {
+      case ReasonType::BOARD_MOVING:
+        TRIGGER(EV_STARTED_MOVING, NULL);
+        break;
+      case ReasonType::BOARD_STOPPED:
+        TRIGGER(EV_STOPPED_MOVING, NULL);
+        break;
+      case ReasonType::FIRST_PACKET:
+        TRIGGER(EV_RECV_PACKET, NULL);
+        TRIGGER(EV_BOARD_FIRST_CONNECT, "Reason: FIRST_PACKET");
+        break;
+      case ReasonType::REQUESTED:
+        TRIGGER(EV_REQUESTED_RESPONSE, NULL);
+        break;
+      case ReasonType::LAST_WILL:
+        TRIGGER(EV_BOARD_LAST_WILL, NULL);
+      default:
+        DEBUGVAL("Unhandled packet reason", vescdata.reason);
+        break;
+    }
   }
 }
 //--------------------------------------------------------------------------------
 
-void send_packet_to_board()
+elapsedMillis since_last_requested_update = 0;
+
+void send_packet_to_board_1()
 {
   esp_err_t result;
   const uint8_t *addr = peer.peer_addr;
-  uint8_t bs[sizeof(controller_packet)];
+  controller_packet.command = 0;
 
-  bool req_update = sendCounter % 50 == 0;
-  if (req_update)
+  if (since_last_requested_update > 5000)
   {
+    since_last_requested_update = 0;
     TRIGGER(EV_REQUESTED_UPDATE, NULL);
+    controller_packet.command = COMMAND_REQUEST_UPDATE;
   }
-  controller_packet.command = req_update ? COMMAND_REQUEST_UPDATE : 0;
 
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)100) == pdTRUE)
   {
+    controller_packet.throttle = easing.GetValue();
     controller_packet.id = sendCounter;
+    
+    uint8_t bs[sizeof(controller_packet)];
     memcpy(bs, &controller_packet, sizeof(controller_packet));
 
     result = esp_now_send(addr, bs, sizeof(bs));
     xSemaphoreGive(xCore1Semaphore);
+
+    print_throttle(target_throttle);
   }
-  else 
+  else
   {
     DEBUG("Unable to take semaphore");
     return;
@@ -218,7 +259,6 @@ void send_packet_to_board()
 
   if (result == ESP_OK)
   {
-    t_SendToBoard.restart();
     sendCounter++;
   }
   else
@@ -236,12 +276,12 @@ void board_event_cb(Board::BoardEventEnum ev)
 {
   switch (ev)
   {
-    case Board::EV_BOARD_TIMEOUT:
-      TRIGGER(EV_BOARD_TIMEOUT, "EV_BOARD_TIMEOUT");
-      break;
-    case Board::EV_BOARD_ONLINE:
-      // TRIGGER(EV_BOARD_CONNECTED, NULL);
-      break;
+  case Board::EV_BOARD_TIMEOUT:
+    TRIGGER(EV_BOARD_TIMEOUT, "EV_BOARD_TIMEOUT");
+    break;
+  case Board::EV_BOARD_ONLINE:
+    // TRIGGER(EV_BOARD_CONNECTED, NULL);
+    break;
   }
 }
 
@@ -250,6 +290,14 @@ void board_event_cb(Board::BoardEventEnum ev)
 void setup()
 {
   Serial.begin(115200);
+  
+  #ifdef USE_TEST_VALUES
+  Serial.printf("\n");
+  Serial.printf("/********************************************************/\n");
+  Serial.printf("/*               WARNING: Using test values!            */\n");
+  Serial.printf("/********************************************************/\n");
+  Serial.printf("\n");
+  #endif
 
   powerpins_init();
   button_init();
@@ -268,6 +316,9 @@ void setup()
 
   Wire.begin();
   delay(10);
+
+  easing.SetMode(LINEAR);
+  easing.SetSetpoint(127);
 
 #ifdef USING_SSD1306
   //https://www.aliexpress.com/item/32871318121.html
@@ -302,7 +353,7 @@ void setup()
 
 void loop()
 {
-  deadman.loop();
+  button0.loop();
 
   runner.execute();
 
@@ -317,28 +368,28 @@ void loop()
   {
     switch (e)
     {
-      case EVENT_THROTTLE_CHANGED:
-      {
-        send_packet_to_board();
-        t_SendToBoard.restart();
-        Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
-      }
+    case EVENT_THROTTLE_CHANGED:
+    {
+      send_packet_to_board_1();
+      t_SendToBoard.restart();
+      // Serial.printf("Throttle EVENT_THROTTLE_CHANGED! %d\n", controller_packet.throttle);
+    }
+    break;
+    case EVENT_2:
+      Serial.printf("Event %d\n", e);
       break;
-      case EVENT_2:
-        Serial.printf("Event %d\n", e);
-        break;
-      case EVENT_3:
-        Serial.printf("Event %d\n", e);
-        break;
-      default:
-        Serial.printf("Unhandled event code: %d \n", e);
+    case EVENT_3:
+      Serial.printf("Event %d\n", e);
+      break;
+    default:
+      Serial.printf("Unhandled event code: %d \n", e);
     }
   }
 
   uint8_t e2;
-  xStatus = xQueueReceive(xSendPacketToBoardQueue, &e2, pdMS_TO_TICKS(50));
+  xStatus = xQueueReceive(xSendPacketToBoardQueue, &e2, pdMS_TO_TICKS(0));
   if (xStatus == pdPASS)
   {
-    send_packet_to_board();
+    send_packet_to_board_1();
   }
 }

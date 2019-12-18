@@ -301,6 +301,37 @@ void tft_util_draw_digit(
 }
 
 //---------------------------------------------------------------
+#define BATTERY_WIDTH     200
+#define BATTERY_HEIGHT    100
+#define BORDER_SIZE 12
+#define KNOB_HEIGHT 40
+
+void drawBattery(int percent)
+{
+  tft.fillScreen(TFT_BLACK);
+
+  int outsideX = (TFT_WIDTH - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
+  int outsideY = (TFT_HEIGHT - BATTERY_HEIGHT) / 2;
+  tft.fillRect(outsideX, outsideY, BATTERY_WIDTH, BATTERY_HEIGHT, TFT_WHITE);
+  tft.fillRect(
+      outsideX + BATTERY_WIDTH,
+      outsideY + (BATTERY_HEIGHT - KNOB_HEIGHT) / 2,
+      BORDER_SIZE,
+      KNOB_HEIGHT,
+      TFT_WHITE); // knob
+  tft.fillRect(
+      outsideX + BORDER_SIZE,
+      outsideY + BORDER_SIZE,
+      BATTERY_WIDTH - BORDER_SIZE * 2,
+      BATTERY_HEIGHT - BORDER_SIZE * 2,
+      TFT_BLACK);
+  tft.fillRect(
+      outsideX + BORDER_SIZE * 2,
+      outsideY + BORDER_SIZE * 2,
+      (BATTERY_WIDTH - BORDER_SIZE * 4) * percent / 100,
+      BATTERY_HEIGHT - BORDER_SIZE * 4,
+      TFT_WHITE);
+}
 //---------------------------------------------------------------
 //---------------------------------------------------------------
 //---------------------------------------------------------------

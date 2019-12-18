@@ -13,9 +13,39 @@ int _oldCounter = 0;
 //-------------------------------------------------------
 
 int mapCounterTo127to255(int counter);
+uint8_t target_throttle = 127;
 
 //-------------------------------------------------------
 int8_t current_counter = 0;
+
+unsigned long get_easing_period(uint8_t target, uint8_t current)
+{
+	bool wanting_to_brake = target < 127;
+	bool braking = current < 127;
+	bool slowing_down = target < current;
+
+	if (wanting_to_brake)
+	{
+		return 0;
+	}
+	else if (braking)
+	{
+		return EASING_ZERO_THROTTLE_PERIOD;
+	}
+	else if (slowing_down)
+	{
+		return EASING_ZERO_THROTTLE_PERIOD;
+	}
+	// accel > 127
+	return (labs(target - current)) * EASING_ACCEL_TIME_INTERVAL;
+}
+
+void set_eased_throttle(uint8_t target, uint8_t current_throttle)
+{
+	unsigned long period = get_easing_period(target, current_throttle);
+	easing.SetMillisInterval(period);
+	easing.SetSetpoint(target);
+}
 
 void encoder_handler(i2cEncoderLibV2 *obj) 
 {
@@ -23,9 +53,10 @@ void encoder_handler(i2cEncoderLibV2 *obj)
 	if (current_counter != counter)
 	{
 		EventEnum e = EVENT_THROTTLE_CHANGED;
-		xQueueSendToFront(xEncoderChangeQueue, &e, pdMS_TO_TICKS(100));
-		controller_packet.throttle =  mapCounterTo127to255(counter);
-		Serial.printf("Throttle: %d (%d)\n", controller_packet.throttle, counter);
+		xQueueSendToFront(xEncoderChangeQueue, &e, pdMS_TO_TICKS(0));
+		target_throttle = mapCounterTo127to255(counter);
+		uint8_t current_throttle = easing.GetValue();
+		set_eased_throttle(target_throttle, current_throttle);
 		current_counter = counter;
 	}
 }

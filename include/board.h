@@ -11,8 +11,6 @@ class Board
 
     typedef void (*eventCallBack)(BoardEventEnum ev);
 
-    // #define CHECK_FOR_BOARD_TIMEOUT 1
-
     Board()
     {
       lastPacketRxTime = 0;
@@ -26,25 +24,25 @@ class Board
       _on_event_callback = ptr;
     }
 
-    bool timed_out()
-    {
-      #ifdef CHECK_FOR_BOARD_TIMEOUT
-      return millis() - lastPacketRxTime > BOARD_COMMS_TIMEOUT;
-      #else
-      return false;
-      #endif
-    }
+    // bool timed_out()
+    // {
+    //   #ifdef CHECK_FOR_BOARD_TIMEOUT
+    //   return millis() - lastPacketRxTime > BOARD_COMMS_TIMEOUT;
+    //   #else
+    //   return false;
+    //   #endif
+    // }
 
     void loop()
     {
-      if (timed_out())
-      {
-        _on_event_callback(EV_BOARD_TIMEOUT);
-      }
-      else 
-      {
-        _on_event_callback(EV_BOARD_ONLINE);
-      }
+      // if (timed_out())
+      // {
+      //   _on_event_callback(EV_BOARD_TIMEOUT);
+      // }
+      // else 
+      // {
+        // _on_event_callback(EV_BOARD_ONLINE);
+      // }
     }
 
     uint8_t received_packet(unsigned long rx_id)
