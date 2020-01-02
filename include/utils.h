@@ -2,10 +2,10 @@
 void powerpins_init()
 {
   // encoder
-  pinMode(ENCODER_PWR_PIN, OUTPUT);
-  digitalWrite(ENCODER_PWR_PIN, HIGH);
-  pinMode(ENCODER_GND_PIN, OUTPUT);
-  digitalWrite(ENCODER_GND_PIN, LOW);
+  // pinMode(ENCODER_PWR_PIN, OUTPUT);
+  // digitalWrite(ENCODER_PWR_PIN, HIGH);
+  // pinMode(ENCODER_GND_PIN, OUTPUT);
+  // digitalWrite(ENCODER_GND_PIN, LOW);
 }
 
 bool boardOnline() 
@@ -38,35 +38,35 @@ uint8_t getBatteryPercentage(float voltage) {
   return percent;
 }
 
-char* reason_toString(ReasonType reason)
-{
-  switch (reason)
-  {
-    case BOARD_STOPPED:
-      return "BOARD_STOPPED";
-    case BOARD_MOVING:
-      return "BOARD_MOVING";
-    case FIRST_PACKET:
-      return "FIRST_PACKET";
-    case LAST_WILL:
-      return "LAST_WILL";
-    case REQUESTED:
-      return "REQUESTED";
-    default:
-      return "unhandle reason";
-  }
-}
+// char* reason_toString(ReasonType reason)
+// {
+//   switch (reason)
+//   {
+//     case BOARD_STOPPED:
+//       return "BOARD_STOPPED";
+//     case BOARD_MOVING:
+//       return "BOARD_MOVING";
+//     case FIRST_PACKET:
+//       return "FIRST_PACKET";
+//     case LAST_WILL:
+//       return "LAST_WILL";
+//     case REQUESTED:
+//       return "REQUESTED";
+//     default:
+//       return "unhandle reason";
+//   }
+// }
 
 bool print_throttle_flag = false;
 
 void print_throttle(uint8_t target)
 {
-  if (target != controller_packet.throttle || print_throttle_flag)
+  if (target != nrf24.controllerPacket.throttle || print_throttle_flag)
   {
     print_throttle_flag = true;
-    Serial.printf("target: %d t: %d ", target, controller_packet.throttle);
+    Serial.printf("target: %d t: %d ", target, nrf24.controllerPacket.throttle);
     Serial.println();
-    if (target == controller_packet.throttle) 
+    if (target == nrf24.controllerPacket.throttle) 
     {
       print_throttle_flag = false;
     }

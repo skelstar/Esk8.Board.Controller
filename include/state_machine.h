@@ -32,8 +32,8 @@ State state_connecting(
   STATE_CONNECTING,
   [] {
     DEBUG("state_connecting --------");
-    tft.fillScreen(TFT_BLACK);
-    lcd_message(MC_DATUM, "searching..", TFT_WIDTH/2, TFT_HEIGHT/2, 2);
+    // tft.fillScreen(TFT_BLACK);
+    // lcd_message(MC_DATUM, "searching..", TFT_WIDTH/2, TFT_HEIGHT/2, 2);
   },
   NULL,
   NULL);
@@ -67,12 +67,12 @@ State state_board_timedout(
   STATE_BOARD_TIMEDOUT,
   [] {
     DEBUG("state_board_timedout --------");
-    controller_packet.throttle = 127; 
+    nrf24.controllerPacket.throttle = 127; 
     // assuming on missing_packet screen
-    tft.fillRect(0, 0, TFT_WIDTH, FONT_2_HEIGHT, TFT_RED);
-    tft.setTextColor(TFT_WHITE, TFT_RED);
-    lcd_message(MC_DATUM, "timed out!", TFT_WIDTH/2, FONT_2_HEIGHT/2, 2);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    // tft.fillRect(0, 0, TFT_WIDTH, FONT_2_HEIGHT, TFT_RED);
+    // tft.setTextColor(TFT_WHITE, TFT_RED);
+    // lcd_message(MC_DATUM, "timed out!", TFT_WIDTH/2, FONT_2_HEIGHT/2, 2);
+    // tft.setTextColor(TFT_WHITE, TFT_BLACK);
   },
   NULL,
   NULL);
@@ -81,7 +81,7 @@ State state_show_battery(
   STATE_SHOW_BATTERY,
   [] {
     DEBUG("state_show_battery --------");
-      drawBattery(getBatteryPercentage(vescdata.batteryVoltage));
+      // drawBattery(getBatteryPercentage(vescdata.batteryVoltage));
   },
   NULL,
   NULL);
@@ -94,7 +94,7 @@ void handle_board_first_packet()
 //-------------------------------
 void handle_stopped_moving()
 {
-  last_trip.save(vescdata);
+  // last_trip.save(vescdata);
   DEBUG("saved vesc data");
 }
 //-------------------------------
