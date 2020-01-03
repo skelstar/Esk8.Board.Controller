@@ -6,7 +6,7 @@
 #include <Fsm.h>
 #include <Wire.h>
 #include <TaskScheduler.h>
-// #include <VescData.h>
+#include <VescData.h>
 #include <elapsedMillis.h>
 
 // prototypes
@@ -21,27 +21,28 @@ void packet_available_cb(uint16_t from_id);
 #define CHECK_FOR_BOARD_TIMEOUT 1
 #define BOARD_COMMS_TIMEOUT 1000
 #define SEND_TO_BOARD_INTERVAL 1000
-#define EASING_ACCEL_TIME_INTERVAL 50
-#define EASING_ZERO_THROTTLE_PERIOD 200
+#define READ_TRIGGER_INTERVAL 200
 #else
 #define CHECK_FOR_BOARD_TIMEOUT 1
 #define BOARD_COMMS_TIMEOUT 1000
 #define SEND_TO_BOARD_INTERVAL 200
-#define EASING_ACCEL_TIME_INTERVAL 50
-#define EASING_ZERO_THROTTLE_PERIOD 200
+#define READ_TRIGGER_INTERVAL SEND_TO_BOARD_INTERVAL
 #endif
 
 #define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
 #define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
 #define BATTERY_VOLTAGE_CUTOFF_END 3.1 * 11   // 34.1
 
+#define SCHEDULED_EVENT_READ_TRIGGER 1
+#define SCHEDULED_EVENT_SEND_TO_BOARD 2
+
 //------------------------------------------------------------------
 
 elapsedMillis since_requested_update = 0;
 
-BoardPacket old_vescdata;
+VescData old_vescdata;
 
-ControllerPacket old_packet;
+ControllerData old_packet;
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
@@ -57,6 +58,7 @@ void TRIGGER(uint8_t x, char *s);
 
 #include "utils.h"
 #include <screens.h>
+#include "SSD1306.h"
 #include <state_machine.h>
 
 void TRIGGER(uint8_t x, char *s)
@@ -69,9 +71,9 @@ void TRIGGER(uint8_t x, char *s)
 }
 
 // queues
-xQueueHandle xTriggerChangeQueue;
-xQueueHandle xDeadmanChangedQueue;
-xQueueHandle xSendPacketToBoardQueue;
+// xQueueHandle xTriggerReadQueue;
+// xQueueHandle xDeadmanChangedQueue;
+xQueueHandle xScheduledEventsQueue;
 
 //------------------------------------------------------------------
 
@@ -88,50 +90,47 @@ void button0_released(Button2 &btn)
 
 //------------------------------------------------------------------
 
-enum EventEnum
-{
-  EVENT_THROTTLE_CHANGED = 1,
-  EVENT_2,
-  EVENT_3
-} event;
-
-//--------------------------------------------------------------------------------
-
-//--------------------------------------------------------------------------------
-
 #define OTHER_CORE 0
 #define NORMAL_CORE 1
-SemaphoreHandle_t xCore0Semaphore;
+SemaphoreHandle_t xControllerPacketSemaphore;
 SemaphoreHandle_t xCore1Semaphore;
+
+uint16_t read_raw_trigger()
+{
+  return analogRead(13);
+}
 
 void triggerTask_0(void *pvParameters)
 {
-  xCore0Semaphore = xSemaphoreCreateMutex();
+  xControllerPacketSemaphore = xSemaphoreCreateMutex();
 
   Serial.printf("triggerTask_0 running on core %d\n", xPortGetCoreID());
 
   while (true)
   {
-    bool accel_enabled = false;
-    BaseType_t xStatus;
+    // bool accel_enabled = false;
+    uint8_t e;
+    bool event = xQueuePeek(xScheduledEventsQueue, &e, (TickType_t)0) == pdTRUE;
+    if (event == true && e == SCHEDULED_EVENT_READ_TRIGGER)
+    {
+      xQueueReceive(xScheduledEventsQueue, &e, (TickType_t)0);
+      /* read encoder */
+      if (xControllerPacketSemaphore != NULL && xSemaphoreTake(xControllerPacketSemaphore, (TickType_t)10) == pdTRUE)
+      {
+        uint16_t raw = read_raw_trigger();
+        uint8_t old_throttle = nrf24.controllerPacket.throttle;
 
-    /* deadman read */
-    xStatus = xQueueReceive(xDeadmanChangedQueue, &accel_enabled, pdMS_TO_TICKS(20));
-    if (xStatus == pdPASS)
-    {
-      // DEBUG("xDeadmanChangedQueue");
-      // updateEncoderMaxCount(accel_enabled);
-    }
-
-    /* read encoder */
-    if (xCore0Semaphore != NULL && xSemaphoreTake(xCore0Semaphore, (TickType_t)10) == pdTRUE)
-    {
-      // encoderUpdate();
-      xSemaphoreGive(xCore0Semaphore);
-    }
-    else
-    {
-      DEBUG("Can't take semaphore!");
+        nrf24.controllerPacket.throttle = map(raw, 0, 4096, 0, 255);
+        // if (old_throttle != nrf24.controllerPacket.throttle)
+        // {
+        DEBUGVAL(nrf24.controllerPacket.throttle);
+        // }
+        xSemaphoreGive(xControllerPacketSemaphore);
+      }
+      else
+      {
+        DEBUG("Can't take semaphore!");
+      }
     }
     vTaskDelay(10);
   }
@@ -142,12 +141,20 @@ void triggerTask_0(void *pvParameters)
 
 Scheduler runner;
 
+Task t_ReadTrigger(
+    READ_TRIGGER_INTERVAL,
+    TASK_FOREVER,
+    [] {
+      uint8_t e = SCHEDULED_EVENT_READ_TRIGGER;
+      xQueueSendToFront(xScheduledEventsQueue, &e, pdMS_TO_TICKS(5));
+    });
+
 Task t_SendToBoard(
     SEND_TO_BOARD_INTERVAL,
     TASK_FOREVER,
     [] {
-      uint8_t e = 1;
-      xQueueSendToFront(xSendPacketToBoardQueue, &e, pdMS_TO_TICKS(5));
+      uint8_t e = SCHEDULED_EVENT_SEND_TO_BOARD;
+      xQueueSendToFront(xScheduledEventsQueue, &e, pdMS_TO_TICKS(5));
     });
 
 //--------------------------------------------------------------------------------
@@ -175,27 +182,37 @@ void packet_available_cb(uint16_t from_id)
 {
   board_id = from_id;
   DEBUGVAL("packet_available_cb", from_id, nrf24.boardPacket.id);
+  if (nrf24.boardPacket.id != nrf24.controllerPacket.id)
+  {
+    // DEBUGVAL("ids don't match", nrf24.controllerPacket.id, nrf24.boardPacket.id);
+  }
 
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
   {
-    if (old_vescdata.isMoving != nrf24.boardPacket.isMoving)
+    TRIGGER(EV_RECV_PACKET, NULL);
+
+    DEBUGVAL(reason_toString(nrf24.boardPacket.reason));
+
+    switch (nrf24.boardPacket.reason)
     {
-      if (nrf24.boardPacket.isMoving)
+    case REQUESTED:
+      if (nrf24.boardPacket.id != nrf24.controllerPacket.id)
       {
-        TRIGGER(EV_STARTED_MOVING, NULL);
+        // DEBUG("ids don't match!");
       }
-      else
-      {
-        TRIGGER(EV_STARTED_MOVING, NULL);
-      }
+      break;
+    case BOARD_MOVING:
+      TRIGGER(EV_STARTED_MOVING, NULL);
+      break;
+    case BOARD_STOPPED:
+      TRIGGER(EV_STOPPED_MOVING, NULL);
+      break;
+    case FIRST_PACKET:
+      TRIGGER(EV_BOARD_FIRST_CONNECT, "EV_BOARD_FIRST_CONNECT");
+      break;
     }
 
-    if (nrf24.boardPacket.id == 0)
-    {
-      TRIGGER(EV_BOARD_FIRST_CONNECT, NULL);
-    }
-
-    memcpy(&old_vescdata, &nrf24.boardPacket, sizeof(BoardPacket));
+    memcpy(&old_vescdata, &nrf24.boardPacket, sizeof(VescData));
 
     xSemaphoreGive(xCore1Semaphore);
   }
@@ -203,8 +220,9 @@ void packet_available_cb(uint16_t from_id)
 
 void send_packet_to_board()
 {
-  nrf24.sendPacket(board_id);
   nrf24.controllerPacket.id++;
+  nrf24.sendPacket(board_id);
+  nrf24.controllerPacket.command &= ~COMMAND_REQUEST_UPDATE;
 
   // esp_err_t result;
   // const uint8_t *addr = peer.peer_addr;
@@ -249,21 +267,6 @@ void send_packet_to_board()
 }
 //--------------------------------------------------------------------------------
 
-// void board_event_cb(Board::BoardEventEnum ev)
-// {
-//   switch (ev)
-//   {
-//   case Board::EV_BOARD_TIMEOUT:
-//     TRIGGER(EV_BOARD_TIMEOUT, "EV_BOARD_TIMEOUT");
-//     break;
-//   case Board::EV_BOARD_ONLINE:
-//     // TRIGGER(EV_BOARD_CONNECTED, NULL);
-//     break;
-//   }
-// }
-
-//--------------------------------------------------------------------------------
-
 void setup()
 {
   Serial.begin(115200);
@@ -286,26 +289,26 @@ void setup()
   Wire.begin();
   delay(10);
 
+#define USING_SSD1306
 #ifdef USING_SSD1306
   //https://www.aliexpress.com/item/32871318121.html
   setupLCD();
   delay(100);
 #endif
 
-  // display_initialise();
-
   xTaskCreatePinnedToCore(triggerTask_0, "triggerTask_0", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
 
-  xTriggerChangeQueue = xQueueCreate(1, sizeof(EventEnum));
-  xDeadmanChangedQueue = xQueueCreate(1, sizeof(bool));
-  xSendPacketToBoardQueue = xQueueCreate(1, sizeof(uint8_t));
+  // xDeadmanChangedQueue = xQueueCreate(1, sizeof(bool));
+  xScheduledEventsQueue = xQueueCreate(1, sizeof(uint8_t));
 
   xCore1Semaphore = xSemaphoreCreateMutex();
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
 
   runner.startNow();
+  runner.addTask(t_ReadTrigger);
   runner.addTask(t_SendToBoard);
+  t_ReadTrigger.enable();
   t_SendToBoard.enable();
 }
 //------------------------------------------------------------------
@@ -318,38 +321,22 @@ void loop()
 
   fsm.run_machine();
 
-  BaseType_t xStatus;
-  EventEnum e;
-
   nrf24.update();
 
-  xStatus = xQueueReceive(xTriggerChangeQueue, &e, pdMS_TO_TICKS(50));
-
-  if (xStatus == pdPASS)
+  if (since_last_requested_update > 5000)
   {
-    switch (e)
-    {
-    case EVENT_THROTTLE_CHANGED:
-    {
-      send_packet_to_board();
-      t_SendToBoard.restart();
-    }
-    break;
-    case EVENT_2:
-      Serial.printf("Event %d\n", e);
-      break;
-    case EVENT_3:
-      Serial.printf("Event %d\n", e);
-      break;
-    default:
-      Serial.printf("Unhandled event code: %d \n", e);
-    }
+    // send request next packet
+    since_last_requested_update = 0;
+    TRIGGER(EV_REQUESTED_UPDATE, NULL);
+    nrf24.controllerPacket.command = COMMAND_REQUEST_UPDATE;
   }
 
-  uint8_t e2;
-  xStatus = xQueueReceive(xSendPacketToBoardQueue, &e2, pdMS_TO_TICKS(0));
-  if (xStatus == pdPASS)
+  uint8_t e;
+  BaseType_t xStatus = xQueuePeek(xScheduledEventsQueue, &e, pdMS_TO_TICKS(50));
+  if (xStatus == pdPASS && e == SCHEDULED_EVENT_SEND_TO_BOARD)
   {
+    xQueueReceive(xScheduledEventsQueue, &e, pdMS_TO_TICKS(0));
     send_packet_to_board();
+    t_SendToBoard.restart();
   }
 }

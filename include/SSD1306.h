@@ -401,8 +401,8 @@ void drawBattery(int percent, bool update)
   }
 
   u8g2.clearBuffer();
-  int outsideX = (LCD_HEIGHT - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
-  int outsideY = (LCD_WIDTH - BATTERY_HEIGHT) / 2;
+  int outsideX = (LCD_WIDTH - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
+  int outsideY = (LCD_HEIGHT - BATTERY_HEIGHT) / 2;
   u8g2.drawBox(outsideX, outsideY, BATTERY_WIDTH, BATTERY_HEIGHT);
   u8g2.drawBox(
       outsideX + BATTERY_WIDTH,

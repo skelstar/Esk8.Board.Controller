@@ -38,24 +38,26 @@ uint8_t getBatteryPercentage(float voltage) {
   return percent;
 }
 
-// char* reason_toString(ReasonType reason)
-// {
-//   switch (reason)
-//   {
-//     case BOARD_STOPPED:
-//       return "BOARD_STOPPED";
-//     case BOARD_MOVING:
-//       return "BOARD_MOVING";
-//     case FIRST_PACKET:
-//       return "FIRST_PACKET";
-//     case LAST_WILL:
-//       return "LAST_WILL";
-//     case REQUESTED:
-//       return "REQUESTED";
-//     default:
-//       return "unhandle reason";
-//   }
-// }
+char* reason_toString(ReasonType reason)
+{
+  switch (reason)
+  {
+    case BOARD_STOPPED:
+      return "BOARD_STOPPED";
+    case BOARD_MOVING:
+      return "BOARD_MOVING";
+    case FIRST_PACKET:
+      return "FIRST_PACKET";
+    case LAST_WILL:
+      return "LAST_WILL";
+    case REQUESTED:
+      return "REQUESTED";
+    case VESC_OFFLINE:
+      return "VESC_OFFLINE";
+    default:
+      return "unhandle reason ";
+  }
+}
 
 bool print_throttle_flag = false;
 
