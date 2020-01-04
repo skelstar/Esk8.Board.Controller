@@ -19,13 +19,13 @@ void packet_available_cb(uint16_t from_id);
 #define USE_TEST_VALUES
 #ifdef USE_TEST_VALUES
 #define CHECK_FOR_BOARD_TIMEOUT 1
-#define BOARD_COMMS_TIMEOUT 1000
 #define SEND_TO_BOARD_INTERVAL 1000
+#define BOARD_COMMS_TIMEOUT   SEND_TO_BOARD_INTERVAL + 100
 #define READ_TRIGGER_INTERVAL 200
 #else
 #define CHECK_FOR_BOARD_TIMEOUT 1
-#define BOARD_COMMS_TIMEOUT 1000
 #define SEND_TO_BOARD_INTERVAL 200
+#define BOARD_COMMS_TIMEOUT   SEND_TO_BOARD_INTERVAL + 100
 #define READ_TRIGGER_INTERVAL SEND_TO_BOARD_INTERVAL
 #endif
 
@@ -38,7 +38,8 @@ void packet_available_cb(uint16_t from_id);
 
 //------------------------------------------------------------------
 
-elapsedMillis since_requested_update = 0;
+elapsedMillis since_waiting_for_response = 0;
+bool received_response = true;
 
 VescData old_vescdata;
 
@@ -71,9 +72,9 @@ void TRIGGER(uint8_t x, char *s)
 }
 
 // queues
-// xQueueHandle xTriggerReadQueue;
 // xQueueHandle xDeadmanChangedQueue;
-xQueueHandle xScheduledEventsQueue;
+xQueueHandle xTriggerReadQueue;
+xQueueHandle xSendToBoardQueue;
 
 //------------------------------------------------------------------
 
@@ -108,23 +109,20 @@ void triggerTask_0(void *pvParameters)
 
   while (true)
   {
-    // bool accel_enabled = false;
     uint8_t e;
-    bool event = xQueuePeek(xScheduledEventsQueue, &e, (TickType_t)0) == pdTRUE;
-    if (event == true && e == SCHEDULED_EVENT_READ_TRIGGER)
+    bool read = xQueueReceive(xTriggerReadQueue, &e, (TickType_t)0) == pdTRUE;
+    if (read == true)
     {
-      xQueueReceive(xScheduledEventsQueue, &e, (TickType_t)0);
-      /* read encoder */
       if (xControllerPacketSemaphore != NULL && xSemaphoreTake(xControllerPacketSemaphore, (TickType_t)10) == pdTRUE)
       {
         uint16_t raw = read_raw_trigger();
         uint8_t old_throttle = nrf24.controllerPacket.throttle;
 
         nrf24.controllerPacket.throttle = map(raw, 0, 4096, 0, 255);
-        // if (old_throttle != nrf24.controllerPacket.throttle)
-        // {
-        DEBUGVAL(nrf24.controllerPacket.throttle);
-        // }
+        if (old_throttle != nrf24.controllerPacket.throttle)
+        {
+          // DEBUGVAL(nrf24.controllerPacket.throttle);
+        }
         xSemaphoreGive(xControllerPacketSemaphore);
       }
       else
@@ -146,7 +144,7 @@ Task t_ReadTrigger(
     TASK_FOREVER,
     [] {
       uint8_t e = SCHEDULED_EVENT_READ_TRIGGER;
-      xQueueSendToFront(xScheduledEventsQueue, &e, pdMS_TO_TICKS(5));
+      xQueueSendToFront(xTriggerReadQueue, &e, pdMS_TO_TICKS(5));
     });
 
 Task t_SendToBoard(
@@ -154,7 +152,7 @@ Task t_SendToBoard(
     TASK_FOREVER,
     [] {
       uint8_t e = SCHEDULED_EVENT_SEND_TO_BOARD;
-      xQueueSendToFront(xScheduledEventsQueue, &e, pdMS_TO_TICKS(5));
+      xQueueSendToFront(xSendToBoardQueue, &e, pdMS_TO_TICKS(5));
     });
 
 //--------------------------------------------------------------------------------
@@ -176,8 +174,6 @@ uint8_t dotsPrinted = 0;
 
 //--------------------------------------------------------------------------------
 
-elapsedMillis since_last_requested_update = 0;
-
 void packet_available_cb(uint16_t from_id)
 {
   board_id = from_id;
@@ -190,26 +186,28 @@ void packet_available_cb(uint16_t from_id)
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
   {
     TRIGGER(EV_RECV_PACKET, NULL);
+    BD_TRIGGER(EV_BD_RESPONDED, "EV_BD_RESPONDED");
 
     DEBUGVAL(reason_toString(nrf24.boardPacket.reason));
 
     switch (nrf24.boardPacket.reason)
     {
-    case REQUESTED:
-      if (nrf24.boardPacket.id != nrf24.controllerPacket.id)
-      {
-        // DEBUG("ids don't match!");
-      }
-      break;
-    case BOARD_MOVING:
-      TRIGGER(EV_STARTED_MOVING, NULL);
-      break;
-    case BOARD_STOPPED:
-      TRIGGER(EV_STOPPED_MOVING, NULL);
-      break;
-    case FIRST_PACKET:
-      TRIGGER(EV_BOARD_FIRST_CONNECT, "EV_BOARD_FIRST_CONNECT");
-      break;
+      case REQUESTED:
+        DEBUGVAL("REQUESTED", nrf24.boardPacket.id);
+        if (nrf24.boardPacket.id != nrf24.controllerPacket.id)
+        {
+          // DEBUG("ids don't match!");
+        }
+        break;
+      case BOARD_MOVING:
+        TRIGGER(EV_STARTED_MOVING, NULL);
+        break;
+      case BOARD_STOPPED:
+        TRIGGER(EV_STOPPED_MOVING, NULL);
+        break;
+      case FIRST_PACKET:
+        TRIGGER(EV_BOARD_FIRST_CONNECT, "EV_BOARD_FIRST_CONNECT");
+        break;
     }
 
     memcpy(&old_vescdata, &nrf24.boardPacket, sizeof(VescData));
@@ -285,6 +283,7 @@ void setup()
   bool nrf_ok = nrf_setup();
 
   addFsmTransitions();
+  add_board_fsm_transitions();
 
   Wire.begin();
   delay(10);
@@ -298,8 +297,8 @@ void setup()
 
   xTaskCreatePinnedToCore(triggerTask_0, "triggerTask_0", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
 
-  // xDeadmanChangedQueue = xQueueCreate(1, sizeof(bool));
-  xScheduledEventsQueue = xQueueCreate(1, sizeof(uint8_t));
+  xTriggerReadQueue = xQueueCreate(1, sizeof(uint8_t));
+  xSendToBoardQueue = xQueueCreate(1, sizeof(uint8_t));
 
   xCore1Semaphore = xSemaphoreCreateMutex();
 
@@ -321,22 +320,15 @@ void loop()
 
   fsm.run_machine();
 
+  board_fsm.run_machine();
+
   nrf24.update();
 
-  if (since_last_requested_update > 5000)
-  {
-    // send request next packet
-    since_last_requested_update = 0;
-    TRIGGER(EV_REQUESTED_UPDATE, NULL);
-    nrf24.controllerPacket.command = COMMAND_REQUEST_UPDATE;
-  }
-
   uint8_t e;
-  BaseType_t xStatus = xQueuePeek(xScheduledEventsQueue, &e, pdMS_TO_TICKS(50));
-  if (xStatus == pdPASS && e == SCHEDULED_EVENT_SEND_TO_BOARD)
+  BaseType_t xStatus = xQueuePeek(xSendToBoardQueue, &e, pdMS_TO_TICKS(50));
+  if (xStatus == pdPASS)
   {
-    xQueueReceive(xScheduledEventsQueue, &e, pdMS_TO_TICKS(0));
+    xQueueReceive(xSendToBoardQueue, &e, pdMS_TO_TICKS(0));
     send_packet_to_board();
-    t_SendToBoard.restart();
-  }
+  } 
 }
