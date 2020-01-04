@@ -13,28 +13,28 @@
 void packet_available_cb(uint16_t from_id);
 
 #include "nrf.h"
+#include "trigger.h"
 
 #define BUTTON0_PIN 0
 
 #define USE_TEST_VALUES
 #ifdef USE_TEST_VALUES
-#define CHECK_FOR_BOARD_TIMEOUT 1
 #define SEND_TO_BOARD_INTERVAL 1000
 #define BOARD_COMMS_TIMEOUT   SEND_TO_BOARD_INTERVAL + 100
 #define READ_TRIGGER_INTERVAL 200
+#define REQUEST_FROM_BOARD_INTERVAL 500
+#define REQUEST_FROM_BOARD_INITIAL_INTERVAL 500
 #else
-#define CHECK_FOR_BOARD_TIMEOUT 1
 #define SEND_TO_BOARD_INTERVAL 200
 #define BOARD_COMMS_TIMEOUT   SEND_TO_BOARD_INTERVAL + 100
 #define READ_TRIGGER_INTERVAL SEND_TO_BOARD_INTERVAL
+#define REQUEST_FROM_BOARD_INITIAL_INTERVAL 500
+#define REQUEST_FROM_BOARD_INTERVAL 3000
 #endif
 
 #define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
 #define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
 #define BATTERY_VOLTAGE_CUTOFF_END 3.1 * 11   // 34.1
-
-#define SCHEDULED_EVENT_READ_TRIGGER 1
-#define SCHEDULED_EVENT_SEND_TO_BOARD 2
 
 //------------------------------------------------------------------
 
@@ -87,10 +87,7 @@ void button0_released(Button2 &btn)
 SemaphoreHandle_t xControllerPacketSemaphore;
 SemaphoreHandle_t xCore1Semaphore;
 
-uint16_t read_raw_trigger()
-{
-  return analogRead(13);
-}
+// #define TRIGGER_DEBUG_ENABLED 1
 
 void triggerTask_0(void *pvParameters)
 {
@@ -106,13 +103,14 @@ void triggerTask_0(void *pvParameters)
     {
       if (xControllerPacketSemaphore != NULL && xSemaphoreTake(xControllerPacketSemaphore, (TickType_t)10) == pdTRUE)
       {
-        uint16_t raw = read_raw_trigger();
         uint8_t old_throttle = nrf24.controllerPacket.throttle;
 
-        nrf24.controllerPacket.throttle = map(raw, 0, 4096, 0, 255);
+        nrf24.controllerPacket.throttle = get_mapped_calibrated_throttle();
         if (old_throttle != nrf24.controllerPacket.throttle)
         {
-          // DEBUGVAL(nrf24.controllerPacket.throttle);
+#ifdef TRIGGER_DEBUG_ENABLED
+          DEBUGVAL(nrf24.controllerPacket.throttle);
+#endif
         }
         xSemaphoreGive(xControllerPacketSemaphore);
       }
@@ -134,7 +132,7 @@ Task t_ReadTrigger(
     READ_TRIGGER_INTERVAL,
     TASK_FOREVER,
     [] {
-      uint8_t e = SCHEDULED_EVENT_READ_TRIGGER;
+      uint8_t e = 1;
       xQueueSendToFront(xTriggerReadQueue, &e, pdMS_TO_TICKS(5));
     });
 
@@ -142,7 +140,7 @@ Task t_SendToBoard(
     SEND_TO_BOARD_INTERVAL,
     TASK_FOREVER,
     [] {
-      uint8_t e = SCHEDULED_EVENT_SEND_TO_BOARD;
+      uint8_t e = 1;
       xQueueSendToFront(xSendToBoardQueue, &e, pdMS_TO_TICKS(5));
     });
 
@@ -165,10 +163,14 @@ uint8_t dotsPrinted = 0;
 
 //--------------------------------------------------------------------------------
 
+// #define PACKET_RECV_DEBUG_ENABLED   1
+
 void packet_available_cb(uint16_t from_id)
 {
   board_id = from_id;
+#ifdef PACKET_RECV_DEBUG_ENABLED
   DEBUGVAL("packet_available_cb", from_id, nrf24.boardPacket.id);
+#endif
   if (nrf24.boardPacket.id != nrf24.controllerPacket.id)
   {
     // DEBUGVAL("ids don't match", nrf24.controllerPacket.id, nrf24.boardPacket.id);
@@ -179,12 +181,15 @@ void packet_available_cb(uint16_t from_id)
     TRIGGER(EV_RECV_PACKET, NULL);
     BD_TRIGGER(EV_BD_RESPONDED, "EV_BD_RESPONDED");
 
+#ifdef PACKET_RECV_DEBUG_ENABLED
     DEBUGVAL(reason_toString(nrf24.boardPacket.reason));
-
+#endif
     switch (nrf24.boardPacket.reason)
     {
       case REQUESTED:
+#ifdef PACKET_RECV_DEBUG_ENABLED
         DEBUGVAL("REQUESTED", nrf24.boardPacket.id);
+#endif
         if (nrf24.boardPacket.id != nrf24.controllerPacket.id)
         {
           // DEBUG("ids don't match!");
@@ -316,10 +321,9 @@ void loop()
   nrf24.update();
 
   uint8_t e;
-  BaseType_t xStatus = xQueuePeek(xSendToBoardQueue, &e, pdMS_TO_TICKS(50));
+  BaseType_t xStatus = xQueueReceive(xSendToBoardQueue, &e, pdMS_TO_TICKS(0));
   if (xStatus == pdPASS)
   {
-    xQueueReceive(xSendToBoardQueue, &e, pdMS_TO_TICKS(0));
     send_packet_to_board();
   } 
 }

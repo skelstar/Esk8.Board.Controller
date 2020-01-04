@@ -376,10 +376,20 @@ void lcdMessage(char *message)
 void lcdMessage(uint8_t line_number, char *message)
 {
   uint8_t y = 0;
-  if (line_number == 3)
+  switch (line_number)
   {
-    u8g2.setFontPosBottom(); // vertical center
-    y = LCD_HEIGHT;
+    case 1:
+      u8g2.setFontPosTop(); // vertical center
+      y = 0;
+      break;
+    case 2:
+      u8g2.setFontPosCenter(); // vertical center
+      y = LCD_HEIGHT/2;
+      break;
+    case 3:
+      u8g2.setFontPosBottom(); // vertical center
+      y = LCD_HEIGHT;
+      break;
   }
   // u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_courB12_tr);

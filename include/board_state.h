@@ -1,4 +1,6 @@
 
+
+
 enum BoardStateId
 {
   BD_IDLE,
@@ -26,7 +28,7 @@ State board_unknown(
     since_last_requested_update = 0;
   }, 
   [] {
-    if (since_last_requested_update > 500)
+    if (since_last_requested_update > REQUEST_FROM_BOARD_INITIAL_INTERVAL)
     {
       request_update();
     }
@@ -40,7 +42,7 @@ State board_idle(
     since_last_requested_update = 0;
   }, 
   [] {
-    if (since_last_requested_update > 5000)
+    if (since_last_requested_update > REQUEST_FROM_BOARD_INTERVAL)
     {
       request_update();
     }
@@ -77,8 +79,9 @@ void add_board_fsm_transitions()
   board_fsm.add_transition(&board_unknown, &board_requested, EV_BD_REQUESTED, NULL);
   board_fsm.add_transition(&board_idle, &board_requested, EV_BD_REQUESTED, NULL);
   board_fsm.add_transition(&board_requested, &board_timedout, EV_BD_TIMEDOUT, NULL);
+  board_fsm.add_transition(&board_timedout, &board_unknown, EV_BD_TIMEDOUT, NULL);
   board_fsm.add_transition(&board_requested, &board_idle, EV_BD_RESPONDED, NULL);
-  board_fsm.add_transition(&board_timedout, &board_idle, EV_BD_RESPONDED, NULL);
+  board_fsm.add_transition(&board_timedout, &board_requested, EV_BD_REQUESTED, NULL);
 }
 
 //-------------------------------------------------------
@@ -91,11 +94,15 @@ void request_update()
   BD_TRIGGER(EV_BD_REQUESTED, "EV_BD_REQUESTED");
 }
 
+#define BOARD_FSM_TRIGGER_DEBUG_ENABLED   1
+
 void BD_TRIGGER(BoardEvent x, char *s)
 {
   if (s != NULL)
   {
-    Serial.printf("BD EVENT: %s\n", s);
+#ifdef BOARD_FSM_TRIGGER_DEBUG_ENABLED    
+    Serial.printf("BD EVENT: %s (%lu)\n", s, millis());
+#endif
   }
   board_fsm.trigger(x);
   board_fsm.run_machine();

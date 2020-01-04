@@ -1,4 +1,6 @@
 
+// #define FSM_TRIGGER_DEBUG_ENABLED   1
+
 enum StateMachineEventEnum
 {
   EV_BUTTON_CLICK,
@@ -14,6 +16,9 @@ enum StateMachineEventEnum
   EV_REQUESTED_RESPONSE,
   EV_BOARD_TIMEOUT, // havne't heard from the board for a while (BOARD_COMMS_TIMEOUT)
   EV_BOARD_LAST_WILL,
+  EV_READ_TRIGGER_MIN,
+  EV_READ_TRIGGER_MAX,
+  EV_FINISHED_TRIGGER_CALIBRATION,
 } fsm_event;
 
 enum StateId
@@ -45,8 +50,14 @@ State state_disconnected(
   STATE_DISCONNECTED,
   [] {
     DEBUG("state_disconnected --------");
-    lcdMessage("Disconnected");
-  },
+    char buffx[12];
+    sprintf(buffx, "missed: %.0f", nrf24.boardPacket.ampHours);
+
+    u8g2.clearBuffer();
+    lcdMessage(/*line#*/ 1, "Disconnected");
+    lcdMessage(/*line#*/ 3, &buffx[0]);
+    u8g2.sendBuffer();
+ },
   NULL,
   NULL);
 
@@ -55,7 +66,13 @@ State state_not_moving(
   STATE_NOT_MOVING,
   [] {
     DEBUG("state_not_moving --------");
-    lcdMessage("Stopped");
+    char buffx[12];
+    sprintf(buffx, "missed: %.0f", nrf24.boardPacket.ampHours);
+
+    u8g2.clearBuffer();
+    lcdMessage(/*line#*/ 1, "Stopped");
+    lcdMessage(/*line#*/ 3, &buffx[0]);
+    u8g2.sendBuffer();
   },
   NULL,
   NULL);
@@ -84,10 +101,74 @@ void handle_last_will()
 }
 //-------------------------------
 
-Fsm fsm(&state_connecting);
+elapsedMillis since_reading_trigger = 0;
+State state_trigger_centre(
+  []{
+    DEBUG("Trigger centre");
+    lcdMessage("Trig Center");
+    since_reading_trigger = 0;
+  },
+  [] {
+    trigger_centre = get_trigger_raw();
+    if (since_reading_trigger > 1000) 
+    {
+      TRIGGER(EV_READ_TRIGGER_MIN, NULL);
+    }
+  },
+  [] { 
+    DEBUGVAL(trigger_centre); 
+    trigger_calibrated = true; 
+  }
+);
+// State state_trigger_min(
+//   []{
+//     DEBUG("Trigger min");
+//     lcdMessage("Trig Min");
+//     since_reading_trigger = 0;
+//   },
+//   [] {
+//     uint16_t min = get_trigger_raw();
+//     if (min < trigger_min || min < trigger_centre)
+//     {
+//       trigger_min = min;
+//     }
+//     if (since_reading_trigger > 2000) 
+//     {
+//       TRIGGER(EV_READ_TRIGGER_MAX, NULL);
+//     }
+//   },
+//   [] { DEBUGVAL(trigger_min); }
+// );
+// State state_trigger_max(
+//   []{
+//     DEBUG("Trigger max");
+//     lcdMessage("Trig Max");
+//     since_reading_trigger = 0;
+//   },
+//   [] {
+//     uint16_t max = get_trigger_raw();
+//     if (max > trigger_max)
+//     {
+//       trigger_max = max;
+//     }
+//     if (since_reading_trigger > 2000) 
+//     {
+//       TRIGGER(EV_FINISHED_TRIGGER_CALIBRATION, NULL);
+//     }
+//   },
+//   [] { DEBUGVAL(trigger_max); }
+// );
+
+Fsm fsm(&state_trigger_centre);
 
 void addFsmTransitions()
 {
+  // trigger calibration
+  fsm.add_transition(&state_trigger_centre, &state_connecting, EV_READ_TRIGGER_MIN, NULL);
+  // fsm.add_transition(&state_trigger_centre, &state_trigger_min, EV_READ_TRIGGER_MIN, NULL);
+  // fsm.add_transition(&state_trigger_min, &state_trigger_max, EV_READ_TRIGGER_MAX, NULL);
+  // fsm.add_transition(&state_trigger_max, &state_connecting, EV_FINISHED_TRIGGER_CALIBRATION, NULL);
+
   // state_connecting ->
   fsm.add_transition(&state_connecting, &state_not_moving, EV_BOARD_CONNECTED, NULL);
   fsm.add_transition(&state_connecting, &state_not_moving, EV_STOPPED_MOVING, NULL);
@@ -123,7 +204,9 @@ void TRIGGER(StateMachineEventEnum x, char *s)
 {
   if (s != NULL)
   {
+#ifdef FSM_TRIGGER_DEBUG_ENABLED
     Serial.printf("EVENT: %s\n", s);
+#endif
   }
   fsm.trigger(x);
 }
