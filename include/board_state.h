@@ -1,6 +1,5 @@
 
 
-
 enum BoardStateId
 {
   BD_IDLE,
@@ -15,61 +14,60 @@ enum BoardEvent
   EV_BD_RESPONDED
 };
 
+void PRINT_BOARD_STATE_NAME(const char *state_name);
 void BD_TRIGGER(BoardEvent x, char *s);
 void request_update();
 
 elapsedMillis since_last_requested_update = 0;
 
-
 //-------------------------------------------------------
 State board_unknown(
-  []{
-    DEBUG("BD: board_unknown.........");
-    since_last_requested_update = 0;
-  }, 
-  [] {
-    if (since_last_requested_update > REQUEST_FROM_BOARD_INITIAL_INTERVAL)
-    {
-      request_update();
-    }
-  }, 
-  NULL);
+    [] {
+      PRINT_BOARD_STATE_NAME("BD: board_unknown.........");
+      since_last_requested_update = 0;
+    },
+    [] {
+      if (since_last_requested_update > REQUEST_FROM_BOARD_INITIAL_INTERVAL)
+      {
+        request_update();
+      }
+    },
+    NULL);
 //-------------------------------------------------------
 State board_idle(
-  []{
-    DEBUG("BD: board_idle.........");
-    TRIGGER(EV_BOARD_CONNECTED, NULL);
-    since_last_requested_update = 0;
-  }, 
-  [] {
-    if (since_last_requested_update > REQUEST_FROM_BOARD_INTERVAL)
-    {
-      request_update();
-    }
-  }, 
-  NULL);
+    [] {
+      PRINT_BOARD_STATE_NAME("BD: board_idle.........");
+      TRIGGER(EV_BOARD_CONNECTED, NULL);
+      since_last_requested_update = 0;
+    },
+    [] {
+      if (since_last_requested_update > REQUEST_FROM_BOARD_INTERVAL)
+      {
+        request_update();
+      }
+    },
+    NULL);
 //-------------------------------------------------------
 State board_requested(
-  [] {
-    DEBUG("BD: board_requested.........");
-    since_waiting_for_response = 0;
-  },
-  [] 
-  {
-    if (since_waiting_for_response > BOARD_COMMS_TIMEOUT)
-    {
-      BD_TRIGGER(EV_BD_TIMEDOUT, "EV_BD_TIMEDOUT");
-    }
-  }, 
-  NULL);
+    [] {
+      PRINT_BOARD_STATE_NAME("BD: board_requested.........");
+      since_waiting_for_response = 0;
+    },
+    [] {
+      if (since_waiting_for_response > BOARD_COMMS_TIMEOUT)
+      {
+        BD_TRIGGER(EV_BD_TIMEDOUT, "EV_BD_TIMEDOUT");
+      }
+    },
+    NULL);
 //-------------------------------------------------------
 State board_timedout(
-  [] {
-    DEBUG("BD: board_timedout.........");
-    TRIGGER(EV_BOARD_TIMEOUT, NULL);
-  },
-  NULL, 
-  NULL);
+    [] {
+      PRINT_BOARD_STATE_NAME("BD: board_timedout.........");
+      TRIGGER(EV_BOARD_TIMEOUT, NULL);
+    },
+    NULL,
+    NULL);
 //-------------------------------------------------------
 
 Fsm board_fsm(&board_unknown);
@@ -94,13 +92,18 @@ void request_update()
   BD_TRIGGER(EV_BD_REQUESTED, "EV_BD_REQUESTED");
 }
 
-#define BOARD_FSM_TRIGGER_DEBUG_ENABLED   1
+void PRINT_BOARD_STATE_NAME(const char *state_name)
+{
+#ifdef DEBUG_BOARD_PRINT_STATE_NAME
+  DEBUG(state_name);
+#endif
+}
 
 void BD_TRIGGER(BoardEvent x, char *s)
 {
   if (s != NULL)
   {
-#ifdef BOARD_FSM_TRIGGER_DEBUG_ENABLED    
+#ifdef BOARD_FSM_TRIGGER_DEBUG_ENABLED
     Serial.printf("BD EVENT: %s (%lu)\n", s, millis());
 #endif
   }

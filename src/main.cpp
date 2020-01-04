@@ -24,6 +24,11 @@ void packet_available_cb(uint16_t from_id);
 #define READ_TRIGGER_INTERVAL 200
 #define REQUEST_FROM_BOARD_INTERVAL 500
 #define REQUEST_FROM_BOARD_INITIAL_INTERVAL 500
+// #define BOARD_FSM_TRIGGER_DEBUG_ENABLED   1
+// #define DEBUG_BOARD_PRINT_STATE_NAME     1
+// #define TRIGGER_DEBUG_ENABLED 1
+// #define PACKET_RECV_DEBUG_ENABLED   1
+// #define DEBUG_PRINT_STATE_NAME_ENABLED   1
 #else
 #define SEND_TO_BOARD_INTERVAL 200
 #define BOARD_COMMS_TIMEOUT   SEND_TO_BOARD_INTERVAL + 100
@@ -63,7 +68,6 @@ uint8_t rxCorrectCount = 0;
 #include <board_state.h>
 
 // queues
-// xQueueHandle xDeadmanChangedQueue;
 xQueueHandle xTriggerReadQueue;
 xQueueHandle xSendToBoardQueue;
 
@@ -86,8 +90,6 @@ void button0_released(Button2 &btn)
 #define NORMAL_CORE 1
 SemaphoreHandle_t xControllerPacketSemaphore;
 SemaphoreHandle_t xCore1Semaphore;
-
-// #define TRIGGER_DEBUG_ENABLED 1
 
 void triggerTask_0(void *pvParameters)
 {
@@ -162,8 +164,6 @@ void button_init()
 uint8_t dotsPrinted = 0;
 
 //--------------------------------------------------------------------------------
-
-// #define PACKET_RECV_DEBUG_ENABLED   1
 
 void packet_available_cb(uint16_t from_id)
 {
@@ -284,12 +284,9 @@ void setup()
   Wire.begin();
   delay(10);
 
-#define USING_SSD1306
-#ifdef USING_SSD1306
   //https://www.aliexpress.com/item/32871318121.html
   setupLCD();
   delay(100);
-#endif
 
   xTaskCreatePinnedToCore(triggerTask_0, "triggerTask_0", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
 

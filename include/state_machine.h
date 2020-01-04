@@ -7,13 +7,8 @@ enum StateMachineEventEnum
   EV_BOARD_CONNECTED,
   EV_STARTED_MOVING,
   EV_STOPPED_MOVING,
-  EV_HELD_DOWN_WAIT,
-  EV_NO_HELD_OPTION_SELECTED,
   EV_RECV_PACKET,
   EV_BOARD_FIRST_CONNECT,
-  EV_PACKET_MISSED,
-  EV_REQUESTED_UPDATE,
-  EV_REQUESTED_RESPONSE,
   EV_BOARD_TIMEOUT, // havne't heard from the board for a while (BOARD_COMMS_TIMEOUT)
   EV_BOARD_LAST_WILL,
   EV_READ_TRIGGER_MIN,
@@ -33,14 +28,14 @@ enum StateId
 };
 
 uint8_t get_prev_state();
+void PRINT_STATE_NAME(const char *state_name);
 void TRIGGER(StateMachineEventEnum x, char *s);
-
 
 //-------------------------------
 State state_connecting(
   STATE_CONNECTING,
   [] {
-    DEBUG("state_connecting --------");
+    PRINT_STATE_NAME("state_connecting --------");
     lcdMessage("Connecting");
   },
   NULL,
@@ -49,7 +44,7 @@ State state_connecting(
 State state_disconnected(
   STATE_DISCONNECTED,
   [] {
-    DEBUG("state_disconnected --------");
+    PRINT_STATE_NAME("state_disconnected --------");
     char buffx[12];
     sprintf(buffx, "missed: %.0f", nrf24.boardPacket.ampHours);
 
@@ -65,7 +60,7 @@ State state_disconnected(
 State state_not_moving(
   STATE_NOT_MOVING,
   [] {
-    DEBUG("state_not_moving --------");
+    PRINT_STATE_NAME("state_not_moving --------");
     char buffx[12];
     sprintf(buffx, "missed: %.0f", nrf24.boardPacket.ampHours);
 
@@ -80,7 +75,7 @@ State state_not_moving(
 State state_moving(
   STATE_MOVING,
   [] {
-    DEBUG("state_moving --------");
+    PRINT_STATE_NAME("state_moving --------");
     lcdMessage("Moving");
   },
   NULL,
@@ -89,7 +84,7 @@ State state_moving(
 State state_show_battery(
   STATE_SHOW_BATTERY,
   [] {
-    DEBUG("state_show_battery --------");
+    PRINT_STATE_NAME("state_show_battery --------");
     drawBattery(getBatteryPercentage(nrf24.boardPacket.batteryVoltage), true);
   },
   NULL,
@@ -97,14 +92,14 @@ State state_show_battery(
 //-------------------------------
 void handle_last_will() 
 {
-  DEBUG("last will received");
+  PRINT_STATE_NAME("last will received");
 }
 //-------------------------------
 
 elapsedMillis since_reading_trigger = 0;
 State state_trigger_centre(
   []{
-    DEBUG("Trigger centre");
+    PRINT_STATE_NAME("Trigger centre");
     lcdMessage("Trig Center");
     since_reading_trigger = 0;
   },
@@ -122,7 +117,7 @@ State state_trigger_centre(
 );
 // State state_trigger_min(
 //   []{
-//     DEBUG("Trigger min");
+//     PRINT_STATE_NAME("Trigger min");
 //     lcdMessage("Trig Min");
 //     since_reading_trigger = 0;
 //   },
@@ -141,7 +136,7 @@ State state_trigger_centre(
 // );
 // State state_trigger_max(
 //   []{
-//     DEBUG("Trigger max");
+//     PRINT_STATE_NAME("Trigger max");
 //     lcdMessage("Trig Max");
 //     since_reading_trigger = 0;
 //   },
@@ -198,6 +193,13 @@ void addFsmTransitions()
 uint8_t get_prev_state()
 {
   return fsm.get_from_state();
+}
+
+void PRINT_STATE_NAME(const char *state_name)
+{
+#ifdef DEBUG_PRINT_STATE_NAME_ENABLED
+  DEBUG(state_name);
+#endif
 }
 
 void TRIGGER(StateMachineEventEnum x, char *s)
