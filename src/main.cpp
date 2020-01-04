@@ -55,21 +55,12 @@ bool syncdWithServer = false;
 uint8_t rxCorrectCount = 0;
 
 // prototypes
-void TRIGGER(uint8_t x, char *s);
 
 #include "utils.h"
 #include <screens.h>
 #include "SSD1306.h"
 #include <state_machine.h>
-
-void TRIGGER(uint8_t x, char *s)
-{
-  if (s != NULL)
-  {
-    Serial.printf("EVENT: %s\n", s);
-  }
-  fsm.trigger(x);
-}
+#include <board_state.h>
 
 // queues
 // xQueueHandle xDeadmanChangedQueue;
