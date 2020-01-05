@@ -17,7 +17,7 @@ void packet_available_cb(uint16_t from_id);
 
 #define BUTTON0_PIN 0
 
-#define USE_TEST_VALUES
+// #define USE_TEST_VALUES
 #ifdef USE_TEST_VALUES
 #define SEND_TO_BOARD_INTERVAL 1000
 #define BOARD_COMMS_TIMEOUT   SEND_TO_BOARD_INTERVAL + 100
@@ -265,6 +265,11 @@ void setup()
 {
   Serial.begin(115200);
 
+  powerpins_init();
+  button_init();
+
+  bool nrf_ok = nrf_setup();
+
 #ifdef USE_TEST_VALUES
   Serial.printf("\n");
   Serial.printf("/********************************************************/\n");
@@ -272,11 +277,6 @@ void setup()
   Serial.printf("/********************************************************/\n");
   Serial.printf("\n");
 #endif
-
-  powerpins_init();
-  button_init();
-
-  bool nrf_ok = nrf_setup();
 
   addFsmTransitions();
   add_board_fsm_transitions();
