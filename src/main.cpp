@@ -32,7 +32,7 @@ void packet_available_cb(uint16_t from_id);
 #else
 #define SEND_TO_BOARD_INTERVAL 200
 #define BOARD_COMMS_TIMEOUT   SEND_TO_BOARD_INTERVAL + 100
-#define READ_TRIGGER_INTERVAL SEND_TO_BOARD_INTERVAL
+#define READ_TRIGGER_INTERVAL 50
 #define REQUEST_FROM_BOARD_INITIAL_INTERVAL 500
 #define REQUEST_FROM_BOARD_INTERVAL 3000
 #endif
@@ -130,7 +130,7 @@ void triggerTask_0(void *pvParameters)
 
 Scheduler runner;
 
-Task t_ReadTrigger(
+Task t_ReadTrigger_1(
     READ_TRIGGER_INTERVAL,
     TASK_FOREVER,
     [] {
@@ -138,7 +138,7 @@ Task t_ReadTrigger(
       xQueueSendToFront(xTriggerReadQueue, &e, pdMS_TO_TICKS(5));
     });
 
-Task t_SendToBoard(
+Task t_SendToBoard_1(
     SEND_TO_BOARD_INTERVAL,
     TASK_FOREVER,
     [] {
@@ -298,10 +298,10 @@ void setup()
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
 
   runner.startNow();
-  runner.addTask(t_ReadTrigger);
-  runner.addTask(t_SendToBoard);
-  t_ReadTrigger.enable();
-  t_SendToBoard.enable();
+  runner.addTask(t_ReadTrigger_1);
+  runner.addTask(t_SendToBoard_1);
+  t_ReadTrigger_1.enable();
+  t_SendToBoard_1.enable();
 }
 //------------------------------------------------------------------
 
