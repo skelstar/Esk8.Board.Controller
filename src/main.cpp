@@ -17,18 +17,12 @@ void packet_available_cb(uint16_t from_id);
 
 #define BUTTON0_PIN 0
 
-// #define USE_TEST_VALUES
 #ifdef USE_TEST_VALUES
 #define SEND_TO_BOARD_INTERVAL 1000
 #define BOARD_COMMS_TIMEOUT   SEND_TO_BOARD_INTERVAL + 100
 #define READ_TRIGGER_INTERVAL 200
 #define REQUEST_FROM_BOARD_INTERVAL 500
 #define REQUEST_FROM_BOARD_INITIAL_INTERVAL 500
-// #define BOARD_FSM_TRIGGER_DEBUG_ENABLED   1
-// #define DEBUG_BOARD_PRINT_STATE_NAME     1
-// #define TRIGGER_DEBUG_ENABLED 1
-// #define PACKET_RECV_DEBUG_ENABLED   1
-// #define DEBUG_PRINT_STATE_NAME_ENABLED   1
 #else
 #define SEND_TO_BOARD_INTERVAL 200
 #define BOARD_COMMS_TIMEOUT   SEND_TO_BOARD_INTERVAL + 100
@@ -217,47 +211,6 @@ void send_packet_to_board()
   nrf24.controllerPacket.id++;
   nrf24.sendPacket(board_id);
   nrf24.controllerPacket.command &= ~COMMAND_REQUEST_UPDATE;
-
-  // esp_err_t result;
-  // const uint8_t *addr = peer.peer_addr;
-  // controller_packet.command = 0;
-
-  // if (since_last_requested_update > 5000)
-  // {
-  //   since_last_requested_update = 0;
-  //   TRIGGER(EV_REQUESTED_UPDATE, NULL);
-  //   controller_packet.command = COMMAND_REQUEST_UPDATE;
-  // }
-
-  // if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)100) == pdTRUE)
-  // {
-  //   controller_packet.throttle = easing.GetValue();
-  //   controller_packet.id = sendCounter;
-
-  //   uint8_t bs[sizeof(controller_packet)];
-  //   memcpy(bs, &controller_packet, sizeof(controller_packet));
-
-  //   result = esp_now_send(addr, bs, sizeof(bs));
-  //   xSemaphoreGive(xCore1Semaphore);
-
-  //   print_throttle(target_throttle);
-  // }
-  // else
-  // {
-  //   DEBUG("Unable to take semaphore");
-  //   return;
-  // }
-
-  // printStatus(result, /*printSuccess*/ false);
-
-  // if (result == ESP_OK)
-  // {
-  //   sendCounter++;
-  // }
-  // else
-  // {
-  //   //DEBUGVAL("Error", sendCounter++);
-  // }
 }
 //--------------------------------------------------------------------------------
 
@@ -270,13 +223,29 @@ void setup()
 
   bool nrf_ok = nrf_setup();
 
+  Serial.printf("\n");
+  Serial.printf("/********************************************************\n");
 #ifdef USE_TEST_VALUES
-  Serial.printf("\n");
-  Serial.printf("/********************************************************/\n");
-  Serial.printf("/*               WARNING: Using test values!            */\n");
-  Serial.printf("/********************************************************/\n");
-  Serial.printf("\n");
+  Serial.printf("               WARNING: Using test values!            \n");
 #endif
+#ifdef BOARD_FSM_TRIGGER_DEBUG_ENABLED   
+  Serial.printf("               WARNING: BOARD_FSM_TRIGGER_DEBUG_ENABLED\n");
+#endif
+#ifdef DEBUG_BOARD_PRINT_STATE_NAME     
+  Serial.printf("               WARNING: DEBUG_BOARD_PRINT_STATE_NAME\n");
+#endif
+#ifdef TRIGGER_DEBUG_ENABLED 
+  Serial.printf("               WARNING: TRIGGER_DEBUG_ENABLED\n");
+#endif
+#ifdef PACKET_RECV_DEBUG_ENABLED   
+  Serial.printf("               WARNING: PACKET_RECV_DEBUG_ENABLED\n");
+#endif
+#ifdef DEBUG_PRINT_STATE_NAME_ENABLED   
+  Serial.printf("               WARNING: DEBUG_PRINT_STATE_NAME_ENABLED\n");
+#endif
+  Serial.printf("/********************************************************/\n");
+  Serial.printf("\n");
+
 
   addFsmTransitions();
   add_board_fsm_transitions();
