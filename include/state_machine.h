@@ -31,6 +31,8 @@ uint8_t get_prev_state();
 void PRINT_STATE_NAME(const char *state_name);
 void TRIGGER(StateMachineEventEnum x, char *s);
 
+elapsedMillis since_updated_battery_volts = 0;
+
 //-------------------------------
 State state_connecting(
   STATE_CONNECTING,
@@ -38,7 +40,16 @@ State state_connecting(
     PRINT_STATE_NAME("state_connecting --------");
     lcdMessage("Connecting");
   },
-  NULL,
+  [] {
+    if (since_updated_battery_volts > 3000)
+    {
+      since_updated_battery_volts = 0;
+      char buff[5];
+      sprintf(buff, "%04d", battery_volts_raw);
+      lcdMessage(/*line*/3, buff);
+      u8g2.sendBuffer();
+    }
+  },
   NULL);
 //-------------------------------
 State state_disconnected(
