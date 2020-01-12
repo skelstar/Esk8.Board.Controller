@@ -108,10 +108,14 @@ void deadman_released(Button2 &btn)
 #define OTHER_CORE 0
 #define NORMAL_CORE 1
 
-void send_packet_to_board()
+void send_packet_to_board(uint8_t type = 0)
 {
   nrf24.controllerPacket.id++;
-  nrf24.sendPacket(board_id);
+
+  uint8_t bs[sizeof(ControllerData)];
+  memcpy(bs, &nrf24.boardPacket, sizeof(ControllerData));
+  
+  nrf24.sendPacket(board_id, type, bs, sizeof(ControllerData));
   nrf24.controllerPacket.command &= ~COMMAND_REQUEST_UPDATE;
 }
 
@@ -137,6 +141,8 @@ void batteryMeasureTask_0(void *pvParameters)
 void comms_task_0(void *pvParameters)
 {
   bool nrf_ok = nrf_setup();
+
+  send_packet_to_board(1);  // initial packet
 
   while (true)
   {
