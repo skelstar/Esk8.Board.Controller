@@ -16,9 +16,3 @@ bool nrf_setup()
   nrf24.begin(&radio, &network, nrf24.RF24_CLIENT, packet_available_cb);
   return true;
 }
-
-
-bool nrf_send_to_board()
-{
-  return true;
-}

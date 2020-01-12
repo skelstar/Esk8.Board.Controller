@@ -33,3 +33,43 @@ uint8_t get_mapped_calibrated_throttle()
   }
   return 127;
 }
+
+void update_throttle()
+{
+  uint8_t old_throttle = nrf24.controllerPacket.throttle;
+
+  throttle_unfiltered = get_mapped_calibrated_throttle();
+  // check for safety/conditions
+  nrf24.controllerPacket.throttle = throttle_unfiltered;
+  if (can_accelerate == false && throttle_unfiltered > 127)
+  {
+    nrf24.controllerPacket.throttle = 127;
+  }
+
+#ifdef TRIGGER_DEBUG_ENABLED
+  bool trigger_changed = old_throttle != nrf24.controllerPacket.throttle;
+  if (trigger_changed)
+  {
+    DEBUGVAL(nrf24.controllerPacket.throttle);
+  }
+#endif
+}
+
+elapsedMillis since_last_read_trigger = 0;
+
+void read_trigger()
+{
+  if (since_last_read_trigger > READ_TRIGGER_INTERVAL)
+  {
+    since_last_read_trigger = 0;
+    if (xControllerPacketSemaphore != NULL && xSemaphoreTake(xControllerPacketSemaphore, (TickType_t)10) == pdTRUE)
+    {
+      update_throttle();
+      xSemaphoreGive(xControllerPacketSemaphore);
+    }
+    else
+    {
+      DEBUG("Can't take semaphore!");
+    }
+  }
+}

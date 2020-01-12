@@ -17,7 +17,7 @@ enum TriggerState
 
 bool trigger_updated;
 
-void TRIGGER_TRIGGER(TriggerEvent event);
+void TRIGGER_TRIGGER(TriggerEvent event, char* s);
 
 void print_trigger_state(char* state_name)
 {
@@ -47,7 +47,7 @@ State state_trigger_wait_not_accelerating(
       bool is_safe = throttle_unfiltered <= 127;
       if (is_safe)
       {
-        TRIGGER_TRIGGER(TRIGGER_SAFE);
+        TRIGGER_TRIGGER(TRIGGER_SAFE, "TRIGGER_SAFE");
       }
     },
     NULL);
@@ -71,7 +71,13 @@ void addTriggerFsmTransitions()
   trigger_fsm.add_transition(&state_trigger_wait_not_accelerating, &state_trigger_ok, TRIGGER_SAFE, NULL);
 }
 
-void TRIGGER_TRIGGER(TriggerEvent event)
+void TRIGGER_TRIGGER(TriggerEvent event, char *s)
 {
+  if (s != NULL)
+  {
+#ifdef PRINT_TRIGGER_FSM_EVENT
+    Serial.printf("TRIGGER_FSM EVENT: %s\n", s);
+#endif
+  }
   trigger_fsm.trigger(event);
 }

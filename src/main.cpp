@@ -5,7 +5,6 @@
 #include <Button2.h>
 #include <Fsm.h>
 #include <Wire.h>
-#include <TaskScheduler.h>
 #include <VescData.h>
 #include <elapsedMillis.h>
 
@@ -13,7 +12,6 @@
 void packet_available_cb(uint16_t from_id);
 
 #include "nrf.h"
-#include "trigger.h"
 
 #define BUTTON0_PIN 0
 #define DEADMAN_BUTTON_PIN 5
@@ -64,19 +62,23 @@ uint8_t rxCorrectCount = 0;
 bool can_accelerate = false;
 uint8_t throttle_unfiltered = 127;
 
+// semaphores
+SemaphoreHandle_t xControllerPacketSemaphore;
+SemaphoreHandle_t xCore1Semaphore;
+
+// queues
+xQueueHandle xTriggerReadQueue;
+xQueueHandle xSendToBoardQueue;
+
 // prototypes
 
+#include "trigger.h"
 #include "utils.h"
 #include "SSD1306.h"
 #include <screens.h>
 #include <trigger_fsm.h>
 #include <state_machine.h>
 #include <board_state.h>
-
-// queues
-xQueueHandle xTriggerReadQueue;
-xQueueHandle xSendToBoardQueue;
-xQueueHandle xDeadmanChangedQueue;
 
 //------------------------------------------------------------------
 
@@ -93,98 +95,28 @@ void button0_released(Button2 &btn)
 {
 }
 
-enum DeadmanEvent
-{
-  DEADMAN_PRESSED,
-  DEADMAN_RELEASED
-};
-
 void deadman_pressed(Button2 &btn)
 {
-  bool pressed = true;
-  xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(5));
+  TRIGGER_TRIGGER(TRIGGER_DEADMAN_PRESSED, "TRIGGER_DEADMAN_PRESSED");
 }
+
 void deadman_released(Button2 &btn)
 {
-  bool pressed = false;
-  xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(5));
+  TRIGGER_TRIGGER(TRIGGER_DEADMAN_RELEASED, "TRIGGER_DEADMAN_RELEASED");
 }
 
 #define OTHER_CORE 0
 #define NORMAL_CORE 1
 
-
-void deadmanTask_0(void *pvParameters)
+void send_packet_to_board()
 {
-  pinMode(DEADMAN_BUTTON_GND, OUTPUT);
-  digitalWrite(DEADMAN_BUTTON_GND, LOW);
-
-  deadman_button.setPressedHandler(deadman_pressed);
-  deadman_button.setReleasedHandler(deadman_released);
-
-  Serial.printf("deadmanTask_0 running on core %d\n", xPortGetCoreID());
-
-  while (1)
-  {
-    deadman_button.loop();
-
-    /* deadman read */
-    bool pressed = false;
-    bool changed = xQueueReceive(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(20)) == pdPASS;
-    if (changed)
-    {
-      trigger_fsm.trigger(pressed ? TRIGGER_DEADMAN_PRESSED : TRIGGER_DEADMAN_RELEASED);
-    }
-    vTaskDelay(10);
-  }
-  vTaskDelete(NULL);
-}
-
-SemaphoreHandle_t xControllerPacketSemaphore;
-SemaphoreHandle_t xCore1Semaphore;
-
-void triggerTask_0(void *pvParameters)
-{
-  xControllerPacketSemaphore = xSemaphoreCreateMutex();
-
-  Serial.printf("triggerTask_0 running on core %d\n", xPortGetCoreID());
-
-  while (true)
-  {
-    uint8_t e;
-    bool read = xQueueReceive(xTriggerReadQueue, &e, (TickType_t)0) == pdTRUE;
-    if (read == true)
-    {
-      if (xControllerPacketSemaphore != NULL && xSemaphoreTake(xControllerPacketSemaphore, (TickType_t)10) == pdTRUE)
-      {
-        uint8_t old_throttle = nrf24.controllerPacket.throttle;
-
-        throttle_unfiltered = get_mapped_calibrated_throttle();
-        // check for safety/conditions
-        nrf24.controllerPacket.throttle = throttle_unfiltered;
-        if (can_accelerate == false && throttle_unfiltered > 127)
-        {
-          nrf24.controllerPacket.throttle = 127;
-        }
-        if (old_throttle != nrf24.controllerPacket.throttle)
-        {
-#ifdef TRIGGER_DEBUG_ENABLED
-          DEBUGVAL(nrf24.controllerPacket.throttle);
-#endif
-        }
-        xSemaphoreGive(xControllerPacketSemaphore);
-      }
-      else
-      {
-        DEBUG("Can't take semaphore!");
-      }
-    }
-    vTaskDelay(10);
-  }
-  vTaskDelete(NULL);
+  nrf24.controllerPacket.id++;
+  nrf24.sendPacket(board_id);
+  nrf24.controllerPacket.command &= ~COMMAND_REQUEST_UPDATE;
 }
 
 elapsedMillis since_measure_battery = 0;
+elapsedMillis since_sent_to_board = 0;
 
 void batteryMeasureTask_0(void *pvParameters)
 {
@@ -202,25 +134,25 @@ void batteryMeasureTask_0(void *pvParameters)
   vTaskDelete(NULL);
 }
 
-//--------------------------------------------------------------------------------
+void comms_task_0(void *pvParameters)
+{
+  bool nrf_ok = nrf_setup();
 
-Scheduler runner;
+  while (true)
+  {
+    if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
+    {
+      since_sent_to_board = 0;
 
-Task t_ReadTrigger_1(
-    READ_TRIGGER_INTERVAL,
-    TASK_FOREVER,
-    [] {
-      uint8_t e = 1;
-      xQueueSendToFront(xTriggerReadQueue, &e, pdMS_TO_TICKS(5));
-    });
+      send_packet_to_board();
+    }
 
-Task t_SendToBoard_1(
-    SEND_TO_BOARD_INTERVAL,
-    TASK_FOREVER,
-    [] {
-      uint8_t e = 1;
-      xQueueSendToFront(xSendToBoardQueue, &e, pdMS_TO_TICKS(5));
-    });
+    nrf24.update();
+
+    vTaskDelay(10);
+  }
+  vTaskDelete(NULL);
+}
 
 //--------------------------------------------------------------------------------
 
@@ -294,13 +226,6 @@ void packet_available_cb(uint16_t from_id)
     xSemaphoreGive(xCore1Semaphore);
   }
 }
-
-void send_packet_to_board()
-{
-  nrf24.controllerPacket.id++;
-  nrf24.sendPacket(board_id);
-  nrf24.controllerPacket.command &= ~COMMAND_REQUEST_UPDATE;
-}
 //--------------------------------------------------------------------------------
 
 void setup()
@@ -310,7 +235,10 @@ void setup()
   powerpins_init();
   button_init();
 
-  bool nrf_ok = nrf_setup();
+  pinMode(DEADMAN_BUTTON_GND, OUTPUT);
+  digitalWrite(DEADMAN_BUTTON_GND, LOW);
+  deadman_button.setPressedHandler(deadman_pressed);
+  deadman_button.setReleasedHandler(deadman_released);
 
   print_build_status();
 
@@ -325,23 +253,13 @@ void setup()
   setupLCD();
   delay(100);
 
-  xTaskCreatePinnedToCore(triggerTask_0, "triggerTask_0", 10000, NULL, /*priority*/ 4, NULL, OTHER_CORE);
-  xTaskCreatePinnedToCore(deadmanTask_0, "deadmanTask_0", 10000, NULL, /*priority*/ 3, NULL, OTHER_CORE);
+  xTaskCreatePinnedToCore(comms_task_0, "comms_task_0", 10000, NULL, /*priority*/ 4, NULL, OTHER_CORE);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "BATT_0", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
 
-  xTriggerReadQueue = xQueueCreate(1, sizeof(uint8_t));
-  xDeadmanChangedQueue = xQueueCreate(1, sizeof(bool));
-  xSendToBoardQueue = xQueueCreate(1, sizeof(uint8_t));
-
   xCore1Semaphore = xSemaphoreCreateMutex();
+  xControllerPacketSemaphore = xSemaphoreCreateMutex();
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
-
-  runner.startNow();
-  runner.addTask(t_ReadTrigger_1);
-  runner.addTask(t_SendToBoard_1);
-  t_ReadTrigger_1.enable();
-  t_SendToBoard_1.enable();
 }
 //------------------------------------------------------------------
 
@@ -349,20 +267,13 @@ void loop()
 {
   button0.loop();
 
-  runner.execute();
+  deadman_button.loop();
 
   fsm.run_machine();
 
   board_fsm.run_machine();
 
   trigger_fsm.run_machine();
-
-  nrf24.update();
-
-  uint8_t e;
-  BaseType_t xStatus = xQueueReceive(xSendToBoardQueue, &e, pdMS_TO_TICKS(0));
-  if (xStatus == pdPASS)
-  {
-    send_packet_to_board();
-  }
+  
+  read_trigger();
 }
