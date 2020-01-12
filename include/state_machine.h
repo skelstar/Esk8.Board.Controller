@@ -97,6 +97,10 @@ State state_show_battery(
   [] {
     PRINT_STATE_NAME("state_show_battery --------");
     drawBattery(getBatteryPercentage(nrf24.boardPacket.batteryVoltage), true);
+    char buffx[5];
+    sprintf(buffx, "%4d", battery_volts_raw);
+    lcdMessage(/*line*/3, buffx);
+    u8g2.sendBuffer();
   },
   NULL,
   NULL);

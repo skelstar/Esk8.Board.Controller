@@ -105,12 +105,16 @@ void deadman_released(Button2 &btn)
   xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(5));
 }
 
-//------------------------------------------------------------------
+bool can_accelerate = false;
+uint8_t throttle_unfiltered = 127;
+
+#include <trigger_fsm.h>
 
 #define OTHER_CORE 0
 #define NORMAL_CORE 1
 
-void throttleTask_0(void *pvParameters)
+
+void deadmanTask_0(void *pvParameters)
 {
   pinMode(DEADMAN_BUTTON_GND, OUTPUT);
   digitalWrite(DEADMAN_BUTTON_GND, LOW);
@@ -118,7 +122,7 @@ void throttleTask_0(void *pvParameters)
   deadman_button.setPressedHandler(deadman_pressed);
   deadman_button.setReleasedHandler(deadman_released);
 
-  Serial.printf("throttleTask_0 running on core %d\n", xPortGetCoreID());
+  Serial.printf("deadmanTask_0 running on core %d\n", xPortGetCoreID());
 
   while (1)
   {
@@ -129,7 +133,7 @@ void throttleTask_0(void *pvParameters)
     bool changed = xQueueReceive(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(20)) == pdPASS;
     if (changed)
     {
-      DEBUGVAL("xDeadmanChangedQueue", pressed);
+      trigger_fsm.trigger(pressed ? TRIGGER_DEADMAN_PRESSED : TRIGGER_DEADMAN_RELEASED);
     }
     vTaskDelay(10);
   }
@@ -151,12 +155,17 @@ void triggerTask_0(void *pvParameters)
     bool read = xQueueReceive(xTriggerReadQueue, &e, (TickType_t)0) == pdTRUE;
     if (read == true)
     {
-
       if (xControllerPacketSemaphore != NULL && xSemaphoreTake(xControllerPacketSemaphore, (TickType_t)10) == pdTRUE)
       {
         uint8_t old_throttle = nrf24.controllerPacket.throttle;
 
-        nrf24.controllerPacket.throttle = battery_volts_raw / 10; // get_mapped_calibrated_throttle();
+        throttle_unfiltered = get_mapped_calibrated_throttle();
+        // check for safety/conditions
+        nrf24.controllerPacket.throttle = throttle_unfiltered;
+        if (can_accelerate == false && throttle_unfiltered > 127)
+        {
+          nrf24.controllerPacket.throttle = 127;
+        }
         if (old_throttle != nrf24.controllerPacket.throttle)
         {
 #ifdef TRIGGER_DEBUG_ENABLED
@@ -322,6 +331,7 @@ void setup()
 
   addFsmTransitions();
   add_board_fsm_transitions();
+  addTriggerFsmTransitions();
 
   Wire.begin();
   delay(10);
@@ -331,7 +341,7 @@ void setup()
   delay(100);
 
   xTaskCreatePinnedToCore(triggerTask_0, "triggerTask_0", 10000, NULL, /*priority*/ 4, NULL, OTHER_CORE);
-  xTaskCreatePinnedToCore(throttleTask_0, "throttleTask_0", 10000, NULL, /*priority*/ 3, NULL, OTHER_CORE);
+  xTaskCreatePinnedToCore(deadmanTask_0, "deadmanTask_0", 10000, NULL, /*priority*/ 3, NULL, OTHER_CORE);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "BATT_0", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
 
   xTriggerReadQueue = xQueueCreate(1, sizeof(uint8_t));
@@ -359,6 +369,8 @@ void loop()
   fsm.run_machine();
 
   board_fsm.run_machine();
+
+  trigger_fsm.run_machine();
 
   nrf24.update();
 
