@@ -74,3 +74,37 @@ void print_throttle(uint8_t target)
     }
   }
 }
+
+void print_build_status()
+{
+  Serial.printf("\n");
+  Serial.printf("/********************************************************\n");
+
+#ifdef RELEASE_BUILD
+
+  Serial.printf("               RELEASE BUILD!! \n");
+
+#else
+
+#ifdef USE_TEST_VALUES
+  Serial.printf("               WARNING: Using test values!            \n");
+#endif
+#ifdef BOARD_FSM_TRIGGER_DEBUG_ENABLED
+  Serial.printf("               WARNING: BOARD_FSM_TRIGGER_DEBUG_ENABLED\n");
+#endif
+#ifdef DEBUG_BOARD_PRINT_STATE_NAME
+  Serial.printf("               WARNING: DEBUG_BOARD_PRINT_STATE_NAME\n");
+#endif
+#ifdef TRIGGER_DEBUG_ENABLED
+  Serial.printf("               WARNING: TRIGGER_DEBUG_ENABLED\n");
+#endif
+#ifdef PACKET_RECV_DEBUG_ENABLED
+  Serial.printf("               WARNING: PACKET_RECV_DEBUG_ENABLED\n");
+#endif
+#ifdef DEBUG_PRINT_STATE_NAME_ENABLED
+  Serial.printf("               WARNING: DEBUG_PRINT_STATE_NAME_ENABLED\n");
+#endif
+#endif
+  Serial.printf("/********************************************************/\n");
+  Serial.printf("\n");
+}
