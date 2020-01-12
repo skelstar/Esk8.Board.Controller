@@ -15,7 +15,7 @@ enum TriggerState
   TRIGGER_STATE_DM_RELEASED,  
 };
 
-bool update_trigger;
+bool trigger_updated;
 
 void TRIGGER_TRIGGER(TriggerEvent event);
 
@@ -31,7 +31,7 @@ State state_trigger_ok(
     [] {
       print_trigger_state("--> state_trigger_ok");
       can_accelerate = true;
-      update_trigger = true;
+      trigger_updated = true;
     },
     NULL,
     NULL);
@@ -41,7 +41,7 @@ State state_trigger_wait_not_accelerating(
     [] {
       print_trigger_state("--> state_trigger_wait_not_accelerating");
       can_accelerate = false;
-      update_trigger = true;
+      trigger_updated = true;
     },
     [] {
       bool is_safe = throttle_unfiltered <= 127;
@@ -57,7 +57,7 @@ State state_trigger_deadman_released(
     [] {
       print_trigger_state("--> state_trigger_deadman_released");
       can_accelerate = false;
-      update_trigger = true;
+      trigger_updated = true;
     },
     NULL,
     NULL);

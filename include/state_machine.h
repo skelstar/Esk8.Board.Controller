@@ -1,6 +1,4 @@
 
-// #define FSM_TRIGGER_DEBUG_ENABLED   1
-
 enum StateMachineEventEnum
 {
   EV_BUTTON_CLICK,
@@ -57,7 +55,7 @@ State state_disconnected(
     [] {
       PRINT_STATE_NAME("state_disconnected --------");
       char buffx[12];
-      sprintf(buffx, "missed: %.0f", nrf24.boardPacket.ampHours);
+      sprintf(buffx, "bd rsts: %d", board_first_packet_count);
 
       u8g2.clearBuffer();
       lcd_message(/*line#*/ 1, "Disconnected");
@@ -76,9 +74,10 @@ State state_not_moving(
       screen_not_moving(trigger_fsm.get_current_state()->id);
     },
     [] {
-      if (update_trigger)
+      if (trigger_updated || first_packet_updated)
       {
-        update_trigger = false;
+        trigger_updated = false;
+        first_packet_updated = false;
         screen_not_moving(trigger_fsm.get_current_state()->id);
         DEBUGVAL(trigger_fsm.get_current_state()->id);
       }
@@ -131,44 +130,6 @@ State state_trigger_centre(
       DEBUGVAL(trigger_centre);
       trigger_calibrated = true;
     });
-// State state_trigger_min(
-//   []{
-//     PRINT_STATE_NAME("Trigger min");
-//     lcd_message("Trig Min");
-//     since_reading_trigger = 0;
-//   },
-//   [] {
-//     uint16_t min = get_trigger_raw();
-//     if (min < trigger_min || min < trigger_centre)
-//     {
-//       trigger_min = min;
-//     }
-//     if (since_reading_trigger > 2000)
-//     {
-//       TRIGGER(EV_READ_TRIGGER_MAX, NULL);
-//     }
-//   },
-//   [] { DEBUGVAL(trigger_min); }
-// );
-// State state_trigger_max(
-//   []{
-//     PRINT_STATE_NAME("Trigger max");
-//     lcd_message("Trig Max");
-//     since_reading_trigger = 0;
-//   },
-//   [] {
-//     uint16_t max = get_trigger_raw();
-//     if (max > trigger_max)
-//     {
-//       trigger_max = max;
-//     }
-//     if (since_reading_trigger > 2000)
-//     {
-//       TRIGGER(EV_FINISHED_TRIGGER_CALIBRATION, NULL);
-//     }
-//   },
-//   [] { DEBUGVAL(trigger_max); }
-// );
 
 Fsm fsm(&state_trigger_centre);
 
@@ -176,9 +137,6 @@ void addFsmTransitions()
 {
   // trigger calibration
   fsm.add_transition(&state_trigger_centre, &state_connecting, EV_READ_TRIGGER_MIN, NULL);
-  // fsm.add_transition(&state_trigger_centre, &state_trigger_min, EV_READ_TRIGGER_MIN, NULL);
-  // fsm.add_transition(&state_trigger_min, &state_trigger_max, EV_READ_TRIGGER_MAX, NULL);
-  // fsm.add_transition(&state_trigger_max, &state_connecting, EV_FINISHED_TRIGGER_CALIBRATION, NULL);
 
   // state_connecting ->
   fsm.add_transition(&state_connecting, &state_not_moving, EV_BOARD_CONNECTED, NULL);

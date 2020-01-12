@@ -24,9 +24,7 @@ void screen_not_moving(uint8_t trigger_state)
 {
   char buff2[10];
   sprintf(buff2, "trig: %d", trigger_state);
-  char buff3[12];
-  sprintf(buff3, "missed: %.0f", nrf24.boardPacket.ampHours);
-
+  
   u8g2.clearBuffer();
   lcd_message(/*line#*/ 1, "Stopped");
   switch (trigger_state)
@@ -36,6 +34,9 @@ void screen_not_moving(uint8_t trigger_state)
     case 2: lcd_message(/*line*/ 2, "trig: hold"); break;
   }
   
+  char buff3[12];
+  sprintf(buff3, "bd rsts: %d", board_first_packet_count);
   lcd_message(/*line#*/ 3, &buff3[0]);
+  
   u8g2.sendBuffer();
 }

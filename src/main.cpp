@@ -52,8 +52,9 @@ ControllerData old_packet;
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
-uint8_t board_first_packet_count = 0, old_board_first_packet_count = 0;
+uint8_t board_first_packet_count = 0;
 uint16_t battery_volts_raw = 0;
+bool first_packet_updated;
 
 unsigned long lastPacketId = 0;
 unsigned long sendCounter = 0;
@@ -278,6 +279,12 @@ void packet_available_cb(uint16_t from_id)
       TRIGGER(EV_STOPPED_MOVING, NULL);
       break;
     case FIRST_PACKET:
+      if (nrf24.controllerPacket.id > 10)
+      {
+        // avoid first 'FIRST_PACKET'
+        board_first_packet_count++;
+      }
+      first_packet_updated = true;
       TRIGGER(EV_BOARD_FIRST_CONNECT, "EV_BOARD_FIRST_CONNECT");
       break;
     }
