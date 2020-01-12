@@ -19,3 +19,23 @@ void draw_missing_packets_screen(bool force = false)
   // }
   // old_board_first_packet_count = board_first_packet_count;
 }
+
+void screen_not_moving(uint8_t trigger_state)
+{
+  char buff2[10];
+  sprintf(buff2, "trig: %d", trigger_state);
+  char buff3[12];
+  sprintf(buff3, "missed: %.0f", nrf24.boardPacket.ampHours);
+
+  u8g2.clearBuffer();
+  lcd_message(/*line#*/ 1, "Stopped");
+  switch (trigger_state)
+  {
+    case 0: lcd_message(/*line*/ 2, "trig: go!"); break;
+    case 1: lcd_message(/*line*/ 2, "trig: wait"); break;
+    case 2: lcd_message(/*line*/ 2, "trig: hold"); break;
+  }
+  
+  lcd_message(/*line#*/ 3, &buff3[0]);
+  u8g2.sendBuffer();
+}

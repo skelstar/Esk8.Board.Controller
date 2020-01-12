@@ -60,11 +60,15 @@ unsigned long sendCounter = 0;
 bool syncdWithServer = false;
 uint8_t rxCorrectCount = 0;
 
+bool can_accelerate = false;
+uint8_t throttle_unfiltered = 127;
+
 // prototypes
 
 #include "utils.h"
-#include <screens.h>
 #include "SSD1306.h"
+#include <screens.h>
+#include <trigger_fsm.h>
 #include <state_machine.h>
 #include <board_state.h>
 
@@ -104,11 +108,6 @@ void deadman_released(Button2 &btn)
   bool pressed = false;
   xQueueSendToFront(xDeadmanChangedQueue, &pressed, pdMS_TO_TICKS(5));
 }
-
-bool can_accelerate = false;
-uint8_t throttle_unfiltered = 127;
-
-#include <trigger_fsm.h>
 
 #define OTHER_CORE 0
 #define NORMAL_CORE 1

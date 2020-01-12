@@ -363,7 +363,7 @@ void lcdTripPage(float ampHours, float odo, bool vescOnline, bool update)
   u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
-void lcdMessage(char *message)
+void lcd_message(char *message)
 {
   u8g2.clearBuffer();
   u8g2.setFontPosCenter(); // vertical center
@@ -373,7 +373,7 @@ void lcdMessage(char *message)
   u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
-void lcdMessage(uint8_t line_number, char *message)
+void lcd_message(uint8_t line_number, char *message)
 {
   uint8_t y = 0;
   switch (line_number)

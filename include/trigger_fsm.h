@@ -8,6 +8,15 @@ enum TriggerEvent
   TRIGGER_DEADMAN_PRESSED,
 };
 
+enum TriggerState
+{
+  TRIGGER_STATE_OK,
+  TRIGGER_STATE_WAIT_NOT_ACCEL,
+  TRIGGER_STATE_DM_RELEASED,  
+};
+
+bool update_trigger;
+
 void TRIGGER_TRIGGER(TriggerEvent event);
 
 void print_trigger_state(char* state_name)
@@ -18,17 +27,21 @@ void print_trigger_state(char* state_name)
 }
 
 State state_trigger_ok(
+    TRIGGER_STATE_OK,
     [] {
       print_trigger_state("--> state_trigger_ok");
       can_accelerate = true;
+      update_trigger = true;
     },
     NULL,
     NULL);
 
 State state_trigger_wait_not_accelerating(
+    TRIGGER_STATE_WAIT_NOT_ACCEL,
     [] {
       print_trigger_state("--> state_trigger_wait_not_accelerating");
       can_accelerate = false;
+      update_trigger = true;
     },
     [] {
       bool is_safe = throttle_unfiltered <= 127;
@@ -40,9 +53,11 @@ State state_trigger_wait_not_accelerating(
     NULL);
 
 State state_trigger_deadman_released(
+    TRIGGER_STATE_DM_RELEASED,
     [] {
       print_trigger_state("--> state_trigger_deadman_released");
       can_accelerate = false;
+      update_trigger = true;
     },
     NULL,
     NULL);

@@ -35,77 +35,79 @@ elapsedMillis since_updated_battery_volts = 0;
 
 //-------------------------------
 State state_connecting(
-  STATE_CONNECTING,
-  [] {
-    PRINT_STATE_NAME("state_connecting --------");
-    lcdMessage("Connecting");
-  },
-  [] {
-    if (since_updated_battery_volts > 3000)
-    {
-      since_updated_battery_volts = 0;
-      char buff[5];
-      sprintf(buff, "%04d", battery_volts_raw);
-      lcdMessage(/*line*/3, buff);
-      u8g2.sendBuffer();
-    }
-  },
-  NULL);
+    STATE_CONNECTING,
+    [] {
+      PRINT_STATE_NAME("state_connecting --------");
+      lcd_message("Connecting");
+    },
+    [] {
+      if (since_updated_battery_volts > 3000)
+      {
+        since_updated_battery_volts = 0;
+        char buff[5];
+        sprintf(buff, "%04d", battery_volts_raw);
+        lcd_message(/*line*/ 3, buff);
+        u8g2.sendBuffer();
+      }
+    },
+    NULL);
 //-------------------------------
 State state_disconnected(
-  STATE_DISCONNECTED,
-  [] {
-    PRINT_STATE_NAME("state_disconnected --------");
-    char buffx[12];
-    sprintf(buffx, "missed: %.0f", nrf24.boardPacket.ampHours);
+    STATE_DISCONNECTED,
+    [] {
+      PRINT_STATE_NAME("state_disconnected --------");
+      char buffx[12];
+      sprintf(buffx, "missed: %.0f", nrf24.boardPacket.ampHours);
 
-    u8g2.clearBuffer();
-    lcdMessage(/*line#*/ 1, "Disconnected");
-    lcdMessage(/*line#*/ 3, &buffx[0]);
-    u8g2.sendBuffer();
- },
-  NULL,
-  NULL);
+      u8g2.clearBuffer();
+      lcd_message(/*line#*/ 1, "Disconnected");
+      lcd_message(/*line#*/ 3, &buffx[0]);
+      u8g2.sendBuffer();
+    },
+    NULL,
+    NULL);
 
 //-------------------------------
 State state_not_moving(
-  STATE_NOT_MOVING,
-  [] {
-    PRINT_STATE_NAME("state_not_moving --------");
-    char buffx[12];
-    sprintf(buffx, "missed: %.0f", nrf24.boardPacket.ampHours);
+    STATE_NOT_MOVING,
+    [] {
+      PRINT_STATE_NAME("state_not_moving --------");
 
-    u8g2.clearBuffer();
-    lcdMessage(/*line#*/ 1, "Stopped");
-    lcdMessage(/*line#*/ 3, &buffx[0]);
-    u8g2.sendBuffer();
-  },
-  NULL,
-  NULL);
+      screen_not_moving(trigger_fsm.get_current_state()->id);
+    },
+    [] {
+      if (update_trigger)
+      {
+        update_trigger = false;
+        screen_not_moving(trigger_fsm.get_current_state()->id);
+        DEBUGVAL(trigger_fsm.get_current_state()->id);
+      }
+    },
+    NULL);
 //-------------------------------
 State state_moving(
-  STATE_MOVING,
-  [] {
-    PRINT_STATE_NAME("state_moving --------");
-    lcdMessage("Moving");
-  },
-  NULL,
-  NULL);
+    STATE_MOVING,
+    [] {
+      PRINT_STATE_NAME("state_moving --------");
+      lcd_message("Moving");
+    },
+    NULL,
+    NULL);
 //-------------------------------
 State state_show_battery(
-  STATE_SHOW_BATTERY,
-  [] {
-    PRINT_STATE_NAME("state_show_battery --------");
-    drawBattery(getBatteryPercentage(nrf24.boardPacket.batteryVoltage), true);
-    char buffx[5];
-    sprintf(buffx, "%4d", battery_volts_raw);
-    lcdMessage(/*line*/3, buffx);
-    u8g2.sendBuffer();
-  },
-  NULL,
-  NULL);
+    STATE_SHOW_BATTERY,
+    [] {
+      PRINT_STATE_NAME("state_show_battery --------");
+      drawBattery(getBatteryPercentage(nrf24.boardPacket.batteryVoltage), true);
+      char buffx[5];
+      sprintf(buffx, "%4d", battery_volts_raw);
+      lcd_message(/*line*/ 3, buffx);
+      u8g2.sendBuffer();
+    },
+    NULL,
+    NULL);
 //-------------------------------
-void handle_last_will() 
+void handle_last_will()
 {
   PRINT_STATE_NAME("last will received");
 }
@@ -113,27 +115,26 @@ void handle_last_will()
 
 elapsedMillis since_reading_trigger = 0;
 State state_trigger_centre(
-  []{
-    PRINT_STATE_NAME("Trigger centre");
-    lcdMessage("Trig Center");
-    since_reading_trigger = 0;
-  },
-  [] {
-    trigger_centre = get_trigger_raw();
-    if (since_reading_trigger > 1000) 
-    {
-      TRIGGER(EV_READ_TRIGGER_MIN, NULL);
-    }
-  },
-  [] { 
-    DEBUGVAL(trigger_centre); 
-    trigger_calibrated = true; 
-  }
-);
+    [] {
+      PRINT_STATE_NAME("Trigger centre");
+      lcd_message("Trig Center");
+      since_reading_trigger = 0;
+    },
+    [] {
+      trigger_centre = get_trigger_raw();
+      if (since_reading_trigger > 1000)
+      {
+        TRIGGER(EV_READ_TRIGGER_MIN, NULL);
+      }
+    },
+    [] {
+      DEBUGVAL(trigger_centre);
+      trigger_calibrated = true;
+    });
 // State state_trigger_min(
 //   []{
 //     PRINT_STATE_NAME("Trigger min");
-//     lcdMessage("Trig Min");
+//     lcd_message("Trig Min");
 //     since_reading_trigger = 0;
 //   },
 //   [] {
@@ -142,7 +143,7 @@ State state_trigger_centre(
 //     {
 //       trigger_min = min;
 //     }
-//     if (since_reading_trigger > 2000) 
+//     if (since_reading_trigger > 2000)
 //     {
 //       TRIGGER(EV_READ_TRIGGER_MAX, NULL);
 //     }
@@ -152,7 +153,7 @@ State state_trigger_centre(
 // State state_trigger_max(
 //   []{
 //     PRINT_STATE_NAME("Trigger max");
-//     lcdMessage("Trig Max");
+//     lcd_message("Trig Max");
 //     since_reading_trigger = 0;
 //   },
 //   [] {
@@ -161,7 +162,7 @@ State state_trigger_centre(
 //     {
 //       trigger_max = max;
 //     }
-//     if (since_reading_trigger > 2000) 
+//     if (since_reading_trigger > 2000)
 //     {
 //       TRIGGER(EV_FINISHED_TRIGGER_CALIBRATION, NULL);
 //     }
@@ -227,7 +228,6 @@ void TRIGGER(StateMachineEventEnum x, char *s)
   }
   fsm.trigger(x);
 }
-
 
 /* ---------------------------------------------- */
 /* ---------------------------------------------- */
