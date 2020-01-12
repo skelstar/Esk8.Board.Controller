@@ -59,7 +59,7 @@ unsigned long sendCounter = 0;
 bool syncdWithServer = false;
 uint8_t rxCorrectCount = 0;
 
-bool can_accelerate = false;
+bool can_accelerate = true;
 uint8_t throttle_unfiltered = 127;
 
 // semaphores
@@ -235,16 +235,21 @@ void setup()
   powerpins_init();
   button_init();
 
+#ifdef USE_DEADMAN_SWITCH
   pinMode(DEADMAN_BUTTON_GND, OUTPUT);
   digitalWrite(DEADMAN_BUTTON_GND, LOW);
   deadman_button.setPressedHandler(deadman_pressed);
   deadman_button.setReleasedHandler(deadman_released);
+#endif
 
   print_build_status();
 
   addFsmTransitions();
   add_board_fsm_transitions();
+
+#ifdef USE_DEADMAN_SWITCH
   addTriggerFsmTransitions();
+#endif
 
   Wire.begin();
   delay(10);
@@ -267,13 +272,17 @@ void loop()
 {
   button0.loop();
 
+#ifdef USE_DEADMAN_SWITCH
   deadman_button.loop();
+#endif
 
   fsm.run_machine();
 
   board_fsm.run_machine();
 
+#ifdef USE_DEADMAN_SWITCH
   trigger_fsm.run_machine();
-  
+#endif
+
   read_trigger();
 }
