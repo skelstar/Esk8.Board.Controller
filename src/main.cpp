@@ -49,7 +49,7 @@ ControllerData controller_packet, old_packet;
 
 class Metrics {
   public:
-    uint8_t millis_for_response = 0;
+    uint8_t response_time = 0;
 
 } metrics;
 
@@ -153,7 +153,7 @@ void comms_task_0(void *pvParameters)
       if (since_last_requested_update > REQUEST_FROM_BOARD_INTERVAL)
       {
         since_last_requested_update = 0;
-        request_update();
+        set_request_update_command();
       }
 
       send_controller_packet_to_board();
@@ -201,10 +201,10 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type)
       if (board_packet.reason == ReasonType::REQUESTED)
       {
         BD_TRIGGER(EV_BD_RESPONDED, NULL);
-        metrics.millis_for_response = since_last_requested_update;
+        metrics.response_time = since_last_requested_update;
         request_delay_updated = true;
 #ifdef PRINT_METRICS
-        DEBUGVAL(metrics.millis_for_response, since_last_requested_update);
+        DEBUGVAL(metrics.response_time);
 #endif
       }
       break;
