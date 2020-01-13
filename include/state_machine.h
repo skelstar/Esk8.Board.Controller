@@ -5,133 +5,189 @@ enum StateMachineEventEnum
   EV_BOARD_CONNECTED,
   EV_STARTED_MOVING,
   EV_STOPPED_MOVING,
-  EV_HELD_DOWN_WAIT,
-  EV_NO_HELD_OPTION_SELECTED,
   EV_RECV_PACKET,
   EV_BOARD_FIRST_CONNECT,
-  EV_PACKET_MISSED,
-  EV_REQUESTED_UPDATE,
-  EV_REQUESTED_RESPONSE,
   EV_BOARD_TIMEOUT, // havne't heard from the board for a while (BOARD_COMMS_TIMEOUT)
   EV_BOARD_LAST_WILL,
+  EV_READ_TRIGGER_MIN,
+  EV_READ_TRIGGER_MAX,
+  EV_FINISHED_TRIGGER_CALIBRATION,
 } fsm_event;
 
 enum StateId
 {
   STATE_CONNECTING,
-  STATE_MAIN_SCREEN,
+  STATE_DISCONNECTED,
+  STATE_NOT_MOVING,
+  STATE_MOVING,
   STATE_WAITING_FOR_UPDATE,
   STATE_BOARD_TIMEDOUT,
   STATE_SHOW_BATTERY,
 };
 
 uint8_t get_prev_state();
+void PRINT_STATE_NAME(const char *state_name);
+void TRIGGER(StateMachineEventEnum x, char *s);
+
+elapsedMillis since_updated_battery_volts = 0;
 
 //-------------------------------
 State state_connecting(
-  STATE_CONNECTING,
-  [] {
-    DEBUG("state_connecting --------");
-    tft.fillScreen(TFT_BLACK);
-    lcd_message(MC_DATUM, "searching..", TFT_WIDTH/2, TFT_HEIGHT/2, 2);
-  },
-  NULL,
-  NULL);
+    STATE_CONNECTING,
+    [] {
+      PRINT_STATE_NAME("state_connecting --------");
+      lcd_message("Connecting");
+    },
+    [] {
+      if (since_updated_battery_volts > 3000)
+      {
+        since_updated_battery_volts = 0;
+        char buff[5];
+        sprintf(buff, "%04d", battery_volts_raw);
+        lcd_message(/*line*/ 3, buff);
+        u8g2.sendBuffer();
+      }
+    },
+    NULL);
 //-------------------------------
+State state_disconnected(
+    STATE_DISCONNECTED,
+    [] {
+      PRINT_STATE_NAME("state_disconnected --------");
+      char buffx[12];
+      sprintf(buffx, "bd rsts: %d", board_first_packet_count);
 
-State state_main_screen(
-  STATE_MAIN_SCREEN,
-  [] {
-    DEBUG("state_main_screen --------");
-    draw_missing_packets_screen(/*force*/true);
-  },
-  NULL,
-  NULL);
+      u8g2.clearBuffer();
+      lcd_message(/*line#*/ 1, "Disconnected");
+      lcd_message(/*line#*/ 3, &buffx[0]);
+      u8g2.sendBuffer();
+    },
+    NULL,
+    NULL);
+
 //-------------------------------
+State state_not_moving(
+    STATE_NOT_MOVING,
+    [] {
+      PRINT_STATE_NAME("state_not_moving --------");
 
-
-State state_waiting_for_update(
-  STATE_WAITING_FOR_UPDATE,
-  [] {
-    since_requested_update = 0;
-  },
-  [] {
-    if (since_requested_update > BOARD_COMMS_TIMEOUT)
-    {
-      TRIGGER(EV_BOARD_TIMEOUT, "EV_BOARD_TIMEOUT");
-    }
-  },
-  NULL);
+      screen_not_moving(trigger_fsm.get_current_state()->id);
+    },
+    [] {
+      if (trigger_updated || first_packet_updated || request_delay_updated)
+      {
+        trigger_updated = false;
+        first_packet_updated = false;
+        request_delay_updated = false;
+        screen_not_moving(trigger_fsm.get_current_state()->id);
+        DEBUGVAL(trigger_fsm.get_current_state()->id);
+      }
+    },
+    NULL);
 //-------------------------------
-State state_board_timedout(
-  STATE_BOARD_TIMEDOUT,
-  [] {
-    DEBUG("state_board_timedout --------");
-    controller_packet.throttle = 127; 
-    // assuming on missing_packet screen
-    tft.fillRect(0, 0, TFT_WIDTH, FONT_2_HEIGHT, TFT_RED);
-    tft.setTextColor(TFT_WHITE, TFT_RED);
-    lcd_message(MC_DATUM, "timed out!", TFT_WIDTH/2, FONT_2_HEIGHT/2, 2);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  },
-  NULL,
-  NULL);
+State state_moving(
+    STATE_MOVING,
+    [] {
+      PRINT_STATE_NAME("state_moving --------");
+      lcd_message("Moving");
+    },
+    NULL,
+    NULL);
 //-------------------------------
 State state_show_battery(
-  STATE_SHOW_BATTERY,
-  [] {
-    DEBUG("state_show_battery --------");
-      drawBattery(getBatteryPercentage(vescdata.batteryVoltage));
-  },
-  NULL,
-  NULL);
+    STATE_SHOW_BATTERY,
+    [] {
+      PRINT_STATE_NAME("state_show_battery --------");
+      drawBattery(getBatteryPercentage(board_packet.batteryVoltage), true);
+      char buffx[5];
+      sprintf(buffx, "%4d", battery_volts_raw);
+      lcd_message(/*line*/ 3, buffx);
+      u8g2.sendBuffer();
+    },
+    NULL,
+    NULL);
 //-------------------------------
-void handle_board_first_packet()
+void handle_last_will()
 {
-  DEBUG("handle_board_first_packet");
-  board_first_packet_count++;
-}
-//-------------------------------
-void handle_stopped_moving()
-{
-  last_trip.save(vescdata);
-  DEBUG("saved vesc data");
-}
-//-------------------------------
-void handle_last_will() 
-{
-  DEBUG("last will received");
+  PRINT_STATE_NAME("last will received");
 }
 //-------------------------------
 
-Fsm fsm(&state_connecting);
+elapsedMillis since_reading_trigger = 0;
+State state_trigger_centre(
+    [] {
+      PRINT_STATE_NAME("Trigger centre");
+      lcd_message("Trig Center");
+      since_reading_trigger = 0;
+    },
+    [] {
+      trigger_centre = get_trigger_raw();
+      if (since_reading_trigger > 1000)
+      {
+        TRIGGER(EV_READ_TRIGGER_MIN, NULL);
+      }
+    },
+    [] {
+      DEBUGVAL(trigger_centre);
+      trigger_calibrated = true;
+    });
 
+Fsm fsm(&state_trigger_centre);
+
+void addFsmTransitions()
+{
+  // trigger calibration
+  fsm.add_transition(&state_trigger_centre, &state_connecting, EV_READ_TRIGGER_MIN, NULL);
+
+  // state_connecting ->
+  fsm.add_transition(&state_connecting, &state_not_moving, EV_BOARD_CONNECTED, NULL);
+  fsm.add_transition(&state_connecting, &state_not_moving, EV_STOPPED_MOVING, NULL);
+  fsm.add_transition(&state_connecting, &state_moving, EV_STARTED_MOVING, NULL);
+
+  // -> state_disconnected
+  fsm.add_transition(&state_not_moving, &state_disconnected, EV_BOARD_TIMEOUT, NULL);
+  fsm.add_transition(&state_moving, &state_disconnected, EV_BOARD_TIMEOUT, NULL);
+
+  // state_disconnected ->
+  fsm.add_transition(&state_disconnected, &state_not_moving, EV_BOARD_CONNECTED, NULL);
+  fsm.add_transition(&state_disconnected, &state_moving, EV_STARTED_MOVING, NULL);
+  fsm.add_transition(&state_disconnected, &state_not_moving, EV_STOPPED_MOVING, NULL);
+
+  // stopped -> moving -> stopped
+  fsm.add_transition(&state_not_moving, &state_moving, EV_STARTED_MOVING, NULL);
+  fsm.add_transition(&state_moving, &state_not_moving, EV_STOPPED_MOVING, NULL);
+
+  // last will
+  // fsm.add_transition(&state_main_screen, &state_main_screen, EV_BOARD_LAST_WILL, handle_last_will);
+
+  // button 0 pressed
+  fsm.add_transition(&state_not_moving, &state_show_battery, EV_BUTTON_CLICK, NULL);
+  fsm.add_timed_transition(&state_show_battery, &state_not_moving, 1500, NULL);
+}
+/* ---------------------------------------------- */
 uint8_t get_prev_state()
 {
   return fsm.get_from_state();
 }
 
-void addFsmTransitions()
+void PRINT_STATE_NAME(const char *state_name)
 {
-  // first connect
-  fsm.add_transition(&state_connecting, &state_main_screen, EV_BOARD_FIRST_CONNECT, handle_board_first_packet);
-  fsm.add_transition(&state_main_screen, &state_main_screen, EV_BOARD_FIRST_CONNECT, handle_board_first_packet);
-  // requested update
-  fsm.add_transition(&state_main_screen, &state_waiting_for_update, EV_REQUESTED_UPDATE, NULL);
-  fsm.add_transition(&state_waiting_for_update, &state_main_screen, EV_REQUESTED_RESPONSE, NULL);
-  fsm.add_transition(&state_waiting_for_update, &state_board_timedout, EV_BOARD_TIMEOUT, NULL);
-  // timed out
-  fsm.add_transition(&state_board_timedout, &state_main_screen, EV_RECV_PACKET, NULL);
-  fsm.add_transition(&state_board_timedout, &state_main_screen, EV_BOARD_FIRST_CONNECT, NULL);
-  fsm.add_transition(&state_board_timedout, &state_main_screen, EV_REQUESTED_RESPONSE, NULL);
-  
-  fsm.add_transition(&state_main_screen, &state_main_screen, EV_STOPPED_MOVING, handle_stopped_moving);
-
-  // last will
-  fsm.add_transition(&state_main_screen, &state_main_screen, EV_BOARD_LAST_WILL, handle_last_will);
-
-  // button 0 pressed
-  fsm.add_transition(&state_main_screen, &state_show_battery, EV_BUTTON_CLICK, NULL);
-  fsm.add_timed_transition(&state_show_battery, &state_main_screen, 1500, NULL);
+#ifdef DEBUG_PRINT_STATE_NAME_ENABLED
+  DEBUG(state_name);
+#endif
 }
+
+void TRIGGER(StateMachineEventEnum x, char *s)
+{
+  if (s != NULL)
+  {
+#ifdef FSM_TRIGGER_DEBUG_ENABLED
+    Serial.printf("EVENT: %s\n", s);
+#endif
+  }
+  fsm.trigger(x);
+}
+
+/* ---------------------------------------------- */
+/* ---------------------------------------------- */
 /* ---------------------------------------------- */

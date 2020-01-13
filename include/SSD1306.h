@@ -363,7 +363,7 @@ void lcdTripPage(float ampHours, float odo, bool vescOnline, bool update)
   u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
-void lcdMessage(char *message)
+void lcd_message(char *message)
 {
   u8g2.clearBuffer();
   u8g2.setFontPosCenter(); // vertical center
@@ -373,13 +373,23 @@ void lcdMessage(char *message)
   u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
-void lcdMessage(uint8_t line_number, char *message)
+void lcd_message(uint8_t line_number, char *message)
 {
   uint8_t y = 0;
-  if (line_number == 3)
+  switch (line_number)
   {
-    u8g2.setFontPosBottom(); // vertical center
-    y = LCD_HEIGHT;
+    case 1:
+      u8g2.setFontPosTop(); // vertical center
+      y = 0;
+      break;
+    case 2:
+      u8g2.setFontPosCenter(); // vertical center
+      y = LCD_HEIGHT/2;
+      break;
+    case 3:
+      u8g2.setFontPosBottom(); // vertical center
+      y = LCD_HEIGHT;
+      break;
   }
   // u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_courB12_tr);
@@ -401,8 +411,8 @@ void drawBattery(int percent, bool update)
   }
 
   u8g2.clearBuffer();
-  int outsideX = (LCD_HEIGHT - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
-  int outsideY = (LCD_WIDTH - BATTERY_HEIGHT) / 2;
+  int outsideX = (LCD_WIDTH - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
+  int outsideY = (LCD_HEIGHT - BATTERY_HEIGHT) / 2;
   u8g2.drawBox(outsideX, outsideY, BATTERY_WIDTH, BATTERY_HEIGHT);
   u8g2.drawBox(
       outsideX + BATTERY_WIDTH,
