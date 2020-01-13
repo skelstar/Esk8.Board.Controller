@@ -44,8 +44,9 @@ State board_requested(
       PRINT_BOARD_STATE_NAME("BD: board_requested.........");
     },
     [] {
-      if (since_waiting_for_response > BOARD_COMMS_TIMEOUT)
+      if (since_last_requested_update > BOARD_COMMS_TIMEOUT)
       {
+        DEBUGVAL(since_last_requested_update);
         BD_TRIGGER(EV_BD_TIMEDOUT, "EV_BD_TIMEDOUT");
       }
     },
