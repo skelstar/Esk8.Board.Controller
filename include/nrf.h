@@ -13,6 +13,23 @@ uint16_t board_id;
 
 bool nrf_setup()
 {
-  nrf24.begin(&radio, &network, nrf24.RF24_CLIENT, packet_available_cb);
+  nrf24.begin(&radio, &network, board_packet_available_cb);
   return true;
+}
+
+void nrf_update()
+{
+  nrf24.update();
+}
+
+void nrf_read(uint8_t *data, uint8_t data_len)
+{
+  nrf24.read_into(data, data_len);
+}
+
+bool nrf_send_to_board()
+{
+  uint8_t bs[sizeof(ControllerData)];
+  memcpy(bs, &controller_packet, sizeof(ControllerData));
+  return nrf24.sendPacket(board_id, /*type*/0, bs, sizeof(ControllerData));
 }

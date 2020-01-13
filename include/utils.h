@@ -63,12 +63,12 @@ bool print_throttle_flag = false;
 
 void print_throttle(uint8_t target)
 {
-  if (target != nrf24.controllerPacket.throttle || print_throttle_flag)
+  if (target != controller_packet.throttle || print_throttle_flag)
   {
     print_throttle_flag = true;
-    Serial.printf("target: %d t: %d ", target, nrf24.controllerPacket.throttle);
+    Serial.printf("target: %d t: %d ", target, controller_packet.throttle);
     Serial.println();
-    if (target == nrf24.controllerPacket.throttle) 
+    if (target == controller_packet.throttle) 
     {
       print_throttle_flag = false;
     }

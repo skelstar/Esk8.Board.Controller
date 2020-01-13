@@ -9,9 +9,8 @@
 #include <elapsedMillis.h>
 
 // prototypes
-void packet_available_cb(uint16_t from_id);
+void board_packet_available_cb(uint16_t from_id, uint8_t type);
 
-#include "nrf.h"
 
 #define BUTTON0_PIN 0
 #define DEADMAN_BUTTON_PIN 5
@@ -44,9 +43,10 @@ void packet_available_cb(uint16_t from_id);
 elapsedMillis since_waiting_for_response = 0;
 bool received_response = true;
 
-VescData old_vescdata;
+VescData old_vescdata, board_packet;
 
-ControllerData old_packet;
+ControllerData controller_packet, old_packet;
+
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
@@ -72,6 +72,7 @@ xQueueHandle xSendToBoardQueue;
 
 // prototypes
 
+#include "nrf.h"
 #include "trigger.h"
 #include "utils.h"
 #include "SSD1306.h"
@@ -110,13 +111,13 @@ void deadman_released(Button2 &btn)
 
 void send_packet_to_board(uint8_t type = 0)
 {
-  nrf24.controllerPacket.id++;
+  controller_packet.id++;
 
   uint8_t bs[sizeof(ControllerData)];
-  memcpy(bs, &nrf24.boardPacket, sizeof(ControllerData));
+  memcpy(bs, &controller_packet, sizeof(ControllerData));
   
   nrf24.sendPacket(board_id, type, bs, sizeof(ControllerData));
-  nrf24.controllerPacket.command &= ~COMMAND_REQUEST_UPDATE;
+  controller_packet.command &= ~COMMAND_REQUEST_UPDATE;
 }
 
 elapsedMillis since_measure_battery = 0;
@@ -153,7 +154,7 @@ void comms_task_0(void *pvParameters)
       send_packet_to_board();
     }
 
-    nrf24.update();
+    nrf_update();
 
     vTaskDelay(10);
   }
@@ -180,15 +181,31 @@ uint8_t dotsPrinted = 0;
 
 //--------------------------------------------------------------------------------
 
-void packet_available_cb(uint16_t from_id)
+void board_packet_available_cb(uint16_t from_id, uint8_t type)
 {
   board_id = from_id;
-#ifdef PACKET_RECV_DEBUG_ENABLED
-  DEBUGVAL("packet_available_cb", from_id, nrf24.boardPacket.id);
-#endif
-  if (nrf24.boardPacket.id != nrf24.controllerPacket.id)
+
+  switch (type)
   {
-    // DEBUGVAL("ids don't match", nrf24.controllerPacket.id, nrf24.boardPacket.id);
+    case 0:
+      uint8_t buff[sizeof(VescData)];
+      nrf_read(buff, sizeof(VescData));
+      memcpy(&board_packet, &buff, sizeof(VescData));
+      break;
+    case 1:
+      DEBUGVAL(type);
+      // send_to_packet_controller(ReasonType::REQUESTED);
+      break;
+    default:
+      break;
+  }
+
+#ifdef PACKET_RECV_DEBUG_ENABLED
+  DEBUGVAL("board_packet_available_cb", from_id, board_packet.id);
+#endif
+  if (board_packet.id != controller_packet.id)
+  {
+    // DEBUGVAL("ids don't match", controller_packet.id, board_packet.id);
   }
 
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
@@ -197,15 +214,15 @@ void packet_available_cb(uint16_t from_id)
     BD_TRIGGER(EV_BD_RESPONDED, "EV_BD_RESPONDED");
 
 #ifdef PACKET_RECV_DEBUG_ENABLED
-    DEBUGVAL(reason_toString(nrf24.boardPacket.reason));
+    DEBUGVAL(reason_toString(board_packet.reason));
 #endif
-    switch (nrf24.boardPacket.reason)
+    switch (board_packet.reason)
     {
     case REQUESTED:
 #ifdef PACKET_RECV_DEBUG_ENABLED
-      DEBUGVAL("REQUESTED", nrf24.boardPacket.id);
+      DEBUGVAL("REQUESTED", board_packet.id);
 #endif
-      if (nrf24.boardPacket.id != nrf24.controllerPacket.id)
+      if (board_packet.id != controller_packet.id)
       {
         // DEBUG("ids don't match!");
       }
@@ -217,7 +234,7 @@ void packet_available_cb(uint16_t from_id)
       TRIGGER(EV_STOPPED_MOVING, NULL);
       break;
     case FIRST_PACKET:
-      if (nrf24.controllerPacket.id > 10)
+      if (controller_packet.id > 10)
       {
         // avoid first 'FIRST_PACKET'
         board_first_packet_count++;
@@ -227,7 +244,7 @@ void packet_available_cb(uint16_t from_id)
       break;
     }
 
-    memcpy(&old_vescdata, &nrf24.boardPacket, sizeof(VescData));
+    memcpy(&old_vescdata, &board_packet, sizeof(VescData));
 
     xSemaphoreGive(xCore1Semaphore);
   }

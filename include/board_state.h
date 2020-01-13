@@ -88,7 +88,7 @@ void request_update()
 {
   since_last_requested_update = 0;
   // send request next packet
-  nrf24.controllerPacket.command = COMMAND_REQUEST_UPDATE;
+  controller_packet.command = COMMAND_REQUEST_UPDATE;
   BD_TRIGGER(EV_BD_REQUESTED, "EV_BD_REQUESTED");
 }
 

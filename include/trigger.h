@@ -39,7 +39,7 @@ uint8_t get_mapped_calibrated_throttle()
 
 void update_throttle()
 {
-  uint8_t old_throttle = nrf24.controllerPacket.throttle;
+  uint8_t old_throttle = controller_packet.throttle;
 
   throttle_unfiltered = get_mapped_calibrated_throttle();
 
@@ -48,17 +48,17 @@ void update_throttle()
 #endif
 
   // check for safety/conditions
-  nrf24.controllerPacket.throttle = throttle_unfiltered;
+  controller_packet.throttle = throttle_unfiltered;
   if (can_accelerate == false && throttle_unfiltered > 127)
   {
-    nrf24.controllerPacket.throttle = 127;
+    controller_packet.throttle = 127;
   }
 
 #ifdef TRIGGER_DEBUG_ENABLED
-  bool trigger_changed = old_throttle != nrf24.controllerPacket.throttle;
+  bool trigger_changed = old_throttle != controller_packet.throttle;
   if (trigger_changed)
   {
-    DEBUGVAL(nrf24.controllerPacket.throttle);
+    DEBUGVAL(controller_packet.throttle);
   }
 #endif
 }
