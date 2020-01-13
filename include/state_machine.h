@@ -74,10 +74,11 @@ State state_not_moving(
       screen_not_moving(trigger_fsm.get_current_state()->id);
     },
     [] {
-      if (trigger_updated || first_packet_updated)
+      if (trigger_updated || first_packet_updated || request_delay_updated)
       {
         trigger_updated = false;
         first_packet_updated = false;
+        request_delay_updated = false;
         screen_not_moving(trigger_fsm.get_current_state()->id);
         DEBUGVAL(trigger_fsm.get_current_state()->id);
       }

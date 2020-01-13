@@ -29,7 +29,6 @@ void screen_not_moving(uint8_t trigger_state)
   // line 1
   lcd_message(/*line#*/ 1, "Stopped");
   //line 2
-  char buff3[12];
 #ifdef USE_DEADMAN_SWITCH  
   switch (trigger_state)
   {
@@ -37,7 +36,11 @@ void screen_not_moving(uint8_t trigger_state)
     case 1: lcd_message(/*line*/ 2, "trig: wait"); break;
     case 2: lcd_message(/*line*/ 2, "trig: hold"); break;
   }
+#else
+  sprintf(buff2, "req: %ds", metrics.millis_for_response);
+  lcd_message(/*line*/ 2, buff2);
 #endif
+  char buff3[12];
   sprintf(buff3, "bd rsts: %d", board_first_packet_count);
   lcd_message(/*line#*/ 3, &buff3[0]);
   u8g2.sendBuffer();

@@ -20,7 +20,7 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type);
 #define SEND_TO_BOARD_INTERVAL 1000
 #define BOARD_COMMS_TIMEOUT SEND_TO_BOARD_INTERVAL + 100
 #define READ_TRIGGER_INTERVAL 200
-#define REQUEST_FROM_BOARD_INTERVAL 500
+#define REQUEST_FROM_BOARD_INTERVAL 3000
 #define REQUEST_FROM_BOARD_INITIAL_INTERVAL 500
 #define BATTERY_MEASURE_PIN 34
 #define BATTERY_MEASURE_PERIOD 1000
@@ -47,12 +47,19 @@ VescData old_vescdata, board_packet;
 
 ControllerData controller_packet, old_packet;
 
+class Metrics {
+  public:
+    uint8_t millis_for_response = 0;
+
+} metrics;
+
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
 uint8_t board_first_packet_count = 0;
 uint16_t battery_volts_raw = 0;
 bool first_packet_updated;
+bool request_delay_updated;
 
 unsigned long lastPacketId = 0;
 unsigned long sendCounter = 0;
@@ -69,6 +76,10 @@ SemaphoreHandle_t xCore1Semaphore;
 // queues
 xQueueHandle xTriggerReadQueue;
 xQueueHandle xSendToBoardQueue;
+
+elapsedMillis since_last_requested_update = 0;
+elapsedMillis since_measure_battery = 0;
+elapsedMillis since_sent_to_board = 0;
 
 // prototypes
 
@@ -109,20 +120,7 @@ void deadman_released(Button2 &btn)
 #define OTHER_CORE 0
 #define NORMAL_CORE 1
 
-void send_packet_to_board(uint8_t type = 0)
-{
-  controller_packet.id++;
-
-  uint8_t bs[sizeof(ControllerData)];
-  memcpy(bs, &controller_packet, sizeof(ControllerData));
-  
-  nrf24.sendPacket(board_id, type, bs, sizeof(ControllerData));
-  controller_packet.command &= ~COMMAND_REQUEST_UPDATE;
-}
-
-elapsedMillis since_measure_battery = 0;
-elapsedMillis since_sent_to_board = 0;
-
+//------------------------------------------------------------
 void batteryMeasureTask_0(void *pvParameters)
 {
   // pinMode(BATTERY_MEASURE_PIN, INPUT);
@@ -138,12 +136,13 @@ void batteryMeasureTask_0(void *pvParameters)
   }
   vTaskDelete(NULL);
 }
-
+//------------------------------------------------------------
 void comms_task_0(void *pvParameters)
 {
   bool nrf_ok = nrf_setup();
 
-  send_packet_to_board(1);  // initial packet
+  send_controller_packet_to_board();
+  controller_packet.id++;
 
   while (true)
   {
@@ -151,7 +150,14 @@ void comms_task_0(void *pvParameters)
     {
       since_sent_to_board = 0;
 
-      send_packet_to_board();
+      if (since_last_requested_update > REQUEST_FROM_BOARD_INTERVAL)
+      {
+        since_last_requested_update = 0;
+        request_update();
+      }
+
+      send_controller_packet_to_board();
+      controller_packet.id++;
     }
 
     nrf_update();
@@ -191,6 +197,16 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type)
       uint8_t buff[sizeof(VescData)];
       nrf_read(buff, sizeof(VescData));
       memcpy(&board_packet, &buff, sizeof(VescData));
+
+      if (board_packet.reason == ReasonType::REQUESTED)
+      {
+        BD_TRIGGER(EV_BD_RESPONDED, NULL);
+        metrics.millis_for_response = since_last_requested_update;
+        request_delay_updated = true;
+#ifdef PRINT_METRICS
+        DEBUGVAL(metrics.millis_for_response, since_last_requested_update);
+#endif
+      }
       break;
     case 1:
       DEBUGVAL(type);
