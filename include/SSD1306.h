@@ -6,6 +6,17 @@
 
 #define USING_SSD1306 1
 
+enum Datum 
+{
+  TL_DATUM,
+  MC_DATUM,
+  BL_DATUM,
+  TR_DATUM,
+  BR_DATUM,
+  ML_DATUM,
+  MR_DATUM
+};
+
 //https://github.com/olikraus/u8g2/wiki/fntgrpiconic#open_iconic_arrow_2x2
 
 #define OLED_SCL 15
@@ -373,9 +384,28 @@ void lcd_message(char *message)
   u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
-void lcd_message(uint8_t line_number, char *message)
+void lcd_message(uint8_t line_number, char *message, Datum datum = MC_DATUM)
 {
-  uint8_t y = 0;
+  uint8_t x = 0, y = 0;
+
+  int width = u8g2.getStrWidth(message);
+
+  switch (datum)
+  {
+    MC_DATUM:
+      x = LCD_WIDTH/2;
+      break;
+    TL_DATUM:
+      x = 0;
+      break;
+    TR_DATUM:
+      x = LCD_WIDTH - width;
+      break;
+    default:
+      x = 0;
+      break;
+  }
+
   switch (line_number)
   {
     case 1:
@@ -393,8 +423,7 @@ void lcd_message(uint8_t line_number, char *message)
   }
   // u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_courB12_tr);
-  int width = u8g2.getStrWidth(message);
-  u8g2.drawStr(LCD_WIDTH / 2 - width / 2, y, message);
+  u8g2.drawStr(x, y, message);
 }
 
 //--------------------------------------------------------------------------------
