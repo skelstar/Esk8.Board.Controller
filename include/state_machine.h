@@ -69,7 +69,6 @@ State state_not_moving(
         first_packet_updated = false;
         request_delay_updated = false;
         screen_not_moving(trigger_fsm.get_current_state()->id);
-        DEBUGVAL(trigger_fsm.get_current_state()->id);
       }
     },
     NULL);
