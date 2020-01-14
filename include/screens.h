@@ -38,7 +38,7 @@ void screen_not_moving(uint8_t trigger_state)
     case 2: lcd_message(/*line*/ 2, "trig: hold"); break;
   }
 #else
-  sprintf(buff2, "req: %ds", metrics.response_time);
+  sprintf(buff2, "ltcy: %ds", metrics.response_time);
   lcd_message(/*line*/ 2, buff2);
 #endif
   char buff3[12];
