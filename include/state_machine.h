@@ -59,7 +59,8 @@ State state_not_moving(
     STATE_NOT_MOVING,
     [] {
       PRINT_STATE_NAME("state_not_moving --------");
-      stats.force_update = true;
+      screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/false);
+      DEBUGVAL(board_packet.batteryVoltage);
     },
     [] {
       if (trigger_updated || stats.changed())
@@ -74,15 +75,9 @@ State state_moving(
     STATE_MOVING,
     [] {
       PRINT_STATE_NAME("state_moving --------");
-      lcd_message("Moving");
+      // lcd_message("Moving");
     },
-    [] {
-      // if (trigger_updated || stats.changed())
-      // {
-      //   trigger_updated = false;
-      //   screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/true);
-      // }
-    },
+    NULL,
     NULL);
 //-------------------------------
 State state_show_battery(

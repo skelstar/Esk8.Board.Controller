@@ -372,12 +372,16 @@ void lcdTripPage(float ampHours, float odo, bool vescOnline, bool update)
 //--------------------------------------------------------------------------------
 void lcd_message(char *message)
 {
+  // vTaskSuspendAll();
+
   u8g2.clearBuffer();
   u8g2.setFontPosCenter(); // vertical center
   u8g2.setFont(u8g2_font_logisoso18_tr);
   int width = u8g2.getStrWidth(message);
   u8g2.drawStr(LCD_WIDTH / 2 - width / 2, LCD_HEIGHT / 2, message);
   u8g2.sendBuffer();
+
+  // xTaskResumeAll();
 }
 //--------------------------------------------------------------------------------
 void lcd_message(uint8_t line_number, const char *message, Aligned aligned = ALIGNED_CENTRE)
