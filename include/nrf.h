@@ -54,10 +54,19 @@ bool send_controller_packet_to_board()
   uint8_t retries = send_with_retries(bs, sizeof(ControllerData), /*num_retries*/ 4);
 
   bool success = retries > 4;
-  if (retries > 0)
+
+#ifdef LOG_RETRIES  
+
+  log_retry(retries > 0);
+
+  uint8_t sum_retries = get_sum_retries();
+
+  if (retries > 0 || controller_packet.id % 20 == 0)
   {
-    DEBUGVAL(retries, success, controller_packet.id);
+    float retry_rate = get_retry_rate(sum_retries, controller_packet.id);
+    DEBUGVAL(sum_retries, retry_rate, success, controller_packet.id);
   }
+#endif
 
   return success;
 }

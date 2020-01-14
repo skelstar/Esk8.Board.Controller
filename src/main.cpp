@@ -102,9 +102,9 @@ elapsedMillis since_sent_to_board = 0;
 
 // prototypes
 
-#include "nrf.h"
 #include "trigger.h"
 #include "utils.h"
+#include "nrf.h"
 #include "SSD1306.h"
 #include <screens.h>
 #include <trigger_fsm.h>
