@@ -11,7 +11,6 @@
 // prototypes
 void board_packet_available_cb(uint16_t from_id, uint8_t type);
 
-
 #define BUTTON0_PIN 0
 #define DEADMAN_BUTTON_PIN 5
 #define DEADMAN_BUTTON_GND 17
@@ -38,8 +37,8 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type);
 #define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
 #define BATTERY_VOLTAGE_CUTOFF_END 3.1 * 11   // 34.1
 
-#define REMOTE_BATTERY_FULL   2300
-#define REMOTE_BATTERY_EMPTY  1520
+#define REMOTE_BATTERY_FULL 2300
+#define REMOTE_BATTERY_EMPTY 1520
 
 //------------------------------------------------------------------
 
@@ -50,12 +49,12 @@ VescData old_vescdata, board_packet;
 
 ControllerData controller_packet, old_packet;
 
-class Metrics {
-  public:
-    uint8_t response_time = 0;
+class Metrics
+{
+public:
+  uint8_t response_time = 0;
 
 } metrics;
-
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
@@ -63,21 +62,21 @@ uint8_t board_first_packet_count = 0;
 uint16_t remote_battery_volts_raw = 0;
 uint8_t remote_battery_percent = 0;
 
-class Stats 
+class Stats
 {
-  public:
-    bool first_packet_updated;
-    bool request_delay_updated;
-    bool force_update;
+public:
+  bool first_packet_updated;
+  bool request_delay_updated;
+  bool force_update;
 
-    bool changed()
-    {
-      bool changed1 = first_packet_updated || request_delay_updated || force_update;
-      first_packet_updated = false;
-      request_delay_updated = false;
-      force_update = true;
-      return changed1;
-    }
+  bool changed()
+  {
+    bool changed1 = first_packet_updated || request_delay_updated || force_update;
+    first_packet_updated = false;
+    request_delay_updated = false;
+    force_update = true;
+    return changed1;
+  }
 } stats;
 
 unsigned long lastPacketId = 0;
@@ -161,7 +160,16 @@ void comms_task_0(void *pvParameters)
 {
   bool nrf_ok = nrf_setup();
 
-  send_controller_packet_to_board();
+  bool success = send_controller_packet_to_board();
+  if (success == false)
+  {
+    BD_TRIGGER(EV_BD_TIMEDOUT, "EV_BD_TIMEDOUT");
+  }
+  else
+  {
+    FSM_EVENT(EV_SENT_TO_BOARD_OK, "EV_SENT_TO_BOARD_OK");
+  }
+
   controller_packet.id++;
 
   while (true)
@@ -176,7 +184,15 @@ void comms_task_0(void *pvParameters)
         set_request_update_command();
       }
 
-      send_controller_packet_to_board();
+      bool success = send_controller_packet_to_board();
+      if (success == false)
+      {
+        BD_TRIGGER(EV_BD_TIMEDOUT, "EV_BD_TIMEDOUT1");
+      }
+      else
+      {
+        FSM_EVENT(EV_SENT_TO_BOARD_OK, "EV_SENT_TO_BOARD_OK");
+      }
       controller_packet.id++;
     }
 
@@ -213,27 +229,27 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type)
 
   switch (type)
   {
-    case 0:
-      uint8_t buff[sizeof(VescData)];
-      nrf_read(buff, sizeof(VescData));
-      memcpy(&board_packet, &buff, sizeof(VescData));
+  case 0:
+    uint8_t buff[sizeof(VescData)];
+    nrf_read(buff, sizeof(VescData));
+    memcpy(&board_packet, &buff, sizeof(VescData));
 
-      if (board_packet.reason == ReasonType::REQUESTED)
-      {
-        BD_TRIGGER(EV_BD_RESPONDED, NULL);
-        metrics.response_time = since_last_requested_update;
-        stats.request_delay_updated = true;
+    if (board_packet.reason == ReasonType::REQUESTED)
+    {
+      BD_TRIGGER(EV_BD_RESPONDED, NULL);
+      metrics.response_time = since_last_requested_update;
+      stats.request_delay_updated = true;
 #ifdef PRINT_METRICS
-        DEBUGVAL(metrics.response_time);
+      DEBUGVAL(metrics.response_time);
 #endif
-      }
-      break;
-    case 1:
-      DEBUGVAL(type);
-      // send_to_packet_controller(ReasonType::REQUESTED);
-      break;
-    default:
-      break;
+    }
+    break;
+  case 1:
+    DEBUGVAL(type);
+    // send_to_packet_controller(ReasonType::REQUESTED);
+    break;
+  default:
+    break;
   }
 
 #ifdef PACKET_RECV_DEBUG_ENABLED

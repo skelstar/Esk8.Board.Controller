@@ -2,6 +2,7 @@ enum StateMachineEventEnum
 {
   EV_BUTTON_CLICK,
   EV_BOARD_CONNECTED,
+  EV_SENT_TO_BOARD_OK,
   EV_STARTED_MOVING,
   EV_STOPPED_MOVING,
   EV_RECV_PACKET,
@@ -125,7 +126,7 @@ void addFsmTransitions()
   fsm.add_transition(&state_trigger_centre, &state_connecting, EV_READ_TRIGGER_MIN, NULL);
 
   // state_connecting ->
-  fsm.add_transition(&state_connecting, &state_not_moving, EV_BOARD_CONNECTED, NULL);
+  fsm.add_transition(&state_connecting, &state_not_moving, EV_SENT_TO_BOARD_OK, NULL);
   fsm.add_transition(&state_connecting, &state_not_moving, EV_STOPPED_MOVING, NULL);
   fsm.add_transition(&state_connecting, &state_moving, EV_STARTED_MOVING, NULL);
 
@@ -134,7 +135,7 @@ void addFsmTransitions()
   fsm.add_transition(&state_moving, &state_disconnected, EV_BOARD_TIMEOUT, NULL);
 
   // state_disconnected ->
-  fsm.add_transition(&state_disconnected, &state_not_moving, EV_BOARD_CONNECTED, NULL);
+  fsm.add_transition(&state_disconnected, &state_not_moving, EV_SENT_TO_BOARD_OK, NULL);
   fsm.add_transition(&state_disconnected, &state_moving, EV_STARTED_MOVING, NULL);
   fsm.add_transition(&state_disconnected, &state_not_moving, EV_STOPPED_MOVING, NULL);
 

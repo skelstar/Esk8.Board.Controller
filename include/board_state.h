@@ -22,7 +22,7 @@ State board_unknown(
 State board_idle(
     [] {
       PRINT_BD_FSM_STATE("BD: board_idle.........");
-      FSM_EVENT(EV_BOARD_CONNECTED, NULL);
+      // FSM_EVENT(EV_BOARD_CONNECTED, NULL);
     },
     NULL,    
     NULL);
@@ -31,12 +31,7 @@ State board_requested(
     [] {
       PRINT_BD_FSM_STATE("BD: board_requested.........");
     },
-    [] {
-      if (since_last_requested_update > BOARD_COMMS_TIMEOUT)
-      {
-        BD_TRIGGER(EV_BD_TIMEDOUT, "EV_BD_TIMEDOUT");
-      }
-    },
+    NULL,
     NULL);
 //-------------------------------------------------------
 State board_timedout(
@@ -54,8 +49,11 @@ void add_board_fsm_transitions()
 {
   board_fsm.add_transition(&board_unknown, &board_requested, EV_BD_REQUESTED, NULL);
   board_fsm.add_transition(&board_idle, &board_requested, EV_BD_REQUESTED, NULL);
+
+  board_fsm.add_transition(&board_idle, &board_timedout, EV_BD_TIMEDOUT, NULL);
   board_fsm.add_transition(&board_requested, &board_timedout, EV_BD_TIMEDOUT, NULL);
   board_fsm.add_transition(&board_timedout, &board_unknown, EV_BD_TIMEDOUT, NULL);
+  
   board_fsm.add_transition(&board_requested, &board_idle, EV_BD_RESPONDED, NULL);
   board_fsm.add_transition(&board_timedout, &board_requested, EV_BD_REQUESTED, NULL);
 }
