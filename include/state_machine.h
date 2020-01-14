@@ -1,4 +1,3 @@
-
 enum StateMachineEventEnum
 {
   EV_BUTTON_CLICK,
@@ -27,7 +26,7 @@ enum StateId
 
 uint8_t get_prev_state();
 void PRINT_STATE_NAME(const char *state_name);
-void TRIGGER(StateMachineEventEnum x, char *s);
+void FSM_EVENT(StateMachineEventEnum x, char *s);
 
 //-------------------------------
 State state_connecting(
@@ -59,14 +58,14 @@ State state_not_moving(
     STATE_NOT_MOVING,
     [] {
       PRINT_STATE_NAME("state_not_moving --------");
-      screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/false);
+      screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/ false);
       DEBUGVAL(board_packet.batteryVoltage);
     },
     [] {
       if (trigger_updated || stats.changed())
       {
         trigger_updated = false;
-        screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/false);
+        screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/ false);
       }
     },
     NULL);
@@ -110,7 +109,7 @@ State state_trigger_centre(
       trigger_centre = get_trigger_raw();
       if (since_reading_trigger > 1000)
       {
-        TRIGGER(EV_READ_TRIGGER_MIN, NULL);
+        FSM_EVENT(EV_READ_TRIGGER_MIN, NULL);
       }
     },
     [] {
@@ -163,17 +162,16 @@ void PRINT_STATE_NAME(const char *state_name)
 #endif
 }
 
-void TRIGGER(StateMachineEventEnum x, char *s)
+void FSM_EVENT(StateMachineEventEnum x, char *s)
 {
   if (s != NULL)
   {
-#ifdef FSM_TRIGGER_DEBUG_ENABLED
+#ifdef PRINT_FSM_EVENT
     Serial.printf("EVENT: %s\n", s);
 #endif
   }
   fsm.trigger(x);
 }
-
 /* ---------------------------------------------- */
 /* ---------------------------------------------- */
 /* ---------------------------------------------- */

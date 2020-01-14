@@ -30,11 +30,18 @@ void nrf_read(uint8_t *data, uint8_t data_len)
   nrf24.read_into(data, data_len);
 }
 
-bool nrf_send_to_board()
+uint8_t send_with_retries(uint8_t *data, uint8_t data_len, uint8_t num_retries)
 {
-  uint8_t bs[sizeof(ControllerData)];
-  memcpy(bs, &controller_packet, sizeof(ControllerData));
-  return nrf24.sendPacket(board_id, /*type*/0, bs, sizeof(ControllerData));
+  uint8_t success, retries = 0;
+  do {
+    success = nrf24.sendPacket(board_id, /*type*/ 0, data, data_len);
+    if (success == false)
+    {
+      vTaskDelay(1);
+    }
+  } while (!success && retries++ < num_retries);
+
+  return retries;
 }
 
 bool send_controller_packet_to_board()
@@ -44,7 +51,13 @@ bool send_controller_packet_to_board()
   
   controller_packet.command = 0;
 
-  bool success = nrf24.sendPacket(board_id, /*type*/ 0, bs, sizeof(ControllerData));
+  uint8_t retries = send_with_retries(bs, sizeof(ControllerData), /*num_retries*/ 4);
+
+  bool success = retries > 4;
+  if (retries > 0)
+  {
+    DEBUGVAL(retries, success, controller_packet.id);
+  }
 
   return success;
 }

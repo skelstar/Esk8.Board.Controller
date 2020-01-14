@@ -26,7 +26,7 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type);
 #define BATTERY_MEASURE_PERIOD 1000
 #else
 #define SEND_TO_BOARD_INTERVAL 200
-#define BOARD_COMMS_TIMEOUT SEND_TO_BOARD_INTERVAL + 100
+#define BOARD_COMMS_TIMEOUT SEND_TO_BOARD_INTERVAL + 500
 #define READ_TRIGGER_INTERVAL 50
 #define REQUEST_FROM_BOARD_INITIAL_INTERVAL 500
 #define REQUEST_FROM_BOARD_INTERVAL 3000
@@ -119,7 +119,7 @@ Button2 deadman_button(DEADMAN_BUTTON_PIN);
 
 void button0_pressed(Button2 &btn)
 {
-  TRIGGER(EV_BUTTON_CLICK, NULL);
+  FSM_EVENT(EV_BUTTON_CLICK, NULL);
 }
 
 void button0_released(Button2 &btn)
@@ -246,7 +246,7 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type)
 
   if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)10) == pdTRUE)
   {
-    TRIGGER(EV_RECV_PACKET, NULL);
+    FSM_EVENT(EV_RECV_PACKET, NULL);
     BD_TRIGGER(EV_BD_RESPONDED, "EV_BD_RESPONDED");
 
 #ifdef PACKET_RECV_DEBUG_ENABLED
@@ -264,10 +264,10 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type)
       }
       break;
     case BOARD_MOVING:
-      TRIGGER(EV_STARTED_MOVING, NULL);
+      FSM_EVENT(EV_STARTED_MOVING, NULL);
       break;
     case BOARD_STOPPED:
-      TRIGGER(EV_STOPPED_MOVING, NULL);
+      FSM_EVENT(EV_STOPPED_MOVING, NULL);
       break;
     case FIRST_PACKET:
       if (controller_packet.id > 10)
@@ -276,7 +276,7 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type)
         board_first_packet_count++;
       }
       stats.first_packet_updated = true;
-      TRIGGER(EV_BOARD_FIRST_CONNECT, "EV_BOARD_FIRST_CONNECT");
+      FSM_EVENT(EV_BOARD_FIRST_CONNECT, "EV_BOARD_FIRST_CONNECT");
       break;
     }
 

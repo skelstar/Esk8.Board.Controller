@@ -1,12 +1,4 @@
 
-
-enum BoardStateId
-{
-  BD_IDLE,
-  BD_REQUESTED,
-  BD_TIMED_OUT
-};
-
 enum BoardEvent
 {
   EV_BD_REQUESTED,
@@ -14,29 +6,30 @@ enum BoardEvent
   EV_BD_RESPONDED
 };
 
-void PRINT_BOARD_STATE_NAME(const char *state_name);
+// prototypes
+void PRINT_BD_FSM_STATE(const char *state_name);
 void BD_TRIGGER(BoardEvent x, char *s);
 void set_request_update_command();
 
 //-------------------------------------------------------
 State board_unknown(
     [] {
-      PRINT_BOARD_STATE_NAME("BD: board_unknown.........");
+      PRINT_BD_FSM_STATE("BD: board_unknown.........");
     },
     NULL,
     NULL);
 //-------------------------------------------------------
 State board_idle(
     [] {
-      PRINT_BOARD_STATE_NAME("BD: board_idle.........");
-      TRIGGER(EV_BOARD_CONNECTED, NULL);
+      PRINT_BD_FSM_STATE("BD: board_idle.........");
+      FSM_EVENT(EV_BOARD_CONNECTED, NULL);
     },
     NULL,    
     NULL);
 //-------------------------------------------------------
 State board_requested(
     [] {
-      PRINT_BOARD_STATE_NAME("BD: board_requested.........");
+      PRINT_BD_FSM_STATE("BD: board_requested.........");
     },
     [] {
       if (since_last_requested_update > BOARD_COMMS_TIMEOUT)
@@ -48,8 +41,8 @@ State board_requested(
 //-------------------------------------------------------
 State board_timedout(
     [] {
-      PRINT_BOARD_STATE_NAME("BD: board_timedout.........");
-      TRIGGER(EV_BOARD_TIMEOUT, NULL);
+      PRINT_BD_FSM_STATE("BD: board_timedout.........");
+      FSM_EVENT(EV_BOARD_TIMEOUT, NULL);
     },
     NULL,
     NULL);
@@ -76,9 +69,9 @@ void set_request_update_command()
   BD_TRIGGER(EV_BD_REQUESTED, "EV_BD_REQUESTED");
 }
 
-void PRINT_BOARD_STATE_NAME(const char *state_name)
+void PRINT_BD_FSM_STATE(const char *state_name)
 {
-#ifdef DEBUG_BOARD_PRINT_STATE_NAME
+#ifdef PRINT_BOARD_FSM_STATE_NAME
   DEBUG(state_name);
 #endif
 }
@@ -87,7 +80,7 @@ void BD_TRIGGER(BoardEvent x, char *s)
 {
   if (s != NULL)
   {
-#ifdef BOARD_FSM_TRIGGER_DEBUG_ENABLED
+#ifdef PRINT_BOARD_FSM_EVENT
     Serial.printf("BD EVENT: %s (%lu)\n", s, millis());
 #endif
   }
