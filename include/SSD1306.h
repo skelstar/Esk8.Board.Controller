@@ -6,6 +6,13 @@
 
 #define USING_SSD1306 1
 
+enum Aligned 
+{
+  ALIGNED_LEFT,
+  ALIGNED_CENTRE,
+  ALIGNED_RIGHT
+};
+
 //https://github.com/olikraus/u8g2/wiki/fntgrpiconic#open_iconic_arrow_2x2
 
 #define OLED_SCL 15
@@ -365,17 +372,37 @@ void lcdTripPage(float ampHours, float odo, bool vescOnline, bool update)
 //--------------------------------------------------------------------------------
 void lcd_message(char *message)
 {
+  // vTaskSuspendAll();
+
   u8g2.clearBuffer();
   u8g2.setFontPosCenter(); // vertical center
   u8g2.setFont(u8g2_font_logisoso18_tr);
   int width = u8g2.getStrWidth(message);
   u8g2.drawStr(LCD_WIDTH / 2 - width / 2, LCD_HEIGHT / 2, message);
   u8g2.sendBuffer();
+
+  // xTaskResumeAll();
 }
 //--------------------------------------------------------------------------------
-void lcd_message(uint8_t line_number, char *message)
+void lcd_message(uint8_t line_number, const char *message, Aligned aligned = ALIGNED_CENTRE)
 {
-  uint8_t y = 0;
+  uint8_t x = 0, y = 0;
+
+  int width = u8g2.getStrWidth(message);
+
+  switch (aligned)
+  {
+    ALIGNED_LEFT:
+      x = 0;
+      break;
+    ALIGNED_CENTRE:
+      x = LCD_WIDTH/2;
+      break;
+    ALIGNED_RIGHT:
+      x = LCD_WIDTH - width;
+      break;
+  }
+
   switch (line_number)
   {
     case 1:
@@ -391,10 +418,8 @@ void lcd_message(uint8_t line_number, char *message)
       y = LCD_HEIGHT;
       break;
   }
-  // u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_courB12_tr);
-  int width = u8g2.getStrWidth(message);
-  u8g2.drawStr(LCD_WIDTH / 2 - width / 2, y, message);
+  u8g2.drawStr(x, y, message);
 }
 
 //--------------------------------------------------------------------------------
@@ -434,3 +459,19 @@ void drawBattery(int percent, bool update)
   u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
+
+#define SM_BATT_WIDTH   20
+#define SM_BATT_HEIGHT  10
+
+void draw_small_battery(uint8_t percent, uint8_t x, uint8_t y)
+{
+  u8g2.setDrawColor(1);
+  u8g2.drawBox(x, y, SM_BATT_WIDTH, SM_BATT_HEIGHT);
+  // knob
+  u8g2.drawBox(x-2, y + 3, 2, 4);
+  // capacity (remove from 100% using black box)
+  u8g2.setDrawColor(0);
+  uint8_t remove_box_width = ((100-percent)/100.0) * (SM_BATT_WIDTH-2);
+  u8g2.drawBox(x+1, y+1, remove_box_width, SM_BATT_HEIGHT-2);
+  u8g2.setDrawColor(1);
+}

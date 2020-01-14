@@ -29,25 +29,14 @@ uint8_t get_prev_state();
 void PRINT_STATE_NAME(const char *state_name);
 void TRIGGER(StateMachineEventEnum x, char *s);
 
-elapsedMillis since_updated_battery_volts = 0;
-
 //-------------------------------
 State state_connecting(
     STATE_CONNECTING,
     [] {
       PRINT_STATE_NAME("state_connecting --------");
-      lcd_message("Connecting");
+      screen_show_connecting();
     },
-    [] {
-      if (since_updated_battery_volts > 3000)
-      {
-        since_updated_battery_volts = 0;
-        char buff[5];
-        sprintf(buff, "%04d", battery_volts_raw);
-        lcd_message(/*line*/ 3, buff);
-        u8g2.sendBuffer();
-      }
-    },
+    NULL,
     NULL);
 //-------------------------------
 State state_disconnected(
@@ -70,17 +59,14 @@ State state_not_moving(
     STATE_NOT_MOVING,
     [] {
       PRINT_STATE_NAME("state_not_moving --------");
-
-      screen_not_moving(trigger_fsm.get_current_state()->id);
+      screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/false);
+      DEBUGVAL(board_packet.batteryVoltage);
     },
     [] {
-      if (trigger_updated || first_packet_updated || request_delay_updated)
+      if (trigger_updated || stats.changed())
       {
         trigger_updated = false;
-        first_packet_updated = false;
-        request_delay_updated = false;
-        screen_not_moving(trigger_fsm.get_current_state()->id);
-        DEBUGVAL(trigger_fsm.get_current_state()->id);
+        screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/false);
       }
     },
     NULL);
@@ -89,7 +75,7 @@ State state_moving(
     STATE_MOVING,
     [] {
       PRINT_STATE_NAME("state_moving --------");
-      lcd_message("Moving");
+      // lcd_message("Moving");
     },
     NULL,
     NULL);
@@ -100,7 +86,7 @@ State state_show_battery(
       PRINT_STATE_NAME("state_show_battery --------");
       drawBattery(getBatteryPercentage(board_packet.batteryVoltage), true);
       char buffx[5];
-      sprintf(buffx, "%4d", battery_volts_raw);
+      sprintf(buffx, "%3d", remote_battery_percent);
       lcd_message(/*line*/ 3, buffx);
       u8g2.sendBuffer();
     },
