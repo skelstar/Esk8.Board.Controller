@@ -108,3 +108,16 @@ void print_build_status()
   Serial.printf("/********************************************************/\n");
   Serial.printf("\n");
 }
+
+uint8_t get_remote_battery_percent(uint16_t raw_battery)
+{
+  uint16_t numerator = raw_battery > REMOTE_BATTERY_EMPTY
+   ? raw_battery < REMOTE_BATTERY_FULL 
+    ? raw_battery - REMOTE_BATTERY_EMPTY
+    : REMOTE_BATTERY_FULL - REMOTE_BATTERY_EMPTY
+   : 1;
+
+  uint16_t denominator = REMOTE_BATTERY_FULL - REMOTE_BATTERY_EMPTY;
+  
+  return (numerator / (denominator*1.0)) * 100;
+}

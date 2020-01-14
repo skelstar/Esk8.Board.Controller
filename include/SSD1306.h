@@ -434,3 +434,19 @@ void drawBattery(int percent, bool update)
   u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
+
+#define SM_BATT_WIDTH   20
+#define SM_BATT_HEIGHT  10
+
+void draw_small_battery(uint8_t percent, uint8_t x, uint8_t y)
+{
+  u8g2.setDrawColor(1);
+  u8g2.drawBox(x, y, SM_BATT_WIDTH, SM_BATT_HEIGHT);
+  // knob
+  u8g2.drawBox(x-2, y + 3, 2, 4);
+  // capacity (remove from 100% using black box)
+  u8g2.setDrawColor(0);
+  uint8_t remove_box_width = ((100-percent)/100.0) * (SM_BATT_WIDTH-2);
+  u8g2.drawBox(x+1, y+1, remove_box_width, SM_BATT_HEIGHT-2);
+  u8g2.setDrawColor(1);
+}

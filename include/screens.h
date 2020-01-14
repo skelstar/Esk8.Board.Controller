@@ -28,6 +28,7 @@ void screen_not_moving(uint8_t trigger_state)
   u8g2.clearBuffer();
   // line 1
   lcd_message(/*line#*/ 1, "Stopped");
+  draw_small_battery(remote_battery_percent, 128-SM_BATT_WIDTH, 0);
   //line 2
 #ifdef USE_DEADMAN_SWITCH  
   switch (trigger_state)

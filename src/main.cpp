@@ -38,6 +38,9 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type);
 #define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
 #define BATTERY_VOLTAGE_CUTOFF_END 3.1 * 11   // 34.1
 
+#define REMOTE_BATTERY_FULL   2300
+#define REMOTE_BATTERY_EMPTY  1520
+
 //------------------------------------------------------------------
 
 elapsedMillis since_waiting_for_response = 0;
@@ -57,7 +60,8 @@ class Metrics {
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
 uint8_t board_first_packet_count = 0;
-uint16_t battery_volts_raw = 0;
+uint16_t remote_battery_volts_raw = 0;
+uint8_t remote_battery_percent = 0;
 bool first_packet_updated;
 bool request_delay_updated;
 
@@ -130,7 +134,8 @@ void batteryMeasureTask_0(void *pvParameters)
     if (since_measure_battery > BATTERY_MEASURE_PERIOD)
     {
       since_measure_battery = 0;
-      battery_volts_raw = analogRead(BATTERY_MEASURE_PIN);
+      remote_battery_volts_raw = analogRead(BATTERY_MEASURE_PIN);
+      remote_battery_percent = get_remote_battery_percent(remote_battery_volts_raw);
     }
     vTaskDelay(10);
   }
