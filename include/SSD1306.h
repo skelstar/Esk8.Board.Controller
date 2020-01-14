@@ -6,15 +6,11 @@
 
 #define USING_SSD1306 1
 
-enum Datum 
+enum Aligned 
 {
-  TL_DATUM,
-  MC_DATUM,
-  BL_DATUM,
-  TR_DATUM,
-  BR_DATUM,
-  ML_DATUM,
-  MR_DATUM
+  ALIGNED_LEFT,
+  ALIGNED_CENTRE,
+  ALIGNED_RIGHT
 };
 
 //https://github.com/olikraus/u8g2/wiki/fntgrpiconic#open_iconic_arrow_2x2
@@ -384,25 +380,22 @@ void lcd_message(char *message)
   u8g2.sendBuffer();
 }
 //--------------------------------------------------------------------------------
-void lcd_message(uint8_t line_number, char *message, Datum datum = MC_DATUM)
+void lcd_message(uint8_t line_number, const char *message, Aligned aligned = ALIGNED_CENTRE)
 {
   uint8_t x = 0, y = 0;
 
   int width = u8g2.getStrWidth(message);
 
-  switch (datum)
+  switch (aligned)
   {
-    MC_DATUM:
+    ALIGNED_LEFT:
+      x = 0;
+      break;
+    ALIGNED_CENTRE:
       x = LCD_WIDTH/2;
       break;
-    TL_DATUM:
-      x = 0;
-      break;
-    TR_DATUM:
+    ALIGNED_RIGHT:
       x = LCD_WIDTH - width;
-      break;
-    default:
-      x = 0;
       break;
   }
 
@@ -421,7 +414,6 @@ void lcd_message(uint8_t line_number, char *message, Datum datum = MC_DATUM)
       y = LCD_HEIGHT;
       break;
   }
-  // u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_courB12_tr);
   u8g2.drawStr(x, y, message);
 }

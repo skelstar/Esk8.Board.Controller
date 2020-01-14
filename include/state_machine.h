@@ -34,7 +34,7 @@ State state_connecting(
     STATE_CONNECTING,
     [] {
       PRINT_STATE_NAME("state_connecting --------");
-      lcd_message("Connecting");
+      screen_show_connecting();
     },
     NULL,
     NULL);
@@ -59,16 +59,13 @@ State state_not_moving(
     STATE_NOT_MOVING,
     [] {
       PRINT_STATE_NAME("state_not_moving --------");
-
-      screen_not_moving(trigger_fsm.get_current_state()->id);
+      stats.force_update = true;
     },
     [] {
-      if (trigger_updated || first_packet_updated || request_delay_updated)
+      if (trigger_updated || stats.changed())
       {
         trigger_updated = false;
-        first_packet_updated = false;
-        request_delay_updated = false;
-        screen_not_moving(trigger_fsm.get_current_state()->id);
+        screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/false);
       }
     },
     NULL);
@@ -79,7 +76,13 @@ State state_moving(
       PRINT_STATE_NAME("state_moving --------");
       lcd_message("Moving");
     },
-    NULL,
+    [] {
+      // if (trigger_updated || stats.changed())
+      // {
+      //   trigger_updated = false;
+      //   screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/true);
+      // }
+    },
     NULL);
 //-------------------------------
 State state_show_battery(

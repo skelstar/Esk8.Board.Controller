@@ -62,8 +62,23 @@ bool serverOnline = false;
 uint8_t board_first_packet_count = 0;
 uint16_t remote_battery_volts_raw = 0;
 uint8_t remote_battery_percent = 0;
-bool first_packet_updated;
-bool request_delay_updated;
+
+class Stats 
+{
+  public:
+    bool first_packet_updated;
+    bool request_delay_updated;
+    bool force_update;
+
+    bool changed()
+    {
+      bool changed1 = first_packet_updated || request_delay_updated || force_update;
+      first_packet_updated = false;
+      request_delay_updated = false;
+      force_update = true;
+      return changed1;
+    }
+} stats;
 
 unsigned long lastPacketId = 0;
 unsigned long sendCounter = 0;
@@ -207,7 +222,7 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type)
       {
         BD_TRIGGER(EV_BD_RESPONDED, NULL);
         metrics.response_time = since_last_requested_update;
-        request_delay_updated = true;
+        stats.request_delay_updated = true;
 #ifdef PRINT_METRICS
         DEBUGVAL(metrics.response_time);
 #endif
@@ -260,7 +275,7 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type)
         // avoid first 'FIRST_PACKET'
         board_first_packet_count++;
       }
-      first_packet_updated = true;
+      stats.first_packet_updated = true;
       TRIGGER(EV_BOARD_FIRST_CONNECT, "EV_BOARD_FIRST_CONNECT");
       break;
     }
