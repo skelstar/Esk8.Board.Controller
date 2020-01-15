@@ -22,12 +22,20 @@ bool nrf_setup()
 
 void nrf_update()
 {
-  nrf24.update();
+  if (xSPISemaphore != NULL && xSemaphoreTake(xSPISemaphore, (TickType_t)10) == pdTRUE)
+  {
+    nrf24.update();
+  }
+  xSemaphoreGive(xSPISemaphore);
 }
 
 void nrf_read(uint8_t *data, uint8_t data_len)
 {
-  nrf24.read_into(data, data_len);
+  if (xSPISemaphore != NULL && xSemaphoreTake(xSPISemaphore, (TickType_t)10) == pdTRUE)
+  {
+    nrf24.read_into(data, data_len);
+  }
+  xSemaphoreGive(xSPISemaphore);
 }
 
 uint8_t send_with_retries(uint8_t *data, uint8_t data_len, uint8_t num_retries)
@@ -45,27 +53,29 @@ uint8_t send_with_retries(uint8_t *data, uint8_t data_len, uint8_t num_retries)
   return retries;
 }
 
+#define NUM_SEND_RETRIES 10
+
 bool send_controller_packet_to_board()
 {
   uint8_t bs[sizeof(ControllerData)];
   memcpy(bs, &controller_packet, sizeof(ControllerData));
 
-  controller_packet.command = 0;
+  uint8_t retries = send_with_retries(bs, sizeof(ControllerData), NUM_SEND_RETRIES);
 
-  uint8_t retries = send_with_retries(bs, sizeof(ControllerData), /*num_retries*/ 4);
+  bool success = retries < NUM_SEND_RETRIES;
 
-  bool success = retries < 4;
+  retry_logger.log(retries);
 
-#ifdef LOG_RETRIES
+#ifdef PRINT_RETRIES_STATS
 
-  log_retry(retries > 0);
-
-  uint8_t sum_retries = get_sum_retries();
-
-  if (retries > 0 || controller_packet.id % 20 == 0)
+  if (retries > 0)
   {
-    float retry_rate = get_retry_rate(sum_retries, controller_packet.id);
-    DEBUGVAL(sum_retries, retry_rate, success, controller_packet.id);
+    float retry_rate = retry_logger.get_retry_rate();
+    stats.force_update = stats.retry_rate != retry_rate * 100;
+    stats.retry_rate = retry_rate * 100;
+
+    unsigned long now = millis() / 1000;
+    DEBUGVAL(retry_logger.get_sum_retries(), retries, stats.retry_rate, retry_rate, success, controller_packet.id, now);
   }
 #endif
 

@@ -53,7 +53,6 @@ class Metrics
 {
 public:
   uint8_t response_time = 0;
-
 } metrics;
 
 uint16_t missedPacketCounter = 0;
@@ -62,22 +61,9 @@ uint8_t board_first_packet_count = 0;
 uint16_t remote_battery_volts_raw = 0;
 uint8_t remote_battery_percent = 0;
 
-class Stats
-{
-public:
-  bool first_packet_updated;
-  bool request_delay_updated;
-  bool force_update;
+#include "StatsLib.h"
 
-  bool changed()
-  {
-    bool changed1 = first_packet_updated || request_delay_updated || force_update;
-    first_packet_updated = false;
-    request_delay_updated = false;
-    force_update = true;
-    return changed1;
-  }
-} stats;
+StatsLib stats;
 
 unsigned long lastPacketId = 0;
 unsigned long sendCounter = 0;
@@ -88,8 +74,8 @@ bool can_accelerate = true;
 uint8_t throttle_unfiltered = 127;
 
 // semaphores
-SemaphoreHandle_t xControllerPacketSemaphore;
 SemaphoreHandle_t xCore1Semaphore;
+SemaphoreHandle_t xSPISemaphore;
 
 // queues
 xQueueHandle xTriggerReadQueue;
@@ -100,6 +86,11 @@ elapsedMillis since_measure_battery = 0;
 elapsedMillis since_sent_to_board = 0;
 
 // prototypes
+
+#include "RetryLoggerLib.h"
+
+RetryLoggerLib retry_logger(100);
+
 
 #include "trigger.h"
 #include "utils.h"
@@ -184,8 +175,14 @@ void comms_task_0(void *pvParameters)
         set_request_update_command();
       }
 
-      bool success = send_controller_packet_to_board();
-      if (success == false)
+      bool sentOK;
+      if (xSPISemaphore != NULL && xSemaphoreTake(xSPISemaphore, (TickType_t)10) == pdTRUE)
+      {
+        sentOK = send_controller_packet_to_board();
+      }
+      xSemaphoreGive(xSPISemaphore);
+
+      if (sentOK == false)
       {
         BD_TRIGGER(EV_BD_TIMEDOUT, "EV_BD_TIMEDOUT1");
       }
@@ -337,7 +334,7 @@ void setup()
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "BATT_0", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
 
   xCore1Semaphore = xSemaphoreCreateMutex();
-  xControllerPacketSemaphore = xSemaphoreCreateMutex();
+  xSPISemaphore = xSemaphoreCreateMutex();
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
 }

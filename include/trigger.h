@@ -70,14 +70,6 @@ void read_trigger()
   if (since_last_read_trigger > READ_TRIGGER_INTERVAL)
   {
     since_last_read_trigger = 0;
-    if (xControllerPacketSemaphore != NULL && xSemaphoreTake(xControllerPacketSemaphore, (TickType_t)10) == pdTRUE)
-    {
-      update_throttle();
-      xSemaphoreGive(xControllerPacketSemaphore);
-    }
-    else
-    {
-      DEBUG("Can't take semaphore!");
-    }
+    update_throttle();
   }
 }

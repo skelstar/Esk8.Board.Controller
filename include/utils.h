@@ -121,36 +121,3 @@ uint8_t get_remote_battery_percent(uint16_t raw_battery)
   
   return (numerator / (denominator*1.0)) * 100;
 }
-
-// uint16_t total_retried = 0;
-#define RETRIES_REG_LEN   100
-bool retries_reg[RETRIES_REG_LEN];
-uint8_t idx = 0;
-
-void log_retry(bool retried)
-{
-  retries_reg[idx] = retried;
-  idx = idx > RETRIES_REG_LEN - 1 ? idx + 1 : 0;
-}
-
-uint8_t get_sum_retries()
-{
-  uint8_t sum_retries = 0;
-  for (int i=0; i<RETRIES_REG_LEN; i++)
-  { 
-    if (retries_reg[i] == true) 
-    {
-      sum_retries++;
-    } 
-  }
-  return sum_retries;
-}
-
-float get_retry_rate(uint8_t sum, uint8_t id)
-{
-  if (id == 0)
-  {
-    id = 1;
-  }
-  return sum / (id < 100 ? id * 1.0 : 100.0);
-}

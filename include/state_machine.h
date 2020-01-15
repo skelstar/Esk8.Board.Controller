@@ -66,6 +66,7 @@ State state_not_moving(
       if (trigger_updated || stats.changed())
       {
         trigger_updated = false;
+        stats.force_update = false;
         screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/ false);
       }
     },

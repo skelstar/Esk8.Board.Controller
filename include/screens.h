@@ -36,7 +36,7 @@ void screen_with_stats(uint8_t trigger_state, bool moving)
     case 2: lcd_message(/*line*/ 2, "trig: hold"); break;
   }
 #else
-  sprintf(buff2, "ltcy: %ds", metrics.response_time);
+  sprintf(buff2, "rate: %d%%", stats.retry_rate);
   lcd_message(LINE_2, buff2);
 #endif
   sprintf(buff2, "bd rsts: %d", board_first_packet_count);
