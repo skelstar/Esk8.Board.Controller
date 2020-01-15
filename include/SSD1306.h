@@ -6,7 +6,7 @@
 
 #define USING_SSD1306 1
 
-enum Aligned 
+enum Aligned
 {
   ALIGNED_LEFT,
   ALIGNED_CENTRE,
@@ -392,31 +392,31 @@ void lcd_message(uint8_t line_number, const char *message, Aligned aligned = ALI
 
   switch (aligned)
   {
-    ALIGNED_LEFT:
-      x = 0;
-      break;
-    ALIGNED_CENTRE:
-      x = LCD_WIDTH/2;
-      break;
-    ALIGNED_RIGHT:
-      x = LCD_WIDTH - width;
-      break;
+  ALIGNED_LEFT:
+    x = 0;
+    break;
+  ALIGNED_CENTRE:
+    x = LCD_WIDTH / 2;
+    break;
+  ALIGNED_RIGHT:
+    x = LCD_WIDTH - width;
+    break;
   }
 
   switch (line_number)
   {
-    case 1:
-      u8g2.setFontPosTop(); // vertical center
-      y = 0;
-      break;
-    case 2:
-      u8g2.setFontPosCenter(); // vertical center
-      y = LCD_HEIGHT/2;
-      break;
-    case 3:
-      u8g2.setFontPosBottom(); // vertical center
-      y = LCD_HEIGHT;
-      break;
+  case 1:
+    u8g2.setFontPosTop(); // vertical center
+    y = 0;
+    break;
+  case 2:
+    u8g2.setFontPosCenter(); // vertical center
+    y = LCD_HEIGHT / 2;
+    break;
+  case 3:
+    u8g2.setFontPosBottom(); // vertical center
+    y = LCD_HEIGHT;
+    break;
   }
   u8g2.setFont(u8g2_font_courB12_tr);
   u8g2.drawStr(x, y, message);
@@ -435,43 +435,47 @@ void drawBattery(int percent, bool update)
     return;
   }
 
-  u8g2.clearBuffer();
-  int outsideX = (LCD_WIDTH - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
-  int outsideY = (LCD_HEIGHT - BATTERY_HEIGHT) / 2;
-  u8g2.drawBox(outsideX, outsideY, BATTERY_WIDTH, BATTERY_HEIGHT);
-  u8g2.drawBox(
-      outsideX + BATTERY_WIDTH,
-      outsideY + (BATTERY_HEIGHT - KNOB_HEIGHT) / 2,
-      BORDER_SIZE,
-      KNOB_HEIGHT); // knob
-  u8g2.setDrawColor(0);
-  u8g2.drawBox(
-      outsideX + BORDER_SIZE,
-      outsideY + BORDER_SIZE,
-      BATTERY_WIDTH - BORDER_SIZE * 2,
-      BATTERY_HEIGHT - BORDER_SIZE * 2);
-  u8g2.setDrawColor(1);
-  u8g2.drawBox(
-      outsideX + BORDER_SIZE * 2,
-      outsideY + BORDER_SIZE * 2,
-      (BATTERY_WIDTH - BORDER_SIZE * 4) * percent / 100,
-      BATTERY_HEIGHT - BORDER_SIZE * 4);
-  u8g2.sendBuffer();
+  if (xSPISemaphore_take(10))
+  {
+    u8g2.clearBuffer();
+    int outsideX = (LCD_WIDTH - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
+    int outsideY = (LCD_HEIGHT - BATTERY_HEIGHT) / 2;
+    u8g2.drawBox(outsideX, outsideY, BATTERY_WIDTH, BATTERY_HEIGHT);
+    u8g2.drawBox(
+        outsideX + BATTERY_WIDTH,
+        outsideY + (BATTERY_HEIGHT - KNOB_HEIGHT) / 2,
+        BORDER_SIZE,
+        KNOB_HEIGHT); // knob
+    u8g2.setDrawColor(0);
+    u8g2.drawBox(
+        outsideX + BORDER_SIZE,
+        outsideY + BORDER_SIZE,
+        BATTERY_WIDTH - BORDER_SIZE * 2,
+        BATTERY_HEIGHT - BORDER_SIZE * 2);
+    u8g2.setDrawColor(1);
+    u8g2.drawBox(
+        outsideX + BORDER_SIZE * 2,
+        outsideY + BORDER_SIZE * 2,
+        (BATTERY_WIDTH - BORDER_SIZE * 4) * percent / 100,
+        BATTERY_HEIGHT - BORDER_SIZE * 4);
+    u8g2.sendBuffer();
+    xSemaphoreGive(xSPISemaphore);
+  }
 }
 //--------------------------------------------------------------------------------
 
-#define SM_BATT_WIDTH   20
-#define SM_BATT_HEIGHT  10
+#define SM_BATT_WIDTH 20
+#define SM_BATT_HEIGHT 10
 
 void draw_small_battery(uint8_t percent, uint8_t x, uint8_t y)
 {
   u8g2.setDrawColor(1);
   u8g2.drawBox(x, y, SM_BATT_WIDTH, SM_BATT_HEIGHT);
   // knob
-  u8g2.drawBox(x-2, y + 3, 2, 4);
+  u8g2.drawBox(x - 2, y + 3, 2, 4);
   // capacity (remove from 100% using black box)
   u8g2.setDrawColor(0);
-  uint8_t remove_box_width = ((100-percent)/100.0) * (SM_BATT_WIDTH-2);
-  u8g2.drawBox(x+1, y+1, remove_box_width, SM_BATT_HEIGHT-2);
+  uint8_t remove_box_width = ((100 - percent) / 100.0) * (SM_BATT_WIDTH - 2);
+  u8g2.drawBox(x + 1, y + 1, remove_box_width, SM_BATT_HEIGHT - 2);
   u8g2.setDrawColor(1);
 }

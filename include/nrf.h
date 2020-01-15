@@ -43,11 +43,12 @@ uint8_t send_with_retries(uint8_t *data, uint8_t data_len, uint8_t num_retries)
   uint8_t success, retries = 0;
   do
   {
-    success = nrf24.sendPacket(board_id, /*type*/ 0, data, data_len);
+    success = nrf24.sendPacket(00, /*type*/ 0, data, data_len);
     if (success == false)
     {
       vTaskDelay(1);
     }
+    DEBUGVAL(success, retries);
   } while (!success && retries++ < num_retries);
 
   return retries;
@@ -75,7 +76,7 @@ bool send_controller_packet_to_board()
     stats.retry_rate = retry_rate * 100;
 
     unsigned long now = millis() / 1000;
-    DEBUGVAL(retry_logger.get_sum_retries(), retries, stats.retry_rate, retry_rate, success, controller_packet.id, now);
+    // DEBUGVAL(retry_logger.get_sum_retries(), retries, stats.retry_rate, retry_rate, success, controller_packet.id, now);
   }
 #endif
 

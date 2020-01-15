@@ -17,7 +17,6 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type);
 
 #ifdef USE_TEST_VALUES
 #define SEND_TO_BOARD_INTERVAL 1000
-#define BOARD_COMMS_TIMEOUT SEND_TO_BOARD_INTERVAL + 100
 #define READ_TRIGGER_INTERVAL 200
 #define REQUEST_FROM_BOARD_INTERVAL 3000
 #define REQUEST_FROM_BOARD_INITIAL_INTERVAL 500
@@ -25,7 +24,6 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type);
 #define BATTERY_MEASURE_PERIOD 1000
 #else
 #define SEND_TO_BOARD_INTERVAL 200
-#define BOARD_COMMS_TIMEOUT SEND_TO_BOARD_INTERVAL + 500
 #define READ_TRIGGER_INTERVAL 50
 #define REQUEST_FROM_BOARD_INITIAL_INTERVAL 500
 #define REQUEST_FROM_BOARD_INTERVAL 3000
@@ -48,12 +46,6 @@ bool received_response = true;
 VescData old_vescdata, board_packet;
 
 ControllerData controller_packet, old_packet;
-
-class Metrics
-{
-public:
-  uint8_t response_time = 0;
-} metrics;
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
@@ -86,11 +78,11 @@ elapsedMillis since_measure_battery = 0;
 elapsedMillis since_sent_to_board = 0;
 
 // prototypes
+bool xSPISemaphore_take(TickType_t wait_ms = 0);
 
 #include "RetryLoggerLib.h"
 
 RetryLoggerLib retry_logger(100);
-
 
 #include "trigger.h"
 #include "utils.h"
@@ -128,6 +120,17 @@ void deadman_released(Button2 &btn)
 
 #define OTHER_CORE 0
 #define NORMAL_CORE 1
+
+bool xSPISemaphore_take(TickType_t wait_ms)
+{
+  elapsedMillis since_tried_take = 0;
+  bool can_take = xSPISemaphore != NULL && xSemaphoreTake(xSPISemaphore, wait_ms) == pdTRUE;
+  // if (!can_take)
+  // {
+  //   DEBUGVAL(can_take);
+  // }
+  return can_take;
+}
 
 //------------------------------------------------------------
 void batteryMeasureTask_0(void *pvParameters)
@@ -176,11 +179,11 @@ void comms_task_0(void *pvParameters)
       }
 
       bool sentOK;
-      if (xSPISemaphore != NULL && xSemaphoreTake(xSPISemaphore, (TickType_t)10) == pdTRUE)
+      if (xSPISemaphore_take(50))
       {
         sentOK = send_controller_packet_to_board();
+        xSemaphoreGive(xSPISemaphore);
       }
-      xSemaphoreGive(xSPISemaphore);
 
       if (sentOK == false)
       {
@@ -234,11 +237,7 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type)
     if (board_packet.reason == ReasonType::REQUESTED)
     {
       BD_TRIGGER(EV_BD_RESPONDED, NULL);
-      metrics.response_time = since_last_requested_update;
       stats.request_delay_updated = true;
-#ifdef PRINT_METRICS
-      DEBUGVAL(metrics.response_time);
-#endif
     }
     break;
   case 1:

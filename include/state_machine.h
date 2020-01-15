@@ -7,7 +7,7 @@ enum StateMachineEventEnum
   EV_STOPPED_MOVING,
   EV_RECV_PACKET,
   EV_BOARD_FIRST_CONNECT,
-  EV_BOARD_TIMEOUT, // havne't heard from the board for a while (BOARD_COMMS_TIMEOUT)
+  EV_BOARD_TIMEOUT,
   EV_BOARD_LAST_WILL,
   EV_READ_TRIGGER_MIN,
   EV_READ_TRIGGER_MAX,
@@ -34,7 +34,7 @@ State state_connecting(
     STATE_CONNECTING,
     [] {
       PRINT_STATE_NAME("state_connecting --------");
-      screen_show_connecting();
+      // screen_show_connecting();
     },
     NULL,
     NULL);
@@ -43,13 +43,13 @@ State state_disconnected(
     STATE_DISCONNECTED,
     [] {
       PRINT_STATE_NAME("state_disconnected --------");
-      char buffx[12];
-      sprintf(buffx, "bd rsts: %d", board_first_packet_count);
+      // char buffx[12];
+      // sprintf(buffx, "bd rsts: %d", board_first_packet_count);
 
-      u8g2.clearBuffer();
-      lcd_message(/*line#*/ 1, "Disconnected");
-      lcd_message(/*line#*/ 3, &buffx[0]);
-      u8g2.sendBuffer();
+      // u8g2.clearBuffer();
+      // lcd_message(/*line#*/ 1, "Disconnected");
+      // lcd_message(/*line#*/ 3, &buffx[0]);
+      // u8g2.sendBuffer();
     },
     NULL,
     NULL);
@@ -59,16 +59,15 @@ State state_not_moving(
     STATE_NOT_MOVING,
     [] {
       PRINT_STATE_NAME("state_not_moving --------");
-      screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/ false);
-      DEBUGVAL(board_packet.batteryVoltage);
+      // screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/ false);
     },
     [] {
-      if (trigger_updated || stats.changed())
-      {
-        trigger_updated = false;
-        stats.force_update = false;
-        screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/ false);
-      }
+      // if (trigger_updated || stats.changed())
+      // {
+      //   trigger_updated = false;
+      //   stats.force_update = false;
+      //   screen_with_stats(trigger_fsm.get_current_state()->id, /*moving*/ false);
+      // }
     },
     NULL);
 //-------------------------------
@@ -85,11 +84,11 @@ State state_show_battery(
     STATE_SHOW_BATTERY,
     [] {
       PRINT_STATE_NAME("state_show_battery --------");
-      drawBattery(getBatteryPercentage(board_packet.batteryVoltage), true);
-      char buffx[5];
-      sprintf(buffx, "%3d", remote_battery_percent);
-      lcd_message(/*line*/ 3, buffx);
-      u8g2.sendBuffer();
+      // drawBattery(getBatteryPercentage(board_packet.batteryVoltage), true);
+      // char buffx[5];
+      // sprintf(buffx, "%3d", remote_battery_percent);
+      // lcd_message(/*line*/ 3, buffx);
+      // u8g2.sendBuffer();
     },
     NULL,
     NULL);
@@ -104,7 +103,7 @@ elapsedMillis since_reading_trigger = 0;
 State state_trigger_centre(
     [] {
       PRINT_STATE_NAME("Trigger centre");
-      lcd_message("Trig Center");
+      // lcd_message("Trig Center");
       since_reading_trigger = 0;
     },
     [] {
