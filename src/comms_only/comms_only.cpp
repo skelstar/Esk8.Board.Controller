@@ -26,36 +26,6 @@ RF24Network network(radio);
 
 //------------------------------------------------------------------
 
-void nrf_read(uint8_t *data, uint8_t data_len)
-{
-  nrf24.read_into(data, data_len);
-}
-
-void board_packet_available_cb(uint16_t from_id, uint8_t type)
-{
-  uint8_t buff[sizeof(VescData)];
-  nrf_read(buff, sizeof(VescData));
-  memcpy(&board_packet, &buff, sizeof(VescData));
-
-  DEBUGVAL(board_packet.id);
-}
-
-uint8_t send_with_retries(uint8_t *data, uint8_t data_len, uint8_t num_retries)
-{
-  uint8_t success, retries = 0;
-  do
-  {
-    success = nrf24.sendPacket(00, /*type*/ 0, data, data_len);
-    if (success == false)
-    {
-      vTaskDelay(1);
-    }
-    // DEBUGVAL(success, retries);
-  } while (!success && retries++ < num_retries);
-
-  return retries;
-}
-
 void setup()
 {
 
