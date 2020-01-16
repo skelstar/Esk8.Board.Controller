@@ -6,12 +6,16 @@
 #include <RF24Network.h>
 #include <NRF24L01Library.h>
 
+
 NRF24L01Lib nrf24;
 
 RF24 radio(SPI_CE, SPI_CS);
 RF24Network network(radio);
 
 Smoothed <float> retry_log;
+Smoothed <int> sm_throttle;
+
+#include <TriggerLib.h>
 
 //------------------------------------------------------------
 
@@ -87,9 +91,16 @@ void trigger_read_task_0(void *pvParameters)
   uint16_t centre = 0;
   uint8_t old_throttle = 0;
 
+  #define READ_TRIGGER_PERIOD 100
+  #define SMOOTH_OVER_MILLIS  2000
+
+  TriggerLib trigger(10);
+  trigger.initialise();
+  sm_throttle.begin(SMOOTHED_EXPONENTIAL, SMOOTH_OVER_MILLIS / READ_TRIGGER_PERIOD);
+
   Serial.printf("\trigger_read_task_0 running on core %d\n", xPortGetCoreID());
 
-#define READ_TRIGGER_PERIOD 100
+  DEBUGVAL("num smooths", SMOOTH_OVER_MILLIS / READ_TRIGGER_PERIOD);
 
   while (true)
   {
@@ -97,22 +108,13 @@ void trigger_read_task_0(void *pvParameters)
     {
       since_read_trigger = 0;
 
-      uint16_t raw;
-      raw = analogRead(13);
+      uint8_t throttle = trigger.get_throttle();
+      sm_throttle.add(throttle);
+      controller_packet.throttle = sm_throttle.get();
 
-      if (centre == 0)
-      {
-        centre = raw;
-      }
-
-      controller_packet.throttle = raw > centre
-          ? map(raw, centre, 4096, 127, 255)
-          : raw < centre
-                ? map(raw, 0, centre, 0, 127)
-                : 127;
       if (old_throttle != controller_packet.throttle)
       {
-        DEBUGVAL(controller_packet.throttle, raw/10);
+        DEBUGVAL(controller_packet.throttle);
         old_throttle = controller_packet.throttle;
       }
     }

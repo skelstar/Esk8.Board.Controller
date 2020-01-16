@@ -68,7 +68,7 @@ void setup()
   lcd_setup();
 
   xTaskCreatePinnedToCore(comms_task_0, "comms_task_0", 5000, NULL, /*priority*/ 4, NULL, /*core*/ 0);
-  // xTaskCreatePinnedToCore(trigger_read_task_0, "trigger_read_task_0", 1024, NULL, /*priority*/ 3, NULL, /*core*/ 0);
+  xTaskCreatePinnedToCore(trigger_read_task_0, "trigger_read_task_0", 1024, NULL, /*priority*/ 3, NULL, /*core*/ 0);
 }
 
 elapsedMillis since_drew_lcd = 0;
