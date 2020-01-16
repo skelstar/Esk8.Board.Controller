@@ -45,7 +45,7 @@ bool received_response = true;
 
 VescData old_vescdata, board_packet;
 
-ControllerData controller_packet, old_packet;
+ControllerData controller_packet;
 
 uint16_t missedPacketCounter = 0;
 bool serverOnline = false;
@@ -67,7 +67,6 @@ uint8_t throttle_unfiltered = 127;
 
 // semaphores
 SemaphoreHandle_t xCore1Semaphore;
-SemaphoreHandle_t xSPISemaphore;
 
 // queues
 xQueueHandle xTriggerReadQueue;
@@ -78,7 +77,6 @@ elapsedMillis since_measure_battery = 0;
 elapsedMillis since_sent_to_board = 0;
 
 // prototypes
-bool xSPISemaphore_take(TickType_t wait_ms = 0);
 
 #include "RetryLoggerLib.h"
 
@@ -120,17 +118,6 @@ void deadman_released(Button2 &btn)
 
 #define OTHER_CORE 0
 #define NORMAL_CORE 1
-
-bool xSPISemaphore_take(TickType_t wait_ms)
-{
-  elapsedMillis since_tried_take = 0;
-  bool can_take = xSPISemaphore != NULL && xSemaphoreTake(xSPISemaphore, wait_ms) == pdTRUE;
-  // if (!can_take)
-  // {
-  //   DEBUGVAL(can_take);
-  // }
-  return can_take;
-}
 
 //------------------------------------------------------------
 void batteryMeasureTask_0(void *pvParameters)
@@ -178,12 +165,7 @@ void comms_task_0(void *pvParameters)
         set_request_update_command();
       }
 
-      bool sentOK;
-      if (xSPISemaphore_take(50))
-      {
-        sentOK = send_controller_packet_to_board();
-        xSemaphoreGive(xSPISemaphore);
-      }
+      bool sentOK = send_controller_packet_to_board();
 
       if (sentOK == false)
       {
@@ -333,7 +315,6 @@ void setup()
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "BATT_0", 10000, NULL, /*priority*/ 1, NULL, OTHER_CORE);
 
   xCore1Semaphore = xSemaphoreCreateMutex();
-  xSPISemaphore = xSemaphoreCreateMutex();
 
   Serial.printf("Loop running on core %d\n", xPortGetCoreID());
 }

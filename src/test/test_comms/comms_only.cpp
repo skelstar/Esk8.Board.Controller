@@ -63,7 +63,7 @@ void setup()
 
   Wire.begin();
 
-  setupLCD();
+  // setupLCD();
 
   nrf24.begin(&radio, &network, 1, board_packet_available_cb);
 

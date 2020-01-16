@@ -19,11 +19,7 @@ void screen_with_stats(uint8_t trigger_state, bool moving)
 {
   char buff2[12];
 
-  if (xSPISemaphore_take(100))
-  {
-    u8g2.clearBuffer();
-    xSemaphoreGive(xSPISemaphore);
-  }
+  u8g2.clearBuffer();
 
   // line 1
   lcd_message(LINE_1, "Stopped", ALIGNED_LEFT);
@@ -34,9 +30,5 @@ void screen_with_stats(uint8_t trigger_state, bool moving)
   // line 3
   sprintf(buff2, "bd rsts: %d", board_first_packet_count);
   lcd_message(LINE_3, buff2);
-  if (xSPISemaphore_take(100))
-  {
-    u8g2.sendBuffer();
-    xSemaphoreGive(xSPISemaphore);
-  }
+  u8g2.sendBuffer();
 }

@@ -22,20 +22,12 @@ bool nrf_setup()
 
 void nrf_update()
 {
-  if (xSPISemaphore != NULL && xSemaphoreTake(xSPISemaphore, (TickType_t)10) == pdTRUE)
-  {
-    nrf24.update();
-  }
-  xSemaphoreGive(xSPISemaphore);
+  nrf24.update();
 }
 
 void nrf_read(uint8_t *data, uint8_t data_len)
 {
-  if (xSPISemaphore != NULL && xSemaphoreTake(xSPISemaphore, (TickType_t)10) == pdTRUE)
-  {
-    nrf24.read_into(data, data_len);
-  }
-  xSemaphoreGive(xSPISemaphore);
+  nrf24.read_into(data, data_len);
 }
 
 uint8_t send_with_retries(uint8_t *data, uint8_t data_len, uint8_t num_retries)

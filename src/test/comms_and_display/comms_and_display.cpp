@@ -94,19 +94,77 @@ uint8_t send_with_retries(uint8_t *data, uint8_t data_len, uint8_t num_retries)
 }
 //------------------------------------------------------------
 
+SemaphoreHandle_t xCore1Semaphore;
+
+void trigger_read_task_0(void *pvParameters)
+{
+  elapsedMillis since_read_trigger;
+  elapsedMicros since_1;
+  uint16_t centre = 0;
+  uint8_t old_throttle = 0;
+
+  Serial.printf("\trigger_read_task_0 running on core %d\n", xPortGetCoreID());
+
+#define READ_TRIGGER_PERIOD 100
+
+  while (true)
+  {
+    if (since_read_trigger > READ_TRIGGER_PERIOD)
+    {
+      since_read_trigger = 0;
+
+      uint16_t raw;
+      // if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)100) == pdTRUE)
+      // {
+        raw = analogRead(13);
+        // xSemaphoreGive(xCore1Semaphore);
+      // }
+      // else 
+      // {
+      //   DEBUG("couldn't take semaphore: trigger_read_task_0");
+      // }
+
+      if (centre == 0)
+      {
+        centre = raw;
+      }
+
+      controller_packet.throttle = raw > centre
+          ? map(raw, centre, 4096, 127, 255)
+          : raw < centre
+                ? map(raw, 0, centre, 0, 127)
+                : 127;
+      if (old_throttle != controller_packet.throttle)
+      {
+        DEBUGVAL(controller_packet.throttle, raw/10);
+        old_throttle = controller_packet.throttle;
+      }
+    }
+
+    vTaskDelay(1);
+  }
+  vTaskDelete(NULL);
+}
+
+//------------------------------------------------------------
+
 uint8_t retries;
+
+#define SEND_TO_BOARD_MS 100
 
 void comms_task_1(void *pvParameters)
 {
+  Serial.printf("comms_task_1 running on core %d\n", xPortGetCoreID());
+  
   elapsedMillis since_sent_to_board, since_requested_response;
 
   nrf24.begin(&radio, &network, 1, board_packet_available_cb);
 
   while (true)
   {
-    if (since_sent_to_board > 150)
+    if (since_sent_to_board > SEND_TO_BOARD_MS)
     {
-      if (since_sent_to_board > 160)
+      if (since_sent_to_board > SEND_TO_BOARD_MS + 10)
       {
         DEBUGVAL(since_sent_to_board);
       }
@@ -115,14 +173,21 @@ void comms_task_1(void *pvParameters)
       if (since_requested_response > 3000)
       {
         since_requested_response = 0;
-        controller_packet.command = 1;  // REQUEST
+        controller_packet.command = 1; // REQUEST
       }
       controller_packet.id++;
       uint8_t bs[sizeof(ControllerData)];
       memcpy(bs, &controller_packet, sizeof(ControllerData));
 
-
-      retries += send_with_retries(bs, sizeof(ControllerData), 5);
+      // if (xCore1Semaphore != NULL && xSemaphoreTake(xCore1Semaphore, (TickType_t)100) == pdTRUE)
+      // {
+        retries += send_with_retries(bs, sizeof(ControllerData), 5);
+        // xSemaphoreGive(xCore1Semaphore);
+      // }
+      // else 
+      // {
+      //   DEBUG("couldn't take semaphore: comms_task_1");
+      // }
 
       controller_packet.command = 0;
     }
@@ -144,6 +209,9 @@ void setup()
   lcd_setup();
 
   xTaskCreatePinnedToCore(comms_task_1, "comms_task_1", 10000, NULL, /*priority*/ 4, NULL, /*core*/ 1);
+  xTaskCreatePinnedToCore(trigger_read_task_0, "trigger_read_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
+
+  xCore1Semaphore = xSemaphoreCreateMutex();
 }
 
 elapsedMillis since_drew_lcd = 0;

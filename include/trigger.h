@@ -54,7 +54,7 @@ void update_throttle()
     controller_packet.throttle = 127;
   }
 
-#ifdef TRIGGER_DEBUG_ENABLED
+#ifdef PRINT_TRIGGER_VALUE
   bool trigger_changed = old_throttle != controller_packet.throttle;
   if (trigger_changed)
   {

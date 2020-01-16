@@ -95,8 +95,8 @@ void print_build_status()
 #ifdef PRINT_BOARD_FSM_STATE_NAME
   Serial.printf("               WARNING: PRINT_BOARD_FSM_STATE\n");
 #endif
-#ifdef TRIGGER_DEBUG_ENABLED
-  Serial.printf("               WARNING: TRIGGER_DEBUG_ENABLED\n");
+#ifdef PRINT_TRIGGER_VALUE
+  Serial.printf("               WARNING: PRINT_TRIGGER_VALUE\n");
 #endif
 #ifdef PACKET_RECV_DEBUG_ENABLED
   Serial.printf("               WARNING: PACKET_RECV_DEBUG_ENABLED\n");
