@@ -11,6 +11,8 @@ NRF24L01Lib nrf24;
 RF24 radio(SPI_CE, SPI_CS);
 RF24Network network(radio);
 
+Smoothed <float> retry_log;
+
 //------------------------------------------------------------
 
 void board_packet_available_cb(uint16_t from_id, uint8_t type)
@@ -32,6 +34,8 @@ uint8_t retries;
 void comms_task_0(void *pvParameters)
 {
   Serial.printf("comms_task_0 running on core %d\n", xPortGetCoreID());
+
+  retry_log.begin(SMOOTHED_AVERAGE, 100);
   
   elapsedMillis since_sent_to_board, since_requested_response;
 
@@ -57,10 +61,11 @@ void comms_task_0(void *pvParameters)
       memcpy(bs, &controller_packet, sizeof(ControllerData));
 
       retries = nrf24.send_with_retries(00, /*type*/0, bs, sizeof(ControllerData), NUM_RETRIES);
+      retry_log.add(retries > 0);
 
       if (retries > 0)
       {
-        DEBUGVAL(retries);
+        DEBUGVAL(retries, retry_log.get());
       }
 
       controller_packet.command = 0;

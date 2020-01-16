@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include <VescData.h>
 #include <elapsedMillis.h>
+#include <Smoothed.h>
 
 #ifndef Wire
 #include <Wire.h>
