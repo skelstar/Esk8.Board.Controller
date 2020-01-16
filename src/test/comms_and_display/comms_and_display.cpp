@@ -27,9 +27,9 @@
 #define OLED_ADDR 0x3C
 #define OLED_CONTRAST_HIGH 100 // 256 highest
 U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R2, /* clock=*/OLED_SCL, /* data=*/OLED_SDA, /* reset=*/OLED_RST);
-// U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R2, U8X8_PIN_NONE, OLED_SCL, OLED_SDA);
+
 //--------------------------------------------------------------------------------
-void setupLCD()
+void lcd_setup()
 {
   u8g2.begin();
   u8g2.setContrast(OLED_CONTRAST_HIGH);
@@ -38,15 +38,17 @@ void setupLCD()
 
 #define FONT_SIZE_MED u8g2_font_profont17_tr
 
-void lcd_write_text(char* text)
+/* 172 ms*/
+void lcd_write_text(uint8_t x, uint8_t y, char *text, bool send)
 {
-  u8g2.clearBuffer();
   u8g2.setFont(FONT_SIZE_MED); // full
   u8g2.setFontPosTop();
   u8g2.setDrawColor(1);
-  u8g2.drawStr(0, 0, text);
-  u8g2.sendBuffer();
-  DEBUG("lcd_write_text");
+  u8g2.drawStr(x, y, text);
+  if (send)
+  {
+    u8g2.sendBuffer();
+  }
 }
 //------------------------------------------------------------------
 
@@ -90,43 +92,65 @@ uint8_t send_with_retries(uint8_t *data, uint8_t data_len, uint8_t num_retries)
 
   return retries;
 }
+//------------------------------------------------------------
+
+uint8_t retries;
+
+void comms_task_1(void *pvParameters)
+{
+  elapsedMillis since_sent_to_board = 0;
+
+  nrf24.begin(&radio, &network, 1, board_packet_available_cb);
+
+  while (true)
+  {
+    if (since_sent_to_board > 150)
+    {
+      if (since_sent_to_board > 160)
+      {
+        DEBUGVAL(since_sent_to_board);
+      }
+      since_sent_to_board = 0;
+      controller_packet.id++;
+      uint8_t bs[sizeof(ControllerData)];
+      memcpy(bs, &controller_packet, sizeof(ControllerData));
+
+      retries += send_with_retries(bs, sizeof(ControllerData), 5);
+    }
+
+    nrf24.update();
+
+    vTaskDelay(10);
+  }
+  vTaskDelete(NULL);
+}
+//------------------------------------------------------------
 
 void setup()
 {
   Serial.begin(115200);
 
-  nrf24.begin(&radio, &network, 1, board_packet_available_cb);
-
   Serial.printf("Ready...\n");
 
-  setupLCD();
+  lcd_setup();
+
+  xTaskCreatePinnedToCore(comms_task_1, "comms_task_1", 10000, NULL, /*priority*/ 4, NULL, /*core*/ 1);
 }
 
-
-elapsedMillis since_sent_to_board = 0;
 elapsedMillis since_drew_lcd = 0;
-
-uint8_t retries;
+bool dot;
 
 void loop()
 {
-  if (since_sent_to_board > 100)
-  {
-    since_sent_to_board = 0;
-    controller_packet.id++;
-    uint8_t bs[sizeof(ControllerData)];
-    memcpy(bs, &controller_packet, sizeof(ControllerData));
-
-    retries += send_with_retries(bs, sizeof(ControllerData), 5);
-  }
-
   if (since_drew_lcd > 2000)
   {
     since_drew_lcd = 0;
     char buff[14];
-    sprintf(buff, "retries: %d", retries);
-    lcd_write_text(buff);
+    sprintf(buff, "retries: %d %d", retries, dot);
+    dot = !dot;
+    lcd_write_text(0, 0, buff, false);
+    lcd_write_text(0, 15, buff, false);
+    lcd_write_text(0, 30, buff, false);
+    lcd_write_text(0, 45, buff, true);
   }
-
-  nrf24.update();
 }
