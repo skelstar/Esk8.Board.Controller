@@ -71,7 +71,7 @@ void nrf_read(uint8_t *data, uint8_t data_len)
 void board_packet_available_cb(uint16_t from_id, uint8_t type)
 {
   uint8_t buff[sizeof(VescData)];
-  nrf_read(buff, sizeof(VescData));
+  nrf24.read_into(buff, sizeof(VescData));
   memcpy(&board_packet, &buff, sizeof(VescData));
 
   DEBUGVAL(board_packet.id);
@@ -98,7 +98,7 @@ uint8_t retries;
 
 void comms_task_1(void *pvParameters)
 {
-  elapsedMillis since_sent_to_board = 0;
+  elapsedMillis since_sent_to_board, since_requested_response;
 
   nrf24.begin(&radio, &network, 1, board_packet_available_cb);
 
@@ -111,11 +111,20 @@ void comms_task_1(void *pvParameters)
         DEBUGVAL(since_sent_to_board);
       }
       since_sent_to_board = 0;
+
+      if (since_requested_response > 3000)
+      {
+        since_requested_response = 0;
+        controller_packet.command = 1;  // REQUEST
+      }
       controller_packet.id++;
       uint8_t bs[sizeof(ControllerData)];
       memcpy(bs, &controller_packet, sizeof(ControllerData));
 
+
       retries += send_with_retries(bs, sizeof(ControllerData), 5);
+
+      controller_packet.command = 0;
     }
 
     nrf24.update();
