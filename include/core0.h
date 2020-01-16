@@ -2,48 +2,31 @@
 #include <Arduino.h>
 #endif
 
-
 #include <RF24Network.h>
 #include <NRF24L01Library.h>
-
-
-NRF24L01Lib nrf24;
-
-RF24 radio(SPI_CE, SPI_CS);
-RF24Network network(radio);
-
-Smoothed <float> retry_log;
-Smoothed <int> sm_throttle;
-
 #include <TriggerLib.h>
 
 //------------------------------------------------------------
+RF24 radio(SPI_CE, SPI_CS);
+RF24Network network(radio);
+NRF24L01Lib nrf24;
 
-void board_packet_available_cb(uint16_t from_id, uint8_t type)
-{
-  uint8_t buff[sizeof(VescData)];
-  nrf24.read_into(buff, sizeof(VescData));
-  memcpy(&board_packet, &buff, sizeof(VescData));
+void board_packet_available_cb(uint16_t from_id, uint8_t type);
 
-  DEBUGVAL(board_packet.id);
-}
-
-//------------------------------------------------------------
-
-uint8_t retries;
-
-#define SEND_TO_BOARD_MS 200
+#define SEND_TO_BOARD_MS  200
 #define NUM_RETRIES       5
+#define LOG_LENGTH_MILLIS 5000
 
 void comms_task_0(void *pvParameters)
 {
+  nrf24.begin(&radio, &network, /*address*/ 1, board_packet_available_cb);
+
   Serial.printf("comms_task_0 running on core %d\n", xPortGetCoreID());
 
-  retry_log.begin(SMOOTHED_AVERAGE, 100);
-  
-  elapsedMillis since_sent_to_board, since_requested_response;
+  Smoothed <float> retry_log;
+  retry_log.begin(SMOOTHED_AVERAGE, LOG_LENGTH_MILLIS / SEND_TO_BOARD_MS);
 
-  nrf24.begin(&radio, &network, /*address*/ 1, board_packet_available_cb);
+  elapsedMillis since_sent_to_board, since_requested_response;
 
   while (true)
   {
@@ -64,7 +47,7 @@ void comms_task_0(void *pvParameters)
       uint8_t bs[sizeof(ControllerData)];
       memcpy(bs, &controller_packet, sizeof(ControllerData));
 
-      retries = nrf24.send_with_retries(00, /*type*/0, bs, sizeof(ControllerData), NUM_RETRIES);
+      uint8_t retries = nrf24.send_with_retries(00, /*type*/0, bs, sizeof(ControllerData), NUM_RETRIES);
       retry_log.add(retries > 0);
 
       if (retries > 0)
@@ -82,13 +65,20 @@ void comms_task_0(void *pvParameters)
   vTaskDelete(NULL);
 }
 
+void board_packet_available_cb(uint16_t from_id, uint8_t type)
+{
+  uint8_t buff[sizeof(VescData)];
+  nrf24.read_into(buff, sizeof(VescData));
+  memcpy(&board_packet, &buff, sizeof(VescData));
+
+  DEBUGVAL(board_packet.id);
+}
+
 //------------------------------------------------------------
 
 void trigger_read_task_0(void *pvParameters)
 {
   elapsedMillis since_read_trigger;
-  elapsedMicros since_1;
-  uint16_t centre = 0;
   uint8_t old_throttle = 0;
 
   #define READ_TRIGGER_PERIOD 100
@@ -96,6 +86,8 @@ void trigger_read_task_0(void *pvParameters)
 
   TriggerLib trigger(10);
   trigger.initialise();
+  
+  Smoothed <int> sm_throttle;
   sm_throttle.begin(SMOOTHED_EXPONENTIAL, SMOOTH_OVER_MILLIS / READ_TRIGGER_PERIOD);
 
   Serial.printf("\trigger_read_task_0 running on core %d\n", xPortGetCoreID());

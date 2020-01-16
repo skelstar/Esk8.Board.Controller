@@ -80,7 +80,7 @@ void loop()
   {
     since_drew_lcd = 0;
     char buff[20];
-    sprintf(buff, "retries: %d %d", retries, dot);
+    sprintf(buff, "retries: %d %d", 0, dot);
     dot = !dot;
     u8g2.clearBuffer();
     lcd_write_text(0, 0, buff, false);
