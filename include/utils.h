@@ -8,11 +8,6 @@ void powerpins_init()
   // digitalWrite(ENCODER_GND_PIN, LOW);
 }
 
-bool boardOnline() 
-{
-  return lastPacketId + 1 >= sendCounter;
-}
-
 uint8_t printDot(uint8_t num_dots)
 {
   if (num_dots++ < 60)
@@ -120,4 +115,13 @@ uint8_t get_remote_battery_percent(uint16_t raw_battery)
   uint16_t denominator = REMOTE_BATTERY_FULL - REMOTE_BATTERY_EMPTY;
   
   return (numerator / (denominator*1.0)) * 100;
+}
+
+
+bool since_(elapsedMillis what, unsigned long when, bool zero = true)
+{
+  if (what > when && zero) {
+    what = 0;
+  }
+  return what > when;
 }

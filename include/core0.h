@@ -6,6 +6,8 @@
 #include <NRF24L01Library.h>
 #include <TriggerLib.h>
 
+#include <comms_fsm.h>
+
 //------------------------------------------------------------
 RF24 radio(SPI_CE, SPI_CS);
 RF24Network network(radio);
@@ -19,6 +21,8 @@ void board_packet_available_cb(uint16_t from_id, uint8_t type);
 
 void comms_task_0(void *pvParameters)
 {
+  comms_fsm.run_machine();
+
   nrf24.begin(&radio, &network, /*address*/ 1, board_packet_available_cb);
 
   Serial.printf("comms_task_0 running on core %d\n", xPortGetCoreID());
@@ -26,23 +30,22 @@ void comms_task_0(void *pvParameters)
   Smoothed <float> retry_log;
   retry_log.begin(SMOOTHED_AVERAGE, LOG_LENGTH_MILLIS / SEND_TO_BOARD_MS);
 
-  elapsedMillis since_sent_to_board, since_requested_response;
+  add_comms_fsm_transitions();
+
+  elapsedMillis sent_to_board;
 
   while (true)
   {
-    if (since_sent_to_board > SEND_TO_BOARD_MS)
-    {
-      if (since_sent_to_board > SEND_TO_BOARD_MS + 10)
-      {
-        DEBUGVAL(since_sent_to_board);
-      }
-      since_sent_to_board = 0;
+    comms_fsm.run_machine();
 
-      if (since_requested_response > 3000)
+    if (since_(sent_to_board, SEND_TO_BOARD_MS, false))
+    {
+      if (since_(sent_to_board, SEND_TO_BOARD_MS + 10, false))
       {
-        since_requested_response = 0;
-        controller_packet.command = 1; // REQUEST
+        DEBUGVAL(sent_to_board);
       }
+      sent_to_board = 0;
+
       controller_packet.id++;
       uint8_t bs[sizeof(ControllerData)];
       memcpy(bs, &controller_packet, sizeof(ControllerData));

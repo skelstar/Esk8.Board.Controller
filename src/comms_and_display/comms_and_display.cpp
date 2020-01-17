@@ -13,6 +13,13 @@
 
 #include <U8g2lib.h>
 
+#define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
+#define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
+#define BATTERY_VOLTAGE_CUTOFF_END 3.1 * 11   // 34.1
+
+#define REMOTE_BATTERY_FULL 2300
+#define REMOTE_BATTERY_EMPTY 1520
+
 //------------------------------------------------------------------
 
 #define SPI_CE 33
@@ -26,6 +33,7 @@
 U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R2, /* clock=*/OLED_SCL, /* data=*/OLED_SDA, /* reset=*/OLED_RST);
 
 //--------------------------------------------------------------------------------
+
 void lcd_setup()
 {
   u8g2.begin();
@@ -55,7 +63,34 @@ ControllerData controller_packet, old_packet;
 
 //------------------------------------------------------------------
 
+#include <utils.h>
 #include "core0.h"
+
+//------------------------------------------------------------
+
+#define BATTERY_MEASURE_PERIOD 1000
+#define BATTERY_MEASURE_PIN 34
+
+elapsedMillis measure_battery;
+uint8_t remote_battery_percent;
+
+void batteryMeasureTask_1(void *pvParameters)
+{
+  vTaskDelay(100);
+  Serial.printf("batteryMeasureTask_1 running on core %d\n", xPortGetCoreID());
+
+  while (true)
+  {
+    if (measure_battery > BATTERY_MEASURE_PERIOD)
+    {
+      measure_battery = 0;
+      remote_battery_percent = get_remote_battery_percent(analogRead(BATTERY_MEASURE_PIN));
+      DEBUGVAL(remote_battery_percent);
+    }
+    vTaskDelay(10);
+  }
+  vTaskDelete(NULL);
+}
 
 //------------------------------------------------------------
 
@@ -69,6 +104,8 @@ void setup()
 
   xTaskCreatePinnedToCore(comms_task_0, "comms_task_0", 5000, NULL, /*priority*/ 4, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(trigger_read_task_0, "trigger_read_task_0", 1024, NULL, /*priority*/ 3, NULL, /*core*/ 0);
+  // xTaskCreatePinnedToCore(batteryMeasureTask_1, "batteryMeasureTask_1", 1024, NULL, /*priority*/ 1, NULL, /*core*/ 1);
+  vTaskDelay(10);
 }
 
 elapsedMillis since_drew_lcd = 0;
@@ -88,4 +125,5 @@ void loop()
     lcd_write_text(0, 30, buff, false);
     lcd_write_text(0, 45, buff, true);
   }
+  vTaskDelay(10);
 }
