@@ -39,28 +39,23 @@ elapsedMillis since_sent_to_board;
 elapsedMillis since_read_trigger;
 uint8_t old_throttle = 0;
 
-#define READ_TRIGGER_PERIOD 100
+#define READ_TRIGGER_PERIOD 500
 #define SMOOTH_OVER_MILLIS  2000
 
 //------------------------------------------------------------
 
 #include <TriggerLib.h>
 
-TriggerLib trigger(/*deadzone*/10);
+TriggerLib trigger(/*pin*/13, /*deadzone*/10);
 
 void read_trigger()
 {
-  if (since_read_trigger > READ_TRIGGER_PERIOD)
+  controller_packet.throttle = trigger.get_throttle();
+
+  if (old_throttle != controller_packet.throttle)
   {
-    since_read_trigger = 0;
-
-    controller_packet.throttle = trigger.get_throttle();
-
-    if (old_throttle != controller_packet.throttle)
-    {
-      DEBUGVAL(controller_packet.throttle);
-      old_throttle = controller_packet.throttle;
-    }
+    DEBUGVAL(controller_packet.throttle);
+    old_throttle = controller_packet.throttle;
   }
 }
 
@@ -82,6 +77,12 @@ void setup()
 
 void loop()
 {
+  if (since_read_trigger > READ_TRIGGER_PERIOD)
+  {
+    since_read_trigger = 0;
+    read_trigger();
+  }
+
   if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
   {
     since_sent_to_board = 0;
