@@ -14,9 +14,20 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
     // COMMS_EVENT(EV_COMMS_FIRST_PACKET, "EV_COMMS_FIRST_PACKET");
   }
 
-  DEBUGVAL(from_id, board_packet.id, since_sent_to_board);
+  switch (board_packet.reason)
+  {
+    case ReasonType::BOARD_STOPPED:
+      DEBUG("***Stopped!***");
+      break;
 
-  // COMMS_EVENT(EV_COMMS_PACKET, "EV_COMMS_PACKET");
+    case ReasonType::BOARD_MOVING:
+      DEBUG("***Moving!***");
+      break;
+      
+    default:
+      DEBUGVAL(from_id, board_packet.id, since_sent_to_board);
+      break;
+  }
 }
 //------------------------------------------------------------------
 

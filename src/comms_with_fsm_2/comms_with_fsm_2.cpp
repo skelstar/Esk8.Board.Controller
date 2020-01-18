@@ -32,7 +32,6 @@ RF24Network network(radio);
 
 elapsedMillis since_sent_to_board;
 
-// #include <comms_fsm_2.h>
 #include <comms_2.h>
 
 //------------------------------------------------------------
