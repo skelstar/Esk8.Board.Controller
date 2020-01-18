@@ -13,7 +13,7 @@
 #define SPI_CS 26
 
 #define COMMS_BOARD 00
-#define COMMS_CONTROLLER  01
+#define COMMS_CONTROLLER 01
 
 //------------------------------------------------------------------
 
@@ -28,35 +28,38 @@ RF24 radio(SPI_CE, SPI_CS);
 RF24Network network(radio);
 
 #define NUM_RETRIES 5
-#define SEND_TO_BOARD_INTERVAL  500
+#define SEND_TO_BOARD_INTERVAL 200
 
 elapsedMillis since_sent_to_board;
 
-#include <comms_2.h>
 
 //------------------------------------------------------------
 
 elapsedMillis since_read_trigger;
-uint8_t old_throttle = 0;
 
-#define READ_TRIGGER_PERIOD 500
-#define SMOOTH_OVER_MILLIS  2000
+#define READ_TRIGGER_PERIOD 200
+#define SMOOTH_OVER_MILLIS 2000
 
 //------------------------------------------------------------
 
+#include <comms_2.h>
 #include <TriggerLib.h>
 
-TriggerLib trigger(/*pin*/13, /*deadzone*/10);
+TriggerLib trigger(/*pin*/ 13, /*deadzone*/ 10);
 
 void read_trigger()
 {
+  uint8_t old_throttle = controller_packet.throttle;
+
   controller_packet.throttle = trigger.get_throttle();
 
+#ifdef PRINT_THROTTLE
   if (old_throttle != controller_packet.throttle)
   {
     DEBUGVAL(controller_packet.throttle);
     old_throttle = controller_packet.throttle;
   }
+#endif
 }
 
 //------------------------------------------------------------------

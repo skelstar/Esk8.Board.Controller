@@ -1,5 +1,7 @@
+
 void send_config_packet_to_board();
 
+//------------------------------------------------------------------
 void packet_available_cb(uint16_t from_id, uint8_t type)
 {
   uint8_t buff[sizeof(VescData)];
@@ -11,7 +13,6 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
     DEBUG("*** first packet!! ***");
     
     send_config_packet_to_board();
-    // COMMS_EVENT(EV_COMMS_FIRST_PACKET, "EV_COMMS_FIRST_PACKET");
   }
 
   switch (board_packet.reason)
@@ -23,7 +24,7 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
     case ReasonType::BOARD_MOVING:
       DEBUG("***Moving!***");
       break;
-      
+
     default:
       DEBUGVAL(from_id, board_packet.id, since_sent_to_board);
       break;
@@ -40,8 +41,6 @@ void send_control_packet_to_board()
     since_sent_request = 0;
     controller_packet.command = 1; // REQUEST
   }
-
-  DEBUGVAL("sending...", controller_packet.id);
 
   uint8_t bs[sizeof(ControllerData)];
   memcpy(bs, &controller_packet, sizeof(ControllerData));
