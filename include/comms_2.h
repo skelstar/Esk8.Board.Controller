@@ -11,23 +11,27 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
   if (board_packet.id == 0)
   {
     DEBUG("*** first packet!! ***");
-    
+#ifdef FEATURE_CRUISE_CONTROL
+    controller_config.cruise_control_enabled = true;
+#else
+    controller_config.cruise_control_enabled = false;
+#endif
     send_config_packet_to_board();
   }
 
   switch (board_packet.reason)
   {
-    case ReasonType::BOARD_STOPPED:
-      DEBUG("***Stopped!***");
-      break;
+  case ReasonType::BOARD_STOPPED:
+    DEBUG("***Stopped!***");
+    break;
 
-    case ReasonType::BOARD_MOVING:
-      DEBUG("***Moving!***");
-      break;
+  case ReasonType::BOARD_MOVING:
+    DEBUG("***Moving!***");
+    break;
 
-    default:
-      DEBUGVAL(from_id, board_packet.id, since_sent_to_board);
-      break;
+  default:
+    DEBUGVAL(from_id, board_packet.id, since_sent_to_board);
+    break;
   }
 }
 //------------------------------------------------------------------
@@ -45,7 +49,7 @@ void send_control_packet_to_board()
   uint8_t bs[sizeof(ControllerData)];
   memcpy(bs, &controller_packet, sizeof(ControllerData));
 
-  uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/PacketType::CONTROL, bs, sizeof(ControllerData), NUM_RETRIES);
+  uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ PacketType::CONTROL, bs, sizeof(ControllerData), NUM_RETRIES);
   if (retries > 0)
   {
     DEBUGVAL(retries);
@@ -59,11 +63,10 @@ void send_config_packet_to_board()
   uint8_t bs[sizeof(ControllerConfig)];
   memcpy(bs, &controller_config, sizeof(ControllerConfig));
 
-  uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/PacketType::CONFIG, bs, sizeof(ControllerConfig), NUM_RETRIES);
+  uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ PacketType::CONFIG, bs, sizeof(ControllerConfig), NUM_RETRIES);
   if (retries > 0)
   {
     DEBUGVAL(retries);
   }
   controller_packet.id++;
 }
-

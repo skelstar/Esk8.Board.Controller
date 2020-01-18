@@ -44,6 +44,7 @@ elapsedMillis since_read_trigger;
 
 #include <comms_2.h>
 #include <TriggerLib.h>
+#include <peripherals.h>
 
 TriggerLib trigger(/*pin*/ 13, /*deadzone*/ 10);
 
@@ -75,6 +76,8 @@ void setup()
 
   trigger.initialise();
 
+  button_init();
+
   DEBUG("Ready to rx from board...and stuff");
 }
 
@@ -93,6 +96,8 @@ void loop()
   }
 
   nrf24.update();
+
+  button0.loop();
 
   vTaskDelay(10);
 }
