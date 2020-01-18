@@ -31,34 +31,40 @@ RF24Network network(radio);
 
 elapsedMillis since_sent_to_board;
 
-#include <comms_fsm_2.h>
-//------------------------------------------------------------------
+// #include <comms_fsm_2.h>
+#include <comms_2.h>
 
-void packet_available_cb(uint16_t from_id, uint8_t type)
+//------------------------------------------------------------
+
+elapsedMillis since_read_trigger;
+uint8_t old_throttle = 0;
+
+#define READ_TRIGGER_PERIOD 100
+#define SMOOTH_OVER_MILLIS  2000
+
+//------------------------------------------------------------
+
+#include <TriggerLib.h>
+
+TriggerLib trigger(/*deadzone*/10);
+
+void read_trigger()
 {
+  if (since_read_trigger > READ_TRIGGER_PERIOD)
+  {
+    since_read_trigger = 0;
 
-  uint8_t buff[sizeof(VescData)];
-  nrf24.read_into(buff, sizeof(VescData));
-  memcpy(&board_packet, &buff, sizeof(VescData));
+    controller_packet.throttle = trigger.get_throttle();
 
-  DEBUGVAL(from_id, board_packet.id, since_sent_to_board);
-}
-//------------------------------------------------------------------
-
-void send_to_board()
-{
-    DEBUGVAL("sending...", controller_packet.id);
-
-    uint8_t bs[sizeof(ControllerData)];
-    memcpy(bs, &controller_packet, sizeof(ControllerData));
-
-    uint8_t retries = nrf24.send_with_retries(/*to*/COMMS_BOARD, /*type*/ 0, bs, sizeof(ControllerData), NUM_RETRIES);
-    if (retries > 0)
+    if (old_throttle != controller_packet.throttle)
     {
-      DEBUGVAL(retries);
+      DEBUGVAL(controller_packet.throttle);
+      old_throttle = controller_packet.throttle;
     }
-    controller_packet.id++;
+  }
 }
+
+
 //------------------------------------------------------------------
 
 void setup()
@@ -67,9 +73,11 @@ void setup()
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 
-  add_comms_fsm_transitions();
+  // add_comms_fsm_transitions();
 
-  DEBUG("Ready to rx from board...");
+  trigger.initialise();
+
+  DEBUG("Ready to rx from board...and stuff");
 }
 
 void loop()
@@ -82,5 +90,8 @@ void loop()
 
   nrf24.update();
 
-  comms_fsm.run_machine();
+  // comms_fsm.run_machine();
+
+  vTaskDelay(10);
 }
+//------------------------------------------------------------------

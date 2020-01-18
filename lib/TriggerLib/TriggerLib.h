@@ -7,9 +7,10 @@ class TriggerLib
 {
 
 public:
-  TriggerLib(uint8_t deadzone = 0)
+  TriggerLib(uint8_t pin, uint8_t deadzone = 0)
   {
     _deadzone = deadzone;
+    _pin = pin;
   }
 
   void initialise()
@@ -44,7 +45,7 @@ public:
 private:
   uint16_t get_raw()
   {
-    return analogRead(13);
+    return analogRead(_pin);
   }
 
   uint16_t _centre = 0;
@@ -53,6 +54,7 @@ private:
   bool _calibrated = false;
   bool _can_accelerate = true;
   uint8_t _deadzone; // either side of centre
+  uint8_t _pin;
 };
 
 #endif
