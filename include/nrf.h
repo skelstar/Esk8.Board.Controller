@@ -1,5 +1,5 @@
 #include <RF24Network.h>
-#include <NRF24L01Library.h>
+#include <NRF24L01Lib.h>
 
 #define SPI_CE 33
 #define SPI_CS 26

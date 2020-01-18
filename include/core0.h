@@ -3,7 +3,7 @@
 #endif
 
 #include <RF24Network.h>
-#include <NRF24L01Library.h>
+#include <NRF24L01Lib.h>
 #include <TriggerLib.h>
 
 #include <comms_fsm.h>
@@ -14,10 +14,13 @@ RF24Network network(radio);
 NRF24L01Lib nrf24;
 
 void board_packet_available_cb(uint16_t from_id, uint8_t type);
+void send_controller_packet_to_board();
 
-#define SEND_TO_BOARD_MS  200
-#define NUM_RETRIES       5
+#define SEND_TO_BOARD_MS  3000
+#define NUM_RETRIES       2
 #define LOG_LENGTH_MILLIS 5000
+
+Smoothed <float> retry_log;
 
 void comms_task_0(void *pvParameters)
 {
@@ -27,7 +30,6 @@ void comms_task_0(void *pvParameters)
 
   Serial.printf("comms_task_0 running on core %d\n", xPortGetCoreID());
 
-  Smoothed <float> retry_log;
   retry_log.begin(SMOOTHED_AVERAGE, LOG_LENGTH_MILLIS / SEND_TO_BOARD_MS);
 
   add_comms_fsm_transitions();
@@ -46,19 +48,7 @@ void comms_task_0(void *pvParameters)
       }
       sent_to_board = 0;
 
-      controller_packet.id++;
-      uint8_t bs[sizeof(ControllerData)];
-      memcpy(bs, &controller_packet, sizeof(ControllerData));
-
-      uint8_t retries = nrf24.send_with_retries(00, /*type*/0, bs, sizeof(ControllerData), NUM_RETRIES);
-      retry_log.add(retries > 0);
-
-      if (retries > 0)
-      {
-        DEBUGVAL(retries, retry_log.get());
-      }
-
-      controller_packet.command = 0;
+      send_controller_packet_to_board();
     }
 
     nrf24.update();
@@ -67,16 +57,45 @@ void comms_task_0(void *pvParameters)
   }
   vTaskDelete(NULL);
 }
+//-------------------------------------------------
+void send_controller_packet_to_board()
+{
+  controller_packet.id++;
+  uint8_t bs[sizeof(ControllerData)];
+  memcpy(bs, &controller_packet, sizeof(ControllerData));
 
+  DEBUGVAL("send_controller_packet_to_board");
+  uint8_t retries = nrf24.send_with_retries(00, /*type*/0, bs, sizeof(ControllerData), NUM_RETRIES);
+  DEBUGVAL(retries);
+  retry_log.add(retries > 0);
+
+  if (retries > 0)
+  {
+    DEBUGVAL(retries, retry_log.get());
+  }
+
+  controller_packet.command = 0;
+}
+//-------------------------------------------------
 void board_packet_available_cb(uint16_t from_id, uint8_t type)
 {
   uint8_t buff[sizeof(VescData)];
   nrf24.read_into(buff, sizeof(VescData));
   memcpy(&board_packet, &buff, sizeof(VescData));
-
   DEBUGVAL(board_packet.id);
-}
 
+  switch (board_packet.reason)
+  {
+    case ReasonType::BOARD_STOPPED:
+      DEBUG("BOARD_STOPPED");
+      break;
+    case ReasonType::BOARD_MOVING:
+      DEBUG("BOARD_MOVING");
+      break;
+  }
+
+  // DEBUGVAL(board_packet.id);
+}
 //------------------------------------------------------------
 
 void trigger_read_task_0(void *pvParameters)

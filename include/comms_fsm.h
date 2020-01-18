@@ -16,16 +16,16 @@ enum CommsEvent
 void PRINT_COMMS_STATE(const char *state_name);
 void COMMS_TRIGGER(CommsEvent x, char *s);
 
-elapsedMillis since_requested_response;
+elapsedMillis since_sent_request;
 //-------------------------------------------------------
 State comms_normal(
     [] {
       PRINT_COMMS_STATE("COMMS: comms_normal.........");
     },
     [] {
-      if (since_requested_response > 3000)
+      if (since_sent_request > 5000)
       {
-        since_requested_response = 0;
+        since_sent_request = 0;
         controller_packet.command = 1; // REQUEST
         COMMS_TRIGGER(EV_COMMS_REQUESTED, "EV_COMMS_REQUESTED");
       }
