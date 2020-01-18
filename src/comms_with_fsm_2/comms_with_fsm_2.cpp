@@ -27,6 +27,7 @@ RF24 radio(SPI_CE, SPI_CS);
 RF24Network network(radio);
 
 #define NUM_RETRIES 5
+#define SEND_TO_BOARD_INTERVAL  1000
 
 elapsedMillis since_sent_to_board;
 
@@ -42,6 +43,7 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
 
   DEBUGVAL(from_id, board_packet.id, since_sent_to_board);
 }
+//------------------------------------------------------------------
 
 void send_to_board()
 {
@@ -57,6 +59,7 @@ void send_to_board()
     }
     controller_packet.id++;
 }
+//------------------------------------------------------------------
 
 void setup()
 {
@@ -71,7 +74,7 @@ void setup()
 
 void loop()
 {
-  if (since_sent_to_board > 1000)
+  if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
   {
     since_sent_to_board = 0;
     send_to_board();
