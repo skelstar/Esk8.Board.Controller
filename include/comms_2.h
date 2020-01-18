@@ -1,3 +1,4 @@
+void send_config_packet_to_board();
 
 void packet_available_cb(uint16_t from_id, uint8_t type)
 {
@@ -8,6 +9,8 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
   if (board_packet.id == 0)
   {
     DEBUG("*** first packet!! ***");
+    
+    send_config_packet_to_board();
     // COMMS_EVENT(EV_COMMS_FIRST_PACKET, "EV_COMMS_FIRST_PACKET");
   }
 
@@ -19,7 +22,7 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
 
 elapsedMillis since_sent_request;
 
-void send_to_board()
+void send_control_packet_to_board()
 {
   if (since_sent_request > 5000)
   {
@@ -32,7 +35,7 @@ void send_to_board()
   uint8_t bs[sizeof(ControllerData)];
   memcpy(bs, &controller_packet, sizeof(ControllerData));
 
-  uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ 0, bs, sizeof(ControllerData), NUM_RETRIES);
+  uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/PacketType::CONTROL, bs, sizeof(ControllerData), NUM_RETRIES);
   if (retries > 0)
   {
     DEBUGVAL(retries);
@@ -40,3 +43,17 @@ void send_to_board()
   controller_packet.command = 0;
   controller_packet.id++;
 }
+//------------------------------------------------------------------
+void send_config_packet_to_board()
+{
+  uint8_t bs[sizeof(ControllerConfig)];
+  memcpy(bs, &controller_config, sizeof(ControllerConfig));
+
+  uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/PacketType::CONFIG, bs, sizeof(ControllerConfig), NUM_RETRIES);
+  if (retries > 0)
+  {
+    DEBUGVAL(retries);
+  }
+  controller_packet.id++;
+}
+

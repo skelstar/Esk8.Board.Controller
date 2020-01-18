@@ -20,6 +20,7 @@
 VescData board_packet;
 
 ControllerData controller_packet;
+ControllerConfig controller_config;
 
 NRF24L01Lib nrf24;
 
@@ -27,7 +28,7 @@ RF24 radio(SPI_CE, SPI_CS);
 RF24Network network(radio);
 
 #define NUM_RETRIES 5
-#define SEND_TO_BOARD_INTERVAL  1000
+#define SEND_TO_BOARD_INTERVAL  500
 
 elapsedMillis since_sent_to_board;
 
@@ -59,7 +60,6 @@ void read_trigger()
   }
 }
 
-
 //------------------------------------------------------------------
 
 void setup()
@@ -68,7 +68,8 @@ void setup()
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 
-  // add_comms_fsm_transitions();
+  controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
+  send_config_packet_to_board();
 
   trigger.initialise();
 
@@ -86,12 +87,10 @@ void loop()
   if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
   {
     since_sent_to_board = 0;
-    send_to_board();
+    send_control_packet_to_board();
   }
 
   nrf24.update();
-
-  // comms_fsm.run_machine();
 
   vTaskDelay(10);
 }
