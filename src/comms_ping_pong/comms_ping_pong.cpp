@@ -25,6 +25,8 @@ RF24 radio(SPI_CE, SPI_CS);
 RF24Network network(radio);
 
 #define NUM_RETRIES 5
+
+elapsedMillis since_sent_to_board;
 //------------------------------------------------------------------
 
 void packet_available_cb(uint16_t from_id, uint8_t type)
@@ -35,7 +37,7 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
   nrf24.read_into(buff, sizeof(ControllerData));
   memcpy(&board_packet, &buff, sizeof(ControllerData));
 
-  DEBUGVAL(from_id, board_packet.id);
+  DEBUGVAL(from_id, board_packet.id, since_sent_to_board);
 }
 
 void setup()
@@ -47,11 +49,10 @@ void setup()
   DEBUG("Ready to rx from board...");
 }
 
-elapsedMillis since_sent_to_board;
 
 void loop()
 {
-  if (since_sent_to_board > 3000)
+  if (since_sent_to_board > 1000)
   {
     since_sent_to_board = 0;
     DEBUG("sending..");
@@ -60,7 +61,10 @@ void loop()
     memcpy(bs, &board_packet, sizeof(VescData));
 
     uint8_t retries = nrf24.send_with_retries(/*to*/COMMS_BOARD, /*type*/ 0, bs, sizeof(VescData), NUM_RETRIES);
-    DEBUGVAL(retries);
+    if (retries > 0)
+    {
+      DEBUGVAL(retries);
+    }
     board_packet.id++;
   }
 
