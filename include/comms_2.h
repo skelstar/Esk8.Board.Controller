@@ -50,10 +50,17 @@ void send_control_packet_to_board()
   memcpy(bs, &controller_packet, sizeof(ControllerData));
 
   uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ PacketType::CONTROL, bs, sizeof(ControllerData), NUM_RETRIES);
+  retry_log.add(retries > 0);
+
   if (retries > 0)
   {
     DEBUGVAL(retries);
   }
+  if (retries >= NUM_RETRIES)
+  {
+    stats.total_failed++;
+  }
+
   controller_packet.command = 0;
   controller_packet.id++;
 }

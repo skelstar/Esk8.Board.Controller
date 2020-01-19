@@ -388,20 +388,20 @@ void lcd_message(uint8_t line_number, const char *message, Aligned aligned = ALI
 {
   uint8_t x = 0, y = 0;
 
-  int width = u8g2.getStrWidth(message);
+  // int width = u8g2.getStrWidth(message);
 
-  switch (aligned)
-  {
-  ALIGNED_LEFT:
-    x = 0;
-    break;
-  ALIGNED_CENTRE:
-    x = LCD_WIDTH / 2;
-    break;
-  ALIGNED_RIGHT:
-    x = LCD_WIDTH - width;
-    break;
-  }
+  // switch (aligned)
+  // {
+  // ALIGNED_LEFT:
+  //   x = 0;
+  //   break;
+  // ALIGNED_CENTRE:
+  //   x = LCD_WIDTH / 2;
+  //   break;
+  // ALIGNED_RIGHT:
+  //   x = LCD_WIDTH - width;
+  //   break;
+  // }
 
   switch (line_number)
   {
