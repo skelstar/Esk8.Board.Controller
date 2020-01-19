@@ -72,6 +72,7 @@ void setup()
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 
   controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
+  controller_config.throttle_smoothing_period = 2000; // ignored for now
   send_config_packet_to_board();
 
   trigger.initialise();
