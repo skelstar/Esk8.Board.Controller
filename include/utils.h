@@ -8,11 +8,6 @@ void powerpins_init()
   // digitalWrite(ENCODER_GND_PIN, LOW);
 }
 
-bool boardOnline() 
-{
-  return lastPacketId + 1 >= sendCounter;
-}
-
 uint8_t printDot(uint8_t num_dots)
 {
   if (num_dots++ < 60)
@@ -89,14 +84,14 @@ void print_build_status()
 #ifdef USE_TEST_VALUES
   Serial.printf("               WARNING: Using test values!            \n");
 #endif
-#ifdef BOARD_FSM_TRIGGER_DEBUG_ENABLED
-  Serial.printf("               WARNING: BOARD_FSM_TRIGGER_DEBUG_ENABLED\n");
+#ifdef PRINT_BOARD_FSM_EVENT
+  Serial.printf("               WARNING: PRINT_BOARD_FSM_EVENT\n");
 #endif
-#ifdef DEBUG_BOARD_PRINT_STATE_NAME
-  Serial.printf("               WARNING: DEBUG_BOARD_PRINT_STATE_NAME\n");
+#ifdef PRINT_BOARD_FSM_STATE_NAME
+  Serial.printf("               WARNING: PRINT_BOARD_FSM_STATE\n");
 #endif
-#ifdef TRIGGER_DEBUG_ENABLED
-  Serial.printf("               WARNING: TRIGGER_DEBUG_ENABLED\n");
+#ifdef PRINT_TRIGGER_VALUE
+  Serial.printf("               WARNING: PRINT_TRIGGER_VALUE\n");
 #endif
 #ifdef PACKET_RECV_DEBUG_ENABLED
   Serial.printf("               WARNING: PACKET_RECV_DEBUG_ENABLED\n");
@@ -120,4 +115,13 @@ uint8_t get_remote_battery_percent(uint16_t raw_battery)
   uint16_t denominator = REMOTE_BATTERY_FULL - REMOTE_BATTERY_EMPTY;
   
   return (numerator / (denominator*1.0)) * 100;
+}
+
+
+bool since_(elapsedMillis what, unsigned long when, bool zero = true)
+{
+  if (what > when && zero) {
+    what = 0;
+  }
+  return what > when;
 }
