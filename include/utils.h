@@ -116,12 +116,3 @@ uint8_t get_remote_battery_percent(uint16_t raw_battery)
   
   return (numerator / (denominator*1.0)) * 100;
 }
-
-
-bool since_(elapsedMillis what, unsigned long when, bool zero = true)
-{
-  if (what > when && zero) {
-    what = 0;
-  }
-  return what > when;
-}
