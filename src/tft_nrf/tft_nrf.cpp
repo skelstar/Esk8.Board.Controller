@@ -28,6 +28,10 @@ NRF24L01Lib nrf24;
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
+void packet_available_cb(uint16_t from_id, uint8_t type)
+{
+}
+
 TFT_eSPI tft = TFT_eSPI(135, 240); // Invoke custom library
 
 elapsedMillis since_sent_to_board;
@@ -42,10 +46,10 @@ void init_tft()
   setup_tft();
 }
 
-void setup_nrf()
+void init_nrf()
 {
   DEBUG("setup_nrf()");
-
+  nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 }
 
 
@@ -54,7 +58,8 @@ void setup()
   Serial.begin(115200);
   delay(100);
 
-  init_tft();
+  // init_tft();
+  init_nrf();
 }
 
 void loop()
