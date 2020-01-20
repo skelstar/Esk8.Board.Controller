@@ -46,22 +46,25 @@ void init_tft()
   setup_tft();
 }
 
+//------------------------------------------------------------
+
 void init_nrf()
 {
   DEBUG("setup_nrf()");
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 }
 
-
+//------------------------------------------------------------------
 void setup()
 {
   Serial.begin(115200);
   delay(100);
 
-  // init_tft();
   init_nrf();
+  delay(100);
+  init_tft();
 }
-
+//------------------------------------------------------------------
 void loop()
 {
   vTaskDelay(100);
