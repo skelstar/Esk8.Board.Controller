@@ -1,4 +1,6 @@
 
+uint16_t remote_battery_percent = 0;
+
 void display_task_0(void *pvParameters)
 {
   elapsedMillis since_show_retry_log;
@@ -26,9 +28,32 @@ void display_task_0(void *pvParameters)
       lcd_message(2, buff2, Aligned::ALIGNED_LEFT);
       // line 3
       // lcd_message(3, buff, Aligned::ALIGNED_LEFT);
+
+      draw_small_battery(remote_battery_percent, 128 - SM_BATT_WIDTH, 0);
       u8g2.sendBuffer();
     }
     vTaskDelay(10);
   }
   vTaskDelete(NULL);
 }
+//------------------------------------------------------------
+#define BATTERY_MEASURE_PIN 34
+#define BATTERY_MEASURE_INTERVAL 1000
+
+elapsedMillis since_measure_battery;
+
+void batteryMeasureTask_0(void *pvParameters)
+{
+  while (true)
+  {
+    if (since_measure_battery > BATTERY_MEASURE_INTERVAL)
+    {
+      since_measure_battery = 0;
+      uint16_t remote_battery_volts_raw = analogRead(BATTERY_MEASURE_PIN);
+      remote_battery_percent = get_remote_battery_percent(remote_battery_volts_raw);
+    }
+    vTaskDelay(10);
+  }
+  vTaskDelete(NULL);
+}
+//------------------------------------------------------------

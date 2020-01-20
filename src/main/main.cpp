@@ -58,6 +58,7 @@ Smoothed <float> retry_log;
 #include <comms_2.h>
 #include <TriggerLib.h>
 #include <peripherals.h>
+#include <utils.h>
 
 #include <core0.h>
 
@@ -98,6 +99,7 @@ void setup()
   button_init();
 
   xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 4, NULL, /*core*/ 0);
+  xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
 
   DEBUG("Ready to rx from board...and stuff");
 }
