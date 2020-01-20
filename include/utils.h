@@ -19,19 +19,19 @@ uint8_t printDot(uint8_t num_dots)
   return 0;
 }
 
-uint8_t getBatteryPercentage(float voltage) {
-  float voltsLeft = voltage - BATTERY_VOLTAGE_CUTOFF_END;
-  float voltsAvail = BATTERY_VOLTAGE_FULL - BATTERY_VOLTAGE_CUTOFF_END;
+// uint8_t getBatteryPercentage(float voltage) {
+//   float voltsLeft = voltage - BATTERY_VOLTAGE_CUTOFF_END;
+//   float voltsAvail = BATTERY_VOLTAGE_FULL - BATTERY_VOLTAGE_CUTOFF_END;
 
-  uint8_t percent = 0;
-  if ( voltage > BATTERY_VOLTAGE_CUTOFF_END ) { 
-    percent = (voltsLeft /  voltsAvail) * 100;
-  }
-  if (percent > 100) {
-    percent = 100;
-	}
-  return percent;
-}
+//   uint8_t percent = 0;
+//   if ( voltage > BATTERY_VOLTAGE_CUTOFF_END ) { 
+//     percent = (voltsLeft /  voltsAvail) * 100;
+//   }
+//   if (percent > 100) {
+//     percent = 100;
+// 	}
+//   return percent;
+// }
 
 char* reason_toString(ReasonType reason)
 {
@@ -103,6 +103,9 @@ void print_build_status()
   Serial.printf("/********************************************************/\n");
   Serial.printf("\n");
 }
+
+#define REMOTE_BATTERY_FULL 2300
+#define REMOTE_BATTERY_EMPTY 1520
 
 uint8_t get_remote_battery_percent(uint16_t raw_battery)
 {
