@@ -22,10 +22,3 @@ void button_init()
   button0.setLongClickHandler([](Button2 &btn) {
   });
 }
-
-//------------------------------------------------------------------
-void light_init()
-{
-  // light.initialise(PIXEL_PIN, NUM_PIXELS);
-  // light.setAll(light.COLOUR_OFF);
-}
