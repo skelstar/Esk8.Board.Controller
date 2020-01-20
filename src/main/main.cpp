@@ -36,6 +36,7 @@ class Stats
 {
   public:
     unsigned long total_failed;
+    unsigned long num_packets_with_retries;
 } stats;
 
 #define NUM_RETRIES 5

@@ -55,6 +55,7 @@ void send_control_packet_to_board()
   if (retries > 0)
   {
     DEBUGVAL(retries);
+    stats.num_packets_with_retries++;
   }
   if (retries >= NUM_RETRIES)
   {
