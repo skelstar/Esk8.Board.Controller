@@ -56,6 +56,34 @@ Smoothed <float> retry_log;
 
 //------------------------------------------------------------
 
+enum DeadmanEvent
+{
+  EV_DEADMAN_NO_EVENT,
+  EV_DEADMAN_PRESSED,
+  EV_DEADMAN_RELEASED,
+};
+
+xQueueHandle xDeadmanQueueEvent;
+void send_to_deadman_event_queue(DeadmanEvent e)
+{
+  xQueueSendToFront(xDeadmanQueueEvent, &e, pdMS_TO_TICKS(10));
+}
+
+DeadmanEvent read_from_deadman_event_queue()
+{
+  DeadmanEvent e;
+  if (xDeadmanQueueEvent != NULL && xQueueReceive(xDeadmanQueueEvent, &e, (TickType_t) 5) == pdPASS)
+  {
+    if (e == EV_DEADMAN_NO_EVENT)
+    {
+      // error
+      DEBUG("ERROR: EV_DEADMAN_NO_EVENT received!");
+    }
+    return e;
+  }
+  return EV_DEADMAN_NO_EVENT;
+}
+
 #include <comms_2.h>
 #include <TriggerLib.h>
 #include <peripherals.h>
@@ -63,27 +91,7 @@ Smoothed <float> retry_log;
 #include <features/deadman.h>
 
 #include <core0.h>
-
-TriggerLib trigger(/*pin*/ 13, /*deadzone*/ 10);
-
-void read_trigger()
-{
-  uint8_t old_throttle = controller_packet.throttle;
-
-#ifdef FEATURE_PUSH_TO_ENABLE
-  controller_packet.throttle = trigger.get_push_to_start_throttle(trigger.get_throttle(), board_packet.moving);
-#else
-  controller_packet.throttle = trigger.get_throttle();
-#endif
-
-#ifdef PRINT_THROTTLE
-  if (old_throttle != controller_packet.throttle)
-  {
-    DEBUGVAL(controller_packet.throttle);
-    old_throttle = controller_packet.throttle;
-  }
-#endif
-}
+#include <core1.h>
 
 //------------------------------------------------------------------
 
@@ -105,9 +113,13 @@ void setup()
   // button_init();
 
   // core 0
+#ifdef USING_DEADMAN  
   xTaskCreatePinnedToCore(deadmanTask_0, "deadmanTask_0", 4092, NULL, /*priority*/ 4, NULL, 0);
+#endif
   xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
+
+  xDeadmanQueueEvent = xQueueCreate(1, sizeof(DeadmanEvent));
 
   DEBUG("Ready to rx from board...and stuff");
 }
