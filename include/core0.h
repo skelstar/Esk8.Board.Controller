@@ -46,6 +46,8 @@ elapsedMillis since_measure_battery;
 
 void batteryMeasureTask_0(void *pvParameters)
 {
+  Serial.printf("batteryMeasureTask_0 running on core %d\n", xPortGetCoreID());
+
   while (true)
   {
     if (since_measure_battery > BATTERY_MEASURE_INTERVAL)
@@ -59,3 +61,17 @@ void batteryMeasureTask_0(void *pvParameters)
   vTaskDelete(NULL);
 }
 //------------------------------------------------------------
+
+void deadmanTask_0(void *pvParameters)
+{
+  Serial.printf("deadmanTask_0 running on core %d\n", xPortGetCoreID());
+
+  deadman_init();
+
+  while (true)
+  {
+    deadman.loop();
+    vTaskDelay(10);
+  }
+  vTaskDelete(NULL);
+}

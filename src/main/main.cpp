@@ -60,6 +60,7 @@ Smoothed <float> retry_log;
 #include <TriggerLib.h>
 #include <peripherals.h>
 #include <utils.h>
+#include <features/deadman.h>
 
 #include <core0.h>
 
@@ -101,9 +102,11 @@ void setup()
 
   trigger.initialise();
 
-  button_init();
+  // button_init();
 
-  xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 4, NULL, /*core*/ 0);
+  // core 0
+  xTaskCreatePinnedToCore(deadmanTask_0, "deadmanTask_0", 4092, NULL, /*priority*/ 4, NULL, 0);
+  xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
 
   DEBUG("Ready to rx from board...and stuff");
