@@ -108,8 +108,9 @@ void setup()
   send_config_packet_to_board();
 
   trigger.initialise();
-
-  // button_init();
+#ifdef USING_DEADMAN
+  trigger.set_deadman_pin(DEADMAN_PIN);
+#endif
 
   // core 0
 #ifdef USING_DEADMAN  

@@ -3,14 +3,17 @@
 
 #include <Arduino.h>
 
+#define NO_DEADMAN  99
+
 class TriggerLib
 {
 
 public:
-  TriggerLib(uint8_t pin, uint8_t deadzone = 0)
+  TriggerLib(uint8_t trigger_pin, uint8_t deadzone = 0)
   {
     _deadzone = deadzone;
-    _pin = pin;
+    _pin = trigger_pin;
+    deadman_held = true;
   }
 
   void initialise()
@@ -19,7 +22,13 @@ public:
     _calibrated = true;
   }
 
-  uint8_t get_throttle()
+  void set_deadman_pin(uint8_t pin)
+  {
+    _deadman_pin = pin;
+  }
+
+
+  uint8_t _get_raw_throttle()
   {
     if (_calibrated == false)
     {
@@ -47,12 +56,56 @@ public:
     return moving || raw <= 127 ? raw : 127;
   }
 
+  uint8_t get_safe_throttle()
+  {
+    uint8_t raw = _get_raw_throttle();
+    return make_throttle_safe(raw);
+  }
+
+  uint8_t make_throttle_safe(uint8_t raw)
+  {
+    if (_deadman_pin == NO_DEADMAN)    
+    {
+      return raw;
+    }
+    bool braking_or_idle = raw <= 127;
+    uint8_t result = 127;
+
+    if (waiting_for_idle_throttle && braking_or_idle)
+    {
+      waiting_for_idle_throttle = false;
+    }
+
+    if (deadman_held)
+    {
+      result = raw;
+      if (waiting_for_idle_throttle)
+      {
+        result = raw <= max_throttle
+                     ? raw
+                     : max_throttle;
+        max_throttle = raw;
+      }
+    }
+    else
+    {
+      result = braking_or_idle ? raw
+                               : 127;
+    }
+    return result;
+  }
+
+  bool deadman_held;
+  bool waiting_for_idle_throttle;
+  uint8_t max_throttle;
+
 private:
   uint16_t get_raw()
   {
     return analogRead(_pin);
   }
 
+  uint8_t _deadman_pin = NO_DEADMAN;
   uint16_t _centre = 0;
   uint16_t max = 0;
   uint16_t min = 0;
