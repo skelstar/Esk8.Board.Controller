@@ -51,7 +51,6 @@ bool throttle_enabled = true;
 
 Smoothed <float> retry_log;
 
-#define READ_TRIGGER_PERIOD 200
 #define SMOOTH_OVER_MILLIS 2000
 
 //------------------------------------------------------------
