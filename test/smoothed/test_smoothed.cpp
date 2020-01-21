@@ -36,11 +36,13 @@ void test_smoothed_throttle_is_expected()
 void setup()
 {
   UNITY_BEGIN();
+
+  RUN_TEST(test_smoothed_throttle_is_expected);
+  
+  UNITY_END();
 }
 
 void loop()
 {
-  RUN_TEST(test_smoothed_throttle_is_expected);
 
-  UNITY_END();
 }

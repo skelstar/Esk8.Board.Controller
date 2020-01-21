@@ -57,12 +57,11 @@ void setup()
   nrf24.begin(&radio, &network, 1, NULL);
 
   Serial.printf("Ready...");
-
+  RUN_TEST(test_send_has_no_retries);
+  UNITY_END();
 }
 
 void loop()
 {
-  RUN_TEST(test_send_has_no_retries);
 
-  UNITY_END();
 }

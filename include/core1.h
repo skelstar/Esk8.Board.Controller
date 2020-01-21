@@ -14,9 +14,9 @@ void update_deadman();
 
 TriggerLib trigger(/*pin*/ 13, /*deadzone*/ 10);
 
-uint8_t make_throttle_safe(uint8_t raw)
+//-----------------------------------------------------
+uint8_t make_throttle_safe(uint8_t raw, bool deadman_held)
 {
-  bool board_moving = board_packet.moving;
   bool braking_or_idle = raw <= 127;
   uint8_t result = 127;
 
@@ -38,10 +38,10 @@ uint8_t make_throttle_safe(uint8_t raw)
   }
   else
   {
-    result = braking_or_idle
-                 ? raw
-                 : 127;
+    result = braking_or_idle ? raw
+                             : 127;
   }
+  return result;
 }
 
 //-------------------------------------------------------
@@ -51,11 +51,14 @@ void read_trigger()
   uint8_t old_throttle = controller_packet.throttle;
 
   raw_throttle = trigger.get_throttle();
+#ifdef USE_DEADMAN
   controller_packet.throttle = make_throttle_safe(raw_throttle);
-
-  DEBUGVAL(controller_packet.throttle, raw_throttle, max_throttle, deadman_held, waiting_for_idle_throttle);
+#else
+  controller_packet.throttle = raw_throttle;
+#endif
 
 #ifdef PRINT_THROTTLE
+  DEBUGVAL(controller_packet.throttle, deadman_held);
   if (old_throttle != controller_packet.throttle)
   {
     old_throttle = controller_packet.throttle;
