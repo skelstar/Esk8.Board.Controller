@@ -110,11 +110,16 @@ void setup_tft()
 {
   // digitalWrite(TFT_CS, LOW);
   // digitalWrite(SPI_CS, HIGH);
-  tft.init();
-  tft.setRotation(1);        // 0 is portrait
-  tft.fillScreen(TFT_BLUE); // Clear screen
-  tft.setTextSize(3);
-  tft.drawString("ready", 20, 20);
+  tft.init(135, 240);   // initialize a ST7789 chip, 240x240 pixels
+
+  tft.setRotation(2);  
+  pinMode(4, OUTPUT);
+  digitalWrite(4, HIGH); // Backlight on
+
+  tft.setCursor(20, 20);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextWrap(true);
+  tft.print("ready!");
   DEBUG("setup_tft");
   // digitalWrite(SPI_CS, LOW);
   // digitalWrite(TFT_CS, HIGH);
