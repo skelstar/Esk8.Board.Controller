@@ -4,7 +4,7 @@
 #include <Button2.h>
 #endif
 
-#define DEADMAN_PIN 0
+#define DEADMAN_PIN 17
 
 Button2 deadman(DEADMAN_PIN);
 

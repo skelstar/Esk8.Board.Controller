@@ -37,17 +37,13 @@ void update_deadman()
   switch (read_from_deadman_event_queue())
   {
   case EV_DEADMAN_PRESSED:
-    // DEBUG("pressed");
-    deadman_held = true;
+    trigger.deadman_held = true;
     break;
   case EV_DEADMAN_RELEASED:
-    max_throttle = controller_packet.throttle;
-    deadman_held = false;
-    waiting_for_idle_throttle = true;
-    // DEBUGVAL("released", deadman_held, waiting_for_idle_throttle, max_throttle);
+    trigger.deadman_held = false;
     break;
   }
 #else
-  deadman = true;
+  deadman_held = true;
 #endif
 }

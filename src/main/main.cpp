@@ -34,9 +34,9 @@ RF24Network network(radio);
 
 class Stats
 {
-  public:
-    unsigned long total_failed;
-    unsigned long num_packets_with_retries;
+public:
+  unsigned long total_failed;
+  unsigned long num_packets_with_retries;
 } stats;
 
 #define NUM_RETRIES 5
@@ -44,12 +44,12 @@ class Stats
 
 elapsedMillis since_sent_to_board;
 elapsedMillis since_read_trigger;
+elapsedMillis since_read_trigger;
 
 bool throttle_enabled = true;
 
-//------------------------------------------------------------
 
-Smoothed <float> retry_log;
+Smoothed<float> retry_log;
 
 #define SMOOTH_OVER_MILLIS 2000
 
@@ -71,7 +71,7 @@ void send_to_deadman_event_queue(DeadmanEvent e)
 DeadmanEvent read_from_deadman_event_queue()
 {
   DeadmanEvent e;
-  if (xDeadmanQueueEvent != NULL && xQueueReceive(xDeadmanQueueEvent, &e, (TickType_t) 5) == pdPASS)
+  if (xDeadmanQueueEvent != NULL && xQueueReceive(xDeadmanQueueEvent, &e, (TickType_t)5) == pdPASS)
   {
     if (e == EV_DEADMAN_NO_EVENT)
     {
@@ -98,7 +98,7 @@ void setup()
 {
   Serial.begin(115200);
 
-  #define LOG_LENGTH_MILLIS 5000
+#define LOG_LENGTH_MILLIS 5000
   retry_log.begin(SMOOTHED_AVERAGE, LOG_LENGTH_MILLIS / SEND_TO_BOARD_INTERVAL);
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
@@ -109,11 +109,13 @@ void setup()
 
   trigger.initialise();
 #ifdef USING_DEADMAN
+  pinMode(5, OUTPUT);
+  digitalWrite(5, LOW);
   trigger.set_deadman_pin(DEADMAN_PIN);
 #endif
 
   // core 0
-#ifdef USING_DEADMAN  
+#ifdef USING_DEADMAN
   xTaskCreatePinnedToCore(deadmanTask_0, "deadmanTask_0", 4092, NULL, /*priority*/ 4, NULL, 0);
 #endif
   xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
