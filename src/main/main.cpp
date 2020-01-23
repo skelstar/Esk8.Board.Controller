@@ -1,4 +1,4 @@
-#ifdef SERIAL__DEBUG
+#ifdef SERIAL_DEBUG
 #define DEBUG_OUT Serial
 #endif
 #define PRINTSTREAM_FALLBACK
@@ -19,6 +19,9 @@
 
 #define COMMS_BOARD 00
 #define COMMS_CONTROLLER 01
+
+#define DEADMAN_PIN 17
+#define TRIGGER_ANALOG_PIN  13
 
 //------------------------------------------------------------------
 
@@ -44,12 +47,13 @@ public:
 
 elapsedMillis since_sent_to_board;
 elapsedMillis since_read_trigger;
-elapsedMillis since_read_trigger;
 
 bool throttle_enabled = true;
 
 
 Smoothed<float> retry_log;
+
+TriggerLib trigger(/*pin*/TRIGGER_ANALOG_PIN, /*deadzone*/ 10);
 
 #define SMOOTH_OVER_MILLIS 2000
 
@@ -63,9 +67,25 @@ enum DeadmanEvent
 };
 
 xQueueHandle xDeadmanQueueEvent;
+xQueueHandle xDisplayChangeEventQueue;
+
 void send_to_deadman_event_queue(DeadmanEvent e)
 {
   xQueueSendToFront(xDeadmanQueueEvent, &e, pdMS_TO_TICKS(10));
+}
+void send_to_(xQueueHandle queue, uint8_t ev, uint8_t ticks = 10)
+{
+  xQueueSendToFront(queue, &ev, pdMS_TO_TICKS(ticks));
+}
+
+uint8_t read_from_(xQueueHandle queue)
+{
+  uint8_t e;
+  if (queue != NULL && xQueueReceive(queue, &e, (TickType_t) 5) == pdPASS)
+  {
+    return e;
+  }
+  return e;
 }
 
 DeadmanEvent read_from_deadman_event_queue()
@@ -108,20 +128,21 @@ void setup()
   send_config_packet_to_board();
 
   trigger.initialise();
-#ifdef USING_DEADMAN
+#ifdef FEATURE_DEADMAN
   pinMode(5, OUTPUT);
   digitalWrite(5, LOW);
   trigger.set_deadman_pin(DEADMAN_PIN);
 #endif
 
   // core 0
-#ifdef USING_DEADMAN
+#ifdef FEATURE_DEADMAN
   xTaskCreatePinnedToCore(deadmanTask_0, "deadmanTask_0", 4092, NULL, /*priority*/ 4, NULL, 0);
 #endif
   xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
 
   xDeadmanQueueEvent = xQueueCreate(1, sizeof(DeadmanEvent));
+  xDisplayChangeEventQueue = xQueueCreate(1, sizeof(uint8_t));
 
   DEBUG("Ready to rx from board...and stuff");
 }

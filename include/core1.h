@@ -12,8 +12,6 @@ bool waiting_for_idle_throttle;
 // prototypes
 void update_deadman();
 
-TriggerLib trigger(/*pin*/ 13, /*deadzone*/ 10);
-
 //-------------------------------------------------------
 void read_trigger()
 {
@@ -33,14 +31,16 @@ void read_trigger()
 
 void update_deadman()
 {
-#ifdef USING_DEADMAN
+#ifdef FEATURE_DEADMAN
   switch (read_from_deadman_event_queue())
   {
   case EV_DEADMAN_PRESSED:
     trigger.deadman_held = true;
+    send_to_(xDisplayChangeEventQueue, 1);
     break;
   case EV_DEADMAN_RELEASED:
     trigger.deadman_held = false;
+    send_to_(xDisplayChangeEventQueue, 1);
     break;
   }
 #else
