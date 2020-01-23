@@ -43,11 +43,11 @@ class Stats
 #define SEND_TO_BOARD_INTERVAL 200
 
 elapsedMillis since_sent_to_board;
+elapsedMillis since_read_trigger;
 
+bool throttle_enabled = true;
 
 //------------------------------------------------------------
-
-elapsedMillis since_read_trigger;
 
 Smoothed <float> retry_log;
 
@@ -69,7 +69,11 @@ void read_trigger()
 {
   uint8_t old_throttle = controller_packet.throttle;
 
+#ifdef FEATURE_PUSH_TO_ENABLE
+  controller_packet.throttle = trigger.get_push_to_start_throttle(trigger.get_throttle(), board_packet.moving);
+#else
   controller_packet.throttle = trigger.get_throttle();
+#endif
 
 #ifdef PRINT_THROTTLE
   if (old_throttle != controller_packet.throttle)
