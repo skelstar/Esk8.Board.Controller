@@ -58,8 +58,11 @@ void send_control_packet_to_board()
 
   if (retries > 0)
   {
+#ifdef PRINT_COMMS_DEBUG    
     DEBUGVAL(retries);
+#endif
     stats.num_packets_with_retries++;
+    send_to_(xDisplayChangeEventQueue, 1);
   }
   if (retries >= NUM_RETRIES)
   {

@@ -2,6 +2,10 @@
 #include <Wire.h>
 #endif
 
+#ifndef TriggerState
+#include <TriggerLib.h>
+#endif
+
 #include <U8g2lib.h>
 
 #define USING_SSD1306 1
@@ -11,6 +15,22 @@ enum Aligned
   ALIGNED_LEFT,
   ALIGNED_CENTRE,
   ALIGNED_RIGHT
+};
+
+enum DatumPoint
+{
+  TL_DATUM,
+  TC_DATUM,
+  TR_DATUM,
+  ML_DATUM,
+  CL_DATUM,
+  MC_DATUM,
+  CC_DATUM,
+  MR_DATUM,
+  CR_DATUM,
+  BL_DATUM,
+  BC_DATUM,
+  BR_DATUM,
 };
 
 //https://github.com/olikraus/u8g2/wiki/fntgrpiconic#open_iconic_arrow_2x2
@@ -421,6 +441,42 @@ void lcd_message(uint8_t line_number, const char *message, Aligned aligned = ALI
   u8g2.setFont(u8g2_font_courB12_tr);
   u8g2.drawStr(x, y, message);
 }
+//--------------------------------------------------------------------------------
+uint8_t get_y_and_set_pos(DatumPoint datum, uint8_t height)
+{
+  if (datum == TL_DATUM || datum == TC_DATUM || datum == TR_DATUM)
+  {
+    u8g2.setFontPosTop();
+    return 0;
+  }
+  else if (datum == ML_DATUM || datum == MC_DATUM || datum == MR_DATUM)
+  {
+    u8g2.setFontPosCenter();
+    return (LCD_HEIGHT/2) - (height/2);
+  }
+  else
+  { // BL_DATUM, BC_DATUM, BR_DATUM:
+    u8g2.setFontPosBottom();
+    return LCD_HEIGHT - height;
+  }
+}
+//--------------------------------------------------------------------------------
+uint8_t get_x(DatumPoint datum, uint8_t width)
+{
+  if (datum == TL_DATUM || datum == ML_DATUM || datum == BL_DATUM)
+  {
+    return 0;
+  }
+  else if (datum == TC_DATUM || datum == MC_DATUM || datum == BC_DATUM)
+  {
+    return (LCD_WIDTH/2) - (width/2);
+  }
+  else if (datum == TR_DATUM || datum == MR_DATUM || datum == BR_DATUM)
+  {
+    return LCD_WIDTH - width;
+  }
+}
+//--------------------------------------------------------------------------------
 
 //--------------------------------------------------------------------------------
 #define BATTERY_WIDTH 100
@@ -474,4 +530,27 @@ void draw_small_battery(uint8_t percent, uint8_t x, uint8_t y)
   uint8_t remove_box_width = ((100 - percent) / 100.0) * (SM_BATT_WIDTH - 2);
   u8g2.drawBox(x + 1, y + 1, remove_box_width, SM_BATT_HEIGHT - 2);
   u8g2.setDrawColor(1);
+}
+//--------------------------------------------------------------------------------
+
+void draw_trigger_state(TriggerState state, DatumPoint datum)
+{
+  uint8_t width = 20, height = 20;
+  uint8_t x = get_x(datum, width);
+  uint8_t y = get_y_and_set_pos(datum, height);
+  uint8_t x2 = x + width/2 - 5;
+  uint8_t y2 = y + 17;
+
+  if (state == IDLE_STATE || state == GO_STATE)
+  {
+    u8g2.drawFrame(x, y, width, height);
+    u8g2.drawStr(x2, y2, state == IDLE_STATE ? "I" : "G");
+  }
+  else 
+  {
+    u8g2.drawBox(x, y, width, height);
+    u8g2.setDrawColor(0);
+    u8g2.drawStr(x2, y2, "W");
+    u8g2.setDrawColor(1);
+  }
 }
