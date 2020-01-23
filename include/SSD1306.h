@@ -452,7 +452,7 @@ uint8_t get_y_and_set_pos(DatumPoint datum, uint8_t height)
   else if (datum == ML_DATUM || datum == MC_DATUM || datum == MR_DATUM)
   {
     u8g2.setFontPosCenter();
-    return (LCD_HEIGHT/2) - (height/2);
+    return LCD_HEIGHT/2;
   }
   else
   { // BL_DATUM, BC_DATUM, BR_DATUM:
@@ -477,8 +477,19 @@ uint8_t get_x(DatumPoint datum, uint8_t width)
   }
 }
 //--------------------------------------------------------------------------------
-
+void lcd_message(const char *message, DatumPoint datum)
+{
+  u8g2.setFont(u8g2_font_courB12_tr);
+  uint8_t x = 0, y = 0;
+  uint8_t width = u8g2.getStrWidth(message);
+  x = get_x(datum, width);
+  DEBUGVAL(u8g2.getMaxCharHeight());
+  y = get_y_and_set_pos(datum, u8g2.getMaxCharHeight());
+  u8g2.drawStr(x, y, message);
+  u8g2.drawStr(x, y, message);
+}
 //--------------------------------------------------------------------------------
+
 #define BATTERY_WIDTH 100
 #define BATTERY_HEIGHT 50
 #define BORDER_SIZE 6

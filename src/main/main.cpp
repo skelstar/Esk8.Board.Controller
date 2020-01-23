@@ -1,4 +1,4 @@
-#ifdef SERIAL_DEBUG
+#ifdef DEBUG_SERIAL
 #define DEBUG_OUT Serial
 #endif
 #define PRINTSTREAM_FALLBACK
@@ -48,6 +48,7 @@ public:
 elapsedMillis since_sent_to_board;
 elapsedMillis since_read_trigger;
 
+uint16_t remote_battery_percent = 0;
 bool throttle_enabled = true;
 
 
@@ -105,13 +106,16 @@ DeadmanEvent read_from_deadman_event_queue()
 
 #include <comms_2.h>
 #include <TriggerLib.h>
-#include <peripherals.h>
 #include <utils.h>
 #include <features/deadman.h>
+
+#include <screens.h>
+#include <menu_system.h>
 
 #include <core0.h>
 #include <core1.h>
 
+#include <peripherals.h>
 //------------------------------------------------------------------
 
 void setup()
@@ -143,6 +147,8 @@ void setup()
 
   xDeadmanQueueEvent = xQueueCreate(1, sizeof(DeadmanEvent));
   xDisplayChangeEventQueue = xQueueCreate(1, sizeof(uint8_t));
+
+  button0_init();
 
   DEBUG("Ready to rx from board...and stuff");
 }
