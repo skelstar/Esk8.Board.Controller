@@ -19,6 +19,10 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
     send_config_packet_to_board();
   }
 
+#ifdef FEATURE_PUSH_TO_ENABLE
+  throttle_enabled = board_packet.moving;
+#endif
+
   switch (board_packet.reason)
   {
   case ReasonType::BOARD_STOPPED:

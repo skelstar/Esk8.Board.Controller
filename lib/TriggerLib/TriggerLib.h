@@ -42,6 +42,11 @@ public:
     return 127;
   }
 
+  uint8_t static get_push_to_start_throttle(uint8_t raw, bool moving)
+  {
+    return moving || raw <= 127 ? raw : 127;
+  }
+
 private:
   uint16_t get_raw()
   {
