@@ -15,10 +15,14 @@ void display_task_0(void *pvParameters)
   {
     display_state.run_machine();
 
-    if (read_from_(xDisplayChangeEventQueue) == 1 || since_updated_display > 5000)
+    DispStateEvent ev = (DispStateEvent) read_from_(xDisplayChangeEventQueue);
+    if (ev == DISP_EV_REFRESH)
     {
       since_updated_display = 0;
-      display_state_event(DISP_EV_BUTTON_REFRESH);
+      display_state_event(DISP_EV_REFRESH);
+    }
+    else if (ev != DISP_EV_NO_EVENT) {
+      display_state_event(ev);
     }
     vTaskDelay(10);
   }

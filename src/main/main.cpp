@@ -104,13 +104,13 @@ DeadmanEvent read_from_deadman_event_queue()
   return EV_DEADMAN_NO_EVENT;
 }
 
-#include <comms_2.h>
 #include <TriggerLib.h>
 #include <utils.h>
 #include <features/deadman.h>
 
 #include <screens.h>
 #include <menu_system.h>
+#include <comms_2.h>
 
 #include <core0.h>
 #include <core1.h>

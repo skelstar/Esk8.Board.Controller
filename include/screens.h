@@ -1,4 +1,4 @@
-
+#include <ChunkyDigit.h>
 
 #define LINE_1 1
 #define LINE_2 2
@@ -22,6 +22,19 @@ void screen_with_stats()
   // battery
   draw_small_battery(remote_battery_percent, 128 - SM_BATT_WIDTH, 0);
   // deadman
+  draw_trigger_state(trigger.get_current_state(), BR_DATUM);
+  u8g2.sendBuffer();
+}
+
+void screen_moving()
+{
+  char buff[10];
+
+  ChunkyDigit chunky_digit(&u8g2, 6, 3);
+
+  u8g2.clearBuffer();
+  sprintf(buff, "%.1f%%", retry_log.get());
+  chunky_digit.draw_float(TR_DATUM, buff, NULL);
   draw_trigger_state(trigger.get_current_state(), BR_DATUM);
   u8g2.sendBuffer();
 }
