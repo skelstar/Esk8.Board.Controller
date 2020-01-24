@@ -91,8 +91,8 @@ uint8_t read_from_(xQueueHandle queue)
 
 DeadmanEvent read_from_deadman_event_queue()
 {
-  DeadmanEvent e;
-  if (xDeadmanQueueEvent != NULL && xQueueReceive(xDeadmanQueueEvent, &e, (TickType_t)5) == pdPASS)
+  DeadmanEvent e = (DeadmanEvent)read_from_(xDeadmanQueueEvent);
+  if (e > 0)
   {
     if (e == EV_DEADMAN_NO_EVENT)
     {

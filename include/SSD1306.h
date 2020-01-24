@@ -483,7 +483,6 @@ void lcd_message(const char *message, DatumPoint datum)
   uint8_t x = 0, y = 0;
   uint8_t width = u8g2.getStrWidth(message);
   x = get_x(datum, width);
-  DEBUGVAL(u8g2.getMaxCharHeight());
   y = get_y_and_set_pos(datum, u8g2.getMaxCharHeight());
   u8g2.drawStr(x, y, message);
   u8g2.drawStr(x, y, message);

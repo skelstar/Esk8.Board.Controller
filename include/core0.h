@@ -18,7 +18,7 @@ void display_task_0(void *pvParameters)
     if (read_from_(xDisplayChangeEventQueue) == 1 || since_updated_display > 5000)
     {
       since_updated_display = 0;
-
+      display_state_event(DISP_EV_BUTTON_REFRESH);
     }
     vTaskDelay(10);
   }

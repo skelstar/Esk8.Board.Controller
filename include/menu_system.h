@@ -5,6 +5,7 @@
 enum DispStateEvent
 {
   DISP_EV_BUTTON_CLICK,
+  DISP_EV_BUTTON_REFRESH,
 };
 
 void display_state_event(DispStateEvent ev);
@@ -48,6 +49,7 @@ Fsm display_state(&disp_state_main_screen);
 void add_disp_state_transitions()
 {
   display_state.add_transition(&disp_state_main_screen, &disp_state_menu_option_1, DISP_EV_BUTTON_CLICK, NULL);
+  display_state.add_transition(&disp_state_main_screen, &disp_state_main_screen, DISP_EV_BUTTON_REFRESH, NULL);
   
   display_state.add_timed_transition(&disp_state_menu_option_1, &disp_state_main_screen, 2000, NULL);
   display_state.add_transition(&disp_state_menu_option_1, &disp_state_menu_option_2, DISP_EV_BUTTON_CLICK, NULL);

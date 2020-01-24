@@ -3,10 +3,6 @@ bool deadman_held;
 uint8_t raw_throttle, max_throttle = 127;
 bool waiting_for_idle_throttle;
 
-#ifndef Fsm
-#include <Fsm.h>
-#endif
-
 #define READ_TRIGGER_PERIOD 200
 
 // prototypes
