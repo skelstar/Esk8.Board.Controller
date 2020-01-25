@@ -62,7 +62,7 @@ void add_disp_state_transitions()
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_menu_option_1, DISP_EV_BUTTON_CLICK, NULL);
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_REFRESH, NULL);
 
-  // moving  
+  // moving
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_moving_screen, DISP_EV_MOVING, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_REFRESH, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_stopped_screen, DISP_EV_STOPPED, NULL);
@@ -70,18 +70,39 @@ void add_disp_state_transitions()
   // option 1
   display_state.add_timed_transition(&disp_state_menu_option_1, &disp_state_stopped_screen, 2000, NULL);
   display_state.add_transition(&disp_state_menu_option_1, &disp_state_menu_option_2, DISP_EV_BUTTON_CLICK, NULL);
-  
+
   // option 2
   display_state.add_timed_transition(&disp_state_menu_option_2, &disp_state_stopped_screen, 2000, NULL);
   display_state.add_transition(&disp_state_menu_option_2, &disp_state_menu_option_3, DISP_EV_BUTTON_CLICK, NULL);
-  
+
   // option 3
   display_state.add_timed_transition(&disp_state_menu_option_3, &disp_state_stopped_screen, 2000, NULL);
   display_state.add_transition(&disp_state_menu_option_3, &disp_state_stopped_screen, DISP_EV_BUTTON_CLICK, NULL);
 }
 
+char *get_event_name(DispStateEvent ev)
+{
+  switch (ev)
+  {
+  case DISP_EV_NO_EVENT:
+    return "DISP_EV_NO_EVENT";
+  case DISP_EV_BUTTON_CLICK:
+    return "DISP_EV_BUTTON_CLICK";
+  case DISP_EV_REFRESH:
+    return "DISP_EV_REFRESH";
+  case DISP_EV_STOPPED:
+    return "DISP_EV_STOPPED";
+  case DISP_EV_MOVING:
+    return "DISP_EV_MOVING";
+  default:
+    return "Unhandled event";
+  }
+}
+
 void display_state_event(DispStateEvent ev)
 {
-  DEBUGVAL(ev);
+#ifdef PRINT_DISP_STATE_EVENT
+  DEBUGVAL(get_event_name(ev));
   display_state.trigger(ev);
+#endif
 }
