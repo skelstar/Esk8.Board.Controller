@@ -21,7 +21,7 @@
 #define COMMS_CONTROLLER 01
 
 #define DEADMAN_PIN 17
-#define TRIGGER_ANALOG_PIN  13
+#define TRIGGER_ANALOG_PIN 13
 
 //------------------------------------------------------------------
 
@@ -51,10 +51,7 @@ elapsedMillis since_read_trigger;
 uint16_t remote_battery_percent = 0;
 bool throttle_enabled = true;
 
-
 Smoothed<float> retry_log;
-
-TriggerLib trigger(/*pin*/TRIGGER_ANALOG_PIN, /*deadzone*/ 10);
 
 #define SMOOTH_OVER_MILLIS 2000
 
@@ -67,6 +64,12 @@ enum DeadmanEvent
   EV_DEADMAN_RELEASED,
 };
 
+//------------------------------------------------------------
+
+// prototypes
+void send_to_deadman_event_queue(DeadmanEvent e);
+
+//------------------------------------------------------------
 xQueueHandle xDeadmanQueueEvent;
 xQueueHandle xDisplayChangeEventQueue;
 
@@ -82,7 +85,7 @@ void send_to_(xQueueHandle queue, uint8_t ev, uint8_t ticks = 10)
 uint8_t read_from_(xQueueHandle queue)
 {
   uint8_t e;
-  if (queue != NULL && xQueueReceive(queue, &e, (TickType_t) 5) == pdPASS)
+  if (queue != NULL && xQueueReceive(queue, &e, (TickType_t)5) == pdPASS)
   {
     return e;
   }
@@ -103,11 +106,17 @@ DeadmanEvent read_from_deadman_event_queue()
   }
   return EV_DEADMAN_NO_EVENT;
 }
-
+//------------------------------------------------------------------
 #include <TriggerLib.h>
+void trigger_changed_cb();
+
+TriggerLib trigger(
+    TRIGGER_ANALOG_PIN,
+    trigger_changed_cb,
+    /*deadzone*/ 10);
+//------------------------------------------------------------------
 #include <utils.h>
 #include <features/deadman.h>
-
 #include <screens.h>
 #include <menu_system.h>
 #include <comms_2.h>
@@ -116,6 +125,12 @@ DeadmanEvent read_from_deadman_event_queue()
 #include <core1.h>
 
 #include <peripherals.h>
+
+//------------------------------------------------------------------
+void trigger_changed_cb()
+{
+  send_to_(xDisplayChangeEventQueue, DISP_EV_REFRESH, 5);
+}
 //------------------------------------------------------------------
 
 void setup()

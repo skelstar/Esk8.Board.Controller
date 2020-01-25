@@ -14,13 +14,15 @@ enum TriggerState
 
 class TriggerLib
 {
+  typedef void (*TriggerStateChangeCallback)();
 
 public:
-  TriggerLib(uint8_t trigger_pin, uint8_t deadzone = 0)
+  TriggerLib(uint8_t trigger_pin, TriggerStateChangeCallback triggerStateChangeCallback, uint8_t deadzone = 0)
   {
     _deadzone = deadzone;
     _pin = trigger_pin;
     deadman_held = true;
+    _triggerStateChangeCallback = triggerStateChangeCallback;
   }
   //-----------------------------------------------------
   void initialise()
@@ -75,8 +77,12 @@ public:
     return make_throttle_safe(raw);
   }
   //-----------------------------------------------------
-  void update_state(uint8_t raw)
+  // returns true if state changed
+  //-----------------------------------------------------
+  bool update_state(uint8_t raw)
   {
+    bool state_changed = false;
+
     switch (t_state)
     {
     case IDLE_STATE:
@@ -84,6 +90,7 @@ public:
       if (deadman_held)
       {
         t_state = GO_STATE;
+        state_changed = true;
         max_throttle = 255;
       }
       break;
@@ -92,6 +99,7 @@ public:
       if (!deadman_held)
       {
         t_state = raw > 127 ? WAIT_STATE : IDLE_STATE;
+        state_changed = true;
         max_throttle = raw > 127 ? raw : 127;
       }
       break;
@@ -99,6 +107,7 @@ public:
       if (raw <= 127)
       {
         t_state = deadman_held ? GO_STATE : IDLE_STATE;
+        state_changed = true;
         max_throttle = t_state == GO_STATE ? 255 : 127;
       }
       else if (raw < max_throttle)
@@ -107,6 +116,7 @@ public:
       }
       break;
     }
+    return state_changed;
   }
   //-----------------------------------------------------
   uint8_t make_throttle_safe(uint8_t raw)
@@ -116,7 +126,7 @@ public:
       return raw;
     }
 
-    update_state(raw);
+    bool changed = update_state(raw);
 
     uint8_t result = 127;
 
@@ -134,6 +144,10 @@ public:
     default:
       Serial.printf("Unknown state: %d", t_state);
     }
+    if (changed)
+    {
+      _triggerStateChangeCallback();
+    }
     return result;
   }
   //-----------------------------------------------------
@@ -148,6 +162,8 @@ private:
   {
     return analogRead(_pin);
   }
+
+  TriggerStateChangeCallback _triggerStateChangeCallback;
 
   uint8_t _deadman_pin = NO_DEADMAN;
   uint16_t _centre = 0;
