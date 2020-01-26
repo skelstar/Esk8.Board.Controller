@@ -27,12 +27,12 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
   {
   case ReasonType::BOARD_STOPPED:
     DEBUG("***Stopped!***");
-    send_to_(xDisplayChangeEventQueue, int(DISP_EV_STOPPED));
+    send_to_display_event_queue(DISP_EV_STOPPED);
     break;
 
   case ReasonType::BOARD_MOVING:
     DEBUG("***Moving!***");
-    send_to_(xDisplayChangeEventQueue, int(DISP_EV_MOVING));
+    send_to_display_event_queue(DISP_EV_MOVING);
     break;
 
   default:
@@ -64,7 +64,7 @@ void send_control_packet_to_board()
     DEBUGVAL(retries);
 #endif
     stats.num_packets_with_retries++;
-    send_to_(xDisplayChangeEventQueue, DISP_EV_REFRESH);
+    send_to_display_event_queue(DISP_EV_REFRESH);
   }
   if (retries >= NUM_RETRIES)
   {

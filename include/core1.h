@@ -32,11 +32,11 @@ void update_deadman()
   {
   case EV_DEADMAN_PRESSED:
     trigger.deadman_held = true;
-    send_to_(xDisplayChangeEventQueue, DISP_EV_REFRESH);
+    send_to_display_event_queue(DISP_EV_REFRESH, (TickType_t)10);
     break;
   case EV_DEADMAN_RELEASED:
     trigger.deadman_held = false;
-    send_to_(xDisplayChangeEventQueue, DISP_EV_REFRESH);
+    send_to_display_event_queue(DISP_EV_REFRESH);
     break;
   }
 #else

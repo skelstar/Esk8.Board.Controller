@@ -73,29 +73,10 @@ void send_to_deadman_event_queue(DeadmanEvent e);
 xQueueHandle xDeadmanQueueEvent;
 xQueueHandle xDisplayChangeEventQueue;
 
-void send_to_deadman_event_queue(DeadmanEvent e)
-{
-  xQueueSendToFront(xDeadmanQueueEvent, &e, pdMS_TO_TICKS(10));
-}
-void send_to_(xQueueHandle queue, uint8_t ev, uint8_t ticks = 10)
-{
-  xQueueSendToFront(queue, &ev, pdMS_TO_TICKS(ticks));
-}
-
-uint8_t read_from_(xQueueHandle queue)
-{
-  uint8_t e;
-  if (queue != NULL && xQueueReceive(queue, &e, (TickType_t)5) == pdPASS)
-  {
-    return e;
-  }
-  return e;
-}
-
 DeadmanEvent read_from_deadman_event_queue()
 {
-  DeadmanEvent e = (DeadmanEvent)read_from_(xDeadmanQueueEvent);
-  if (e > 0)
+  DeadmanEvent e;
+  if (xDeadmanQueueEvent != NULL && xQueueReceive(xDeadmanQueueEvent, &e, (TickType_t)5) == pdPASS)
   {
     if (e == EV_DEADMAN_NO_EVENT)
     {
@@ -115,6 +96,37 @@ TriggerLib trigger(
     trigger_changed_cb,
     /*deadzone*/ 10);
 //------------------------------------------------------------------
+
+
+enum DispStateEvent
+{
+  DISP_EV_NO_EVENT = 0,
+  DISP_EV_BUTTON_CLICK,
+  DISP_EV_REFRESH,
+  DISP_EV_STOPPED,
+  DISP_EV_MOVING,
+};
+
+void send_to_display_event_queue(DispStateEvent ev, TickType_t ticks = 10)
+{
+  xQueueSendToFront(xDisplayChangeEventQueue, &ev, ticks);
+}
+
+void send_to_deadman_event_queue(DeadmanEvent ev)
+{
+  xQueueSendToFront(xDeadmanQueueEvent, &ev, pdMS_TO_TICKS(10));
+}
+
+uint8_t read_from_(xQueueHandle queue)
+{
+  uint8_t e;
+  if (queue != NULL && xQueueReceive(queue, &e, (TickType_t)5) == pdPASS)
+  {
+    return e;
+  }
+  return e;
+}
+
 #include <utils.h>
 #include <features/deadman.h>
 #include <screens.h>
@@ -129,7 +141,7 @@ TriggerLib trigger(
 //------------------------------------------------------------------
 void trigger_changed_cb()
 {
-  send_to_(xDisplayChangeEventQueue, DISP_EV_REFRESH, 5);
+  send_to_display_event_queue(DISP_EV_REFRESH, 5);
 }
 //------------------------------------------------------------------
 

@@ -2,15 +2,6 @@
 #include <Fsm.h>
 #endif
 
-enum DispStateEvent
-{
-  DISP_EV_NO_EVENT = 0,
-  DISP_EV_BUTTON_CLICK,
-  DISP_EV_REFRESH,
-  DISP_EV_STOPPED,
-  DISP_EV_MOVING,
-};
-
 void display_state_event(DispStateEvent ev);
 
 State disp_state_stopped_screen(
