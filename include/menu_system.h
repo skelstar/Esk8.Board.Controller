@@ -45,6 +45,16 @@ State disp_state_menu_option_3(
     },
     NULL, NULL);
 
+State disp_state_menu_option_selected(
+    [] {
+      DEBUG("...disp_state_menu_option_selected");
+      u8g2.clearBuffer();
+      lcd_message("selected!", MC_DATUM);
+      u8g2.sendBuffer();
+    },
+    NULL, NULL);
+
+
 Fsm display_state(&disp_state_stopped_screen);
 
 void add_disp_state_transitions()
@@ -58,17 +68,23 @@ void add_disp_state_transitions()
   display_state.add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_REFRESH, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_stopped_screen, DISP_EV_STOPPED, NULL);
 
+  // options
+  const uint16_t OPTION_SCREEN_TIMEOUT = 2000;
+  const uint16_t OPTION_SELECTED_TIMEOUT = 1000;
   // option 1
-  display_state.add_timed_transition(&disp_state_menu_option_1, &disp_state_stopped_screen, 2000, NULL);
+  display_state.add_timed_transition(&disp_state_menu_option_1, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
   display_state.add_transition(&disp_state_menu_option_1, &disp_state_menu_option_2, DISP_EV_BUTTON_CLICK, NULL);
-
+  display_state.add_transition(&disp_state_menu_option_1, &disp_state_menu_option_selected, DISP_EV_MENU_OPTION_SELECT, NULL);
   // option 2
-  display_state.add_timed_transition(&disp_state_menu_option_2, &disp_state_stopped_screen, 2000, NULL);
+  display_state.add_timed_transition(&disp_state_menu_option_2, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
   display_state.add_transition(&disp_state_menu_option_2, &disp_state_menu_option_3, DISP_EV_BUTTON_CLICK, NULL);
-
+  display_state.add_transition(&disp_state_menu_option_2, &disp_state_menu_option_selected, DISP_EV_MENU_OPTION_SELECT, NULL);
   // option 3
-  display_state.add_timed_transition(&disp_state_menu_option_3, &disp_state_stopped_screen, 2000, NULL);
+  display_state.add_timed_transition(&disp_state_menu_option_3, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
   display_state.add_transition(&disp_state_menu_option_3, &disp_state_stopped_screen, DISP_EV_BUTTON_CLICK, NULL);
+  display_state.add_transition(&disp_state_menu_option_3, &disp_state_menu_option_selected, DISP_EV_MENU_OPTION_SELECT, NULL);
+  // option selected
+  display_state.add_timed_transition(&disp_state_menu_option_selected, &disp_state_stopped_screen, OPTION_SELECTED_TIMEOUT, NULL);
 }
 
 char *get_event_name(DispStateEvent ev)

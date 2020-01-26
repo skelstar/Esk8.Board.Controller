@@ -9,7 +9,7 @@ Button2 button0(BUTTON_0);
 
 void button0_init()
 {
-  button0.setPressedHandler([](Button2 &btn) {
+  button0.setClickHandler([](Button2 &btn) {
 #ifdef FEATURE_CRUISE_CONTROL
     controller_packet.cruise_control = true;
 #endif
@@ -20,6 +20,7 @@ void button0_init()
     controller_packet.cruise_control = false;
 #endif
   });
-  button0.setLongClickHandler([](Button2 &btn) {
+  button0.setDoubleClickHandler([](Button2 &btn) {
+    display_state.trigger(DISP_EV_MENU_OPTION_SELECT);
   });
 }
