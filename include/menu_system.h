@@ -103,6 +103,6 @@ void display_state_event(DispStateEvent ev)
 {
 #ifdef PRINT_DISP_STATE_EVENT
   DEBUGVAL(get_event_name(ev));
-  display_state.trigger(ev);
 #endif
+  display_state.trigger(ev);
 }

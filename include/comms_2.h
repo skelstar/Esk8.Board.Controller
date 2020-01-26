@@ -64,7 +64,7 @@ void send_control_packet_to_board()
     DEBUGVAL(retries);
 #endif
     stats.num_packets_with_retries++;
-    send_to_(xDisplayChangeEventQueue, 1);
+    send_to_(xDisplayChangeEventQueue, DISP_EV_REFRESH);
   }
   if (retries >= NUM_RETRIES)
   {
