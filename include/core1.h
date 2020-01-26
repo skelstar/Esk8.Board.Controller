@@ -3,10 +3,6 @@ bool deadman_held;
 uint8_t raw_throttle, max_throttle = 127;
 bool waiting_for_idle_throttle;
 
-#ifndef Fsm
-#include <Fsm.h>
-#endif
-
 #define READ_TRIGGER_PERIOD 200
 
 // prototypes
@@ -36,11 +32,11 @@ void update_deadman()
   {
   case EV_DEADMAN_PRESSED:
     trigger.deadman_held = true;
-    send_to_(xDisplayChangeEventQueue, 1);
+    send_to_(xDisplayChangeEventQueue, DISP_EV_REFRESH);
     break;
   case EV_DEADMAN_RELEASED:
     trigger.deadman_held = false;
-    send_to_(xDisplayChangeEventQueue, 1);
+    send_to_(xDisplayChangeEventQueue, DISP_EV_REFRESH);
     break;
   }
 #else

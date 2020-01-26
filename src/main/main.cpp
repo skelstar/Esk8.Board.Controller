@@ -1,4 +1,4 @@
-#ifdef SERIAL_DEBUG
+#ifdef DEBUG_SERIAL
 #define DEBUG_OUT Serial
 #endif
 #define PRINTSTREAM_FALLBACK
@@ -21,7 +21,7 @@
 #define COMMS_CONTROLLER 01
 
 #define DEADMAN_PIN 17
-#define TRIGGER_ANALOG_PIN  13
+#define TRIGGER_ANALOG_PIN 13
 
 //------------------------------------------------------------------
 
@@ -48,12 +48,10 @@ public:
 elapsedMillis since_sent_to_board;
 elapsedMillis since_read_trigger;
 
+uint16_t remote_battery_percent = 0;
 bool throttle_enabled = true;
 
-
 Smoothed<float> retry_log;
-
-TriggerLib trigger(/*pin*/TRIGGER_ANALOG_PIN, /*deadzone*/ 10);
 
 #define SMOOTH_OVER_MILLIS 2000
 
@@ -66,6 +64,12 @@ enum DeadmanEvent
   EV_DEADMAN_RELEASED,
 };
 
+//------------------------------------------------------------
+
+// prototypes
+void send_to_deadman_event_queue(DeadmanEvent e);
+
+//------------------------------------------------------------
 xQueueHandle xDeadmanQueueEvent;
 xQueueHandle xDisplayChangeEventQueue;
 
@@ -81,7 +85,7 @@ void send_to_(xQueueHandle queue, uint8_t ev, uint8_t ticks = 10)
 uint8_t read_from_(xQueueHandle queue)
 {
   uint8_t e;
-  if (queue != NULL && xQueueReceive(queue, &e, (TickType_t) 5) == pdPASS)
+  if (queue != NULL && xQueueReceive(queue, &e, (TickType_t)5) == pdPASS)
   {
     return e;
   }
@@ -90,8 +94,8 @@ uint8_t read_from_(xQueueHandle queue)
 
 DeadmanEvent read_from_deadman_event_queue()
 {
-  DeadmanEvent e;
-  if (xDeadmanQueueEvent != NULL && xQueueReceive(xDeadmanQueueEvent, &e, (TickType_t)5) == pdPASS)
+  DeadmanEvent e = (DeadmanEvent)read_from_(xDeadmanQueueEvent);
+  if (e > 0)
   {
     if (e == EV_DEADMAN_NO_EVENT)
     {
@@ -102,16 +106,31 @@ DeadmanEvent read_from_deadman_event_queue()
   }
   return EV_DEADMAN_NO_EVENT;
 }
-
-#include <comms_2.h>
+//------------------------------------------------------------------
 #include <TriggerLib.h>
-#include <peripherals.h>
+void trigger_changed_cb();
+
+TriggerLib trigger(
+    TRIGGER_ANALOG_PIN,
+    trigger_changed_cb,
+    /*deadzone*/ 10);
+//------------------------------------------------------------------
 #include <utils.h>
 #include <features/deadman.h>
+#include <screens.h>
+#include <menu_system.h>
+#include <comms_2.h>
 
 #include <core0.h>
 #include <core1.h>
 
+#include <peripherals.h>
+
+//------------------------------------------------------------------
+void trigger_changed_cb()
+{
+  send_to_(xDisplayChangeEventQueue, DISP_EV_REFRESH, 5);
+}
 //------------------------------------------------------------------
 
 void setup()
@@ -143,6 +162,8 @@ void setup()
 
   xDeadmanQueueEvent = xQueueCreate(1, sizeof(DeadmanEvent));
   xDisplayChangeEventQueue = xQueueCreate(1, sizeof(uint8_t));
+
+  button0_init();
 
   DEBUG("Ready to rx from board...and stuff");
 }

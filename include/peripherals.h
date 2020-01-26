@@ -7,12 +7,13 @@
 
 Button2 button0(BUTTON_0);
 
-void button_init()
+void button0_init()
 {
   button0.setPressedHandler([](Button2 &btn) {
 #ifdef FEATURE_CRUISE_CONTROL
     controller_packet.cruise_control = true;
 #endif
+    display_state.trigger(DISP_EV_BUTTON_CLICK);
   });
   button0.setReleasedHandler([](Button2 &btn) {
 #ifdef FEATURE_CRUISE_CONTROL

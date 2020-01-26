@@ -27,10 +27,12 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
   {
   case ReasonType::BOARD_STOPPED:
     DEBUG("***Stopped!***");
+    send_to_(xDisplayChangeEventQueue, int(DISP_EV_STOPPED));
     break;
 
   case ReasonType::BOARD_MOVING:
     DEBUG("***Moving!***");
+    send_to_(xDisplayChangeEventQueue, int(DISP_EV_MOVING));
     break;
 
   default:

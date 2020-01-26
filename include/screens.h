@@ -1,34 +1,40 @@
+#include <ChunkyDigit.h>
+
 #define LINE_1 1
 #define LINE_2 2
 #define LINE_3 3
 
-void screen_show_connecting()
+void screen_with_stats()
 {
   u8g2.clearBuffer();
   // line 1
-  lcd_message(
-      LINE_1,
-      "Connecting",
-      ALIGNED_LEFT);
+  char buff1[20];
+  sprintf(buff1, "rate: %.1f%%", retry_log.get());
+  lcd_message(1, buff1, Aligned::ALIGNED_LEFT);
+  // line 2
+  char buff2[20];
+  sprintf(buff2, "total: %lu", stats.total_failed);
+  lcd_message(2, buff2, Aligned::ALIGNED_LEFT);
+  // line 3
+  char buff3[20];
+  sprintf(buff3, "w/rt: %lu", stats.num_packets_with_retries);
+  lcd_message(3, buff3, Aligned::ALIGNED_LEFT);
+  // battery
   draw_small_battery(remote_battery_percent, 128 - SM_BATT_WIDTH, 0);
-
+  // deadman
+  draw_trigger_state(trigger.get_current_state(), BR_DATUM);
   u8g2.sendBuffer();
 }
 
-void screen_with_stats(uint8_t trigger_state, bool moving)
+void screen_moving()
 {
-  char buff2[12];
+  char buff[10];
+
+  ChunkyDigit chunky_digit(&u8g2, 6, 3);
 
   u8g2.clearBuffer();
-
-  // line 1
-  lcd_message(LINE_1, "Stopped", ALIGNED_LEFT);
-  draw_small_battery(remote_battery_percent, 128 - SM_BATT_WIDTH, 0);
-  // line 2
-  sprintf(buff2, "rate: %d%%", stats.retry_rate);
-  lcd_message(LINE_2, buff2);
-  // line 3
-  sprintf(buff2, "bd rsts: %d", board_first_packet_count);
-  lcd_message(LINE_3, buff2);
+  sprintf(buff, "%.1f%%", retry_log.get());
+  chunky_digit.draw_float(TR_DATUM, buff, NULL);
+  draw_trigger_state(trigger.get_current_state(), BR_DATUM);
   u8g2.sendBuffer();
 }
