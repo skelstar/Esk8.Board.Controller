@@ -1,3 +1,5 @@
+#ifndef UNIT_TEST
+
 #ifdef DEBUG_SERIAL
 #define DEBUG_OUT Serial
 #endif
@@ -209,3 +211,5 @@ void loop()
   vTaskDelay(10);
 }
 //------------------------------------------------------------------
+
+#endif
