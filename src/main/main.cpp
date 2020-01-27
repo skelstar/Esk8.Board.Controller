@@ -101,6 +101,8 @@ TriggerLib trigger(
 enum DispStateEvent
 {
   DISP_EV_NO_EVENT = 0,
+  DISP_EV_CONNECTED,
+  DISP_EV_DISCONNECTED,
   DISP_EV_BUTTON_CLICK,
   DISP_EV_MENU_OPTION_SELECT,
   DISP_EV_REFRESH,
@@ -132,6 +134,7 @@ uint8_t read_from_(xQueueHandle queue)
 #include <features/deadman.h>
 #include <screens.h>
 #include <menu_system.h>
+#include <comms_connected_state.h>
 #include <comms_2.h>
 
 #include <core0.h>
@@ -178,6 +181,8 @@ void setup()
 
   button0_init();
 
+  add_comms_state_transitions();
+
   DEBUG("Ready to rx from board...and stuff");
 }
 
@@ -194,6 +199,8 @@ void loop()
     since_sent_to_board = 0;
     send_control_packet_to_board();
   }
+
+  comms_state_fsm.run_machine();
 
   nrf24.update();
 

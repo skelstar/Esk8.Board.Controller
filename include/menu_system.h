@@ -2,63 +2,84 @@
 #include <Fsm.h>
 #endif
 
+void print_disp_state(const char *state_name);
 void display_state_event(DispStateEvent ev);
 
+//---------------------------------------------------------------
+State disp_state_searching(
+    [] {
+      print_disp_state("...disp_state_searching");
+      screen_searching();
+    },
+    NULL, NULL);
+//---------------------------------------------------------------
+State disp_state_disconnected(
+    [] {
+      print_disp_state("...disp_state_disconnected");
+      screen_disconnected();
+    },
+    NULL, NULL);
+//---------------------------------------------------------------
 State disp_state_stopped_screen(
     [] {
-      DEBUG("...disp_state_stopped_screen");
+      print_disp_state("...disp_state_stopped_screen");
       screen_with_stats();
     },
     NULL, NULL);
-
+//---------------------------------------------------------------
 State disp_state_moving_screen(
     [] {
-      DEBUG("...disp_state_moving_screen");
+      print_disp_state("...disp_state_moving_screen");
       screen_moving();
     },
     NULL, NULL);
-
+//---------------------------------------------------------------
 State disp_state_menu_option_1(
     [] {
-      DEBUG("...disp_state_menu_option_1");
+      print_disp_state("...disp_state_menu_option_1");
       u8g2.clearBuffer();
       lcd_message("option 1", MC_DATUM);
       u8g2.sendBuffer();
     },
     NULL, NULL);
-
+//---------------------------------------------------------------
 State disp_state_menu_option_2(
     [] {
-      DEBUG("...disp_state_menu_option_2");
+      print_disp_state("...disp_state_menu_option_2");
       u8g2.clearBuffer();
       lcd_message("option 2", MC_DATUM);
       u8g2.sendBuffer();
     },
     NULL, NULL);
-
+//---------------------------------------------------------------
 State disp_state_menu_option_3(
     [] {
-      DEBUG("...disp_state_menu_option_3");
+      print_disp_state("...disp_state_menu_option_3");
       u8g2.clearBuffer();
       lcd_message("option 3", MC_DATUM);
       u8g2.sendBuffer();
     },
     NULL, NULL);
-
+//---------------------------------------------------------------
 State disp_state_menu_option_selected(
     [] {
-      DEBUG("...disp_state_menu_option_selected");
+      print_disp_state("...disp_state_menu_option_selected");
       u8g2.clearBuffer();
       lcd_message("selected!", MC_DATUM);
       u8g2.sendBuffer();
     },
     NULL, NULL);
+//---------------------------------------------------------------
 
-
-Fsm display_state(&disp_state_stopped_screen);
+Fsm display_state(&disp_state_searching);
 
 void add_disp_state_transitions()
 {
+  // searcing
+  display_state.add_transition(&disp_state_searching, &disp_state_stopped_screen, DISP_EV_CONNECTED, NULL);
+  // disconnected
+  display_state.add_transition(&disp_state_stopped_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
+  display_state.add_transition(&disp_state_moving_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
   // main - stopped
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_menu_option_1, DISP_EV_BUTTON_CLICK, NULL);
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_REFRESH, NULL);
@@ -104,6 +125,13 @@ char *get_event_name(DispStateEvent ev)
   default:
     return "Unhandled event";
   }
+}
+
+void print_disp_state(const char *state_name)
+{
+#ifdef PRINT_DISP_STATE
+  DEBUG(state_name);
+#endif
 }
 
 void display_state_event(DispStateEvent ev)

@@ -1,5 +1,6 @@
 
 void send_config_packet_to_board();
+void manage_retries(uint8_t retries);
 
 //------------------------------------------------------------------
 void packet_available_cb(uint16_t from_id, uint8_t type)
@@ -39,6 +40,8 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
     DEBUGVAL(from_id, board_packet.id, since_sent_to_board);
     break;
   }
+
+  comms_state_event(EV_COMMS_CONNECTED);
 }
 //------------------------------------------------------------------
 
@@ -56,20 +59,8 @@ void send_control_packet_to_board()
   memcpy(bs, &controller_packet, sizeof(ControllerData));
 
   uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ PacketType::CONTROL, bs, sizeof(ControllerData), NUM_RETRIES);
-  retry_log.add(retries > 0);
 
-  if (retries > 0)
-  {
-#ifdef PRINT_COMMS_DEBUG    
-    DEBUGVAL(retries);
-#endif
-    stats.num_packets_with_retries++;
-    send_to_display_event_queue(DISP_EV_REFRESH);
-  }
-  if (retries >= NUM_RETRIES)
-  {
-    stats.total_failed++;
-  }
+  manage_retries(retries);
 
   controller_packet.command = 0;
   controller_packet.id++;
@@ -86,4 +77,36 @@ void send_config_packet_to_board()
     DEBUGVAL(retries);
   }
   controller_packet.id++;
+}
+//------------------------------------------------------------------
+
+float old_retry_rate = 0.0;
+
+void manage_retries(uint8_t retries)
+{
+  if (comms_session_started)
+  {
+    retry_log.add(retries > 0);
+
+    float retry_rate = retry_log.get();
+
+    if (retries > 0)
+    {
+#ifdef PRINT_COMMS_DEBUG
+      DEBUGVAL(retries);
+#endif
+      stats.num_packets_with_retries++;
+      send_to_display_event_queue(DISP_EV_REFRESH);
+      if (retries >= NUM_RETRIES)
+      {
+        stats.total_failed++;
+        comms_state_event(EV_COMMS_DISCONNECTED);
+      }
+    }
+    else if (old_retry_rate != retry_rate)
+    {
+      old_retry_rate = retry_rate;
+      send_to_display_event_queue(DISP_EV_REFRESH);
+    }
+  }
 }
