@@ -5,6 +5,10 @@
 xQueueHandle xQueue1;
 xQueueHandle xQueue2;
 
+SemaphoreHandle_t x_Semaphore1;
+// SemaphoreHandle_t xSemaphore2;
+
+
 //---------------------------------------------------------------------
 void send_to_queue1(uint8_t ev)
 {
@@ -39,22 +43,23 @@ uint8_t read_from_queue2(TickType_t ticks)
 void task_1(void *pvParameters)
 {
   Serial.printf("task_1 running on core %d\n", xPortGetCoreID());
-  elapsedMillis since_task_1 = 0;
+  elapsedMillis since_task_1 = 5000;
 
   while (true)
   {
-    if (since_task_1 > 2300)
+    if (since_task_1 > 10000)
     {
+      Serial.printf("task_1 at %lu\n", since_task_1);
       since_task_1 = 0;
-      Serial.printf("task_1\n");
 
-      Serial.printf("starting read (task_1)\n");
-      read_from_queue1(2000);
-      Serial.printf("finished read (task_1)\n");
-
-      // Serial.printf("starting 4s delay (task_1)\n");
-      // delay(4000);
-      // Serial.printf("finished 4s delay (task_1)\n");
+      Serial.printf("starting take (task_1)\n");
+      if (x_Semaphore1 != NULL && xSemaphoreTake(x_Semaphore1, (TickType_t) 10) == pdTRUE)
+      {
+        vTaskDelay(4000);
+        xSemaphoreGive(x_Semaphore1);
+      }
+      // read_from_queue1(2000);
+      Serial.printf("finished take (task_1)\n");
     }
     vTaskDelay(10);
   }
@@ -70,8 +75,16 @@ void task_2(void *pvParameters)
   {
     if (since_task_2 > 1000)
     {
+      Serial.printf("task_2 at %lu\n", since_task_2);
       since_task_2 = 0;
-      Serial.printf("task_2\n");
+
+      if (x_Semaphore1 != NULL && xSemaphoreTake(x_Semaphore1, (TickType_t) 10) == pdTRUE)
+      {
+        Serial.printf("Got semaphore task_2\n");
+        vTaskDelay(2000);
+        xSemaphoreGive(x_Semaphore1);
+        Serial.printf("Finished with semaphore task_2\n");
+      }
     }
     vTaskDelay(10);
   }
@@ -88,6 +101,9 @@ void setup()
 
   xQueue1 = xQueueCreate(1, sizeof(uint8_t));
   xQueue2 = xQueueCreate(1, sizeof(uint8_t));
+
+  x_Semaphore1 = xSemaphoreCreateMutex();
+  // xSemaphore2 = xSemaphoreCreateMutex();
 }
 
 void loop()
