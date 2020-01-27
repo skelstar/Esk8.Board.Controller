@@ -137,7 +137,7 @@ uint8_t read_from_(xQueueHandle queue)
 #include <screens.h>
 #include <menu_system.h>
 #include <comms_connected_state.h>
-#include <comms_2.h>
+#include <nrf_comms.h>
 
 #include <core0.h>
 #include <core1.h>
