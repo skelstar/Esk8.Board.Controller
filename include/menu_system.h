@@ -136,7 +136,7 @@ void add_disp_state_transitions()
   display_state.add_timed_transition(&disp_state_menu_option_selected, &disp_state_stopped_screen, OPTION_SELECTED_TIMEOUT, NULL);
 }
 
-char *get_event_name(DispStateEvent ev)
+const char *get_event_name(DispStateEvent ev)
 {
   switch (ev)
   {

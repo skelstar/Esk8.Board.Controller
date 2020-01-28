@@ -9,8 +9,6 @@ void display_task_0(void *pvParameters)
 
   Serial.printf("display_task_0 running on core %d\n", xPortGetCoreID());
 
-  int i = 0;
-
   while (true)
   {
     display_state.run_machine();

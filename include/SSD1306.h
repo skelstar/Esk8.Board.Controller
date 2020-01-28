@@ -141,37 +141,6 @@ void lcd_medium_float_text(
   u8g2.drawStr(LCD_HEIGHT - width, y, buff2);
 }
 //--------------------------------------------------------------------------------
-void lcd_paramText(uint8_t x, uint8_t y, char *paramtext, float val1, float val2)
-{
-  u8g2.setFontPosTop();
-  char buffx[8];
-  char buff1[8]; // Buffer big enough for 7-character float
-  char buff2[8]; // Buffer big enough for 7-character float
-  sprintf(buffx, paramtext, getFloatString(buff1, val1, 4, 0), getFloatString(buff2, val2, 2, 1));
-  u8g2.setFont(FONT_SIZE_MED); // full
-  int width = u8g2.getStrWidth(buffx);
-  u8g2.drawStr(x, y, buffx);
-}
-//--------------------------------------------------------------------------------
-void lcd_line_text(uint8_t x, uint8_t y, char *text, bool vertical_centered, bool horizontal_centered)
-{
-  if (vertical_centered)
-  {
-    u8g2.setFontPosCenter();
-  }
-  else
-  {
-    u8g2.setFontPosTop();
-  }
-  u8g2.setFont(FONT_SIZE_MED); // full
-  if (horizontal_centered)
-  {
-    int width = u8g2.getStrWidth(text);
-    x = u8g2.getWidth() / 2 - width / 2;
-  }
-  u8g2.drawStr(x, y, text);
-}
-//--------------------------------------------------------------------------------
 void lcd_message(char *message)
 {
   // vTaskSuspendAll();

@@ -33,7 +33,7 @@ uint8_t printDot(uint8_t num_dots)
 //   return percent;
 // }
 
-char* reason_toString(ReasonType reason)
+const char* reason_toString(ReasonType reason)
 {
   switch (reason)
   {
