@@ -2,6 +2,34 @@
 #include <Fsm.h>
 #endif
 
+
+enum DispStateEvent
+{
+  DISP_EV_NO_EVENT = 0,
+  DISP_EV_CONNECTED,
+  DISP_EV_DISCONNECTED,
+  DISP_EV_BUTTON_CLICK,
+  DISP_EV_MENU_OPTION_SELECT,
+  DISP_EV_REFRESH,
+  DISP_EV_STOPPED,
+  DISP_EV_MOVING,
+};
+
+void send_to_display_event_queue(DispStateEvent ev, TickType_t ticks = 10)
+{
+  xQueueSendToFront(xDisplayChangeEventQueue, &ev, ticks);
+}
+
+DispStateEvent read_from_display_event_queue(TickType_t ticks = 5)
+{
+  DispStateEvent e;
+  if (xDisplayChangeEventQueue != NULL && xQueueReceive(xDisplayChangeEventQueue, &e, ticks) == pdPASS)
+  {
+    return e;
+  }
+  return DISP_EV_NO_EVENT;
+}
+
 void print_disp_state(const char *state_name);
 void display_state_event(DispStateEvent ev);
 
