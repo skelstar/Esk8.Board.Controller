@@ -80,8 +80,6 @@ TriggerLib trigger(
     /*deadzone*/ 10);
 //------------------------------------------------------------------
 
-
-
 // uint8_t read_from_(xQueueHandle queue)
 // {
 // }
@@ -114,6 +112,8 @@ void setup()
   retry_log.begin(SMOOTHED_AVERAGE, LOG_LENGTH_MILLIS / SEND_TO_BOARD_INTERVAL);
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
+
+  print_build_status();
 
   controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
   controller_config.throttle_smoothing_period = 2000; // ignored for now

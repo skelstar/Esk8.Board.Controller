@@ -1,13 +1,4 @@
 
-void powerpins_init()
-{
-  // encoder
-  // pinMode(ENCODER_PWR_PIN, OUTPUT);
-  // digitalWrite(ENCODER_PWR_PIN, HIGH);
-  // pinMode(ENCODER_GND_PIN, OUTPUT);
-  // digitalWrite(ENCODER_GND_PIN, LOW);
-}
-
 uint8_t printDot(uint8_t num_dots)
 {
   if (num_dots++ < 60)
@@ -18,20 +9,6 @@ uint8_t printDot(uint8_t num_dots)
   Serial.printf(".\n");
   return 0;
 }
-
-// uint8_t getBatteryPercentage(float voltage) {
-//   float voltsLeft = voltage - BATTERY_VOLTAGE_CUTOFF_END;
-//   float voltsAvail = BATTERY_VOLTAGE_FULL - BATTERY_VOLTAGE_CUTOFF_END;
-
-//   uint8_t percent = 0;
-//   if ( voltage > BATTERY_VOLTAGE_CUTOFF_END ) { 
-//     percent = (voltsLeft /  voltsAvail) * 100;
-//   }
-//   if (percent > 100) {
-//     percent = 100;
-// 	}
-//   return percent;
-// }
 
 const char* reason_toString(ReasonType reason)
 {
@@ -54,52 +31,18 @@ const char* reason_toString(ReasonType reason)
   }
 }
 
-bool print_throttle_flag = false;
-
-void print_throttle(uint8_t target)
-{
-  if (target != controller_packet.throttle || print_throttle_flag)
-  {
-    print_throttle_flag = true;
-    Serial.printf("target: %d t: %d ", target, controller_packet.throttle);
-    Serial.println();
-    if (target == controller_packet.throttle) 
-    {
-      print_throttle_flag = false;
-    }
-  }
-}
-
 void print_build_status()
 {
   Serial.printf("\n");
-  Serial.printf("/********************************************************\n");
-
 #ifdef RELEASE_BUILD
-
+  Serial.printf("-----------------------------------------------");
   Serial.printf("               RELEASE BUILD!! \n");
-
-#else
-
-#ifdef USE_TEST_VALUES
-  Serial.printf("               WARNING: Using test values!            \n");
+  Serial.printf("-----------------------------------------------");
 #endif
-#ifdef PRINT_BOARD_FSM_EVENT
-  Serial.printf("               WARNING: PRINT_BOARD_FSM_EVENT\n");
+#ifdef DEBUG_BUILD
+  Serial.printf("-----------------------------------------------");
+  Serial.printf("               RELEASE BUILD!! \n");
+  Serial.printf("-----------------------------------------------");
 #endif
-#ifdef PRINT_BOARD_FSM_STATE_NAME
-  Serial.printf("               WARNING: PRINT_BOARD_FSM_STATE\n");
-#endif
-#ifdef PRINT_TRIGGER_VALUE
-  Serial.printf("               WARNING: PRINT_TRIGGER_VALUE\n");
-#endif
-#ifdef PACKET_RECV_DEBUG_ENABLED
-  Serial.printf("               WARNING: PACKET_RECV_DEBUG_ENABLED\n");
-#endif
-#ifdef DEBUG_PRINT_STATE_NAME_ENABLED
-  Serial.printf("               WARNING: DEBUG_PRINT_STATE_NAME_ENABLED\n");
-#endif
-#endif
-  Serial.printf("/********************************************************/\n");
   Serial.printf("\n");
 }
