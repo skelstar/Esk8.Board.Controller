@@ -1,3 +1,5 @@
+#ifndef UNIT_TEST
+
 #ifdef DEBUG_SERIAL
 #define DEBUG_OUT Serial
 #endif
@@ -66,27 +68,8 @@ enum DeadmanEvent
 
 //------------------------------------------------------------
 
-// prototypes
-void send_to_deadman_event_queue(DeadmanEvent e);
-
-//------------------------------------------------------------
 xQueueHandle xDeadmanQueueEvent;
 xQueueHandle xDisplayChangeEventQueue;
-
-DeadmanEvent read_from_deadman_event_queue()
-{
-  DeadmanEvent e;
-  if (xDeadmanQueueEvent != NULL && xQueueReceive(xDeadmanQueueEvent, &e, (TickType_t)5) == pdPASS)
-  {
-    if (e == EV_DEADMAN_NO_EVENT)
-    {
-      // error
-      DEBUG("ERROR: EV_DEADMAN_NO_EVENT received!");
-    }
-    return e;
-  }
-  return EV_DEADMAN_NO_EVENT;
-}
 //------------------------------------------------------------------
 #include <TriggerLib.h>
 void trigger_changed_cb();
@@ -98,43 +81,20 @@ TriggerLib trigger(
 //------------------------------------------------------------------
 
 
-enum DispStateEvent
-{
-  DISP_EV_NO_EVENT = 0,
-  DISP_EV_BUTTON_CLICK,
-  DISP_EV_MENU_OPTION_SELECT,
-  DISP_EV_REFRESH,
-  DISP_EV_STOPPED,
-  DISP_EV_MOVING,
-};
 
-void send_to_display_event_queue(DispStateEvent ev, TickType_t ticks = 10)
-{
-  xQueueSendToFront(xDisplayChangeEventQueue, &ev, ticks);
-}
-
-void send_to_deadman_event_queue(DeadmanEvent ev)
-{
-  xQueueSendToFront(xDeadmanQueueEvent, &ev, pdMS_TO_TICKS(10));
-}
-
-uint8_t read_from_(xQueueHandle queue)
-{
-  uint8_t e;
-  if (queue != NULL && xQueueReceive(queue, &e, (TickType_t)5) == pdPASS)
-  {
-    return e;
-  }
-  return e;
-}
+// uint8_t read_from_(xQueueHandle queue)
+// {
+// }
 
 #include <utils.h>
 #include <features/deadman.h>
 #include <screens.h>
 #include <menu_system.h>
-#include <comms_2.h>
+#include <comms_connected_state.h>
+#include <nrf_comms.h>
 
-#include <core0.h>
+#include <display_task_0.h>
+#include <features/battery_measure.h>
 #include <core1.h>
 
 #include <peripherals.h>
@@ -178,6 +138,8 @@ void setup()
 
   button0_init();
 
+  add_comms_state_transitions();
+
   DEBUG("Ready to rx from board...and stuff");
 }
 
@@ -195,6 +157,8 @@ void loop()
     send_control_packet_to_board();
   }
 
+  comms_state_fsm.run_machine();
+
   nrf24.update();
 
   button0.loop();
@@ -202,3 +166,5 @@ void loop()
   vTaskDelay(10);
 }
 //------------------------------------------------------------------
+
+#endif

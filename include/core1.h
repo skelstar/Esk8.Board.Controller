@@ -38,6 +38,8 @@ void update_deadman()
     trigger.deadman_held = false;
     send_to_display_event_queue(DISP_EV_REFRESH);
     break;
+  default:
+    break;
   }
 #else
   deadman_held = true;
