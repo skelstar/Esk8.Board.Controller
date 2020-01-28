@@ -163,7 +163,12 @@ void task_queue_reader(void *pvParameters)
   }
   vTaskDelete(NULL);
 }
+//---------------------------------------------------------------------
 
+void vTimer1_cb( TimerHandle_t xTimer )
+{
+  Serial.printf("Timer1!\n");
+}
 //---------------------------------------------------------------------
 
 void setup()
@@ -175,11 +180,22 @@ void setup()
   xTaskCreatePinnedToCore(task_queue_peeker, "task_queue_peeker", 4092, NULL, /*priority*/ 2, NULL, 1);
   xTaskCreatePinnedToCore(task_queue_reader, "task_queue_reader", 4092, NULL, /*priority*/ 2, NULL, 1);
 
+  xTimerHandle xTimer1 = xTimerCreate("xTimer1", 100, pdTRUE, (void*) 0, vTimer1_cb);
+  if (xTimer1 != NULL)
+  {
+    if (xTimerStart(xTimer1, 0) != pdPASS)
+    {
+      Serial.printf("xTimer1 could not be started\n");
+    }
+  }
+
   xQueue1 = xQueueCreate(1, sizeof(uint8_t));
   xQueue2 = xQueueCreate(1, sizeof(uint8_t));
 
   xTheSemaphore = xSemaphoreCreateMutex();
   // xSemaphore2 = xSemaphoreCreateMutex();
+
+  vTaskStartScheduler();
 }
 
 void loop()
