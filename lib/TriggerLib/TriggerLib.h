@@ -21,7 +21,7 @@ public:
   {
     _deadzone = deadzone;
     _pin = trigger_pin;
-    deadman_held = true;
+    deadman_held = false;
     _triggerStateChangeCallback = triggerStateChangeCallback;
   }
   //-----------------------------------------------------
@@ -87,11 +87,17 @@ public:
     {
     case IDLE_STATE:
       max_throttle = 127;
-      if (deadman_held)
+      if (deadman_held && raw < 127 + _safe_deadzone)
       {
         t_state = GO_STATE;
         state_changed = true;
         max_throttle = 255;
+      }
+      else if (raw >= 127 + _safe_deadzone)
+      {
+        t_state = WAIT_STATE;
+        state_changed = true;
+        max_throttle = 127;
       }
       break;
     case GO_STATE:
@@ -104,8 +110,9 @@ public:
       }
       break;
     case WAIT_STATE:
-      if (raw <= 127)
+      if (raw <= 127 + _safe_deadzone)
       {
+        DEBUGVAL(raw);
         t_state = deadman_held ? GO_STATE : IDLE_STATE;
         state_changed = true;
         max_throttle = t_state == GO_STATE ? 255 : 127;
@@ -155,7 +162,7 @@ public:
   bool deadman_held;
   bool waiting_for_idle_throttle;
   uint8_t max_throttle;
-  TriggerState t_state;
+  TriggerState t_state = IDLE_STATE;
 
 private:
   uint16_t get_raw()
@@ -172,6 +179,7 @@ private:
   bool _calibrated = false;
   bool _can_accelerate = true;
   uint8_t _deadzone; // either side of centre
+  const uint8_t _safe_deadzone = 5;
   uint8_t _pin;
 };
 
