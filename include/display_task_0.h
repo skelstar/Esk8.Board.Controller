@@ -1,4 +1,6 @@
 
+bool display_task_initialised = false;
+
 void display_task_0(void *pvParameters)
 {
   elapsedMillis since_updated_display;
@@ -11,6 +13,8 @@ void display_task_0(void *pvParameters)
 
   while (true)
   {
+    display_task_initialised = true;
+
     display_state.run_machine();
 
     DispStateEvent ev = read_from_display_event_queue();

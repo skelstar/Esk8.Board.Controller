@@ -116,7 +116,6 @@ void setup()
   print_build_status();
 
   controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
-  controller_config.throttle_smoothing_period = 2000; // ignored for now
   send_config_packet_to_board();
 
   trigger.initialise();
@@ -140,7 +139,10 @@ void setup()
 
   add_comms_state_transitions();
 
-  DEBUG("Ready to rx from board...and stuff");
+  while (!display_task_initialised)
+  {
+    vTaskDelay(10);
+  }
 }
 
 void loop()
