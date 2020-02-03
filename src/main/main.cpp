@@ -25,6 +25,7 @@
 #define DEADMAN_PIN 17
 #define TRIGGER_ANALOG_PIN 13
 
+
 //------------------------------------------------------------------
 
 VescData board_packet;
