@@ -49,7 +49,7 @@ elapsedMillis since_sent_request;
 
 void send_control_packet_to_board()
 {
-  if (since_sent_request > 5000)
+  if (since_sent_request > 5000 || comms_state_connected == false)
   {
     since_sent_request = 0;
     controller_packet.command = 1; // REQUEST
