@@ -94,8 +94,6 @@ public:
     }
   }
   //-----------------------------------------------------
-  // returns true if state changed
-  //-----------------------------------------------------
   bool update_state(uint8_t raw)
   {
     bool state_changed = false;
@@ -180,7 +178,7 @@ public:
   bool waiting_for_idle_throttle;
   uint8_t max_throttle;
   TriggerState t_state = IDLE_STATE;
-  ThrottleMode throttle_mode = THROTTLE_MODE_DEADMAN;
+  ThrottleMode throttle_mode = THROTTLE_MODE_PUSH_TO_START;
 
 private:
   uint16_t get_raw()

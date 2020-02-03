@@ -69,9 +69,12 @@ State disp_state_menu_option_throttle_mode(
       switch (trigger.throttle_mode)
       {
         case THROTTLE_MODE_DEADMAN:
-          lcd_message("push-to-start?", MC_DATUM);
+          lcd_message("throttle:", TC_DATUM);
+          lcd_message("push to?", MC_DATUM);
+          lcd_message("start?", MC_DATUM);
           break;
         case THROTTLE_MODE_PUSH_TO_START:
+          lcd_message("throttle:", TC_DATUM);
           lcd_message("deadman?", MC_DATUM);
           break;
       }
