@@ -92,9 +92,6 @@ void manage_retries(uint8_t retries)
 
     if (retries > 0)
     {
-#ifdef PRINT_COMMS_DEBUG
-      DEBUGVAL(retries);
-#endif
       stats.num_packets_with_retries++;
       send_to_display_event_queue(DISP_EV_REFRESH);
       if (retries >= NUM_RETRIES)

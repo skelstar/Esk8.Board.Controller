@@ -62,38 +62,39 @@ State disp_state_moving_screen(
     },
     NULL, NULL);
 //---------------------------------------------------------------
-State disp_state_menu_option_1(
+State disp_state_menu_option_throttle_mode(
     [] {
-      print_disp_state("...disp_state_menu_option_1");
+      print_disp_state("...disp_state_menu_option_throttle_mode");
       u8g2.clearBuffer();
-      lcd_message("option 1", MC_DATUM);
+      switch (trigger.throttle_mode)
+      {
+        case THROTTLE_MODE_DEADMAN:
+          lcd_message("push-to-start?", MC_DATUM);
+          break;
+        case THROTTLE_MODE_PUSH_TO_START:
+          lcd_message("deadman?", MC_DATUM);
+          break;
+      }
       u8g2.sendBuffer();
     },
     NULL, NULL);
 //---------------------------------------------------------------
-State disp_state_menu_option_2(
+State disp_state_menu_option_throttle_mode_selected(
     [] {
-      print_disp_state("...disp_state_menu_option_2");
+      print_disp_state("...disp_state_menu_option_throttle_mode_selected");
       u8g2.clearBuffer();
-      lcd_message("option 2", MC_DATUM);
-      u8g2.sendBuffer();
-    },
-    NULL, NULL);
-//---------------------------------------------------------------
-State disp_state_menu_option_3(
-    [] {
-      print_disp_state("...disp_state_menu_option_3");
-      u8g2.clearBuffer();
-      lcd_message("option 3", MC_DATUM);
-      u8g2.sendBuffer();
-    },
-    NULL, NULL);
-//---------------------------------------------------------------
-State disp_state_menu_option_selected(
-    [] {
-      print_disp_state("...disp_state_menu_option_selected");
-      u8g2.clearBuffer();
-      lcd_message("selected!", MC_DATUM);
+      switch (trigger.throttle_mode)
+      {
+        case THROTTLE_MODE_DEADMAN:
+          trigger.throttle_mode = THROTTLE_MODE_PUSH_TO_START;
+          lcd_message("push-to-start", MC_DATUM);
+          break;
+        case THROTTLE_MODE_PUSH_TO_START:
+          trigger.throttle_mode = THROTTLE_MODE_DEADMAN;
+          lcd_message("deadman", MC_DATUM);
+          break;
+      }
+      lcd_message("selected!", BC_DATUM);
       u8g2.sendBuffer();
     },
     NULL, NULL);
@@ -109,8 +110,8 @@ void add_disp_state_transitions()
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
   // main - stopped
-  display_state.add_transition(&disp_state_stopped_screen, &disp_state_menu_option_1, DISP_EV_BUTTON_CLICK, NULL);
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_REFRESH, NULL);
+  display_state.add_transition(&disp_state_stopped_screen, &disp_state_menu_option_throttle_mode, DISP_EV_BUTTON_CLICK, NULL);
 
   // moving
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_moving_screen, DISP_EV_MOVING, NULL);
@@ -121,19 +122,11 @@ void add_disp_state_transitions()
   const uint16_t OPTION_SCREEN_TIMEOUT = 2000;
   const uint16_t OPTION_SELECTED_TIMEOUT = 1000;
   // option 1
-  display_state.add_timed_transition(&disp_state_menu_option_1, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
-  display_state.add_transition(&disp_state_menu_option_1, &disp_state_menu_option_2, DISP_EV_BUTTON_CLICK, NULL);
-  display_state.add_transition(&disp_state_menu_option_1, &disp_state_menu_option_selected, DISP_EV_MENU_OPTION_SELECT, NULL);
-  // option 2
-  display_state.add_timed_transition(&disp_state_menu_option_2, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
-  display_state.add_transition(&disp_state_menu_option_2, &disp_state_menu_option_3, DISP_EV_BUTTON_CLICK, NULL);
-  display_state.add_transition(&disp_state_menu_option_2, &disp_state_menu_option_selected, DISP_EV_MENU_OPTION_SELECT, NULL);
-  // option 3
-  display_state.add_timed_transition(&disp_state_menu_option_3, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
-  display_state.add_transition(&disp_state_menu_option_3, &disp_state_stopped_screen, DISP_EV_BUTTON_CLICK, NULL);
-  display_state.add_transition(&disp_state_menu_option_3, &disp_state_menu_option_selected, DISP_EV_MENU_OPTION_SELECT, NULL);
-  // option selected
-  display_state.add_timed_transition(&disp_state_menu_option_selected, &disp_state_stopped_screen, OPTION_SELECTED_TIMEOUT, NULL);
+  display_state.add_timed_transition(&disp_state_menu_option_throttle_mode, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
+  display_state.add_transition(&disp_state_menu_option_throttle_mode, &disp_state_stopped_screen, DISP_EV_BUTTON_CLICK, NULL);
+  display_state.add_transition(&disp_state_menu_option_throttle_mode, &disp_state_menu_option_throttle_mode_selected, DISP_EV_MENU_OPTION_SELECT, NULL);
+  // option  1selected
+  display_state.add_timed_transition(&disp_state_menu_option_throttle_mode_selected, &disp_state_stopped_screen, OPTION_SELECTED_TIMEOUT, NULL);
 }
 
 const char *get_event_name(DispStateEvent ev)

@@ -14,7 +14,7 @@ void read_trigger()
   update_deadman();
   uint8_t old_throttle = controller_packet.throttle;
 
-  controller_packet.throttle = trigger.get_safe_throttle();
+  controller_packet.throttle = trigger.get_safe_throttle(board_packet.moving);
 
 #ifdef PRINT_THROTTLE
   DEBUGVAL(controller_packet.throttle, deadman_held);

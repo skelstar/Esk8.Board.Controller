@@ -12,6 +12,12 @@ enum TriggerState
   WAIT_STATE
 };
 
+enum ThrottleMode
+{
+  THROTTLE_MODE_DEADMAN,
+  THROTTLE_MODE_PUSH_TO_START
+};
+
 class TriggerLib
 {
   typedef void (*TriggerStateChangeCallback)();
@@ -71,10 +77,21 @@ public:
   }
 
   //-----------------------------------------------------
-  uint8_t get_safe_throttle()
+  uint8_t get_safe_throttle(bool moving)
   {
     uint8_t raw = _get_raw_throttle();
-    return make_throttle_safe(raw);
+    switch(throttle_mode)
+    {
+      case THROTTLE_MODE_DEADMAN:
+        return make_throttle_safe(raw);
+
+      case THROTTLE_MODE_PUSH_TO_START:
+        if (moving || raw <= 127)
+        {
+          return _get_raw_throttle();
+        }
+        return 127;
+    }
   }
   //-----------------------------------------------------
   // returns true if state changed
@@ -163,6 +180,7 @@ public:
   bool waiting_for_idle_throttle;
   uint8_t max_throttle;
   TriggerState t_state = IDLE_STATE;
+  ThrottleMode throttle_mode = THROTTLE_MODE_DEADMAN;
 
 private:
   uint16_t get_raw()
