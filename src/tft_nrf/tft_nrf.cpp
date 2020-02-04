@@ -6,15 +6,10 @@
 
 #include <Arduino.h>
 #include <elapsedMillis.h>
+#include <VescData.h>
 
 #include <SPI.h>
-#include <RF24Network.h>
-#include <NRF24L01Lib.h>
-// #include <TFT_eSPI.h>
-#include <Adafruit_GFX.h>
-// #include <Arduino_ST7789.h>
-#include <Adafruit_ST7789.h>
-
+#include <TFT_eSPI.h>
 
 // #define TFT_MOSI  19   // for hardware SPI data pin (all of available pins)
 // #define TFT_SCLK  18   // for hardware SPI sclk pin (all of available pins)
@@ -22,11 +17,17 @@
 #define TFT_DC    16
 #define TFT_RST   23 
 
-#define NRF_MOSI 23 // blue?
-#define NRF_MISO 19 // orange?
-#define NRF_CLK 18  // yellow
-#define NRF_CS 12 // green
-#define NRF_CE 16 // same as tft 15 // white
+// HSPI
+#define NRF_MOSI 13 // blue?
+#define NRF_MISO 12 // orange?
+#define NRF_CLK 15  // yellow
+#define NRF_CS 33 // green
+#define NRF_CE 26 // white
+// #define NRF_MOSI 23 // blue?
+// #define NRF_MISO 19 // orange?
+// #define NRF_CLK 18  // yellow
+// #define NRF_CS 12 // green
+// #define NRF_CE 16 // same as tft 15 // white
 
 #define COMMS_BOARD 00
 #define COMMS_CONTROLLER 01
@@ -40,26 +41,18 @@ const uint16_t  Display_Color_Magenta      = 0xF81F;
 const uint16_t  Display_Color_Yellow       = 0xFFE0;
 const uint16_t  Display_Color_White        = 0xFFFF;
 //------------------------------------------------------------------
+#include <SPI.h>
+#include <NRFLite.h>
 
-NRF24L01Lib nrf24;
+VescData vesc_data;
 
-RF24 radio(NRF_CE, NRF_CS);
-RF24Network network(radio);
+NRFLite _radio(Serial);
 
 void packet_available_cb(uint16_t from_id, uint8_t type)
 {
 }
 
-// TFT_eSPI tft = TFT_eSPI(135, 240); // Invoke custom library
-// Arduino_ST7789 tft = Arduino_ST7789(TFT_DC, TFT_RST, TFT_CS);
-
-// #if (SPI_INTERFACES_COUNT == 1)
-  SPIClass* spi = &SPI;
-// #else
-//   SPIClass* spi = &SPI1;
-// #endif
-
-Adafruit_ST7789 tft = Adafruit_ST7789(spi, TFT_CS, TFT_DC, TFT_RST);
+TFT_eSPI tft = TFT_eSPI(135, 240); // Invoke custom library
 
 elapsedMillis since_sent_to_board;
 
@@ -78,7 +71,8 @@ void init_tft()
 void init_nrf()
 {
   DEBUG("setup_nrf()");
-  nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
+  _radio.init(0, NRF_CE, NRF_CS, NRFLite::BITRATE250KBPS);
+  _radio.printDetails();
 }
 
 //------------------------------------------------------------------
@@ -96,6 +90,13 @@ void setup()
 //------------------------------------------------------------------
 void loop()
 {
+  while (_radio.hasData())
+  {
+    _radio.readData(&vesc_data);
+
+    DEBUGVAL("packet!", vesc_data.id);
+  }
+
   vTaskDelay(100);
 }
 //------------------------------------------------------------------
