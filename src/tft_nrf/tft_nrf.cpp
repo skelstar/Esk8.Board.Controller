@@ -54,7 +54,7 @@ void setup()
 
   delay(500);
 
-  if (!_radio.init(RADIO_ID, NRF_CE, NRF_CS))
+  if (!_radio.init(RADIO_ID, NRF_MISO, NRF_MOSI, NRF_CLK, NRF_CE, NRF_CS, NRFLite::BITRATE2MBPS, 100))
   {
     Serial.println("Cannot communicate with radio");
     while (1)
