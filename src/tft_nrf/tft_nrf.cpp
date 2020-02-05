@@ -53,9 +53,9 @@ void init_tft()
   tft.init();
   tft.setRotation(1);       // 0 is portrait
   tft.fillScreen(TFT_BLUE); // Clear screen
+  tft.setTextColor(TFT_WHITE, TFT_BLUE);
   tft.setTextSize(3);
   tft.drawString("ready", 20, 20);
-  tft.setRotation(2);
   pinMode(4, OUTPUT);
   digitalWrite(4, HIGH); // Backlight on
 
@@ -83,10 +83,25 @@ void setup()
 
 #include <elapsedMillis.h>
 
-elapsedMillis since_sent = 0, since_waiting = 0;
+elapsedMillis since_sent = 0, since_waiting = 0, since_tft_update;
+uint8_t counter;
 
 void loop()
 {
+  if (since_tft_update > 2000)
+  {
+    since_tft_update = 0;
+    char buff[20];
+    sprintf(buff, "count: %d", counter++);
+    if (counter == 255)
+    {
+      counter = 0;
+    }
+
+    tft.drawString(buff, 20, 20);
+  }
+
+
   if (since_sent > 1000)
   {
     since_sent = 0;
@@ -112,8 +127,7 @@ void loop()
     }
     else
     {
-      Serial.println("...failed to send :(");
-      _radioData.FailedTxCount++;
+      DEBUGVAL("...failed to send :(", ++_radioData.FailedTxCount);
     }
   }
 }
