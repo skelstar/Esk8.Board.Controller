@@ -1,101 +1,100 @@
-#ifdef SERIAL__DEBUG
-#define DEBUG_OUT Serial
-#endif
-#define PRINTSTREAM_FALLBACK
-#include "Debug.hpp"
+/*
 
-#include <Arduino.h>
-#include <elapsedMillis.h>
+Demonstrates simple RX and TX operation.
+Any of the Basic_TX examples can be used as a transmitter.
+Please read through 'NRFLite.h' for a description of all the methods available in the library.
 
-#include <VescData.h>
+Radio    Arduino
+CE    -> 9
+CSN   -> 10 (Hardware SPI SS)
+MOSI  -> 11 (Hardware SPI MOSI)
+MISO  -> 12 (Hardware SPI MISO)
+SCK   -> 13 (Hardware SPI SCK)
+IRQ   -> No connection
+VCC   -> No more than 3.6 volts
+GND   -> GND
+
+*/
+
 #include <SPI.h>
 #include <NRFLite.h>
-#include <TFT_eSPI.h>
 
-// #define TFT_MOSI  19   // for hardware SPI data pin (all of available pins)
-// #define TFT_SCLK  18   // for hardware SPI sclk pin (all of available pins)
-#define TFT_CS 5 // only for displays with CS pin
-#define TFT_DC 16
-#define TFT_RST 23
+static const uint8_t NRF_MOSI = 13; // blue?
+static const uint8_t NRF_MISO = 12; // orange?
+static const uint8_t NRF_CLK = 15;  // yellow
+static const uint8_t NRF_CS = 33; // green
+static const uint8_t NRF_CE = 26; // white
 
-#define NRF_MOSI 23 // blue?
-#define NRF_MISO 19 // orange?
-#define NRF_CLK 18  // yellow
-#define NRF_CS 33   // green
-#define NRF_CE 26   // same as tft 15 // white
+const static uint8_t RADIO_ID = 0;             // Our radio's id.  The transmitter will send to this id.
+const static uint8_t DESTINATION_RADIO_ID = 1; // Id of the radio we will transmit to.
+// const static uint8_t PIN_RADIO_CSN = 33;
+// const static uint8_t PIN_RADIO_CE = 26;
 
-#define COMMS_BOARD 00
-#define COMMS_CONTROLLER 01
-
-const uint16_t Display_Color_Black = 0x0000;
-const uint16_t Display_Color_Blue = 0x001F;
-const uint16_t Display_Color_Red = 0xF800;
-const uint16_t Display_Color_Green = 0x07E0;
-const uint16_t Display_Color_Cyan = 0x07FF;
-const uint16_t Display_Color_Magenta = 0xF81F;
-const uint16_t Display_Color_Yellow = 0xFFE0;
-const uint16_t Display_Color_White = 0xFFFF;
-//------------------------------------------------------------------
-
-// NRF24L01Lib nrf24;
-
-// RF24 radio(NRF_CE, NRF_CS);
-// RF24Network network(radio);
+struct RadioPacket // Any packet up to 32 bytes can be sent.
+{
+  uint8_t FromRadioId;
+  uint32_t OnTimeMillis;
+  uint32_t FailedTxCount;
+};
 
 NRFLite _radio(Serial);
+RadioPacket _radioData;
 
-const static uint8_t RADIO_ID = 0;             // Our radio's id.
-const static uint8_t DESTINATION_RADIO_ID = 1; // Id of the radio we will transmit to.
-
-TFT_eSPI tft = TFT_eSPI(135, 240);
-
-elapsedMillis since_sent_to_board;
-
-//------------------------------------------------------------
-
-void init_tft()
-{
-  DEBUG("-----------------------\nsetup_tft()\n-----------------------");
-
-  tft.init();
-  tft.setRotation(1);       // 0 is portrait
-  tft.fillScreen(TFT_BLUE); // Clear screen
-  tft.setTextSize(3);
-  tft.drawString("ready", 20, 20);
-}
-
-//------------------------------------------------------------
-
-void init_nrf()
-{
-  DEBUG("-----------------------\nsetup_nrf()\n-----------------------");
-  _radio.init(RADIO_ID, NRF_MISO, NRF_MOSI, NRF_CLK, NRF_CE, NRF_CS, NRFLite::BITRATE250KBPS, 100);
-  _radio.printDetails();
-}
-
-//------------------------------------------------------------------
 void setup()
 {
   Serial.begin(115200);
-  delay(100);
 
-  init_tft();
-  delay(1000);
-  init_nrf();
+  // By default, 'init' configures the radio to use a 2MBPS bitrate on channel 100 (channels 0-125 are valid).
+  // Both the RX and TX radios must have the same bitrate and channel to communicate with each other.
+  // You can run the 'ChannelScanner' example to help select the best channel for your environment.
+  // You can assign a different bitrate and channel as shown below.
+  //   _radio.init(RADIO_ID, PIN_RADIO_CE, PIN_RADIO_CSN, NRFLite::BITRATE2MBPS, 100) // THE DEFAULT
+  //   _radio.init(RADIO_ID, PIN_RADIO_CE, PIN_RADIO_CSN, NRFLite::BITRATE1MBPS, 75)
+  //   _radio.init(RADIO_ID, PIN_RADIO_CE, PIN_RADIO_CSN, NRFLite::BITRATE250KBPS, 0)
+
+  delay(500);
+
+  if (!_radio.init(RADIO_ID, NRF_CE, NRF_CS))
+  {
+    Serial.println("Cannot communicate with radio");
+    while (1)
+      ; // Wait here forever.
+  }
 }
-//------------------------------------------------------------------
 
-VescData vesc_data;
+#include <elapsedMillis.h>
+
+elapsedMillis since_sent = 0;
 
 void loop()
 {
   while (_radio.hasData())
   {
-    _radio.readData(&vesc_data);
+    _radio.readData(&_radioData); // Note how '&' must be placed in front of the variable name.
 
-    DEBUGVAL("packet!", vesc_data.id);
+    String msg = "Radio ";
+    msg += _radioData.FromRadioId;
+    msg += ", ";
+    msg += _radioData.OnTimeMillis;
+    msg += " ms, ";
+    msg += _radioData.FailedTxCount;
+    msg += " Failed TX";
+
+    Serial.println(msg);
   }
 
-  vTaskDelay(100);
+  if (since_sent > 1000)
+  {
+    since_sent = 0;
+    _radioData.OnTimeMillis = millis();
+    if (_radio.send(DESTINATION_RADIO_ID, &_radioData, sizeof(_radioData))) // Note how '&' must be placed in front of the variable name.
+    {
+      Serial.println("...Success");
+    }
+    else
+    {
+      Serial.println("...Failed");
+      _radioData.FailedTxCount++;
+    }
+  }
 }
-//------------------------------------------------------------------
