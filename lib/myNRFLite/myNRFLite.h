@@ -3,16 +3,19 @@
 
 #include <Arduino.h>
 #include <nRF24L01.h>
+#ifndef SPI
+#include <SPI.h>
+#endif
 
 class myNRFLite {
 
   public:
-    
+
     // Constructors
     // Optionally pass in an Arduino Serial or SoftwareSerial object for use throughout the library when debugging.
     // Use the debug and debugln DEFINES in NRFLite.cpp to use the serial object.
-    myNRFLite() {}
-    myNRFLite(Stream &serial) : _serial(&serial) {}
+    // myNRFLite() {}
+    myNRFLite(uint8_t miso, uint8_t mosi, uint8_t sclk, uint8_t cs, uint8_t ce, Stream &serial);
     
     enum Bitrates { BITRATE2MBPS, BITRATE1MBPS, BITRATE250KBPS };
     enum SendType { REQUIRE_ACK, NO_ACK };
@@ -26,8 +29,7 @@ class myNRFLite {
     // powerDown  = Power down the radio.  Turn the radio back on by calling one of the 'hasData' or 'send' methods.
     // printDetails  = Prints many of the radio registers.  Requires a serial object in the constructor, e.g. NRFLite _radio(Serial);
     // printChannels = Prints a graph showing received signals across all available channels.  Requires a serial object in the constructor.
-    uint8_t init(uint8_t radioId, uint8_t cePin, uint8_t csnPin, Bitrates bitrate = BITRATE250KBPS, uint8_t channel = 100);
-    uint8_t init(uint8_t radioId, uint8_t miso_pin, uint8_t mosi_pin, uint8_t sclk_pin, uint8_t cePin, uint8_t csnPin, Bitrates bitrate = BITRATE250KBPS, uint8_t channel = 100);
+    uint8_t init(uint8_t radioId, Bitrates bitrate = BITRATE250KBPS, uint8_t channel = 100);
 
 #if defined(__AVR__)
     uint8_t initTwoPin(uint8_t radioId, uint8_t momiPin, uint8_t sckPin, Bitrates bitrate = BITRATE2MBPS, uint8_t channel = 100);
@@ -83,17 +85,19 @@ class myNRFLite {
     enum SpiTransferType { READ_OPERATION, WRITE_OPERATION };
 
     Stream *_serial;
+    SPIClass *_spi;
     volatile uint8_t *_momi_PORT;
     volatile uint8_t *_momi_DDR;
     volatile uint8_t *_momi_PIN;
     volatile uint8_t *_sck_PORT;
     uint8_t _cePin, _csnPin, _momi_MASK, _sck_MASK;
+    uint8_t _miso, _mosi, _sclk;
     volatile uint8_t _resetInterruptFlags;
-    uint8_t _useTwoPinSpiTransfer, _usingSeparateCeAndCsnPins;
     uint16_t _transmissionRetryWaitMicros, _maxHasDataIntervalMicros;
     int16_t _lastToRadioId = -1;
     uint32_t _microsSinceLastDataCheck;
-    
+    uint8_t _useTwoPinSpiTransfer, _usingSeparateCeAndCsnPins;
+
     uint8_t getPipeOfFirstRxPacket();
     uint8_t getRxPacketLength();
     uint8_t initRadio(uint8_t radioId, Bitrates bitrate, uint8_t channel);
@@ -106,7 +110,6 @@ class myNRFLite {
     void writeRegister(uint8_t regName, void* data, uint8_t length);
     void spiTransfer(SpiTransferType transferType, uint8_t regName, void* data, uint8_t length);
     uint8_t usiTransfer(uint8_t data);    
-    uint8_t twoPinTransfer(uint8_t data);
 
     void printRegister(const char name[], uint8_t regName);
 };
