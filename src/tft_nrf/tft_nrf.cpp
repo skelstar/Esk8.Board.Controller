@@ -11,9 +11,9 @@
 #include <SPI.h>
 #include <TFT_eSPI.h>
 
-#define TFT_CS    5 // only for displays with CS pin
-#define TFT_DC    16
-#define TFT_RST   23 
+#define TFT_CS 5 // only for displays with CS pin
+#define TFT_DC 16
+#define TFT_RST 23
 
 //------------------------------------------------------------------
 #include <SPI.h>
@@ -45,7 +45,7 @@ struct RadioPacket // Any packet up to 32 bytes can be sent.
 };
 
 myNRFLite _radio(NRF_MISO, NRF_MOSI, NRF_CLK, NRF_CS, NRF_CE, Serial);
-RadioPacket _radioData;
+RadioPacket _radioData, _rx_data;
 
 //-------------------------------------------------
 void init_tft()
@@ -60,6 +60,20 @@ void init_tft()
   digitalWrite(4, HIGH); // Backlight on
 
   Serial.printf("setup_tft()\n");
+}
+
+unsigned long counter;
+unsigned long timeouts;
+
+void tft_refresh()
+{
+  char buff[20];
+  sprintf(buff, "count: %lu", counter);
+  tft.drawString(buff, 20, 20);
+  sprintf(buff, "tx/f: %d", _radioData.FailedTxCount);
+  tft.drawString(buff, 20, 50);
+  sprintf(buff, "t/o: %lu", timeouts);
+  tft.drawString(buff, 20, 80);
 }
 //-------------------------------------------------
 void setup()
@@ -84,50 +98,41 @@ void setup()
 #include <elapsedMillis.h>
 
 elapsedMillis since_sent = 0, since_waiting = 0, since_tft_update;
-uint8_t counter;
+bool registered_timeout;
 
 void loop()
 {
   if (since_tft_update > 2000)
   {
+    counter++;
     since_tft_update = 0;
-    char buff[20];
-    sprintf(buff, "count: %d", counter++);
-    if (counter == 255)
-    {
-      counter = 0;
-    }
-
-    tft.drawString(buff, 20, 20);
+    tft_refresh();
   }
 
-
-  if (since_sent > 1000)
+  if (since_sent > 200)
   {
     since_sent = 0;
     _radioData.OnTimeMillis = millis();
-    if (_radio.send(DESTINATION_RADIO_ID, &_radioData, sizeof(_radioData))) // Note how '&' must be placed in front of the variable name.
+    if (!_radio.send(DESTINATION_RADIO_ID, &_radioData, sizeof(_radioData), myNRFLite::NO_ACK)) // Note how '&' must be placed in front of the variable name.
     {
-      Serial.printf("...sent\n");
-      since_waiting = 0;
-
-      while (_radio.hasData() == false && since_waiting > 100)
-      {
-      }
-
-      if (_radio.hasData())
-      {
-        Serial.printf(" ... rx after %lums round trip\n", (unsigned long)since_waiting);
-        _radio.readData(&_radioData); // Note how '&' must be placed in front of the variable name.
-      }
-      else
-      {
-        Serial.printf("timed out :(\n");
-      }
+      _radioData.FailedTxCount++;
+      tft_refresh();
+      DEBUGVAL("...failed to send :(", _radioData.FailedTxCount);
     }
-    else
+  }
+
+  if (_radio.hasData())
+  {
+    while (_radio.hasData())
     {
-      DEBUGVAL("...failed to send :(", ++_radioData.FailedTxCount);
+      _radio.readData(&_rx_data);
     }
+  }
+  else if (since_sent > 50 && !registered_timeout)
+  {
+    registered_timeout = true;
+    timeouts++;
+    tft_refresh();
+    Serial.printf("timed out :(\n");
   }
 }
