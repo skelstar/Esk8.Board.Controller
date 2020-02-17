@@ -33,6 +33,14 @@ RF24Network network(radio);
 #define NUM_RETRIES 5
 
 elapsedMillis since_sent_to_board;
+
+//------------------------------------------------------------------
+
+#define LCD_WIDTH 240
+#define LCD_HEIGHT 135
+
+TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
+
 //------------------------------------------------------------------
 
 void packet_available_cb(uint16_t from_id, uint8_t type)
@@ -53,32 +61,64 @@ enum SpiDevice
   TFT_SPI
 };
 
-#define TFT_SPI_FREQUENCY 40000000
-#define TFT_SPI_MODE SPI_MODE3
-
 void set_SPI_to(SpiDevice device)
 {
   if (device == NRF_SPI)
   {
-    SPI.setFrequency(TFT_SPI_FREQUENCY);
-    SPI.setDataMode(TFT_SPI_MODE);
+    DEBUG("device == NRF_SPI");
+    SPI.setClockDivider(SPI_CLOCK_DIV32);
+    SPI.setDataMode(SPI_MODE1);
   }
   else if (device == TFT_SPI)
   {
-    _SPI.setClockDivider(SPI_CLOCK_DIV32);
+    DEBUG("device == TFT_SPI");
+    SPI.setFrequency(4096);
+    SPI.setDataMode(SPI_MODE3);
   }
 }
 //------------------------------------------------------------------
+
+void init_tft()
+{
+  set_SPI_to(TFT_SPI);
+
+  tft.init();
+
+  Serial.printf("tft clk_div: %lu\n", SPI.getClockDivider()); // nrf=20713473, tft=4097
+
+  tft.setRotation(1);       // 0 is portrait
+  tft.fillScreen(TFT_BLUE); // Clear screen
+  tft.setTextColor(TFT_WHITE, TFT_BLUE);
+  tft.setTextSize(3);
+  tft.drawString("ready", 20, 20);
+  pinMode(4, OUTPUT);
+  digitalWrite(4, HIGH); // Backlight on
+
+  DEBUG("setup_tft()");
+}
+
+void init_nrf()
+{
+  set_SPI_to(NRF_SPI);
+  nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
+
+  radio.csn(HIGH); // take off SPI bus
+}
 
 void setup()
 {
   Serial.begin(115200);
 
-  //set_SPI_to(NRF_SPI);
-  nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
+  init_nrf();
+
+  delay(200);
+
+  init_tft();
 
   DEBUG("Ready to rx from board...");
 }
+
+int i = 0;
 
 void loop()
 {
@@ -87,16 +127,19 @@ void loop()
     since_sent_to_board = 0;
     DEBUG("sending..");
 
-    uint8_t bs[sizeof(VescData)];
-    memcpy(bs, &board_packet, sizeof(VescData));
+    tft.drawNumber(i, 20, 20);
+    i++;
 
-    uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ 0, bs, sizeof(VescData), NUM_RETRIES);
-    if (retries > 0)
-    {
-      DEBUGVAL(retries);
-    }
-    board_packet.id++;
+    // uint8_t bs[sizeof(VescData)];
+    // memcpy(bs, &board_packet, sizeof(VescData));
+
+    // uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ 0, bs, sizeof(VescData), NUM_RETRIES);
+    // if (retries > 0)
+    // {
+    //   DEBUGVAL(retries);
+    // }
+    // board_packet.id++;
   }
 
-  nrf24.update();
+  // nrf24.update();
 }
