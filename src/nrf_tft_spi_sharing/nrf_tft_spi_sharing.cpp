@@ -11,8 +11,12 @@
 
 #include <TFT_eSPI.h>
 
-#define SPI_CE 33
-#define SPI_CS 26
+// #define SPI_MISO // 19 Orange
+// #define SPI_MOSI // 23 Blue
+// #define SPI_CLK  // 18 Yellow
+
+#define SPI_CE 26
+#define SPI_CS 33
 
 #define COMMS_BOARD 00
 #define COMMS_CONTROLLER 01
@@ -70,7 +74,7 @@ void setup()
 {
   Serial.begin(115200);
 
-  set_SPI_to(NRF_SPI);
+  //set_SPI_to(NRF_SPI);
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 
   DEBUG("Ready to rx from board...");
