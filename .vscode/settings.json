@@ -1,5 +1,16 @@
 {
   "workbench.colorCustomizations": {
     "editor.background": "#3b0909"
+  },
+  "files.associations": {
+    "*.tcc": "cpp",
+    "array": "cpp",
+    "deque": "cpp",
+    "list": "cpp",
+    "string": "cpp",
+    "unordered_map": "cpp",
+    "unordered_set": "cpp",
+    "vector": "cpp",
+    "initializer_list": "cpp"
   }
 }
