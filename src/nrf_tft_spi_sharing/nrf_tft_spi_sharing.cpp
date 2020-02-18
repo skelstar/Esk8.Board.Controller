@@ -9,14 +9,15 @@
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
 
+// #define ESP32_PARALLEL
 #include <TFT_eSPI.h>
 
 // #define SPI_MISO // 19 Orange
 // #define SPI_MOSI // 23 Blue
 // #define SPI_CLK  // 18 Yellow
 
-#define SPI_CE 26
-#define SPI_CS 33
+#define NRF_CE 26
+#define NRF_CS 33
 
 #define COMMS_BOARD 00
 #define COMMS_CONTROLLER 01
@@ -27,7 +28,7 @@ VescData board_packet;
 
 NRF24L01Lib nrf24;
 
-RF24 radio(SPI_CE, SPI_CS);
+RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
 #define NUM_RETRIES 5
@@ -66,14 +67,14 @@ void set_SPI_to(SpiDevice device)
   if (device == NRF_SPI)
   {
     DEBUG("device == NRF_SPI");
-    SPI.setClockDivider(SPI_CLOCK_DIV32);
-    SPI.setDataMode(SPI_MODE1);
+    // SPI.setClockDivider(SPI_CLOCK_DIV32);
+    // SPI.setDataMode(SPI_MODE1);
   }
   else if (device == TFT_SPI)
   {
     DEBUG("device == TFT_SPI");
-    SPI.setFrequency(4096);
-    SPI.setDataMode(SPI_MODE3);
+    // SPI.setClockDivider(4097);
+    // SPI.setDataMode(SPI_MODE3);
   }
 }
 //------------------------------------------------------------------
@@ -91,8 +92,8 @@ void init_tft()
   tft.setTextColor(TFT_WHITE, TFT_BLUE);
   tft.setTextSize(3);
   tft.drawString("ready", 20, 20);
-  pinMode(4, OUTPUT);
-  digitalWrite(4, HIGH); // Backlight on
+  // pinMode(4, OUTPUT);
+  // digitalWrite(4, HIGH); // Backlight on
 
   DEBUG("setup_tft()");
 }
@@ -100,20 +101,24 @@ void init_tft()
 void init_nrf()
 {
   set_SPI_to(NRF_SPI);
-  nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
+  bool connected = nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 
-  radio.csn(HIGH); // take off SPI bus
+  if (!connected)
+  {
+    DEBUG("ERROR: nrf not connected!!!");
+  }
 }
 
 void setup()
 {
   Serial.begin(115200);
 
-  init_nrf();
-
-  delay(200);
+  digitalWrite(NRF_CS, HIGH);
 
   init_tft();
+  delay(200);
+  digitalWrite(TFT_CS, HIGH);
+  init_nrf();
 
   DEBUG("Ready to rx from board...");
 }
