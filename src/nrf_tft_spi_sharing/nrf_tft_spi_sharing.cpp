@@ -56,9 +56,9 @@
 
 VescData board_packet;
 
-NRF24L01Lib nrf24 = NRF24L01Lib(NRF_CLK, NRF_MISO, NRF_MOSI);
+NRF24L01Lib nrf24;
 
-RF24 radio = RF24(NRF_CE, NRF_CS);
+RF24 radio = RF24(/*sclk*/ 18, /*miso*/ 23, /*mosi*/ 19, NRF_CE, NRF_CS);
 RF24Network network(radio);
 
 #define NUM_RETRIES 5
@@ -100,7 +100,7 @@ void init_tft()
 
 void init_nrf()
 {
-  radio.begin(NRF_CLK, NRF_MISO, NRF_MOSI);
+  radio.begin();
   radio.setPALevel(RF24_PA_MAX);
   radio.setDataRate(RF24_250KBPS);
   radio.printDetails();

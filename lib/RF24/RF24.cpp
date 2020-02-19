@@ -466,10 +466,14 @@ RF24::RF24(uint16_t _cepin, uint16_t _cspin)
   pipe0_reading_address[0] = 0;
 }
 
-RF24::RF24(uint16_t _sclk, uint16_t _miso, uint16_t _mosi, uint16_t _cs, uint16_t _ce)
-    : sclk_pin(_sclk), miso_pin(_miso), mosi_pin(_mosi), ce_pin(_ce), csn_pin(_cs), p_variant(false), payload_size(32), dynamic_payloads_enabled(false), addr_width(5),
+/****************************************************************************/
+/****************************************************************************/
+
+RF24::RF24(uint16_t _sclkpin, uint16_t _misopin, uint16_t _mosipin, uint16_t _cepin, uint16_t _cspin)
+    : sclk_pin(_sclkpin), miso_pin(_misopin), mosi_pin(_mosipin), ce_pin(_cepin), csn_pin(_cspin), p_variant(false), payload_size(32), dynamic_payloads_enabled(false), addr_width(5),
       csDelay(5) //,pipe0_reading_address(0)
 {
+  pipe0_reading_address[0] = 0;
 }
 
 /****************************************************************************/
@@ -660,20 +664,70 @@ void RF24::printDetails(void)
 
 /****************************************************************************/
 
-bool RF24::begin(uint16_t cs, uint16_t ce)
+bool RF24::begin(void)
 {
-  return begin(SCK, MISO, MOSI, cs, ce);
-}
 
-bool RF24::begin(uint16_t sclk, uint16_t miso, uint16_t mosi, uint16_t cs, uint16_t ce)
-{
   uint8_t setup = 0;
-  mosi_pin = mosi;
-  miso_pin = miso;
-  sclk_pin = sclk;
-  ce_pin = ce;
-  cs_pin = cs;
 
+#if defined(RF24_LINUX)
+
+#if defined(MRAA)
+  GPIO();
+  gpio.begin(ce_pin, csn_pin);
+#endif
+
+#if defined(RF24_RPi)
+  switch (csn_pin)
+  { //Ensure valid hardware CS pin
+  case 0:
+    break;
+  case 1:
+    break;
+  // Allow BCM2835 enums for RPi
+  case 8:
+    csn_pin = 0;
+    break;
+  case 7:
+    csn_pin = 1;
+    break;
+  case 18:
+    csn_pin = 10;
+    break; //to make it work on SPI1
+  case 17:
+    csn_pin = 11;
+    break;
+  case 16:
+    csn_pin = 12;
+    break;
+  default:
+    csn_pin = 0;
+    break;
+  }
+#endif // RF24_RPi
+
+  _SPI.begin(csn_pin);
+
+  pinMode(ce_pin, OUTPUT);
+  ce(LOW);
+
+  delay(100);
+
+#elif defined(LITTLEWIRE)
+
+  pinMode(csn_pin, OUTPUT);
+  _SPI.begin();
+  csn(HIGH);
+
+#elif defined(XMEGA_D3)
+  if (ce_pin != csn_pin)
+  {
+    pinMode(ce_pin, OUTPUT);
+  };
+  _SPI.begin(csn_pin);
+  ce(LOW);
+  csn(HIGH);
+  delay(200);
+#else
   // Initialize pins
   if (ce_pin != csn_pin)
   {
@@ -687,12 +741,13 @@ bool RF24::begin(uint16_t sclk, uint16_t miso, uint16_t mosi, uint16_t cs, uint1
     pinMode(csn_pin, OUTPUT);
   }
 
-  _SPI.begin(sclk, miso, mosi, csn_pin);
+  _SPI.begin(sclk_pin, miso_pin, mosi_pin, csn_pin);
   ce(LOW);
   csn(HIGH);
 #if defined(__ARDUINO_X86__)
   delay(100);
 #endif
+#endif //Linux
 
   // Must allow the radio time to settle else configuration bits will not necessarily stick.
   // This is actually only required following power up but some settling time also appears to
