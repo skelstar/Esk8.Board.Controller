@@ -81,8 +81,11 @@ private:
     GPIO gpio;
 #endif
 
-    uint16_t ce_pin;    /**< "Chip Enable" pin, activates the RX or TX role */
+    uint16_t sclk_pin;
+    uint16_t miso_pin;
+    uint16_t mosi_pin;
     uint16_t csn_pin;   /**< SPI Chip select */
+    uint16_t ce_pin;    /**< SPI Chip select */
     uint16_t spi_speed; /**< SPI Bus Speed */
 #if defined(RF24_LINUX) || defined(XMEGA_D3)
     uint8_t spi_rxbuff[32 + 1]; //SPI receive buffer (payload max 32 bytes)
@@ -122,7 +125,7 @@ public:
      * @param _cepin The pin attached to Chip Enable on the RF module
      * @param _cspin The pin attached to Chip Select
      */
-    RF24(uint16_t _cepin, uint16_t _cspin);
+    RF24(uint16_t sclk, uint16_t miso, uint16_t mosi, uint16_t cs, uint16_t ce);
     //#if defined (RF24_LINUX)
 
     /**
@@ -149,7 +152,7 @@ public:
      * Call this in setup(), before calling any other methods.
      * @code radio.begin() @endcode
      */
-    bool begin(uint8_t clk, uint8_t miso, uint8_t mosi);
+    bool begin();
 
     /**
      * Checks if the chip is connected to the SPI bus

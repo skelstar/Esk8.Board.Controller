@@ -8,7 +8,7 @@
 
 #include <RF24.h>
 #include <RF24Network.h>
-// #include <NRF24L01Lib.h>
+#include <NRF24L01Lib.h>
 
 // #define TFT_MOSI 19
 // #define TFT_SCLK 18
@@ -29,17 +29,17 @@
 
 #define USE_TOUCH TOUCH_TYPE_NONE
 
-#define PIN_NUM_MISO 0  // SPI MISO
-#define PIN_NUM_MOSI 19 // SPI MOSI
-#define PIN_NUM_CLK 18  // SPI CLOCK pin
-#define PIN_NUM_CS 5    // Display CS pin
-#define PIN_NUM_DC 16   // Display command/data pin
-#define PIN_NUM_TCS 0   // Touch screen CS pin
+// #define PIN_NUM_MISO 0  // SPI MISO
+// #define PIN_NUM_MOSI 19 // SPI MOSI
+// #define PIN_NUM_CLK 18  // SPI CLOCK pin
+// #define PIN_NUM_CS 5    // Display CS pin
+// #define PIN_NUM_DC 16   // Display command/data pin
+// #define PIN_NUM_TCS 0   // Touch screen CS pin
 
-#define PIN_NUM_RST 23 // GPIO used for RESET control
-#define PIN_NUM_BCKL 4 // GPIO used for backlight control
-#define PIN_BCKL_ON 1  // GPIO value for backlight ON
-#define PIN_BCKL_OFF 0 // GPIO value for backlight OFF
+// #define PIN_NUM_RST 23 // GPIO used for RESET control
+// #define PIN_NUM_BCKL 4 // GPIO used for backlight control
+// #define PIN_BCKL_ON 1  // GPIO value for backlight ON
+// #define PIN_BCKL_OFF 0 // GPIO value for backlight OFF
 
 #include <TFT_eSPI.h>
 
@@ -56,7 +56,7 @@
 
 VescData board_packet;
 
-// NRF24L01Lib nrf24;
+NRF24L01Lib nrf24 = NRF24L01Lib(NRF_CLK, NRF_MISO, NRF_MOSI);
 
 RF24 radio = RF24(NRF_CE, NRF_CS);
 RF24Network network(radio);
@@ -79,7 +79,7 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
   ControllerData board_packet;
 
   uint8_t buff[sizeof(ControllerData)];
-  // nrf24.read_into(buff, sizeof(ControllerData));
+  nrf24.read_into(buff, sizeof(ControllerData));
   memcpy(&board_packet, &buff, sizeof(ControllerData));
 
   DEBUGVAL(from_id, board_packet.id, since_sent_to_board);
