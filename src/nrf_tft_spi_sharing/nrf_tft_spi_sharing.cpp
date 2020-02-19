@@ -43,8 +43,8 @@
 
 #include <TFT_eSPI.h>
 
-#define NRF_MISO 19 // Orange
-#define NRF_MOSI 23 // Blue
+#define NRF_MISO 23 // Orange
+#define NRF_MOSI 19 // Blue
 #define NRF_CLK 18  // Yellow
 #define NRF_CE 26
 #define NRF_CS 33
@@ -89,13 +89,11 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
 void init_tft()
 {
   tft.init();
-  SPI.begin(1, 1, 1, 1);
-
-  // tft.setRotation(1);       // 0 is portrait
+  tft.setRotation(1);       // 0 is portrait
   tft.fillScreen(TFT_BLUE); // Clear screen
-  // tft.setTextColor(TFT_WHITE, TFT_BLUE);
-  // tft.setTextSize(3);
-  // tft.drawString("ready", 20, 20);
+  tft.setTextColor(TFT_WHITE, TFT_BLUE);
+  tft.setTextSize(3);
+  tft.drawString("ready", 20, 20);
 
   DEBUG("setup_tft()");
 }
@@ -103,8 +101,8 @@ void init_tft()
 void init_nrf()
 {
   radio.begin(NRF_CLK, NRF_MISO, NRF_MOSI);
-  // radio.setPALevel(RF24_PA_MAX);
-  // radio.setDataRate(RF24_250KBPS);
+  radio.setPALevel(RF24_PA_MAX);
+  radio.setDataRate(RF24_250KBPS);
   radio.printDetails();
 
   // nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
@@ -125,7 +123,7 @@ int i = 0;
 
 void loop()
 {
-  if (since_sent_to_board > 1000)
+  if (since_sent_to_board > 5000)
   {
     since_sent_to_board = 0;
     DEBUG("sending..");
