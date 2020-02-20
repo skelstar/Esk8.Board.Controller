@@ -2,7 +2,6 @@
 #include <Fsm.h>
 #endif
 
-
 enum DispStateEvent
 {
   DISP_EV_NO_EVENT = 0,
@@ -58,25 +57,25 @@ State disp_state_stopped_screen(
 State disp_state_moving_screen(
     [] {
       print_disp_state("...disp_state_moving_screen");
-      screen_moving();
+      // screen_moving();
+      screen_with_stats();
     },
     NULL, NULL);
 //---------------------------------------------------------------
 State disp_state_menu_option_throttle_mode(
     [] {
       print_disp_state("...disp_state_menu_option_throttle_mode");
-      //u8g2.clearBuffer();
       switch (trigger.throttle_mode)
       {
-        case THROTTLE_MODE_DEADMAN:
-          lcd_message("throttle:", TC_DATUM);
-          lcd_message("push to?", MC_DATUM);
-          lcd_message("start?", MC_DATUM);
-          break;
-        case THROTTLE_MODE_PUSH_TO_START:
-          lcd_message("throttle:", TC_DATUM);
-          lcd_message("deadman?", MC_DATUM);
-          break;
+      case THROTTLE_MODE_DEADMAN:
+        lcd_message("throttle:", LINE_1, ALIGNED_LEFT);
+        lcd_message("push to?", LINE_2, ALIGNED_LEFT);
+        lcd_message("start?", LINE_3, ALIGNED_LEFT);
+        break;
+      case THROTTLE_MODE_PUSH_TO_START:
+        lcd_message("throttle:", LINE_1, ALIGNED_LEFT);
+        lcd_message("deadman?", LINE_2, ALIGNED_LEFT);
+        break;
       }
       //u8g2.sendBuffer();
     },
@@ -85,19 +84,20 @@ State disp_state_menu_option_throttle_mode(
 State disp_state_menu_option_throttle_mode_selected(
     [] {
       print_disp_state("...disp_state_menu_option_throttle_mode_selected");
-      //u8g2.clearBuffer();
+      tft.fillScreen(TFT_BLUE);
+
       switch (trigger.throttle_mode)
       {
-        case THROTTLE_MODE_DEADMAN:
-          trigger.throttle_mode = THROTTLE_MODE_PUSH_TO_START;
-          lcd_message("push-to-start", MC_DATUM);
-          break;
-        case THROTTLE_MODE_PUSH_TO_START:
-          trigger.throttle_mode = THROTTLE_MODE_DEADMAN;
-          lcd_message("deadman", MC_DATUM);
-          break;
+      case THROTTLE_MODE_DEADMAN:
+        trigger.throttle_mode = THROTTLE_MODE_PUSH_TO_START;
+        lcd_message("push-to-start", LINE_2, ALIGNED_CENTRE);
+        break;
+      case THROTTLE_MODE_PUSH_TO_START:
+        trigger.throttle_mode = THROTTLE_MODE_DEADMAN;
+        lcd_message("deadman", LINE_2, ALIGNED_CENTRE);
+        break;
       }
-      lcd_message("selected!", BC_DATUM);
+      lcd_message("selected!", LINE_2, ALIGNED_CENTRE);
       //u8g2.sendBuffer();
     },
     NULL, NULL);

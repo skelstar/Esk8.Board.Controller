@@ -60,6 +60,10 @@ void send_control_packet_to_board()
 
   uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ PacketType::CONTROL, bs, sizeof(ControllerData), NUM_RETRIES);
 
+  if (retries)
+  {
+    DEBUGVAL(retries);
+  }
   manage_retries(retries);
 
   controller_packet.command = 0;

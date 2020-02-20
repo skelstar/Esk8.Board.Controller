@@ -1,6 +1,6 @@
-#ifndef TFT_eSPI
-#include <TFT_eSPI.h>
-#endif
+// #ifndef // u8g2lib
+// #include <// u8g2lib.h>
+// #endif
 
 class ChunkyDigit
 {
@@ -85,12 +85,12 @@ class ChunkyDigit
       }};
 
 public:
-  ChunkyDigit(TFT_eSPI *tft, uint8_t pixel_size, uint8_t spacing)
-  {
-    _tft = tft;
-    _pixel_size = pixel_size;
-    _spacing = spacing;
-  }
+  // ChunkyDigit(// u8g2_SSD1306_128X64_NONAME_F_SW_I2C *u8, uint8_t pixel_size, uint8_t spacing)
+  // {
+  //   // _u8g2 = u8;
+  //   _pixel_size = pixel_size;
+  //   _spacing = spacing;
+  // }
   //--------------------------------------------------------------------------------
   int get_str_width(char *number)
   {
@@ -135,7 +135,7 @@ public:
       }
       else if (ch == '.')
       {
-        //_u8g2->drawBox(cursor_x, y + 4 * _pixel_size, _pixel_size, _pixel_size);
+        // _u8g2->drawBox(cursor_x, y + 4 * _pixel_size, _pixel_size, _pixel_size);
         cursor_x += _pixel_size + spc;
       }
       else if (ch == '-')
@@ -154,14 +154,13 @@ public:
     // units
     if (units != NULL)
     {
-      // //_u8g2->setFont(u8g2_font_profont15_tr);
-      // //_u8g2->drawStr(cursor_x + _spacing, y + //_u8g2->getMaxCharHeight(), units);
+      // _u8g2->setFont(// u8g2_font_profont15_tr);
+      // _u8g2->drawStr(cursor_x + _spacing, y + // _u8g2->getMaxCharHeight(), units);
     }
   }
 
 private:
-  // U8G2_SSD1306_128X64_NONAME_F_SW_I2C *//_u8g2;
-  TFT_eSPI *_tft;
+  // u8g2_SSD1306_128X64_NONAME_F_SW_I2C *// _u8g2;
   uint8_t _pixel_size;
   uint8_t _spacing;
 
@@ -177,8 +176,8 @@ private:
       {
         int x1 = x + xx * _pixel_size;
         int y1 = y + yy * _pixel_size;
-        // //_u8g2->setDrawColor(FONT_DIGITS_3x5[digit][yy][xx]);
-        // //_u8g2->drawBox(x1, y1, _pixel_size, _pixel_size);
+        // _u8g2->setDrawColor(FONT_DIGITS_3x5[digit][yy][xx]);
+        // _u8g2->drawBox(x1, y1, _pixel_size, _pixel_size);
       }
     }
   }

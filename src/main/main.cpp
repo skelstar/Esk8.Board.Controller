@@ -121,15 +121,6 @@ void setup()
 #define LOG_LENGTH_MILLIS 5000
   retry_log.begin(SMOOTHED_AVERAGE, LOG_LENGTH_MILLIS / SEND_TO_BOARD_INTERVAL);
 
-  tft.init();
-  tft.setRotation(1);
-  tft.fillScreen(TFT_BLUE);
-  tft.setTextColor(TFT_WHITE, TFT_BLUE);
-  tft.setTextSize(3);
-  tft.drawString("ready", 20, 20);
-
-  delay(200);
-
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 
   print_build_status();
