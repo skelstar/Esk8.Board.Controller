@@ -23,15 +23,15 @@
 //#define SERIAL_DEBUG
 //#define MINIMAL
 //#define SPI_UART    // Requires library from https://github.com/TMRh20/Sketches/tree/master/SPI_UART
-//#define SOFTSPI     // Requires library from https://github.com/greiman/DigitalIO
+#define SOFTSPI // Requires library from https://github.com/greiman/DigitalIO
 
 /**********************/
 #define rf24_max(a, b) (a > b ? a : b)
 #define rf24_min(a, b) (a < b ? a : b)
 
-// #if defined (SPI_HAS_TRANSACTION) && !defined (SPI_UART) && !defined (SOFTSPI)
+#if defined(SPI_HAS_TRANSACTION) && !defined(SPI_UART) && !defined(SOFTSPI)
 #define RF24_SPI_TRANSACTIONS
-// #endif // defined (SPI_HAS_TRANSACTION) && !defined (SPI_UART) && !defined (SOFTSPI)
+#endif // defined (SPI_HAS_TRANSACTION) && !defined (SPI_UART) && !defined (SOFTSPI)
 
 //ATXMega
 #if defined(__AVR_ATxmega64D3__) || defined(__AVR_ATxmega128D3__) || defined(__AVR_ATxmega192D3__) || defined(__AVR_ATxmega256D3__) || defined(__AVR_ATxmega384D3__) // In order to be available both in Windows and Linux this should take presence here.
@@ -69,16 +69,21 @@ const uint32_t RF24_SPI_SPEED = 10000000;
 #elif defined(SOFTSPI)
 // change these pins to your liking
 //
+
+#define NRF_MOSI 13 // Blue
+#define NRF_MISO 12 // Orange
+#define NRF_CLK 15  // Yellow
+
 #ifndef SOFT_SPI_MISO_PIN
-#define SOFT_SPI_MISO_PIN 9
+#define SOFT_SPI_MISO_PIN NRF_MISO
 #endif // SOFT_SPI_MISO_PIN
 
 #ifndef SOFT_SPI_MOSI_PIN
-#define SOFT_SPI_MOSI_PIN 8
+#define SOFT_SPI_MOSI_PIN NRF_MOSI
 #endif // SOFT_SPI_MOSI_PIN
 
 #ifndef SOFT_SPI_SCK_PIN
-#define SOFT_SPI_SCK_PIN 7
+#define SOFT_SPI_SCK_PIN NRF_CLK
 #endif // SOFT_SPI_SCK_PIN
 
 const uint8_t SPI_MODE = 0;

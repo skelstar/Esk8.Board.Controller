@@ -12,9 +12,9 @@
 
 #include <TFT_eSPI.h>
 
-// #define NRF_MISO 23 // Orange
-// #define NRF_MOSI 19 // Blue
-// #define NRF_CLK 18  // Yellow
+#define NRF_MOSI 13 // Blue
+#define NRF_MISO 12 // Orange
+#define NRF_CLK 15  // Yellow
 #define NRF_CE 26
 #define NRF_CS 33
 
@@ -28,7 +28,7 @@ ControllerData controller_packet;
 
 NRF24L01Lib nrf24;
 
-RF24 radio = RF24(/*sclk*/ 18, /*miso*/ 23, /*mosi*/ 19, NRF_CE, NRF_CS);
+RF24 radio = RF24(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
 #define NUM_RETRIES 5
@@ -77,11 +77,10 @@ void setup()
 {
   Serial.begin(115200);
 
-  init_nrf();
+  init_tft();
 
   delay(1000);
-
-  init_tft();
+  init_nrf();
 }
 
 int i = 0;
@@ -99,13 +98,13 @@ void loop()
     uint8_t bs[sizeof(ControllerData)];
     memcpy(bs, &controller_packet, sizeof(ControllerData));
 
-    // uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ 0, bs, sizeof(ControllerData), NUM_RETRIES);
-    // if (retries > 0)
-    // {
-    //   DEBUGVAL(retries);
-    // }
+    uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ 0, bs, sizeof(ControllerData), NUM_RETRIES);
+    if (retries > 0)
+    {
+      DEBUGVAL(retries);
+    }
     controller_packet.id++;
   }
-  delay(1000);
+  // delay(1000);
   nrf24.update();
 }
