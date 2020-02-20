@@ -26,7 +26,7 @@
 //------------------------------------------------------------------
 
 #define DEADMAN_PIN 17
-#define TRIGGER_ANALOG_PIN 13
+#define TRIGGER_ANALOG_PIN 27
 
 //------------------------------------------------------------------
 
@@ -44,27 +44,13 @@ RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
 #define NUM_RETRIES 5
+#ifndef SEND_TO_BOARD_INTERVAL
 #define SEND_TO_BOARD_INTERVAL 200
+#endif
 //------------------------------------------------------------------
 
 #define LCD_WIDTH 240
 #define LCD_HEIGHT 135
-
-// enum DatumPoint
-// {
-//   TL_DATUM,
-//   TC_DATUM,
-//   TR_DATUM,
-//   ML_DATUM,
-//   CL_DATUM,
-//   MC_DATUM,
-//   CC_DATUM,
-//   MR_DATUM,
-//   CR_DATUM,
-//   BL_DATUM,
-//   BC_DATUM,
-//   BR_DATUM,
-// };
 
 TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 //------------------------------------------------------------------
