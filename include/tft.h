@@ -52,20 +52,22 @@ void lcd_message(const char *message, uint8_t line, Aligned aligned, MessageStat
   uint8_t x = MARGIN,
           y = TOP_BAR + ((line - 1) * line_height);
 
-  tft.setTextDatum(TL_DATUM);
   tft.setTextSize(3);
   tft.setTextColor(TFT_WHITE, status_colours[status]);
   if (aligned == ALIGNED_LEFT)
   {
-    tft.drawString(message, x, y, TL_DATUM);
+    tft.setTextDatum(TL_DATUM);
+    tft.drawString(message, x, y);
   }
   else if (aligned == ALIGNED_RIGHT)
   {
-    tft.drawString(message, x, y, TR_DATUM);
+    tft.setTextDatum(TR_DATUM);
+    tft.drawString(message, LCD_WIDTH - MARGIN, y);
   }
   else if (aligned == ALIGNED_CENTRE)
   {
-    tft.drawString(message, x, y, TC_DATUM);
+    tft.setTextDatum(TC_DATUM);
+    tft.drawString(message, x, y);
   }
 }
 //--------------------------------------------------------------------------------

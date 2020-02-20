@@ -125,9 +125,6 @@ void setup()
 
   print_build_status();
 
-  controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
-  send_config_packet_to_board();
-
   trigger.initialise();
 #ifdef FEATURE_DEADMAN
   pinMode(5, OUTPUT);
@@ -155,8 +152,17 @@ void setup()
   }
 }
 
+elapsedMillis since_sent_config_to_board;
+
 void loop()
 {
+  if (comms_state_connected == false && since_sent_config_to_board > 1000)
+  {
+    since_sent_config_to_board = 0;
+    controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
+    send_config_packet_to_board();
+  }
+
   if (since_read_trigger > READ_TRIGGER_PERIOD)
   {
     since_read_trigger = 0;
