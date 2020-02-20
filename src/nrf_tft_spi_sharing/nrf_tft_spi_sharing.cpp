@@ -6,17 +6,18 @@
 #include <VescData.h>
 #include <elapsedMillis.h>
 
+#define SOFT_SPI_MOSI_PIN 13 // Blue
+#define SOFT_SPI_MISO_PIN 12 // Orange
+#define SOFT_SPI_SCK_PIN 15  // Yellow
+
+#define NRF_CE 26
+#define NRF_CS 33
+
 #include <RF24.h>
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
 
 #include <TFT_eSPI.h>
-
-#define NRF_MOSI 13 // Blue
-#define NRF_MISO 12 // Orange
-#define NRF_CLK 15  // Yellow
-#define NRF_CE 26
-#define NRF_CS 33
 
 #define COMMS_BOARD 00
 #define COMMS_CONTROLLER 01

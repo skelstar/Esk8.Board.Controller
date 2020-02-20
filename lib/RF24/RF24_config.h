@@ -70,20 +70,16 @@ const uint32_t RF24_SPI_SPEED = 10000000;
 // change these pins to your liking
 //
 
-#define NRF_MOSI 13 // Blue
-#define NRF_MISO 12 // Orange
-#define NRF_CLK 15  // Yellow
-
 #ifndef SOFT_SPI_MISO_PIN
-#define SOFT_SPI_MISO_PIN NRF_MISO
+#define SOFT_SPI_MISO_PIN 12
 #endif // SOFT_SPI_MISO_PIN
 
 #ifndef SOFT_SPI_MOSI_PIN
-#define SOFT_SPI_MOSI_PIN NRF_MOSI
+#define SOFT_SPI_MOSI_PIN 13
 #endif // SOFT_SPI_MOSI_PIN
 
 #ifndef SOFT_SPI_SCK_PIN
-#define SOFT_SPI_SCK_PIN NRF_CLK
+#define SOFT_SPI_SCK_PIN 15
 #endif // SOFT_SPI_SCK_PIN
 
 const uint8_t SPI_MODE = 0;
