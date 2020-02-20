@@ -1,5 +1,5 @@
 
-#define LONGCLICK_MS 1000
+// #define LONGCLICK_MS 1000
 
 #include <Button2.h>
 

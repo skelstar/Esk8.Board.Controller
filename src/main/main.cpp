@@ -10,33 +10,64 @@
 #include <VescData.h>
 #include <elapsedMillis.h>
 
+#define SOFT_SPI_MOSI_PIN 13 // Blue
+#define SOFT_SPI_MISO_PIN 12 // Orange
+#define SOFT_SPI_SCK_PIN 15  // Yellow
+
+#define NRF_CE 26
+#define NRF_CS 33
+
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
 #include <Smoothed.h>
 
-#include <SSD1306.h>
+#include <TFT_eSPI.h>
 
-#define SPI_CE 33
-#define SPI_CS 26
-
-#define COMMS_BOARD 00
-#define COMMS_CONTROLLER 01
+//------------------------------------------------------------------
 
 #define DEADMAN_PIN 17
 #define TRIGGER_ANALOG_PIN 13
 
-
 //------------------------------------------------------------------
 
-VescData board_packet;
+#define COMMS_BOARD 00
+#define COMMS_CONTROLLER 01
 
+VescData board_packet;
 ControllerData controller_packet;
 ControllerConfig controller_config;
+//------------------------------------------------------------------
 
 NRF24L01Lib nrf24;
 
-RF24 radio(SPI_CE, SPI_CS);
+RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
+
+#define NUM_RETRIES 5
+#define SEND_TO_BOARD_INTERVAL 200
+//------------------------------------------------------------------
+
+#define LCD_WIDTH 240
+#define LCD_HEIGHT 135
+
+// enum DatumPoint
+// {
+//   TL_DATUM,
+//   TC_DATUM,
+//   TR_DATUM,
+//   ML_DATUM,
+//   CL_DATUM,
+//   MC_DATUM,
+//   CC_DATUM,
+//   MR_DATUM,
+//   CR_DATUM,
+//   BL_DATUM,
+//   BC_DATUM,
+//   BR_DATUM,
+// };
+
+TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
+//------------------------------------------------------------------
 
 class Stats
 {
@@ -44,9 +75,6 @@ public:
   unsigned long total_failed;
   unsigned long num_packets_with_retries;
 } stats;
-
-#define NUM_RETRIES 5
-#define SEND_TO_BOARD_INTERVAL 200
 
 elapsedMillis since_sent_to_board;
 elapsedMillis since_read_trigger;
@@ -66,7 +94,6 @@ enum DeadmanEvent
   EV_DEADMAN_PRESSED,
   EV_DEADMAN_RELEASED,
 };
-
 //------------------------------------------------------------
 
 xQueueHandle xDeadmanQueueEvent;
@@ -80,10 +107,6 @@ TriggerLib trigger(
     trigger_changed_cb,
     /*deadzone*/ 10);
 //------------------------------------------------------------------
-
-// uint8_t read_from_(xQueueHandle queue)
-// {
-// }
 
 #include <utils.h>
 #include <features/deadman.h>
@@ -111,6 +134,15 @@ void setup()
 
 #define LOG_LENGTH_MILLIS 5000
   retry_log.begin(SMOOTHED_AVERAGE, LOG_LENGTH_MILLIS / SEND_TO_BOARD_INTERVAL);
+
+  tft.init();
+  tft.setRotation(1);
+  tft.fillScreen(TFT_BLUE);
+  tft.setTextColor(TFT_WHITE, TFT_BLUE);
+  tft.setTextSize(3);
+  tft.drawString("ready", 20, 20);
+
+  delay(200);
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 
@@ -166,7 +198,7 @@ void loop()
 
   button0.loop();
 
-  vTaskDelay(10);
+  vTaskDelay(1);
 }
 //------------------------------------------------------------------
 

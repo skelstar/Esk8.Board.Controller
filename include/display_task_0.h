@@ -1,6 +1,10 @@
 
 bool display_task_initialised = false;
 
+#ifndef TFT_H
+#include <tft.h>
+#endif
+
 void display_task_0(void *pvParameters)
 {
   elapsedMillis since_updated_display;

@@ -65,7 +65,7 @@ State disp_state_moving_screen(
 State disp_state_menu_option_throttle_mode(
     [] {
       print_disp_state("...disp_state_menu_option_throttle_mode");
-      u8g2.clearBuffer();
+      //u8g2.clearBuffer();
       switch (trigger.throttle_mode)
       {
         case THROTTLE_MODE_DEADMAN:
@@ -78,14 +78,14 @@ State disp_state_menu_option_throttle_mode(
           lcd_message("deadman?", MC_DATUM);
           break;
       }
-      u8g2.sendBuffer();
+      //u8g2.sendBuffer();
     },
     NULL, NULL);
 //---------------------------------------------------------------
 State disp_state_menu_option_throttle_mode_selected(
     [] {
       print_disp_state("...disp_state_menu_option_throttle_mode_selected");
-      u8g2.clearBuffer();
+      //u8g2.clearBuffer();
       switch (trigger.throttle_mode)
       {
         case THROTTLE_MODE_DEADMAN:
@@ -98,7 +98,7 @@ State disp_state_menu_option_throttle_mode_selected(
           break;
       }
       lcd_message("selected!", BC_DATUM);
-      u8g2.sendBuffer();
+      //u8g2.sendBuffer();
     },
     NULL, NULL);
 //---------------------------------------------------------------
