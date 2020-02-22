@@ -9,7 +9,10 @@
 #include <Arduino.h>
 #include <VescData.h>
 #include <elapsedMillis.h>
+#include <Smoothed.h>
+#include <HallEffectThrottleLib.h>
 
+// used in TFT_eSPI library as alternate SPI port (HSPI?)
 #define SOFT_SPI_MOSI_PIN 13 // Blue
 #define SOFT_SPI_MISO_PIN 12 // Orange
 #define SOFT_SPI_SCK_PIN 15  // Yellow
@@ -19,21 +22,20 @@
 
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
-#include <Smoothed.h>
 
 #include <TFT_eSPI.h>
 
 //------------------------------------------------------------------
 
-#define DEADMAN_PIN 17
-#define TRIGGER_ANALOG_PIN 27
+#define INDEX_FINGER_PIN 17
+#define HALL_EFFECT_SENSOR_PIN 36
 
 //------------------------------------------------------------------
 
 #define COMMS_BOARD 00
 #define COMMS_CONTROLLER 01
 
-VescData board_packet;
+VescData board_packet, old_board_packet;
 ControllerData controller_packet;
 ControllerConfig controller_config;
 //------------------------------------------------------------------
@@ -42,6 +44,8 @@ NRF24L01Lib nrf24;
 
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
+
+HallEffectThrottleLib throttle;
 
 #define NUM_RETRIES 5
 #ifndef SEND_TO_BOARD_INTERVAL
@@ -66,7 +70,6 @@ elapsedMillis since_sent_to_board;
 elapsedMillis since_read_trigger;
 
 uint16_t remote_battery_percent = 0;
-bool throttle_enabled = true;
 
 Smoothed<float> retry_log;
 
@@ -74,28 +77,11 @@ Smoothed<float> retry_log;
 
 //------------------------------------------------------------
 
-enum DeadmanEvent
-{
-  EV_DEADMAN_NO_EVENT,
-  EV_DEADMAN_PRESSED,
-  EV_DEADMAN_RELEASED,
-};
-//------------------------------------------------------------
-
-xQueueHandle xDeadmanQueueEvent;
 xQueueHandle xDisplayChangeEventQueue;
-//------------------------------------------------------------------
-#include <TriggerLib.h>
-void trigger_changed_cb();
 
-TriggerLib trigger(
-    TRIGGER_ANALOG_PIN,
-    trigger_changed_cb,
-    /*deadzone*/ 10);
 //------------------------------------------------------------------
 
 #include <utils.h>
-#include <features/deadman.h>
 #include <screens.h>
 #include <menu_system.h>
 #include <comms_connected_state.h>
@@ -106,13 +92,6 @@ TriggerLib trigger(
 #include <core1.h>
 
 #include <peripherals.h>
-
-//------------------------------------------------------------------
-void trigger_changed_cb()
-{
-  send_to_display_event_queue(DISP_EV_REFRESH, 5);
-}
-//------------------------------------------------------------------
 
 void setup()
 {
@@ -125,21 +104,13 @@ void setup()
 
   print_build_status();
 
-  trigger.initialise();
-#ifdef FEATURE_DEADMAN
-  pinMode(5, OUTPUT);
-  digitalWrite(5, LOW);
-  trigger.set_deadman_pin(DEADMAN_PIN);
-#endif
+  throttle.init(HALL_EFFECT_SENSOR_PIN, /*braking granularity*/ 15, /*accel granularity*/ 15);
+  throttle.getMiddle();
 
   // core 0
-#ifdef FEATURE_DEADMAN
-  xTaskCreatePinnedToCore(deadmanTask_0, "deadmanTask_0", 4092, NULL, /*priority*/ 4, NULL, 0);
-#endif
   xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
 
-  xDeadmanQueueEvent = xQueueCreate(1, sizeof(DeadmanEvent));
   xDisplayChangeEventQueue = xQueueCreate(1, sizeof(uint8_t));
 
   button0_init();
@@ -156,13 +127,6 @@ elapsedMillis since_sent_config_to_board;
 
 void loop()
 {
-  if (comms_state_connected == false && since_sent_config_to_board > 1000)
-  {
-    since_sent_config_to_board = 0;
-    controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
-    send_config_packet_to_board();
-  }
-
   if (since_read_trigger > READ_TRIGGER_PERIOD)
   {
     since_read_trigger = 0;
@@ -172,7 +136,16 @@ void loop()
   if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
   {
     since_sent_to_board = 0;
-    send_control_packet_to_board();
+
+    if (comms_state_connected == false)
+    {
+      controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
+      send_config_packet_to_board();
+    }
+    else
+    {
+      send_control_packet_to_board();
+    }
   }
 
   comms_state_fsm.run_machine();

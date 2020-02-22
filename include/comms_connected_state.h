@@ -63,11 +63,16 @@ void print_state(const char *state_name)
 void comms_state_event(CommsStateEvent ev)
 {
 #ifdef PRINT_COMMS_STATE_EVENT
-  if (ev == EV_COMMS_CONNECTED)
+  if (ev == EV_COMMS_CONNECTED && !comms_state_connected)
+  {
     DEBUG("-->Comms State: Connected");
-  else if (ev == EV_COMMS_DISCONNECTED)
+  }
+  else if (ev == EV_COMMS_DISCONNECTED && comms_state_connected)
   {
     DEBUG("-->Comms State: Disconnected!");
+  }
+  else
+  {
   }
 #endif
   comms_state_fsm.trigger(ev);

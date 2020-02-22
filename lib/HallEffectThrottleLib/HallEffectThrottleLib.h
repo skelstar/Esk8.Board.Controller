@@ -48,8 +48,13 @@ public:
     _highest = HALL_TRIGGER_MAX_PROVISIONAL;
   }
 
-  uint8_t getThrottle()
+  uint8_t getThrottle(bool moving)
   {
+    if (!moving)
+    {
+      return 127;
+    }
+
     _raw = analogRead(_pin);
 
     _updateLimits(_raw);

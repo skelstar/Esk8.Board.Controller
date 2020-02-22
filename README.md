@@ -7,6 +7,7 @@
     - toggles encoder max
 ### Core 1
 - loop()
-  - Scheduler
-    - t_SendToBoard() (xSendPacketToBoardQueue)
+  - read_trigger
+  - send_controller_packet_to_board
+    - send_config if not connected
   - packetReceived()

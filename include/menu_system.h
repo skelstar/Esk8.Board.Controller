@@ -65,40 +65,29 @@ State disp_state_moving_screen(
 State disp_state_menu_option_throttle_mode(
     [] {
       print_disp_state("...disp_state_menu_option_throttle_mode");
-      switch (trigger.throttle_mode)
-      {
-      case THROTTLE_MODE_DEADMAN:
-        lcd_message("throttle:", LINE_1, ALIGNED_LEFT);
-        lcd_message("push to?", LINE_2, ALIGNED_LEFT);
-        lcd_message("start?", LINE_3, ALIGNED_LEFT);
-        break;
-      case THROTTLE_MODE_PUSH_TO_START:
-        lcd_message("throttle:", LINE_1, ALIGNED_LEFT);
-        lcd_message("deadman?", LINE_2, ALIGNED_LEFT);
-        break;
-      }
-      //u8g2.sendBuffer();
+      lcd_message("throttle:", LINE_1, ALIGNED_LEFT);
+      // lcd_message("deadman?", LINE_2, ALIGNED_LEFT);
     },
     NULL, NULL);
 //---------------------------------------------------------------
 State disp_state_menu_option_throttle_mode_selected(
     [] {
       print_disp_state("...disp_state_menu_option_throttle_mode_selected");
-      tft.fillScreen(TFT_BLUE);
+      // tft.fillScreen(TFT_BLUE);
 
-      switch (trigger.throttle_mode)
-      {
-      case THROTTLE_MODE_DEADMAN:
-        trigger.throttle_mode = THROTTLE_MODE_PUSH_TO_START;
-        lcd_message("push-to-start", LINE_2, ALIGNED_CENTRE);
-        break;
-      case THROTTLE_MODE_PUSH_TO_START:
-        trigger.throttle_mode = THROTTLE_MODE_DEADMAN;
-        lcd_message("deadman", LINE_2, ALIGNED_CENTRE);
-        break;
-      }
-      lcd_message("selected!", LINE_2, ALIGNED_CENTRE);
-      //u8g2.sendBuffer();
+      // switch (throttle.throttle_mode)
+      // {
+      // case THROTTLE_MODE_DEADMAN:
+      //   throttle.throttle_mode = THROTTLE_MODE_PUSH_TO_START;
+      //   lcd_message("push-to-start", LINE_2, ALIGNED_CENTRE);
+      //   break;
+      // case THROTTLE_MODE_PUSH_TO_START:
+      //   throttle.throttle_mode = THROTTLE_MODE_DEADMAN;
+      //   lcd_message("deadman", LINE_2, ALIGNED_CENTRE);
+      //   break;
+      // }
+      // lcd_message("selected!", LINE_2, ALIGNED_CENTRE);
+      // //u8g2.sendBuffer();
     },
     NULL, NULL);
 //---------------------------------------------------------------
@@ -138,8 +127,14 @@ const char *get_event_name(DispStateEvent ev)
   {
   case DISP_EV_NO_EVENT:
     return "DISP_EV_NO_EVENT";
+  case DISP_EV_CONNECTED:
+    return "DISP_EV_CONNECTED";
+  case DISP_EV_DISCONNECTED:
+    return "DISP_EV_DISCONNECTED";
   case DISP_EV_BUTTON_CLICK:
     return "DISP_EV_BUTTON_CLICK";
+  case DISP_EV_MENU_OPTION_SELECT:
+    return "DISP_EV_MENU_OPTION_SELECT";
   case DISP_EV_REFRESH:
     return "DISP_EV_REFRESH";
   case DISP_EV_STOPPED:
@@ -147,7 +142,9 @@ const char *get_event_name(DispStateEvent ev)
   case DISP_EV_MOVING:
     return "DISP_EV_MOVING";
   default:
-    return "Unhandled event";
+    char buff[20];
+    sprintf(buff, "unhandled ev: %d", (uint8_t)ev);
+    return buff;
   }
 }
 
@@ -158,10 +155,21 @@ void print_disp_state(const char *state_name)
 #endif
 }
 
+elapsedMillis since_last_refresh_event;
+
 void display_state_event(DispStateEvent ev)
 {
 #ifdef PRINT_DISP_STATE_EVENT
   DEBUGVAL(get_event_name(ev));
 #endif
+  if (ev == DISP_EV_REFRESH)
+  {
+    bool too_soon = since_last_refresh_event < 500;
+    since_last_refresh_event = 0;
+    if (too_soon)
+    {
+      return;
+    }
+  }
   display_state.trigger(ev);
 }

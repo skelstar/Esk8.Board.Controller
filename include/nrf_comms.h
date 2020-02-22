@@ -20,26 +20,12 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
     send_config_packet_to_board();
   }
 
-#ifdef FEATURE_PUSH_TO_ENABLE
-  throttle_enabled = board_packet.moving;
-#endif
-
-  switch (board_packet.reason)
+  if (old_board_packet.moving != board_packet.moving)
   {
-  case ReasonType::BOARD_STOPPED:
-    DEBUG("***Stopped!***");
-    send_to_display_event_queue(DISP_EV_STOPPED);
-    break;
-
-  case ReasonType::BOARD_MOVING:
-    DEBUG("***Moving!***");
-    send_to_display_event_queue(DISP_EV_MOVING);
-    break;
-
-  default:
-    DEBUGVAL(from_id, board_packet.id, since_sent_to_board);
-    break;
+    display_state_event(board_packet.moving ? DISP_EV_MOVING : DISP_EV_STOPPED);
   }
+
+  old_board_packet = board_packet;
 
   comms_state_event(EV_COMMS_CONNECTED);
 }
@@ -104,10 +90,10 @@ void manage_retries(uint8_t retries)
         comms_state_event(EV_COMMS_DISCONNECTED);
       }
     }
-    else if (old_retry_rate != retry_rate)
-    {
-      old_retry_rate = retry_rate;
-      send_to_display_event_queue(DISP_EV_REFRESH);
-    }
+    // else if (old_retry_rate != retry_rate)
+    // {
+    //   old_retry_rate = retry_rate;
+    //   send_to_display_event_queue(DISP_EV_REFRESH);
+    // }
   }
 }
