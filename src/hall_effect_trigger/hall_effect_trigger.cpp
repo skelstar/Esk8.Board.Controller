@@ -4,24 +4,24 @@
 
 #include <Arduino.h>
 #include <elapsedMillis.h>
+#include <HallEffectThrottleLib.h>
 
-#define HALL_EFFECT_TRIGGER_PIN 25
-
-#define HALL_TRIGGER_MAX 2200
-#define HALL_TRIGGER_MID 1833
-#define HALL_TRIGGER_MIN 1740
-#define HALL_TRIGGER_DEADBAND 10
+#define HALL_EFFECT_TRIGGER_PIN 36
 
 //------------------------------------------------------------------
+
+HallEffectThrottleLib trigger;
 
 void setup()
 {
   Serial.begin(115200);
 
-  pinMode(HALL_EFFECT_TRIGGER_PIN, INPUT);
+  trigger.init(HALL_EFFECT_TRIGGER_PIN, /*braking*/ 15, /*accel*/ 15);
+  trigger.getMiddle();
 }
 
 elapsedMillis since_read_trigger;
+uint8_t old_throttle;
 
 void loop()
 {
@@ -29,19 +29,12 @@ void loop()
   {
     since_read_trigger = 0;
 
-    uint16_t raw = analogRead(HALL_EFFECT_TRIGGER_PIN);
-    uint16_t constrained = constrain(raw, HALL_TRIGGER_MIN, HALL_TRIGGER_MAX);
-
-    uint8_t mapped = 127;
-    if (constrained >= HALL_TRIGGER_MID + HALL_TRIGGER_DEADBAND)
+    uint8_t throttle = trigger.getThrottle();
+    if (old_throttle != throttle)
     {
-      mapped = map(constrained, HALL_TRIGGER_MID, HALL_TRIGGER_MAX, 127, 0);
-    }
-    else if (constrained <= HALL_TRIGGER_MID - HALL_TRIGGER_DEADBAND)
-    {
-      mapped = map(constrained, HALL_TRIGGER_MIN, HALL_TRIGGER_MID, 255, 127);
+      trigger.print();
     }
 
-    DEBUGVAL(raw, constrained, mapped);
+    old_throttle = throttle;
   }
 }
