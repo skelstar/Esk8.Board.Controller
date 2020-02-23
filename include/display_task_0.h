@@ -15,16 +15,17 @@ void display_task_0(void *pvParameters)
 
   Serial.printf("display_task_0 running on core %d\n", xPortGetCoreID());
 
+  display_task_initialised = true;
+
   while (true)
   {
-    display_task_initialised = true;
 
     display_state.run_machine();
 
     DispStateEvent ev = read_from_display_event_queue();
     if (ev == DISP_EV_REFRESH)
     {
-      if (since_updated_display < 500)
+      if (since_updated_display > 500)
       {
         since_updated_display = 0;
         display_state_event(DISP_EV_REFRESH);
