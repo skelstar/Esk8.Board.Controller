@@ -112,13 +112,13 @@ Button2 _deadmanButton(DEADMAN_PIN);
 void encoderChanged(i2cEncoderLibV2 *obj)
 {
   controller_packet.throttle = throttle.mapCounterToThrottle(_deadmanButton.isPressed());
-  DEBUGVAL(obj->readCounterByte(), controller_packet.throttle);
+  // DEBUGVAL(obj->readCounterByte(), controller_packet.throttle);
 }
 
 void encoderButtonPushed(i2cEncoderLibV2 *obj)
 {
   controller_packet.throttle = throttle.mapCounterToThrottle(_deadmanButton.isPressed());
-  DEBUGVAL("button pushed!!!", controller_packet.throttle);
+  // DEBUGVAL("button pushed!!!", controller_packet.throttle);
 }
 
 void deadmanReleased(Button2 &btn)
@@ -171,7 +171,7 @@ void setup()
   xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
 
-  xDisplayChangeEventQueue = xQueueCreate(1, sizeof(uint8_t));
+  xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
 
   button0_init();
 

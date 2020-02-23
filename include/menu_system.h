@@ -18,7 +18,9 @@ const char *get_event_name(DispStateEvent ev);
 
 void send_to_display_event_queue(DispStateEvent ev, TickType_t ticks = 10)
 {
-  DEBUGVAL("send_to_display_event_queue", get_event_name((DispStateEvent)ev));
+#ifdef PRINT_DISP_STATE_EVENT
+  Serial.printf("-> SEND: %s\n", get_event_name((DispStateEvent)ev));
+#endif
   uint8_t e = (uint8_t)ev;
   xQueueSendToFront(xDisplayChangeEventQueue, &e, ticks);
 }
@@ -28,13 +30,15 @@ DispStateEvent read_from_display_event_queue(TickType_t ticks = 5)
   uint8_t e;
   if (xDisplayChangeEventQueue != NULL && xQueueReceive(xDisplayChangeEventQueue, &e, ticks) == pdPASS)
   {
+#ifdef PRINT_DISP_STATE_EVENT
+    Serial.printf("<- RX: %s\n", get_event_name((DispStateEvent)e));
+#endif
     return (DispStateEvent)e;
   }
   return DISP_EV_NO_EVENT;
 }
 
 void print_disp_state(const char *state_name);
-void display_state_event(DispStateEvent ev);
 
 //---------------------------------------------------------------
 State disp_state_searching(
@@ -157,15 +161,4 @@ void print_disp_state(const char *state_name)
 #ifdef PRINT_DISP_STATE
   DEBUG(state_name);
 #endif
-}
-
-elapsedMillis since_last_refresh_event;
-
-void display_state_event(DispStateEvent ev)
-{
-#ifdef PRINT_DISP_STATE_EVENT
-  DEBUGVAL(get_event_name(ev));
-#endif
-
-  display_state.trigger(ev);
 }

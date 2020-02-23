@@ -35,7 +35,7 @@ void display_task_0(void *pvParameters)
         if (since_updated_display > 500)
         {
           since_updated_display = 0;
-          display_state_event(DISP_EV_REFRESH);
+          display_state.trigger(DISP_EV_REFRESH);
         }
         else
         {
@@ -44,8 +44,7 @@ void display_task_0(void *pvParameters)
       }
       else if (ev != DISP_EV_NO_EVENT)
       {
-        DEBUGVAL("ev", ev);
-        display_state_event(ev);
+        display_state.trigger(ev);
       }
     }
     vTaskDelay(10);
