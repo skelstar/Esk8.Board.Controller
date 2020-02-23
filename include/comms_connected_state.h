@@ -65,11 +65,11 @@ void comms_state_event(CommsStateEvent ev)
 #ifdef PRINT_COMMS_STATE_EVENT
   if (ev == EV_COMMS_CONNECTED && !comms_state_connected)
   {
-    DEBUG("-->Comms State: Connected");
+    DEBUG("-->Comms Event: Connected");
   }
   else if (ev == EV_COMMS_DISCONNECTED && comms_state_connected)
   {
-    DEBUG("-->Comms State: Disconnected!");
+    DEBUG("-->Comms Event: Disconnected!");
   }
   else
   {

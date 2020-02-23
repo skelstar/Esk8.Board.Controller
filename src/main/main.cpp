@@ -131,7 +131,7 @@ void setup()
 
   // throttle
   Wire.begin();
-  throttle.init(encoderChanged, encoderButtonPushed, /*min*/ -5, /*max*/ 5);
+  throttle.init(encoderChanged, encoderButtonPushed, /*min*/ -ENCODER_NUM_STEPS_BRAKE, /*max*/ ENCODER_NUM_STEPS_ACCEL);
   _deadmanButton.setReleasedHandler(deadmanReleased);
 
   // core 0

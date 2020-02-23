@@ -162,14 +162,6 @@ void display_state_event(DispStateEvent ev)
 #ifdef PRINT_DISP_STATE_EVENT
   DEBUGVAL(get_event_name(ev));
 #endif
-  if (ev == DISP_EV_REFRESH)
-  {
-    bool too_soon = since_last_refresh_event < 500;
-    since_last_refresh_event = 0;
-    if (too_soon)
-    {
-      return;
-    }
-  }
+
   display_state.trigger(ev);
 }
