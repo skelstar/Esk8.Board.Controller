@@ -47,13 +47,11 @@ TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 
 void packet_available_cb(uint16_t from_id, uint8_t type)
 {
-  ControllerData controller_packet;
+  uint8_t buff[sizeof(VescData)];
+  nrf24.read_into(buff, sizeof(VescData));
+  memcpy(&board_packet, &buff, sizeof(VescData));
 
-  uint8_t buff[sizeof(ControllerData)];
-  nrf24.read_into(buff, sizeof(ControllerData));
-  memcpy(&controller_packet, &buff, sizeof(ControllerData));
-
-  DEBUGVAL(from_id, controller_packet.id, since_sent_to_board);
+  // DEBUGVAL(from_id, board_packet.id, since_sent_to_board);
 }
 //------------------------------------------------------------------
 
@@ -74,11 +72,34 @@ void init_nrf()
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 }
 
+void display_task_0(void *pvParameters)
+{
+  elapsedMillis since_updated_display;
+
+  int j = 0;
+
+  init_tft();
+
+  Serial.printf("display_task_0 running on core %d\n", xPortGetCoreID());
+
+  while (true)
+  {
+    if (since_updated_display > 10)
+    {
+      since_updated_display = 0;
+      tft.drawNumber((unsigned long)board_packet.id, 20, 20);
+    }
+
+    vTaskDelay(5);
+  }
+  vTaskDelete(NULL);
+}
+
 void setup()
 {
   Serial.begin(115200);
 
-  init_tft();
+  xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
 
   delay(1000);
   init_nrf();
@@ -88,12 +109,10 @@ int i = 0;
 
 void loop()
 {
-  if (since_sent_to_board > 2000)
+  if (since_sent_to_board > 200)
   {
     since_sent_to_board = 0;
-    DEBUG("sending..");
 
-    tft.drawNumber(i, 20, 20);
     i++;
 
     uint8_t bs[sizeof(ControllerData)];

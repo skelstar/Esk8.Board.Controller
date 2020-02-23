@@ -10,7 +10,6 @@
 #include <VescData.h>
 #include <elapsedMillis.h>
 #include <Smoothed.h>
-#include <HallEffectThrottleLib.h>
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
 #define SOFT_SPI_MOSI_PIN 13 // Blue
@@ -24,6 +23,7 @@
 #include <NRF24L01Lib.h>
 
 #include <TFT_eSPI.h>
+#include <Wire.h>
 
 //------------------------------------------------------------------
 
@@ -45,7 +45,11 @@ NRF24L01Lib nrf24;
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
-HallEffectThrottleLib throttle;
+#define DEADMAN_PIN INDEX_FINGER_PIN
+
+#include <EncoderThrottleLib.h>
+
+EncoderThrottleLib throttle;
 
 #define NUM_RETRIES 5
 #ifndef SEND_TO_BOARD_INTERVAL
@@ -92,6 +96,27 @@ xQueueHandle xDisplayChangeEventQueue;
 #include <core1.h>
 
 #include <peripherals.h>
+#include <Button2.h>
+
+Button2 _deadmanButton(DEADMAN_PIN);
+
+void encoderChanged(i2cEncoderLibV2 *obj)
+{
+  controller_packet.throttle = throttle.mapCounterToThrottle(_deadmanButton.isPressed());
+  DEBUGVAL(obj->readCounterByte(), controller_packet.throttle);
+}
+
+void encoderButtonPushed(i2cEncoderLibV2 *obj)
+{
+  controller_packet.throttle = throttle.mapCounterToThrottle(_deadmanButton.isPressed());
+  DEBUGVAL("button pushed!!!", controller_packet.throttle);
+}
+
+void deadmanReleased(Button2 &btn)
+{
+  controller_packet.throttle = throttle.mapCounterToThrottle(/*pressed*/ false);
+  DEBUGVAL(controller_packet.throttle);
+}
 
 void setup()
 {
@@ -104,8 +129,10 @@ void setup()
 
   print_build_status();
 
-  throttle.init(HALL_EFFECT_SENSOR_PIN, /*braking granularity*/ 15, /*accel granularity*/ 15);
-  throttle.getMiddle();
+  // throttle
+  Wire.begin();
+  throttle.init(encoderChanged, encoderButtonPushed, /*min*/ -5, /*max*/ 5);
+  _deadmanButton.setReleasedHandler(deadmanReleased);
 
   // core 0
   xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
@@ -130,7 +157,10 @@ void loop()
   if (since_read_trigger > READ_TRIGGER_PERIOD)
   {
     since_read_trigger = 0;
-    read_trigger();
+
+    throttle.loop();
+
+    // read_trigger();
   }
 
   if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
@@ -153,6 +183,8 @@ void loop()
   nrf24.update();
 
   button0.loop();
+
+  _deadmanButton.loop();
 
   vTaskDelay(1);
 }

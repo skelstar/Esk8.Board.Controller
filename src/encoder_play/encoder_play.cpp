@@ -5,10 +5,6 @@
 #include <Arduino.h>
 #include <elapsedMillis.h>
 
-#define ENCODER_CLK_PIN 26
-#define ENCODER_DATA_PIN 27
-#define ENCODER_BUTTON_PIN 25
-
 #include <Wire.h>
 #include <i2cEncoderLibV2.h>
 
@@ -113,11 +109,11 @@ elapsedMillis since_checked_encoder;
 
 void loop()
 {
-
-  if (since_checked_encoder > 50)
+  if (since_checked_encoder > 500)
   {
     since_checked_encoder = 0;
     /* Check the status of the encoder and call the callback */
     Encoder.updateStatus();
+    DEBUGVAL(since_checked_encoder);
   }
 }

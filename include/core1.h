@@ -12,7 +12,7 @@ void read_trigger()
 #ifdef FEATURE_PUSH_TO_ENABLE
   controller_packet.throttle = throttle.getThrottle(board_packet.moving);
 #else
-  controller_packet.throttle = throttle.getThrottle(true);
+  // controller_packet.throttle = throttle.getThrottle(true);
 #endif
 
 #ifdef PRINT_THROTTLE
