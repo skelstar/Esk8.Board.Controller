@@ -22,12 +22,15 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
 
   if (old_board_packet.moving != board_packet.moving)
   {
-    display_state_event(board_packet.moving ? DISP_EV_MOVING : DISP_EV_STOPPED);
+    send_to_display_event_queue(board_packet.moving ? DISP_EV_MOVING : DISP_EV_STOPPED);
   }
 
   old_board_packet = board_packet;
 
-  comms_state_event(EV_COMMS_CONNECTED);
+  if (display_task_initialised)
+  {
+    comms_state_event(EV_COMMS_CONNECTED);
+  }
 }
 //------------------------------------------------------------------
 

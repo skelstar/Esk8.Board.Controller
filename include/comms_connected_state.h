@@ -15,30 +15,29 @@ void print_state(const char *state_name);
 
 State _state_searching(
     [] {
-      print_state("..._state_searching");
+      print_state("...comms_state_searching");
       comms_session_started = false;
       comms_state_connected = false;
     },
     NULL,
     [] {
-      display_state_event(DISP_EV_CONNECTED);
     });
 
 State _state_connected(
     [] {
-      print_state("..._state_connected");
+      print_state("...comms_state_connected");
       comms_session_started = true;
       comms_state_connected = true;
+      send_to_display_event_queue(DISP_EV_CONNECTED);
     },
     NULL,
     [] {
-      display_state_event(DISP_EV_CONNECTED);
     });
 
 State _state_disconnected(
     [] {
-      print_state("..._state_disconnected");
-      display_state_event(DISP_EV_DISCONNECTED);
+      print_state("...comms_state_disconnected");
+      send_to_display_event_queue(DISP_EV_DISCONNECTED);
       comms_state_connected = false;
     },
     NULL,

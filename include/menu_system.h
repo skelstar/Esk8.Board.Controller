@@ -14,17 +14,21 @@ enum DispStateEvent
   DISP_EV_MOVING,
 };
 
+const char *get_event_name(DispStateEvent ev);
+
 void send_to_display_event_queue(DispStateEvent ev, TickType_t ticks = 10)
 {
-  xQueueSendToFront(xDisplayChangeEventQueue, &ev, ticks);
+  DEBUGVAL("send_to_display_event_queue", get_event_name((DispStateEvent)ev));
+  uint8_t e = (uint8_t)ev;
+  xQueueSendToFront(xDisplayChangeEventQueue, &e, ticks);
 }
 
 DispStateEvent read_from_display_event_queue(TickType_t ticks = 5)
 {
-  DispStateEvent e;
+  uint8_t e;
   if (xDisplayChangeEventQueue != NULL && xQueueReceive(xDisplayChangeEventQueue, &e, ticks) == pdPASS)
   {
-    return e;
+    return (DispStateEvent)e;
   }
   return DISP_EV_NO_EVENT;
 }

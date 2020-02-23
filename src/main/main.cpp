@@ -96,15 +96,17 @@ xQueueHandle xDisplayChangeEventQueue;
 #include <screens.h>
 #include <menu_system.h>
 #include <comms_connected_state.h>
-#include <nrf_comms.h>
 
 #include <display_task_0.h>
+#include <nrf_comms.h>
+
 #include <features/battery_measure.h>
 #include <core1.h>
 
 #include <peripherals.h>
 #include <Button2.h>
 
+//---------------------------------------------------------------
 Button2 _deadmanButton(DEADMAN_PIN);
 
 void encoderChanged(i2cEncoderLibV2 *obj)
@@ -124,6 +126,7 @@ void deadmanReleased(Button2 &btn)
   controller_packet.throttle = throttle.mapCounterToThrottle(/*pressed*/ false);
   DEBUGVAL(controller_packet.throttle);
 }
+//---------------------------------------------------------------
 
 void setup()
 {
@@ -179,6 +182,7 @@ void setup()
     vTaskDelay(10);
   }
 }
+//---------------------------------------------------------------
 
 elapsedMillis since_sent_config_to_board;
 
