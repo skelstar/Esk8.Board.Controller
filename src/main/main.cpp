@@ -9,6 +9,7 @@
 #include <Arduino.h>
 #include <VescData.h>
 #include <elapsedMillis.h>
+#include <rom/rtc.h> // for reset reason
 #include <Smoothed.h>
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
@@ -24,6 +25,7 @@
 
 #include <TFT_eSPI.h>
 #include <Wire.h>
+#include <Preferences.h>
 
 //------------------------------------------------------------------
 
@@ -68,7 +70,12 @@ class Stats
 public:
   unsigned long total_failed;
   unsigned long num_packets_with_retries;
+  RESET_REASON reset_reason_core0;
+  RESET_REASON reset_reason_core1;
+  uint16_t soft_resets = 0;
 } stats;
+
+Preferences storage;
 
 elapsedMillis since_sent_to_board;
 elapsedMillis since_read_trigger;
@@ -121,6 +128,29 @@ void deadmanReleased(Button2 &btn)
 void setup()
 {
   Serial.begin(115200);
+
+  storage.begin("stats", /*read-only*/ false);
+  stats.soft_resets = storage.getUInt("soft resets", 0);
+
+  stats.reset_reason_core0 = rtc_get_reset_reason(0);
+  stats.reset_reason_core1 = rtc_get_reset_reason(1);
+
+  Serial.printf("CPU0 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core0));
+  Serial.printf("CPU1 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core1));
+
+  if (stats.reset_reason_core0 == RESET_REASON::SW_CPU_RESET)
+  {
+    stats.soft_resets++;
+    storage.putUInt("soft resets", stats.soft_resets);
+    DEBUGVAL("RESET!!! =========> ", stats.soft_resets);
+  }
+  else if (stats.reset_reason_core0 == RESET_REASON::POWERON_RESET)
+  {
+    stats.soft_resets = 0;
+    storage.putUInt("soft resets", stats.soft_resets);
+    DEBUG("Storage: cleared resets");
+  }
+  storage.end();
 
 #define LOG_LENGTH_MILLIS 5000
   retry_log.begin(SMOOTHED_AVERAGE, LOG_LENGTH_MILLIS / SEND_TO_BOARD_INTERVAL);

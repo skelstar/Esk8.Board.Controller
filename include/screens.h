@@ -31,10 +31,9 @@ void screen_with_stats()
 {
   tft.fillScreen(TFT_BLUE);
   // line 1
-  // char buff1[20];
-  // float retry_rate = retry_log.get();
-  // sprintf(buff1, "rate: %.1f%%", isnan(retry_rate) ? 0.0 : retry_rate);
-  // lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT);
+  char buff1[20];
+  sprintf(buff1, "rsts: %d", stats.soft_resets);
+  lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, stats.soft_resets == 0 ? OKAY : CRITICAL);
   // line 2
   char buff2[20];
   sprintf(buff2, "total f: %lu", stats.total_failed);

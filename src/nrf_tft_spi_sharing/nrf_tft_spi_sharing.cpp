@@ -121,7 +121,7 @@ void loop()
     uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ 0, bs, sizeof(ControllerData), NUM_RETRIES);
     if (retries > 0)
     {
-      DEBUGVAL(retries);
+      DEBUGVAL(retries, since_sent_to_board);
     }
     controller_packet.id++;
   }
