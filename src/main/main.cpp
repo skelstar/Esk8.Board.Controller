@@ -86,6 +86,7 @@ uint16_t remote_battery_percent = 0;
 //------------------------------------------------------------
 
 xQueueHandle xDisplayChangeEventQueue;
+xQueueHandle xCommsStateEventQueue;
 
 //------------------------------------------------------------------
 
@@ -147,12 +148,12 @@ void setup()
   // core 0
   xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
+  xTaskCreatePinnedToCore(commsStateTask_0, "commsStateTask_0", 10000, NULL, /*priority*/ 2, NULL, 0);
 
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
+  xCommsStateEventQueue = xQueueCreate(3, sizeof(uint8_t));
 
   button0_init();
-
-  add_comms_state_transitions();
 
   while (!display_task_initialised)
   {
@@ -186,8 +187,6 @@ void loop()
       send_control_packet_to_board();
     }
   }
-
-  comms_state_fsm.run_machine();
 
   nrf24.update();
 

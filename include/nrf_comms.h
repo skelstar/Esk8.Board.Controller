@@ -27,9 +27,9 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
 
   old_board_packet = board_packet;
 
-  if (display_task_initialised)
+  if (display_task_initialised && commsStateTask_initialised)
   {
-    comms_state_event(EV_COMMS_CONNECTED);
+    send_to_comms_state_event_queue(EV_COMMS_CONNECTED);
   }
 }
 //------------------------------------------------------------------
@@ -88,7 +88,7 @@ void manage_retries(uint8_t retries)
       if (retries >= NUM_RETRIES)
       {
         stats.total_failed++;
-        comms_state_event(EV_COMMS_DISCONNECTED);
+        send_to_comms_state_event_queue(EV_COMMS_DISCONNECTED);
       }
       else
       {

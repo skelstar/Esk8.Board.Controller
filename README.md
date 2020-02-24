@@ -2,9 +2,9 @@
 
 ## Cores
 ### Core 0
-- EncoderTask
-  - xQueueRx: xDeadmanChangedQueue
-    - toggles encoder max
+- display_task_0
+  - send/read display queue
+- batteryMeasureTask_0
 ### Core 1
 - loop()
   - read_trigger
