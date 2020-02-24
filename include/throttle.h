@@ -20,7 +20,6 @@ void deadmanReleased(Button2 &btn)
 
 void init_throttle()
 {
-  // throttle
   Wire.begin();
   throttle.init(/*changed*/ encoderChanged,
                 /*pushed*/ encoderButtonPushed,

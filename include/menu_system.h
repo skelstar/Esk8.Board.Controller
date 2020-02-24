@@ -22,7 +22,7 @@ void send_to_display_event_queue(DispStateEvent ev, TickType_t ticks = 10)
   Serial.printf("-> SEND: %s\n", get_event_name((DispStateEvent)ev));
 #endif
   uint8_t e = (uint8_t)ev;
-  xQueueSendToFront(xDisplayChangeEventQueue, &e, ticks);
+  xQueueSendToBack(xDisplayChangeEventQueue, &e, ticks);
 }
 
 DispStateEvent read_from_display_event_queue(TickType_t ticks = 5)
@@ -51,7 +51,7 @@ State disp_state_searching(
 State disp_state_disconnected(
     [] {
       print_disp_state("...disp_state_disconnected");
-      screen_disconnected();
+      screen_with_stats(/*connected*/ false);
     },
     NULL, NULL);
 //---------------------------------------------------------------
@@ -106,6 +106,7 @@ void add_disp_state_transitions()
 {
   // searcing
   display_state.add_transition(&disp_state_searching, &disp_state_stopped_screen, DISP_EV_CONNECTED, NULL);
+  display_state.add_transition(&disp_state_disconnected, &disp_state_stopped_screen, DISP_EV_CONNECTED, NULL);
   // disconnected
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);

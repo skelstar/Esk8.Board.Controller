@@ -10,7 +10,6 @@
 #define LINE_3 3
 
 // prototypes
-void screen_with_stats();
 
 //-----------------------------------------------------
 
@@ -21,29 +20,41 @@ void screen_searching()
 }
 //-----------------------------------------------------
 
-void screen_disconnected()
+MessageStatus getStatus(uint8_t val, uint8_t okay, uint8_t warn, uint8_t crit)
 {
-  screen_with_stats();
+  if (val >= crit)
+  {
+    return CRITICAL;
+  }
+  else if (val >= warn)
+  {
+    return WARNING;
+  }
+  return OKAY;
 }
-//-----------------------------------------------------
 
-void screen_with_stats()
+void screen_with_stats(bool connected = true)
 {
   tft.fillScreen(TFT_BLUE);
   // line 1
   char buff1[20];
   sprintf(buff1, "rsts: %d", stats.soft_resets);
-  lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, stats.soft_resets == 0 ? OKAY : CRITICAL);
+  lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, getStatus(stats.soft_resets, 0, 1, 1));
   // line 2
   char buff2[20];
   sprintf(buff2, "total f: %lu", stats.total_failed);
-  lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT);
+  lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, getStatus(stats.total_failed, 0, 1, 2));
   // line 3
   char buff3[20];
   sprintf(buff3, "w/rt: %lu", stats.num_packets_with_retries);
-  lcd_message(buff3, LINE_3, Aligned::ALIGNED_LEFT);
+  lcd_message(buff3, LINE_3, Aligned::ALIGNED_LEFT, getStatus(stats.num_packets_with_retries, 0, 10, 50));
   // battery
   draw_small_battery(remote_battery_percent, LCD_WIDTH - MARGIN, 0 + MARGIN, TR_DATUM);
+
+  if (!connected)
+  {
+    tft.drawRect(0, 0, LCD_WIDTH, LCD_HEIGHT, TFT_RED);
+  }
 }
 //-----------------------------------------------------
 

@@ -49,10 +49,12 @@ void send_control_packet_to_board()
 
   uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ PacketType::CONTROL, bs, sizeof(ControllerData), NUM_RETRIES);
 
-  if (retries)
+#ifdef PRINT_RETRIES
+  if (retries > 0)
   {
     DEBUGVAL(retries);
   }
+#endif
   manage_retries(retries);
 
   controller_packet.command = 0;
@@ -65,37 +67,33 @@ void send_config_packet_to_board()
   memcpy(bs, &controller_config, sizeof(ControllerConfig));
 
   uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ PacketType::CONFIG, bs, sizeof(ControllerConfig), NUM_RETRIES);
+#ifdef PRINT_RETRIES
   if (retries > 0)
   {
     DEBUGVAL(retries);
   }
+#endif
+  manage_retries(retries);
+
   controller_packet.id++;
 }
 //------------------------------------------------------------------
-
-float old_retry_rate = 0.0;
 
 void manage_retries(uint8_t retries)
 {
   if (comms_session_started)
   {
-    retry_log.add(retries > 0);
-
-    float retry_rate = retry_log.get();
-
     if (retries > 0)
     {
-      stats.num_packets_with_retries++;
       if (retries >= NUM_RETRIES)
       {
         stats.total_failed++;
         comms_state_event(EV_COMMS_DISCONNECTED);
       }
-      send_to_display_event_queue(DISP_EV_REFRESH);
-    }
-    else if (old_retry_rate != retry_rate)
-    {
-      old_retry_rate = retry_rate;
+      else
+      {
+        stats.num_packets_with_retries++;
+      }
       send_to_display_event_queue(DISP_EV_REFRESH);
     }
   }

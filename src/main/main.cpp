@@ -20,18 +20,16 @@
 #define NRF_CE 26
 #define NRF_CS 33
 
+#define INDEX_FINGER_PIN 2
+#define HALL_EFFECT_SENSOR_PIN 36
+#define ENCODER_INTERRUPT_PIN 17
+
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
 
 #include <TFT_eSPI.h>
 #include <Wire.h>
 #include <Preferences.h>
-
-//------------------------------------------------------------------
-
-#define INDEX_FINGER_PIN 2
-#define HALL_EFFECT_SENSOR_PIN 36
-#define ENCODER_INTERRUPT_PIN 17
 
 //------------------------------------------------------------------
 
@@ -82,8 +80,6 @@ elapsedMillis since_sent_to_board;
 elapsedMillis since_read_trigger;
 
 uint16_t remote_battery_percent = 0;
-
-Smoothed<float> retry_log;
 
 #define SMOOTH_OVER_MILLIS 2000
 
@@ -141,9 +137,6 @@ void setup()
     DEBUG("Storage: cleared resets");
   }
   storage.end();
-
-#define LOG_LENGTH_MILLIS 5000
-  retry_log.begin(SMOOTHED_AVERAGE, LOG_LENGTH_MILLIS / SEND_TO_BOARD_INTERVAL);
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 
