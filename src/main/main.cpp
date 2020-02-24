@@ -29,8 +29,9 @@
 
 //------------------------------------------------------------------
 
-#define INDEX_FINGER_PIN 17
+#define INDEX_FINGER_PIN 2
 #define HALL_EFFECT_SENSOR_PIN 36
+#define ENCODER_INTERRUPT_PIN 17
 
 //------------------------------------------------------------------
 
@@ -107,25 +108,11 @@ xQueueHandle xDisplayChangeEventQueue;
 #include <Button2.h>
 
 //---------------------------------------------------------------
+
 Button2 _deadmanButton(DEADMAN_PIN);
 
-void encoderChanged(i2cEncoderLibV2 *obj)
-{
-  controller_packet.throttle = throttle.mapCounterToThrottle(_deadmanButton.isPressed());
-  // DEBUGVAL(obj->readCounterByte(), controller_packet.throttle);
-}
+#include <throttle.h>
 
-void encoderButtonPushed(i2cEncoderLibV2 *obj)
-{
-  controller_packet.throttle = throttle.mapCounterToThrottle(_deadmanButton.isPressed());
-  // DEBUGVAL("button pushed!!!", controller_packet.throttle);
-}
-
-void deadmanReleased(Button2 &btn)
-{
-  controller_packet.throttle = throttle.mapCounterToThrottle(/*pressed*/ false);
-  DEBUGVAL(controller_packet.throttle);
-}
 //---------------------------------------------------------------
 
 void setup()
@@ -162,10 +149,7 @@ void setup()
 
   print_build_status();
 
-  // throttle
-  Wire.begin();
-  throttle.init(encoderChanged, encoderButtonPushed, /*min*/ -ENCODER_NUM_STEPS_BRAKE, /*max*/ ENCODER_NUM_STEPS_ACCEL);
-  _deadmanButton.setReleasedHandler(deadmanReleased);
+  init_throttle();
 
   // core 0
   xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
@@ -193,8 +177,6 @@ void loop()
     since_read_trigger = 0;
 
     throttle.loop();
-
-    // read_trigger();
   }
 
   if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
