@@ -1,6 +1,7 @@
 {
   "workbench.colorCustomizations": {
-    "editorGroupHeader.tabsBackground": "#fc5603"
+    "tab.activeBackground": "#ff0000",
+    "editor.lineHighlightBackground": "#444242"
   },
   "files.associations": {
     "*.tcc": "cpp",
