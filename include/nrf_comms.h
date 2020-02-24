@@ -86,17 +86,17 @@ void manage_retries(uint8_t retries)
     if (retries > 0)
     {
       stats.num_packets_with_retries++;
-      send_to_display_event_queue(DISP_EV_REFRESH);
       if (retries >= NUM_RETRIES)
       {
         stats.total_failed++;
         comms_state_event(EV_COMMS_DISCONNECTED);
       }
+      send_to_display_event_queue(DISP_EV_REFRESH);
     }
-    // else if (old_retry_rate != retry_rate)
-    // {
-    //   old_retry_rate = retry_rate;
-    //   send_to_display_event_queue(DISP_EV_REFRESH);
-    // }
+    else if (old_retry_rate != retry_rate)
+    {
+      old_retry_rate = retry_rate;
+      send_to_display_event_queue(DISP_EV_REFRESH);
+    }
   }
 }

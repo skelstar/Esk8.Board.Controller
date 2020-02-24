@@ -7,8 +7,6 @@ bool display_task_initialised = false;
 
 void display_task_0(void *pvParameters)
 {
-  elapsedMillis since_updated_display;
-
   setupLCD();
 
   add_disp_state_transitions();
@@ -30,19 +28,7 @@ void display_task_0(void *pvParameters)
       display_state.run_machine();
 
       DispStateEvent ev = read_from_display_event_queue();
-      if (ev == DISP_EV_REFRESH)
-      {
-        if (since_updated_display > 500)
-        {
-          since_updated_display = 0;
-          display_state.trigger(DISP_EV_REFRESH);
-        }
-        else
-        {
-          DEBUG("too soon!");
-        }
-      }
-      else if (ev != DISP_EV_NO_EVENT)
+      if (ev != DISP_EV_NO_EVENT)
       {
         display_state.trigger(ev);
       }
