@@ -64,6 +64,11 @@ public:
     Encoder.updateStatus();
   }
 
+  void clear()
+  {
+    Encoder.writeCounter(0);
+  }
+
   uint8_t mapCounterToThrottle(bool deadmanPressed)
   {
     int counter = Encoder.readCounterByte();
@@ -81,6 +86,11 @@ public:
       return map(counter, _min, 0, _mapped_min, 127);
     }
     return 127;
+  }
+
+  ThrottleMode getmode()
+  {
+    return _mode;
   }
 
   void setMode(ThrottleMode mode)

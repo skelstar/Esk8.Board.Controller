@@ -75,7 +75,7 @@ State disp_state_menu_throttle(
       print_disp_state("...disp_state_menu_throttle");
       tft.fillScreen(TFT_DARKGREEN);
       lcd_message("throttle..", LINE_1, ALIGNED_LEFT);
-      switch (throttle.mode)
+      switch (throttle.getMode())
       {
       case ADVANCED:
         lcd_message("beginner?", LINE_2, ALIGNED_CENTRE);
@@ -91,14 +91,14 @@ State disp_state_menu_throttle_selected(
     [] {
       print_disp_state("...disp_state_menu_throttle_selected");
 
-      switch (throttle.mode)
+      switch (throttle.getMode())
       {
       case ADVANCED:
-        throttle.mode = BEGINNER;
+        throttle.setMode(BEGINNER);
         lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
         break;
       case BEGINNER:
-        throttle.mode = ADVANCED;
+        throttle.setMode(ADVANCED);
         lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
         break;
       }

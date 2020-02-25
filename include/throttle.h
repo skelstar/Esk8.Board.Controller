@@ -14,6 +14,11 @@ void encoderButtonPushed(i2cEncoderLibV2 *obj)
 
 void deadmanReleased(Button2 &btn)
 {
+  if (controller_packet.throttle < 127)
+  {
+    controller_packet.throttle = 127;
+    throttle.clear();
+  }
   controller_packet.throttle = throttle.mapCounterToThrottle(/*pressed*/ false);
   DEBUGVAL(controller_packet.throttle);
 }
