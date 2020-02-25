@@ -1,6 +1,3 @@
-#ifndef TriggerState
-#include <TriggerLib.h>
-#endif
 
 #ifndef TFT_eSPI
 #include <TFT_eSPI.h>
@@ -53,7 +50,15 @@ void lcd_message(const char *message, uint8_t line, Aligned aligned, MessageStat
           y = TOP_BAR + ((line - 1) * line_height);
 
   tft.setTextSize(3);
-  tft.setTextColor(TFT_WHITE, status_colours[status]);
+  if (status != OKAY)
+  {
+    tft.setTextColor(TFT_WHITE, status_colours[status]);
+  }
+  else
+  {
+    tft.setTextColor(TFT_WHITE);
+  }
+
   if (aligned == ALIGNED_LEFT)
   {
     tft.setTextDatum(TL_DATUM);
@@ -160,28 +165,6 @@ void draw_small_battery(uint8_t percent, uint16_t x, uint16_t y, uint8_t datum)
   // capacity (remove from 100% using black box)
   uint8_t remove_box_width = ((100 - percent) / 100.0) * (SM_BATT_WIDTH - SM_BATT_KNOB_WIDTH);
   tft.fillRect(x + SM_BATT_KNOB_WIDTH + 1, y + 1, remove_box_width, SM_BATT_HEIGHT - 2, TFT_BLUE);
-}
-//--------------------------------------------------------------------------------
-void draw_trigger_state(TriggerState state, uint8_t datum)
-{
-  // uint8_t width = 20, height = 20;
-  // uint8_t x = get_x(datum, width);
-  // uint8_t y = get_y_and_set_pos(datum, height);
-  // uint8_t x2 = x + width/2 - 5;
-  // uint8_t y2 = y + 17;
-
-  // if (state == IDLE_STATE || state == GO_STATE)
-  // {
-  //   u8g2.drawFrame(x, y, width, height);
-  //   u8g2.drawStr(x2, y2, state == IDLE_STATE ? "I" : "G");
-  // }
-  // else
-  // {
-  //   u8g2.drawBox(x, y, width, height);
-  //   u8g2.setDrawColor(0);
-  //   u8g2.drawStr(x2, y2, "W");
-  //   u8g2.setDrawColor(1);
-  // }
 }
 //--------------------------------------------------------------------------------
 uint16_t get_x_from_datum(uint16_t x, uint16_t width, uint8_t datum)

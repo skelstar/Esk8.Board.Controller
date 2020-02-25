@@ -70,32 +70,38 @@ State disp_state_moving_screen(
     },
     NULL, NULL);
 //---------------------------------------------------------------
-State disp_state_menu_option_throttle_mode(
+State disp_state_menu_throttle(
     [] {
-      print_disp_state("...disp_state_menu_option_throttle_mode");
-      lcd_message("throttle:", LINE_1, ALIGNED_LEFT);
-      // lcd_message("deadman?", LINE_2, ALIGNED_LEFT);
+      print_disp_state("...disp_state_menu_throttle");
+      tft.fillScreen(TFT_DARKGREEN);
+      lcd_message("throttle..", LINE_1, ALIGNED_LEFT);
+      switch (throttle.mode)
+      {
+      case ADVANCED:
+        lcd_message("beginner?", LINE_2, ALIGNED_CENTRE);
+        break;
+      case BEGINNER:
+        lcd_message("advanced", LINE_2, ALIGNED_CENTRE);
+        break;
+      }
     },
     NULL, NULL);
 //---------------------------------------------------------------
-State disp_state_menu_option_throttle_mode_selected(
+State disp_state_menu_throttle_selected(
     [] {
-      print_disp_state("...disp_state_menu_option_throttle_mode_selected");
-      // tft.fillScreen(TFT_BLUE);
+      print_disp_state("...disp_state_menu_throttle_selected");
 
-      // switch (throttle.throttle_mode)
-      // {
-      // case THROTTLE_MODE_DEADMAN:
-      //   throttle.throttle_mode = THROTTLE_MODE_PUSH_TO_START;
-      //   lcd_message("push-to-start", LINE_2, ALIGNED_CENTRE);
-      //   break;
-      // case THROTTLE_MODE_PUSH_TO_START:
-      //   throttle.throttle_mode = THROTTLE_MODE_DEADMAN;
-      //   lcd_message("deadman", LINE_2, ALIGNED_CENTRE);
-      //   break;
-      // }
-      // lcd_message("selected!", LINE_2, ALIGNED_CENTRE);
-      // //u8g2.sendBuffer();
+      switch (throttle.mode)
+      {
+      case ADVANCED:
+        throttle.mode = BEGINNER;
+        lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
+        break;
+      case BEGINNER:
+        throttle.mode = ADVANCED;
+        lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
+        break;
+      }
     },
     NULL, NULL);
 //---------------------------------------------------------------
@@ -112,8 +118,7 @@ void add_disp_state_transitions()
   display_state.add_transition(&disp_state_moving_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
   // main - stopped
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_REFRESH, NULL);
-  display_state.add_transition(&disp_state_stopped_screen, &disp_state_menu_option_throttle_mode, DISP_EV_BUTTON_CLICK, NULL);
-
+  display_state.add_transition(&disp_state_stopped_screen, &disp_state_menu_throttle, DISP_EV_BUTTON_CLICK, NULL);
   // moving
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_moving_screen, DISP_EV_MOVING, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_REFRESH, NULL);
@@ -123,11 +128,11 @@ void add_disp_state_transitions()
   const uint16_t OPTION_SCREEN_TIMEOUT = 2000;
   const uint16_t OPTION_SELECTED_TIMEOUT = 1000;
   // option 1
-  display_state.add_timed_transition(&disp_state_menu_option_throttle_mode, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
-  display_state.add_transition(&disp_state_menu_option_throttle_mode, &disp_state_stopped_screen, DISP_EV_BUTTON_CLICK, NULL);
-  display_state.add_transition(&disp_state_menu_option_throttle_mode, &disp_state_menu_option_throttle_mode_selected, DISP_EV_MENU_OPTION_SELECT, NULL);
+  display_state.add_timed_transition(&disp_state_menu_throttle, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
+  display_state.add_transition(&disp_state_menu_throttle, &disp_state_stopped_screen, DISP_EV_BUTTON_CLICK, NULL);
+  display_state.add_transition(&disp_state_menu_throttle, &disp_state_menu_throttle_selected, DISP_EV_MENU_OPTION_SELECT, NULL);
   // option  1selected
-  display_state.add_timed_transition(&disp_state_menu_option_throttle_mode_selected, &disp_state_stopped_screen, OPTION_SELECTED_TIMEOUT, NULL);
+  display_state.add_timed_transition(&disp_state_menu_throttle_selected, &disp_state_stopped_screen, OPTION_SELECTED_TIMEOUT, NULL);
 }
 
 const char *get_event_name(DispStateEvent ev)

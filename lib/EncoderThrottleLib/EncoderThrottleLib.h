@@ -11,6 +11,12 @@
 
 i2cEncoderLibV2 Encoder(0x01); /* A0 is soldered */
 
+enum ThrottleMode
+{
+  BEGINNER,
+  ADVANCED,
+};
+
 class EncoderThrottleLib
 {
   typedef void (*EncoderThrottleCb)(i2cEncoderLibV2 *);
@@ -30,6 +36,9 @@ public:
     _encoderButtonPushedCb = encoderButtonPushedCb;
     _min = min;
     _max = max;
+    mode = ADVANCED;
+    _mapped_max = 255;
+    _mapped_min = 0;
 
     Encoder.reset();
     Encoder.begin(
@@ -65,19 +74,36 @@ public:
         Encoder.writeCounter((int32_t)0);
         return 127;
       }
-      return map(counter, 0, _max, 127, 255);
+      return map(counter, 0, _max, 127, _mapped_max);
     }
     else if (counter < 0)
     {
-      return map(counter, _min, 0, 0, 127);
+      return map(counter, _min, 0, _mapped_min, 127);
     }
     return 127;
+  }
+
+  void setMode(ThrottleMode mode)
+  {
+    _mode = mode;
+    switch (mode)
+    {
+    case ADVANCED:
+      _mapped_max = 255;
+      _mapped_min = 0;
+      break;
+    case BEGINNER:
+      uint8_t limit = 127 * 0.5;
+      _mapped_max = 127 + limit;
+    }
   }
 
 private:
   EncoderThrottleCb _encoderChangedCb;
   EncoderThrottleCb _encoderButtonPushedCb;
+  ThrottleMode _mode;
   int _min, _max;
+  int _mapped_min, _mapped_max;
 };
 
 #endif
