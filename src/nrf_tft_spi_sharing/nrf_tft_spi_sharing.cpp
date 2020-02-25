@@ -72,11 +72,13 @@ void init_nrf()
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 }
 
+bool update_display;
+uint8_t total_missed = 0;
+uint8_t packets_with_retries = 0;
+
 void display_task_0(void *pvParameters)
 {
   elapsedMillis since_updated_display;
-
-  int j = 0;
 
   init_tft();
 
@@ -84,10 +86,19 @@ void display_task_0(void *pvParameters)
 
   while (true)
   {
-    if (since_updated_display > 10)
+    if (since_updated_display > 100)
     {
       since_updated_display = 0;
       tft.drawNumber((unsigned long)board_packet.id, 20, 20);
+    }
+
+    if (update_display)
+    {
+      update_display = false;
+      tft.drawString("missed", 20, 50);
+      tft.drawNumber(total_missed, 180, 50);
+      tft.drawString("w/rts", 20, 80);
+      tft.drawNumber(packets_with_retries, 180, 80);
     }
 
     vTaskDelay(5);
@@ -106,6 +117,7 @@ void setup()
 }
 
 int i = 0;
+elapsedMillis since_last_missed = 0;
 
 void loop()
 {
@@ -118,13 +130,33 @@ void loop()
     uint8_t bs[sizeof(ControllerData)];
     memcpy(bs, &controller_packet, sizeof(ControllerData));
 
-    uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ 0, bs, sizeof(ControllerData), NUM_RETRIES);
-    if (retries > 0)
+    bool success = nrf24.send_packet(/*to*/ COMMS_BOARD, /*type*/ 0, /*data*/ bs, sizeof /*len*/ (ControllerData));
+    if (!success)
     {
-      DEBUGVAL(retries, since_sent_to_board);
+      total_missed++;
+      update_display = true;
+      long last_missed_seconds = since_last_missed / 1000;
+      DEBUGVAL(controller_packet.id, total_missed, last_missed_seconds);
+      since_last_missed = 0;
     }
+    // uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ 0, bs, sizeof(ControllerData), NUM_RETRIES);
+    // if (retries > 0)
+    // {
+    //   if (retries > 5)
+    //   {
+    //     total_missed++;
+    //     DEBUGVAL(retries, since_sent_to_board);
+    //   }
+    //   else
+    //   {
+    //     packets_with_retries++;
+    //     DEBUGVAL(retries, since_sent_to_board);
+    //   }
+    //   update_display = true;
+    // }
     controller_packet.id++;
   }
   // delay(1000);
   nrf24.update();
+  vTaskDelay(10);
 }
