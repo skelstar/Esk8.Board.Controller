@@ -11,10 +11,10 @@
 
 i2cEncoderLibV2 Encoder(0x01); /* A0 is soldered */
 
-enum ThrottleMode
+enum ThrottleMap
 {
-  BEGINNER,
-  ADVANCED,
+  LINEAR,
+  GENTLE,
 };
 
 struct MapEncoderToThrottle
@@ -23,7 +23,7 @@ struct MapEncoderToThrottle
   uint8_t throttle;
 };
 
-MapEncoderToThrottle normal_map[] = {
+MapEncoderToThrottle gentle_map[] = {
     {-8, 0},
     {-7, 18},
     {-6, 36},
@@ -66,6 +66,8 @@ public:
     _mapped_max = 255;
     _mapped_min = 0;
 
+    _useMap = ThrottleMap::LINEAR;
+
     Encoder.reset();
     Encoder.begin(
         i2cEncoderLibV2::INT_DATA |
@@ -99,19 +101,20 @@ public:
   {
     switch (_useMap)
     {
-    case 0:
+    case ThrottleMap::LINEAR:
       return map(counter, 0, _max, 127, _mapped_max);
-    case 1:
+    case ThrottleMap::GENTLE:
       // find item in normal map
-      for (uint8_t i = 0; i < sizeof(normal_map); i++)
+      for (uint8_t i = 0; i < sizeof(gentle_map); i++)
       {
-        if (normal_map[i].value == counter)
+        if (gentle_map[i].value == counter)
         {
-          return normal_map[i].throttle;
+          return gentle_map[i].throttle;
         }
       }
       return 127;
     }
+    return 127;
   }
 
   uint8_t mapCounterToThrottle(bool deadmanPressed)
@@ -125,9 +128,14 @@ public:
     return _getThrottleFromMap(counter);
   }
 
-  void useMap(uint8_t mapNum)
+  void setMap(ThrottleMap mapNum)
   {
     _useMap = mapNum;
+  }
+
+  ThrottleMap getMap()
+  {
+    return _useMap;
   }
 
 private:
@@ -135,7 +143,7 @@ private:
   EncoderThrottleCb _encoderButtonPushedCb;
   int _min, _max;
   int _mapped_min, _mapped_max;
-  uint8_t _useMap = 0;
+  ThrottleMap _useMap;
 };
 
 #endif
