@@ -17,6 +17,32 @@ enum ThrottleMode
   ADVANCED,
 };
 
+struct MapEncoderToThrottle
+{
+  int value;
+  uint8_t throttle;
+};
+
+MapEncoderToThrottle normal_map[] = {
+    {-8, 0},
+    {-7, 18},
+    {-6, 36},
+    {-5, 53},
+    {-4, 70},
+    {-3, 88},
+    {-2, 106},
+    {-1, 122},
+    {0, 127},
+    {1, 133},
+    {2, 149},
+    {3, 167},
+    {4, 185},
+    {5, 202},
+    {6, 219},
+    {7, 237},
+    {8, 255},
+};
+
 class EncoderThrottleLib
 {
   typedef void (*EncoderThrottleCb)(i2cEncoderLibV2 *);
@@ -36,7 +62,7 @@ public:
     _encoderButtonPushedCb = encoderButtonPushedCb;
     _min = min;
     _max = max;
-    mode = ADVANCED;
+    // mode = ADVANCED;
     _mapped_max = 255;
     _mapped_min = 0;
 
@@ -69,51 +95,47 @@ public:
     Encoder.writeCounter(0);
   }
 
+  uint8_t _getThrottleFromMap(int counter)
+  {
+    switch (_useMap)
+    {
+    case 0:
+      return map(counter, 0, _max, 127, _mapped_max);
+    case 1:
+      // find item in normal map
+      for (uint8_t i = 0; i < sizeof(normal_map); i++)
+      {
+        if (normal_map[i].value == counter)
+        {
+          return normal_map[i].throttle;
+        }
+      }
+      return 127;
+    }
+  }
+
   uint8_t mapCounterToThrottle(bool deadmanPressed)
   {
     int counter = Encoder.readCounterByte();
-    if (counter > 0)
+    if (counter > 0 && deadmanPressed == false)
     {
-      if (deadmanPressed == false)
-      {
-        Encoder.writeCounter((int32_t)0);
-        return 127;
-      }
-      return map(counter, 0, _max, 127, _mapped_max);
+      Encoder.writeCounter((int32_t)0);
+      return 127;
     }
-    else if (counter < 0)
-    {
-      return map(counter, _min, 0, _mapped_min, 127);
-    }
-    return 127;
+    return _getThrottleFromMap(counter);
   }
 
-  ThrottleMode getmode()
+  void useMap(uint8_t mapNum)
   {
-    return _mode;
-  }
-
-  void setMode(ThrottleMode mode)
-  {
-    _mode = mode;
-    switch (mode)
-    {
-    case ADVANCED:
-      _mapped_max = 255;
-      _mapped_min = 0;
-      break;
-    case BEGINNER:
-      uint8_t limit = 127 * 0.5;
-      _mapped_max = 127 + limit;
-    }
+    _useMap = mapNum;
   }
 
 private:
   EncoderThrottleCb _encoderChangedCb;
   EncoderThrottleCb _encoderButtonPushedCb;
-  ThrottleMode _mode;
   int _min, _max;
   int _mapped_min, _mapped_max;
+  uint8_t _useMap = 0;
 };
 
 #endif

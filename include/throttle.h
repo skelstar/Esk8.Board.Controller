@@ -30,5 +30,6 @@ void init_throttle()
                 /*pushed*/ encoderButtonPushed,
                 /*min*/ -ENCODER_NUM_STEPS_BRAKE,
                 /*max*/ ENCODER_NUM_STEPS_ACCEL);
+  throttle.useMap(1);
   _deadmanButton.setReleasedHandler(deadmanReleased);
 }
