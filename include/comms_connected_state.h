@@ -38,7 +38,7 @@ public:
   void init()
   {
     _current = ST_COMMS_SEARCHING;
-    comms_session_started = true;
+    // comms_session_started = true;
     print_state("...comms_state_searching");
   }
 
@@ -52,8 +52,9 @@ public:
     switch (_current)
     {
     case ST_COMMS_SEARCHING:
-      if (event == EV_COMMS_CONNECTED)
+      if (event == EV_COMMS_CONNECTED && comms_session_started)
       {
+        // comms_session_started = true;
         comms_state_connected = true;
         _current = ST_COMMS_CONNECTED;
         print_state("...comms_state_connected");

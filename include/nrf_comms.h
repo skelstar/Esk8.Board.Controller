@@ -1,6 +1,7 @@
 
 void send_packet_to_board(PacketType packetType);
-void manage_retries(bool success);
+void manage_responses();
+void manage_responses(bool success);
 
 //------------------------------------------------------------------
 void packet_available_cb(uint16_t from_id, uint8_t type)
@@ -13,11 +14,6 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
   if (board_packet.id == 0)
   {
     DEBUG("*** first packet!! ***");
-#ifdef FEATURE_CRUISE_CONTROL
-    controller_config.cruise_control_enabled = true;
-#else
-    controller_config.cruise_control_enabled = false;
-#endif
     send_packet_to_board(CONFIG);
   }
 
@@ -50,6 +46,7 @@ void send_packet_to_board(PacketType packetType)
   }
   else if (packetType == PacketType::CONFIG)
   {
+    controller_config.id = controller_packet.id;
     uint8_t bs[sizeof(ControllerConfig)];
     memcpy(bs, &controller_config, sizeof(ControllerConfig));
 
@@ -58,20 +55,42 @@ void send_packet_to_board(PacketType packetType)
   }
   if (false == success)
   {
-    manage_retries(false);
+    manage_responses(false);
   }
 }
 //------------------------------------------------------------------
 
-void manage_retries(bool success)
+// checks board_packet.id
+void manage_responses()
 {
+  bool response_ok = board_packet.id == controller_packet.id - 1 ||
+                     board_packet.id == controller_config.id - 1;
+  if (response_ok)
+  {
+    stats.consecutive_resps++;
+    comms_session_started = stats.consecutive_resps > 3;
+  }
+  else
+  {
+    stats.consecutive_resps = 0;
+    DEBUG("disconnect because ids don't match");
+  }
+  manage_responses(response_ok);
+}
+
+void manage_responses(bool success)
+{
+  if (!comms_state_connected && success)
+  {
+    send_to_comms_state_event_queue(EV_COMMS_CONNECTED);
+  }
+
   if (comms_session_started && !success)
   {
     stats.total_failed++;
 #ifdef PRINT_RETRIES
     DEBUGVAL(success, stats.total_failed);
 #endif
-    // send_to_comms_state_event_queue(EV_COMMS_DISCONNECTED);
-    send_to_display_event_queue(DISP_EV_REFRESH);
+    send_to_comms_state_event_queue(EV_COMMS_DISCONNECTED);
   }
 }
