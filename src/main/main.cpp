@@ -68,7 +68,6 @@ class Stats
 {
 public:
   unsigned long total_failed;
-  unsigned long num_packets_with_retries;
   RESET_REASON reset_reason_core0;
   RESET_REASON reset_reason_core1;
   uint16_t soft_resets = 0;
@@ -76,8 +75,9 @@ public:
 
 Preferences storage;
 
-elapsedMillis since_sent_to_board;
-elapsedMillis since_read_trigger;
+elapsedMillis since_sent_to_board,
+    since_read_trigger,
+    since_got_reply_from_board;
 
 uint16_t remote_battery_percent = 0;
 
@@ -180,15 +180,21 @@ void loop()
     if (comms_state_connected == false)
     {
       controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
-      send_config_packet_to_board();
+      send_packet_to_board(CONFIG);
     }
     else
     {
-      send_control_packet_to_board();
+      send_packet_to_board(CONTROL);
     }
+    since_got_reply_from_board = 0;
   }
 
   nrf24.update();
+
+  if (since_got_reply_from_board > 100)
+  {
+    // manage_retries(/*success*/ false);
+  }
 
   button0.loop();
 

@@ -45,9 +45,9 @@ void screen_with_stats(bool connected = true)
   sprintf(buff2, "total f: %lu", stats.total_failed);
   lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, getStatus(stats.total_failed, 0, 1, 2));
   // line 3
-  char buff3[20];
-  sprintf(buff3, "w/rt: %lu", stats.num_packets_with_retries);
-  lcd_message(buff3, LINE_3, Aligned::ALIGNED_LEFT, getStatus(stats.num_packets_with_retries, 0, 10, 50));
+  // char buff3[20];
+  // sprintf(buff3, "w/rt: %lu", stats.num_packets_with_retries);
+  // lcd_message(buff3, LINE_3, Aligned::ALIGNED_LEFT, getStatus(stats.num_packets_with_retries, 0, 10, 50));
   // battery
   draw_small_battery(remote_battery_percent, LCD_WIDTH - MARGIN, 0 + MARGIN, TR_DATUM);
 

@@ -1,10 +1,11 @@
 
-void send_config_packet_to_board();
-void manage_retries(uint8_t retries);
+void send_packet_to_board(PacketType packetType);
+void manage_retries(bool success);
 
 //------------------------------------------------------------------
 void packet_available_cb(uint16_t from_id, uint8_t type)
 {
+  since_got_reply_from_board = 0;
   uint8_t buff[sizeof(VescData)];
   nrf24.read_into(buff, sizeof(VescData));
   memcpy(&board_packet, &buff, sizeof(VescData));
@@ -17,7 +18,7 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
 #else
     controller_config.cruise_control_enabled = false;
 #endif
-    send_config_packet_to_board();
+    send_packet_to_board(CONFIG);
   }
 
   if (old_board_packet.moving != board_packet.moving)
@@ -36,65 +37,41 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
 
 elapsedMillis since_sent_request;
 
-void send_control_packet_to_board()
+void send_packet_to_board(PacketType packetType)
 {
-  if (since_sent_request > 5000 || comms_state_connected == false)
+  bool success = false;
+  if (packetType == PacketType::CONTROL)
   {
-    since_sent_request = 0;
-    controller_packet.command = 1; // REQUEST
+    uint8_t bs[sizeof(ControllerData)];
+    memcpy(bs, &controller_packet, sizeof(ControllerData));
+
+    success = nrf24.send_packet(/*to*/ COMMS_BOARD, /*type*/ packetType, bs, sizeof(ControllerData));
+    controller_packet.id++;
   }
-
-  uint8_t bs[sizeof(ControllerData)];
-  memcpy(bs, &controller_packet, sizeof(ControllerData));
-
-  uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ PacketType::CONTROL, bs, sizeof(ControllerData), NUM_RETRIES);
-
-#ifdef PRINT_RETRIES
-  if (retries > 0)
+  else if (packetType == PacketType::CONFIG)
   {
-    DEBUGVAL(retries);
+    uint8_t bs[sizeof(ControllerConfig)];
+    memcpy(bs, &controller_config, sizeof(ControllerConfig));
+
+    success = nrf24.send_packet(/*to*/ COMMS_BOARD, /*type*/ packetType, bs, sizeof(ControllerConfig));
+    controller_packet.id++;
   }
-#endif
-  manage_retries(retries);
-
-  controller_packet.command = 0;
-  controller_packet.id++;
-}
-//------------------------------------------------------------------
-void send_config_packet_to_board()
-{
-  uint8_t bs[sizeof(ControllerConfig)];
-  memcpy(bs, &controller_config, sizeof(ControllerConfig));
-
-  uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ PacketType::CONFIG, bs, sizeof(ControllerConfig), NUM_RETRIES);
-#ifdef PRINT_RETRIES
-  if (retries > 0)
+  if (false == success)
   {
-    DEBUGVAL(retries);
+    manage_retries(false);
   }
-#endif
-  manage_retries(retries);
-
-  controller_packet.id++;
 }
 //------------------------------------------------------------------
 
-void manage_retries(uint8_t retries)
+void manage_retries(bool success)
 {
-  if (comms_session_started)
+  if (comms_session_started && !success)
   {
-    if (retries > 0)
-    {
-      if (retries >= NUM_RETRIES)
-      {
-        stats.total_failed++;
-        send_to_comms_state_event_queue(EV_COMMS_DISCONNECTED);
-      }
-      else
-      {
-        stats.num_packets_with_retries++;
-      }
-      send_to_display_event_queue(DISP_EV_REFRESH);
-    }
+    stats.total_failed++;
+#ifdef PRINT_RETRIES
+    DEBUGVAL(success, stats.total_failed);
+#endif
+    // send_to_comms_state_event_queue(EV_COMMS_DISCONNECTED);
+    send_to_display_event_queue(DISP_EV_REFRESH);
   }
 }
