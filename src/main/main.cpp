@@ -178,13 +178,6 @@ void loop()
   {
     since_sent_to_board = 0;
 
-    manage_responses();
-
-    if (board_packet.id != controller_packet.id - 1)
-    {
-      DEBUGVAL(board_packet.id, controller_packet.id - 1);
-    }
-
     if (comms_state_connected == false)
     {
       controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
@@ -198,12 +191,6 @@ void loop()
   }
 
   nrf24.update();
-
-  if (since_got_reply_from_board > 100 && comms_state_connected)
-  {
-    // manage_responses(/*success*/ false);
-    // DEBUGVAL(since_got_reply_from_board);
-  }
 
   button0.loop();
 

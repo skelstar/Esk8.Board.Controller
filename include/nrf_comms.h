@@ -11,9 +11,11 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
   nrf24.read_into(buff, sizeof(VescData));
   memcpy(&board_packet, &buff, sizeof(VescData));
 
+  manage_responses();
+
   if (board_packet.id == 0)
   {
-    DEBUG("*** first packet!! ***");
+    DEBUG("*** board's first packet!! ***");
     send_packet_to_board(CONFIG);
   }
 
