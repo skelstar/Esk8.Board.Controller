@@ -55,11 +55,13 @@ public:
   void init(
       EncoderThrottleCb encoderChangedCb,
       EncoderThrottleCb encoderButtonPushedCb,
+      EncoderThrottleCb encoderButtonDoubleClickCb,
       int8_t min,
       int8_t max)
   {
     _encoderChangedCb = encoderChangedCb;
     _encoderButtonPushedCb = encoderButtonPushedCb;
+    _encoderButtonDoubleClickCb = encoderButtonDoubleClickCb;
     _min = min;
     _max = max;
     // mode = ADVANCED;
@@ -79,6 +81,7 @@ public:
     Encoder.onIncrement = _encoderChangedCb;
     Encoder.onDecrement = _encoderChangedCb;
     Encoder.onButtonPush = _encoderButtonPushedCb;
+    Encoder.onButtonDoublePush = _encoderButtonDoubleClickCb;
     Encoder.writeCounter((int32_t)0);    /* Reset the counter value */
     Encoder.writeMax((int32_t)max);      /* Set the maximum threshold*/
     Encoder.writeMin((int32_t)min);      /* Set the minimum threshold */
@@ -141,6 +144,7 @@ public:
 private:
   EncoderThrottleCb _encoderChangedCb;
   EncoderThrottleCb _encoderButtonPushedCb;
+  EncoderThrottleCb _encoderButtonDoubleClickCb;
   int _min, _max;
   int _mapped_min, _mapped_max;
   ThrottleMap _useMap;

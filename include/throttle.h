@@ -2,14 +2,25 @@
 
 void encoderChanged(i2cEncoderLibV2 *obj)
 {
+  uint8_t old_throttle = controller_packet.throttle;
   controller_packet.throttle = throttle.mapCounterToThrottle(_deadmanButton.isPressed());
-  DEBUGVAL(obj->readCounterByte(), controller_packet.throttle);
+
+#ifdef PRINT_THROTTLE
+  if (old_throttle != controller_packet.throttle)
+  {
+    DEBUGVAL("encoderChanged", controller_packet.throttle);
+  }
+#endif
 }
 
 void encoderButtonPushed(i2cEncoderLibV2 *obj)
 {
-  controller_packet.throttle = throttle.mapCounterToThrottle(_deadmanButton.isPressed());
-  DEBUGVAL("button pushed!!!", controller_packet.throttle);
+  DEBUGVAL("button pushed!!!");
+}
+
+void encoderButtonDoubleClicked(i2cEncoderLibV2 *obj)
+{
+  DEBUGVAL("button double clicked!!!");
 }
 
 void deadmanReleased(Button2 &btn)
@@ -28,6 +39,7 @@ void init_throttle()
   Wire.begin();
   throttle.init(/*changed*/ encoderChanged,
                 /*pushed*/ encoderButtonPushed,
+                /*double*/ encoderButtonDoubleClicked,
                 /*min*/ -ENCODER_NUM_STEPS_BRAKE,
                 /*max*/ ENCODER_NUM_STEPS_ACCEL);
   throttle.setMap(GENTLE);
