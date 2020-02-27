@@ -74,11 +74,13 @@ public:
   uint16_t soft_resets = 0;
 } stats;
 
-Preferences storage;
+#define STORE_STATS "stats"
+#define STORE_STATS_SOFT_RSTS "soft resets"
+Preferences statsStore;
 
-elapsedMillis since_sent_to_board,
-    since_read_trigger,
-    since_got_reply_from_board;
+elapsedMillis
+    since_sent_to_board,
+    since_read_trigger;
 
 uint16_t remote_battery_percent = 0;
 
@@ -117,8 +119,8 @@ void setup()
 {
   Serial.begin(115200);
 
-  storage.begin("stats", /*read-only*/ false);
-  stats.soft_resets = storage.getUInt("soft resets", 0);
+  statsStore.begin(STORE_STATS, /*read-only*/ false);
+  stats.soft_resets = statsStore.getUInt(STORE_STATS_SOFT_RSTS, 0);
 
   stats.reset_reason_core0 = rtc_get_reset_reason(0);
   stats.reset_reason_core1 = rtc_get_reset_reason(1);
@@ -129,16 +131,16 @@ void setup()
   if (stats.reset_reason_core0 == RESET_REASON::SW_CPU_RESET)
   {
     stats.soft_resets++;
-    storage.putUInt("soft resets", stats.soft_resets);
+    statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
     DEBUGVAL("RESET!!! =========> ", stats.soft_resets);
   }
   else if (stats.reset_reason_core0 == RESET_REASON::POWERON_RESET)
   {
     stats.soft_resets = 0;
-    storage.putUInt("soft resets", stats.soft_resets);
+    statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
     DEBUG("Storage: cleared resets");
   }
-  storage.end();
+  statsStore.end();
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 
@@ -187,7 +189,6 @@ void loop()
     {
       send_packet_to_board(CONTROL);
     }
-    since_got_reply_from_board = 0;
   }
 
   nrf24.update();

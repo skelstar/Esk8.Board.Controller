@@ -6,7 +6,6 @@ void manage_responses(bool success);
 //------------------------------------------------------------------
 void packet_available_cb(uint16_t from_id, uint8_t type)
 {
-  since_got_reply_from_board = 0;
   uint8_t buff[sizeof(VescData)];
   nrf24.read_into(buff, sizeof(VescData));
   memcpy(&board_packet, &buff, sizeof(VescData));
@@ -19,6 +18,7 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
     send_packet_to_board(CONFIG);
   }
 
+  // update display state if motion change
   if (old_board_packet.moving != board_packet.moving)
   {
     send_to_display_event_queue(board_packet.moving ? DISP_EV_MOVING : DISP_EV_STOPPED);
@@ -26,10 +26,7 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
 
   old_board_packet = board_packet;
 
-  if (display_task_initialised && commsStateTask_initialised)
-  {
-    send_to_comms_state_event_queue(EV_COMMS_CONNECTED);
-  }
+  send_to_comms_state_event_queue(EV_COMMS_CONNECTED);
 }
 //------------------------------------------------------------------
 
