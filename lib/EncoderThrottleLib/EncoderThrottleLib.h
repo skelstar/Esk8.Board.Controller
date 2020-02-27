@@ -56,39 +56,51 @@ public:
       EncoderThrottleCb encoderChangedCb,
       EncoderThrottleCb encoderButtonPushedCb,
       EncoderThrottleCb encoderButtonDoubleClickCb,
+      EncoderThrottleCb encoderDeadmanChanged,
       int8_t min,
       int8_t max)
   {
     _encoderChangedCb = encoderChangedCb;
     _encoderButtonPushedCb = encoderButtonPushedCb;
     _encoderButtonDoubleClickCb = encoderButtonDoubleClickCb;
+    _encoderDeadmanChanged = encoderDeadmanChanged;
     _min = min;
     _max = max;
-    // mode = ADVANCED;
     _mapped_max = 255;
     _mapped_min = 0;
+    _deadmanHeld = false;
 
     _useMap = ThrottleMap::LINEAR;
 
     Encoder.reset();
-    Encoder.begin(
-        i2cEncoderLibV2::INT_DATA |
-        i2cEncoderLibV2::WRAP_DISABLE |
-        i2cEncoderLibV2::DIRE_RIGHT |
-        i2cEncoderLibV2::IPUP_ENABLE |
-        i2cEncoderLibV2::RMOD_X1 |
-        i2cEncoderLibV2::STD_ENCODER);
+    Encoder.begin(i2cEncoderLibV2::INT_DATA |
+                  i2cEncoderLibV2::WRAP_DISABLE |
+                  i2cEncoderLibV2::DIRE_RIGHT |
+                  i2cEncoderLibV2::IPUP_ENABLE |
+                  i2cEncoderLibV2::RMOD_X1 |
+                  i2cEncoderLibV2::STD_ENCODER);
+
+    Encoder.writeGP2conf(i2cEncoderLibV2::GP_IN |
+                         i2cEncoderLibV2::GP_PULL_EN |
+                         i2cEncoderLibV2::GP_INT_DI);
+
     Encoder.onIncrement = _encoderChangedCb;
     Encoder.onDecrement = _encoderChangedCb;
     Encoder.onButtonPush = _encoderButtonPushedCb;
     Encoder.onButtonDoublePush = _encoderButtonDoubleClickCb;
+    Encoder.onGP2Rise = _encoderDeadmanChanged;
+    Encoder.onGP2Fall = _encoderDeadmanChanged;
+
     Encoder.writeCounter((int32_t)0);    /* Reset the counter value */
     Encoder.writeMax((int32_t)max);      /* Set the maximum threshold*/
     Encoder.writeMin((int32_t)min);      /* Set the minimum threshold */
     Encoder.writeStep((int32_t)1);       /* Set the step to 1*/
     Encoder.writeAntibouncingPeriod(20); /* Set an anti-bouncing of 200ms */
     Encoder.writeDoublePushPeriod(50);   /*Set a period for the double push of 500ms */
+    Encoder.updateStatus();
   }
+
+  bool _deadmanHeld = false;
 
   void loop()
   {
@@ -120,10 +132,10 @@ public:
     return 127;
   }
 
-  uint8_t mapCounterToThrottle(bool deadmanPressed)
+  uint8_t mapCounterToThrottle()
   {
     int counter = Encoder.readCounterByte();
-    if (counter > 0 && deadmanPressed == false)
+    if (counter > 0 && _deadmanHeld == false)
     {
       Encoder.writeCounter((int32_t)0);
       return 127;
@@ -142,9 +154,20 @@ public:
   }
 
 private:
+  void _onDeadmanChanged(i2cEncoderLibV2 *obj)
+  {
+    _deadmanHeld = Encoder.readGP2() == 0;
+    _encoderChangedCb(&Encoder);
+#ifdef PRINT_THROTTLE
+    DEBUGVAL(_deadmanHeld);
+#endif
+  }
+
   EncoderThrottleCb _encoderChangedCb;
   EncoderThrottleCb _encoderButtonPushedCb;
   EncoderThrottleCb _encoderButtonDoubleClickCb;
+  EncoderThrottleCb _encoderDeadmanChanged;
+
   int _min, _max;
   int _mapped_min, _mapped_max;
   ThrottleMap _useMap;

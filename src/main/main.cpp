@@ -109,7 +109,7 @@ xQueueHandle xCommsStateEventQueue;
 
 //---------------------------------------------------------------
 
-Button2 _deadmanButton(DEADMAN_PIN);
+// Button2 _deadmanButton(DEADMAN_PIN);
 
 #include <throttle.h>
 
@@ -194,8 +194,6 @@ void loop()
   nrf24.update();
 
   button0.loop();
-
-  _deadmanButton.loop();
 
   vTaskDelay(1);
 }
