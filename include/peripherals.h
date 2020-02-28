@@ -4,8 +4,10 @@
 #include <Button2.h>
 
 #define BUTTON_0 0
+#define BUTTON_35 35
 
 Button2 button0(BUTTON_0);
+Button2 button35(BUTTON_35);
 
 void button0_init()
 {
@@ -22,5 +24,15 @@ void button0_init()
   });
   button0.setDoubleClickHandler([](Button2 &btn) {
     display_state.trigger(DISP_EV_MENU_OPTION_SELECT);
+  });
+}
+
+void button35_init()
+{
+  button35.setClickHandler([](Button2 &btn) {
+  });
+  button35.setReleasedHandler([](Button2 &btn) {
+  });
+  button35.setDoubleClickHandler([](Button2 &btn) {
   });
 }
