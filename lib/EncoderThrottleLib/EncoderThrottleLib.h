@@ -132,6 +132,11 @@ public:
     return 127;
   }
 
+  void resetCounter()
+  {
+    Encoder.writeCounter(0);
+  }
+
   uint8_t mapCounterToThrottle()
   {
     int counter = Encoder.readCounterByte();
@@ -154,15 +159,6 @@ public:
   }
 
 private:
-  void _onDeadmanChanged(i2cEncoderLibV2 *obj)
-  {
-    _deadmanHeld = Encoder.readGP2() == 0;
-    _encoderChangedCb(&Encoder);
-#ifdef PRINT_THROTTLE
-    DEBUGVAL(_deadmanHeld);
-#endif
-  }
-
   EncoderThrottleCb _encoderChangedCb;
   EncoderThrottleCb _encoderButtonPushedCb;
   EncoderThrottleCb _encoderButtonDoubleClickCb;

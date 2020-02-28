@@ -15,6 +15,10 @@ void encoderChanged(i2cEncoderLibV2 *obj)
 void onDeadmanChanged(i2cEncoderLibV2 *obj)
 {
   throttle._deadmanHeld = obj->readGP2() == 0;
+  if (throttle._deadmanHeld == false && controller_packet.throttle < 127)
+  {
+    throttle.resetCounter();
+  }
   encoderChanged(obj);
 #ifdef PRINT_THROTTLE
   DEBUGVAL(throttle._deadmanHeld);
@@ -30,17 +34,6 @@ void encoderButtonDoubleClicked(i2cEncoderLibV2 *obj)
 {
   DEBUGVAL("button double clicked!!!");
 }
-
-// void deadmanReleased(Button2 &btn)
-// {
-//   if (controller_packet.throttle < 127)
-//   {
-//     controller_packet.throttle = 127;
-//     throttle.clear();
-//   }
-//   controller_packet.throttle = throttle.mapCounterToThrottle(/*pressed*/ false);
-//   DEBUGVAL(controller_packet.throttle);
-// }
 
 void init_throttle()
 {
