@@ -85,6 +85,9 @@ State disp_state_menu_throttle(
       case LINEAR:
         lcd_message("gentle?", LINE_2, ALIGNED_CENTRE);
         break;
+      case SMOOTHED:
+        lcd_message("gentle?", LINE_2, ALIGNED_CENTRE);
+        break;
       }
     },
     NULL, NULL);
@@ -92,17 +95,24 @@ State disp_state_menu_throttle(
 State disp_state_menu_throttle_selected(
     [] {
       print_disp_state("...disp_state_menu_throttle_selected");
-
+      // GENTLE -> LINEAR -> SMOOTHED -> GENTLE
       ThrottleMap currentMap = throttle.getMap();
       switch (currentMap)
       {
       case GENTLE:
         throttle.setMap(LINEAR);
         lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
+        DEBUG("LINEAR SELECTED");
         break;
       case LINEAR:
+        throttle.setMap(SMOOTHED);
+        lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
+        DEBUG("SMOOTHED SELECTED");
+        break;
+      case SMOOTHED:
         throttle.setMap(GENTLE);
         lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
+        DEBUG("GENTLE SELECTED");
         break;
       }
     },

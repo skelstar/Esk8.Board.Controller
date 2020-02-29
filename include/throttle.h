@@ -2,7 +2,17 @@
 void encoderChanged(i2cEncoderLibV2 *obj)
 {
   uint8_t old_throttle = controller_packet.throttle;
-  controller_packet.throttle = throttle.mapCounterToThrottle();
+
+  if (throttle.getMap() == ThrottleMap::SMOOTHED)
+  {
+    // smoothedThrottle.add(throttle.mapCounterToThrottle());
+    // controller_packet.throttle = (uint8_t)smoothedThrottle.get();
+    // DEBUGVAL(controller_packet.throttle, smoothedThrottle.get());
+  }
+  else
+  {
+    controller_packet.throttle = throttle.mapCounterToThrottle();
+  }
 
 #ifdef PRINT_THROTTLE
   if (old_throttle != controller_packet.throttle)

@@ -9,12 +9,19 @@
 #endif
 #include <i2cEncoderLibV2.h>
 
+#ifndef Smoothed
+#include <Smoothed.h>
+#endif
+
 i2cEncoderLibV2 Encoder(0x01); /* A0 is soldered */
+
+Smoothed<float> smoothedThrottle;
 
 enum ThrottleMap
 {
   LINEAR,
   GENTLE,
+  SMOOTHED,
 };
 
 struct MapEncoderToThrottle
@@ -42,6 +49,8 @@ MapEncoderToThrottle gentle_map[] = {
     {7, 237},
     {8, 255},
 };
+
+MapEncoderToThrottle calc_map[30];
 
 class EncoderThrottleLib
 {
@@ -71,6 +80,10 @@ public:
     _deadmanHeld = false;
 
     _useMap = ThrottleMap::LINEAR;
+
+    uint8_t smoothedBufferLength = 1 * (1000 / READ_TRIGGER_PERIOD);
+    DEBUGVAL(smoothedBufferLength);
+    smoothedThrottle.begin(SMOOTHED_AVERAGE, smoothedBufferLength);
 
     Encoder.reset();
     Encoder.begin(i2cEncoderLibV2::INT_DATA |
@@ -105,6 +118,23 @@ public:
   void loop()
   {
     Encoder.updateStatus();
+
+    if (_useMap == ThrottleMap::SMOOTHED)
+    {
+      uint8_t t = mapCounterToThrottle();
+      smoothedThrottle.add(t);
+
+      uint8_t smoothedt = smoothedThrottle.get();
+      if (controller_packet.throttle != smoothedt)
+      {
+        controller_packet.throttle = smoothedt;
+        DEBUGVAL(controller_packet.throttle);
+      }
+      // uint8_t smoothed_throttle = _getThrottleFromMap(Encoder.readCounterByte());
+    }
+    else
+    {
+    }
   }
 
   void clear()
@@ -117,7 +147,14 @@ public:
     switch (_useMap)
     {
     case ThrottleMap::LINEAR:
-      return map(counter, 0, _max, 127, _mapped_max);
+      if (counter >= 0)
+      {
+        return map(counter, 0, 8, 127, 255);
+      }
+      else
+      {
+        return map(counter, -8, 0, 0, 127);
+      }
     case ThrottleMap::GENTLE:
       // find item in normal map
       for (uint8_t i = 0; i < sizeof(gentle_map); i++)
@@ -128,6 +165,10 @@ public:
         }
       }
       return 127;
+    case ThrottleMap::SMOOTHED:
+      uint8_t m = map(counter, -8, 8, 0, 255);
+      smoothedThrottle.add(m);
+      return smoothedThrottle.get();
     }
     return 127;
   }
