@@ -76,19 +76,19 @@ State disp_state_menu_throttle(
       tft.fillScreen(TFT_DARKGREEN);
       lcd_message("set map to:", LINE_1, ALIGNED_LEFT);
 
-      ThrottleMap currentMap = throttle.getMap();
-      switch (currentMap)
-      {
-      case GENTLE:
-        lcd_message("linear?", LINE_2, ALIGNED_CENTRE);
-        break;
-      case LINEAR:
-        lcd_message("gentle?", LINE_2, ALIGNED_CENTRE);
-        break;
-      case SMOOTHED:
-        lcd_message("gentle?", LINE_2, ALIGNED_CENTRE);
-        break;
-      }
+      // ThrottleMap currentMap = throttle.getMap();
+      // switch (currentMap)
+      // {
+      // case GENTLE:
+      //   lcd_message("linear?", LINE_2, ALIGNED_CENTRE);
+      //   break;
+      // case LINEAR:
+      //   lcd_message("gentle?", LINE_2, ALIGNED_CENTRE);
+      //   break;
+      // case SMOOTHED:
+      //   lcd_message("gentle?", LINE_2, ALIGNED_CENTRE);
+      //   break;
+      // }
     },
     NULL, NULL);
 //---------------------------------------------------------------
@@ -96,25 +96,25 @@ State disp_state_menu_throttle_selected(
     [] {
       print_disp_state("...disp_state_menu_throttle_selected");
       // GENTLE -> LINEAR -> SMOOTHED -> GENTLE
-      ThrottleMap currentMap = throttle.getMap();
-      switch (currentMap)
-      {
-      case GENTLE:
-        throttle.setMap(LINEAR);
-        lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
-        DEBUG("LINEAR SELECTED");
-        break;
-      case LINEAR:
-        throttle.setMap(SMOOTHED);
-        lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
-        DEBUG("SMOOTHED SELECTED");
-        break;
-      case SMOOTHED:
-        throttle.setMap(GENTLE);
-        lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
-        DEBUG("GENTLE SELECTED");
-        break;
-      }
+      // ThrottleMap currentMap = throttle.getMap();
+      // switch (currentMap)
+      // {
+      // case GENTLE:
+      //   throttle.setMap(LINEAR);
+      //   lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
+      //   DEBUG("LINEAR SELECTED");
+      //   break;
+      // case LINEAR:
+      //   throttle.setMap(SMOOTHED);
+      //   lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
+      //   DEBUG("SMOOTHED SELECTED");
+      //   break;
+      // case SMOOTHED:
+      //   throttle.setMap(GENTLE);
+      //   lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
+      //   DEBUG("GENTLE SELECTED");
+      //   break;
+      // }
     },
     NULL, NULL);
 //---------------------------------------------------------------

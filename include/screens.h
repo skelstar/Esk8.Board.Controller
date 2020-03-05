@@ -21,15 +21,15 @@ void screen_searching()
   tft.drawString("interval: ", 10, 40);
   tft.drawNumber(SEND_TO_BOARD_INTERVAL, tft.textWidth("interval: ") + 10, 40);
   // throttle map
-  switch (throttle.getMap())
-  {
-  case ThrottleMap::GENTLE:
-    tft.drawString("map: GENTLE", 10, 70);
-    break;
-  case ThrottleMap::LINEAR:
-    tft.drawString("map: LINEAR", 10, 70);
-    break;
-  }
+  // switch (throttle.getMap())
+  // {
+  // case ThrottleMap::GENTLE:
+  //   tft.drawString("map: GENTLE", 10, 70);
+  //   break;
+  // case ThrottleMap::LINEAR:
+  //   tft.drawString("map: LINEAR", 10, 70);
+  //   break;
+  // }
   // tft.drawString("interval", 10, 40);
 }
 //-----------------------------------------------------
