@@ -2,6 +2,14 @@
 #include <Arduino.h>
 #endif
 
+#ifndef Smoothed
+#include <Smoothed.h>
+#endif
+
+#ifndef BUtton2
+#include <Button2.h>
+#endif
+
 class FSRPin
 {
 public:
@@ -10,17 +18,13 @@ public:
          uint16_t min,
          uint16_t max,
          uint8_t mapMin,
-         uint8_t mapMax,
-         uint8_t *inMap,
-         uint8_t *outMap)
+         uint8_t mapMax)
   {
     _pin = pin;
     _min = min;
     _max = max;
     _mapMin = mapMin;
     _mapMax = mapMax;
-    _in = inMap;
-    _out = outMap;
   }
 
   void init()
@@ -28,8 +32,22 @@ public:
     pinMode(_pin, INPUT);
   }
 
+  void setMaps(uint8_t in[], uint8_t out[])
+  {
+    for (uint8_t i = 0; i < 4; i++)
+    {
+      _in[i] = in[i];
+      _out[i] = out[i];
+    }
+  }
+
   uint8_t get()
   {
+    if (_in[0] == _in[1] || _out[0] == _out[1])
+    {
+      DEBUG("ERROR: not mapped!");
+      return 127;
+    }
     uint16_t raw = constrain(analogRead(_pin), _min, _max);
     uint8_t mapped = map(raw, _min, _max, _mapMin, _mapMax);
     return _multiMap(mapped);
@@ -39,10 +57,8 @@ private:
   uint8_t _pin;
   uint16_t _min, _max;
   uint8_t _mapMin, _mapMax;
-  uint8_t *_in;
-  uint8_t *_out;
+  uint8_t _in[4], _out[4];
 
-  // note: the _in array should have increasing values
   uint8_t _multiMap(uint8_t val)
   {
     uint8_t size = sizeof(_in);
@@ -74,21 +90,31 @@ private:
 class FSRThrottleLib
 {
 public:
-  FSRThrottleLib(FSRPin accelPin, FSRPin brakePin)
+  FSRThrottleLib(FSRPin *accelPin, FSRPin *brakePin, Button2 *deadman)
   {
     _accelPin = accelPin;
     _brakePin = brakePin;
+    _deadman = deadman;
   }
 
   void init()
   {
+    _brakePin->init();
+    _accelPin->init();
   }
 
   uint8_t get()
   {
     uint8_t brakeVal, accelVal;
-    brakeVal = _brakePin.get();
-    accelVal = _accelPin.get();
+
+    _deadman->loop();
+    if (_deadman->isPressed() == false)
+    {
+      return 127;
+    }
+
+    brakeVal = _brakePin->get();
+    accelVal = _accelPin->get();
 
     if (brakeVal < 127)
     {
@@ -110,7 +136,8 @@ public:
       {
         Serial.printf("%s", i < printMapped ? "-" : "#");
       }
-      Serial.printf("--------------------\n");
+      Serial.printf("--------------------");
+      Serial.printf(" : %d\n", throttle);
     }
     else
     {
@@ -120,11 +147,12 @@ public:
       {
         Serial.printf("%s", i <= printMapped ? "#" : "-");
       }
-      Serial.println();
+      Serial.printf(" : %d\n", throttle);
     }
   }
 
 private:
-  FSRPin _accelPin, _brakePin;
+  FSRPin *_accelPin, *_brakePin;
+  Button2 *_deadman;
   uint8_t throttle = 127;
 };

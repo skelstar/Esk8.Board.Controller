@@ -13,9 +13,12 @@
 #include <Smoothed.h>
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
-#define SOFT_SPI_MOSI_PIN 13 // Blue
-#define SOFT_SPI_MISO_PIN 12 // Orange
-#define SOFT_SPI_SCK_PIN 15  // Yellow
+#define SOFT_SPI_MOSI_PIN 19 // Blue
+#define SOFT_SPI_MISO_PIN 23 // Orange
+#define SOFT_SPI_SCK_PIN 18  // Yellow
+// #define SOFT_SPI_MOSI_PIN 13 // Blue
+// #define SOFT_SPI_MISO_PIN 12 // Orange
+// #define SOFT_SPI_SCK_PIN 15  // Yellow
 
 #define NRF_CE 26
 #define NRF_CS 33
@@ -185,7 +188,7 @@ void loop()
     since_read_trigger = 0;
 
     uint8_t thr = throttle.get();
-    DEBUGVAL(thr);
+    DEBUGVAL(thr, since_read_trigger, millis());
   }
 
   if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)

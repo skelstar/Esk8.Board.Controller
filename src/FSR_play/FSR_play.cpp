@@ -11,29 +11,34 @@ uint8_t brakePin = 34, accelPin = 35;
 
 uint8_t brakeIn[] = {0, 30, 70, 127};
 uint8_t brakeOut[] = {0, 50, 90, 127};
-FSRPin brake(/*pin*/ 35, 1800, 4095, 0, 127, brakeIn, brakeOut);
 
-uint8_t accelIn[] = {127, 180, 200, 255};
-uint8_t accelOut[] = {127, 140, 170, 255};
-FSRPin accel(/*pin*/ 34, 1800, 4095, 255, 127, accelIn, accelOut);
+uint8_t brakeInConservative[] = {0, 30, 70, 127};
+uint8_t brakeOutConservative[] = {80, 90, 100, 127};
 
-FSRThrottleLib throttle(accel, brake);
+FSRPin brake(/*pin*/ 35, 1800, 4095, 0, 127);
+
+uint8_t accelIn[4] = {127, 180, 200, 255};
+uint8_t accelOut[4] = {127, 140, 170, 255};
+
+FSRPin accel(/*pin*/ 34, 1800, 4095, 255, 127);
+
+#define DEADMAN_PIN 0
+Button2 deadman(DEADMAN_PIN);
+
+FSRThrottleLib throttle(&accel, &brake, &deadman);
 
 //------------------------------------------------------------
 
 void setup(void)
 {
   Serial.begin(115200);
-  Serial.println("**** I2C Encoder V2 basic example ****");
 
-  pinMode(brakePin, INPUT);
-  pinMode(accelPin, INPUT);
+  brake.setMaps(brakeIn, brakeOut);
+  accel.setMaps(accelIn, accelOut);
 }
 
 elapsedMillis since_read_fsr;
-
-const uint16_t brakeMin = 1700, brakeMax = 4095;
-const uint16_t accelMin = 1700, accelMax = 4095;
+bool updated = false;
 
 void loop()
 {
@@ -41,7 +46,14 @@ void loop()
   {
     since_read_fsr = 0;
 
-    throttle.get();
+    uint8_t t = throttle.get();
     throttle.print(/*width*/ 20);
   }
+
+  // if (millis() > 10000 && !updated)
+  // {
+  //   updated = true;
+  //   brake.setMaps(brakeInConservative, brakeOutConservative);
+  //   DEBUG("updated map");
+  // }
 }
