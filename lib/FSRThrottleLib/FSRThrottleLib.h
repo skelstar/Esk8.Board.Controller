@@ -107,11 +107,13 @@ public:
   {
     uint8_t brakeVal, accelVal;
 
+#ifdef USE_DEADMAN
     _deadman->loop();
     if (_deadman->isPressed() == false)
     {
       return 127;
     }
+#endif
 
     brakeVal = _brakePin->get();
     accelVal = _accelPin->get();
