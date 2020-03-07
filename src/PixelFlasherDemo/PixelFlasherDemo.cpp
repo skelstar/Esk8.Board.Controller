@@ -57,7 +57,7 @@ void loop()
     {
       doneChanging2 = true;
       status1.setColour(COLOUR_RED);
-      status1.flashOnce(3);
+      status1.blinks(3);
     }
     else if (since_changed_config > 10000 && doneChanging1 == false)
     {

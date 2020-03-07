@@ -34,7 +34,12 @@ public:
     _flashCount = 0;
   }
 
-  void flashOnce(uint8_t num = 1)
+  void blink()
+  {
+    setFlashes(1, 1);
+  }
+
+  void blinks(uint8_t num = 1)
   {
     setFlashes(num, 1);
   }
