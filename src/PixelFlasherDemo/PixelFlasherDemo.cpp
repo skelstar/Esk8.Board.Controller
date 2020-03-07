@@ -44,7 +44,7 @@ void setup()
   status1.setColour(currentColour);
 }
 
-elapsedMillis since_changed_colour;
+elapsedMillis since_changed_config;
 bool doneChanging1, doneChanging2;
 
 void loop()
@@ -53,16 +53,17 @@ void loop()
   {
     status1.loop();
 
-    if (since_changed_colour > 20000 && doneChanging2 == false)
+    if (since_changed_config > 20000 && doneChanging2 == false)
     {
       doneChanging2 = true;
-      // setFlashes(0);
+      status1.setColour(COLOUR_RED);
+      status1.flashOnce(3);
     }
-    else if (since_changed_colour > 10000 && doneChanging1 == false)
+    else if (since_changed_config > 10000 && doneChanging1 == false)
     {
-      // since_changed_colour = 0;
       doneChanging1 = true;
-      // setFlashes(3);
+      status1.setColour(COLOUR_BLUE);
+      status1.setFlashes(3, /*cycles*/ 2);
     }
 
     vTaskDelay(10);

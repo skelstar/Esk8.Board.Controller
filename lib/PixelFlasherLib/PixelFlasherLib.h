@@ -25,10 +25,18 @@ public:
     _currentState = FlashCommand::ON;
   }
 
-  void setFlashes(uint8_t num)
+  /* cycles = 0 is infinite */
+  void setFlashes(uint8_t num, uint8_t cycles = 0)
   {
     _numFlashes = num;
+    _cycles = cycles;
+    _infinite = cycles == 0;
     _flashCount = 0;
+  }
+
+  void flashOnce(uint8_t num = 1)
+  {
+    setFlashes(num, 1);
   }
 
   void setColour(uint32_t colour)
@@ -59,7 +67,9 @@ private:
 
   uint8_t _pixelPin = 0,
           _numFlashes = 0,
+          _cycles = 0,
           _flashCount = 0;
+  bool _infinite;
   volatile FlashCommand _currentState;
   uint32_t _currentColour;
   volatile uint16_t _time_to_change;
@@ -80,13 +90,21 @@ private:
     switch (_currentState)
     {
     case FlashCommand::ON:
-      if (_numFlashes == 0)
+      if (_numFlashes == 0 || (_cycles == 0 && !_infinite))
       {
         return;
       }
       if (_flashCount == _numFlashes)
       {
-        _flashCount = 0;
+        if (_cycles > 0 || _infinite)
+        {
+          _flashCount = 0;
+          _cycles = !_infinite ? _cycles - 1 : 0;
+        }
+        if (_cycles == 0 && !_infinite)
+        {
+          return;
+        }
       }
       _pixel->setPixelColor(0, _pixel->Color(0, 0, 0));
       _pixel->show();
