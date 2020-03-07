@@ -10,7 +10,7 @@
 #define FLASHER_OFF_INTERVAL_MS 50
 #endif
 #ifndef FLASHER_BETWEEN_FLASHES_MS
-#define FLASHER_BETWEEN_FLASHES_MS 300
+#define FLASHER_BETWEEN_FLASHES_MS 250
 #endif
 
 class PixelFlasherLib
@@ -61,7 +61,7 @@ private:
           _numFlashes = 0,
           _flashCount = 0;
   volatile FlashCommand _currentState;
-  volatile uint32_t _currentColour;
+  uint32_t _currentColour;
   volatile uint16_t _time_to_change;
   elapsedMillis _since_last_state_change;
 
@@ -88,7 +88,7 @@ private:
       {
         _flashCount = 0;
       }
-      _pixel->setPixelColor(0, COLOUR_OFF);
+      _pixel->setPixelColor(0, _pixel->Color(0, 0, 0));
       _pixel->show();
       _setNextState(FlashCommand::OFF);
       _time_to_change = FLASHER_OFF_INTERVAL_MS;
