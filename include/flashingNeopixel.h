@@ -37,8 +37,8 @@ void flasher_task_1(void *pvParameters)
 
   Serial.printf("flasher_task_1 running on core %d\n", xPortGetCoreID());
 
-  status1.setFlashes(5);
-  status1.setColour(COLOUR_GREEN);
+  status1.setFlashes(3);
+  status1.setColour(currentColour);
 
   elapsedMillis since_changed_colour;
 
