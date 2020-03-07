@@ -34,6 +34,12 @@ public:
 
   void setMaps(uint8_t in[], uint8_t out[])
   {
+    bool validMaps = _in[0] != _in[1] && _out[0] != _out[1];
+    if (!validMaps)
+    {
+      DEBUG("ERROR: maps not valid!");
+      return;
+    }
     for (uint8_t i = 0; i < 4; i++)
     {
       _in[i] = in[i];
@@ -43,19 +49,20 @@ public:
 
   uint8_t get()
   {
-    if (_in[0] == _in[1] || _out[0] == _out[1])
-    {
-      DEBUG("ERROR: not mapped!");
-      return 127;
-    }
-    uint16_t raw = constrain(analogRead(_pin), _min, _max);
-    uint8_t mapped = map(raw, _min, _max, _mapMin, _mapMax);
-    return _multiMap(mapped);
+    bool validMaps = _in[0] != _in[1] && _out[0] != _out[1];
+    _lastRaw = constrain(analogRead(_pin), _min, _max);
+    uint8_t mapped = map(_lastRaw, _min, _max, _mapMin, _mapMax);
+    return validMaps ? _multiMap(mapped) : mapped;
+  }
+
+  int16_t getLastRaw()
+  {
+    return _lastRaw;
   }
 
 private:
   uint8_t _pin;
-  uint16_t _min, _max;
+  uint16_t _min, _max, _lastRaw;
   uint8_t _mapMin, _mapMax;
   uint8_t _in[4], _out[4];
 
@@ -139,7 +146,6 @@ public:
         Serial.printf("%s", i < printMapped ? "-" : "#");
       }
       Serial.printf("--------------------");
-      Serial.printf(" : %d\n", throttle);
     }
     else
     {
@@ -149,8 +155,8 @@ public:
       {
         Serial.printf("%s", i <= printMapped ? "#" : "-");
       }
-      Serial.printf(" : %d\n", throttle);
     }
+    Serial.printf(" : %03d br: %04d acc: %04d\n", throttle, _brakePin->getLastRaw(), _accelPin->getLastRaw());
   }
 
 private:

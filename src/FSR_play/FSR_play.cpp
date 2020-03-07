@@ -7,7 +7,8 @@
 
 #include <FSRThrottleLib.h>
 
-uint8_t brakePin = 34, accelPin = 35;
+#define FSR_BRAKE_PIN 36
+#define FSR_ACCEL_PIN 39
 
 uint8_t brakeIn[] = {0, 30, 70, 127};
 uint8_t brakeOut[] = {0, 50, 90, 127};
@@ -15,12 +16,12 @@ uint8_t brakeOut[] = {0, 50, 90, 127};
 uint8_t brakeInConservative[] = {0, 30, 70, 127};
 uint8_t brakeOutConservative[] = {80, 90, 100, 127};
 
-FSRPin brake(/*pin*/ 35, 1800, 4095, 0, 127);
+FSRPin brake(/*pin*/ FSR_BRAKE_PIN, 500, 3000, 0, 127);
 
 uint8_t accelIn[4] = {127, 180, 200, 255};
 uint8_t accelOut[4] = {127, 140, 170, 255};
 
-FSRPin accel(/*pin*/ 34, 1800, 4095, 255, 127);
+FSRPin accel(/*pin*/ FSR_ACCEL_PIN, 500, 3000, 255, 127);
 
 #define DEADMAN_PIN 0
 Button2 deadman(DEADMAN_PIN);
@@ -33,8 +34,8 @@ void setup(void)
 {
   Serial.begin(115200);
 
-  brake.setMaps(brakeIn, brakeOut);
-  accel.setMaps(accelIn, accelOut);
+  // brake.setMaps(brakeIn, brakeOut);
+  // accel.setMaps(accelIn, accelOut);
 }
 
 elapsedMillis since_read_fsr;
