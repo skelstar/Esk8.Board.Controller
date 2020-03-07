@@ -11,6 +11,7 @@
 #include <elapsedMillis.h>
 #include <rom/rtc.h> // for reset reason
 #include <Smoothed.h>
+#include <flashingNeopixel.h>
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
 #define SOFT_SPI_MOSI_PIN 19 // Blue
@@ -22,10 +23,6 @@
 
 #define NRF_CE 26
 #define NRF_CS 33
-
-#define INDEX_FINGER_PIN 2
-#define HALL_EFFECT_SENSOR_PIN 36
-#define ENCODER_INTERRUPT_PIN 17
 
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
@@ -49,23 +46,26 @@ NRF24L01Lib nrf24;
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
-#define DEADMAN_PIN INDEX_FINGER_PIN
-
 //------------------------------------------------------------------
 #include <FSRThrottleLib.h>
 
-uint8_t brakePin = 34, accelPin = 35;
+#include <Button2.h>
+
+#define BUTTON_35 35
+Button2 button35(BUTTON_35);
+
+#define FSR_BRAKE_PIN 36
+#define FSR_ACCEL_PIN 39
 
 uint8_t brakeIn[] = {0, 30, 70, 127};
 uint8_t brakeOut[] = {0, 50, 90, 127};
-FSRPin brake(/*pin*/ 35, 1800, 4095, 0, 127, brakeIn, brakeOut);
+FSRPin brake(/*pin*/ FSR_BRAKE_PIN, 1800, 4095, 0, 127);
 
 uint8_t accelIn[] = {127, 180, 200, 255};
 uint8_t accelOut[] = {127, 140, 170, 255};
-FSRPin accel(/*pin*/ 34, 1800, 4095, 255, 127, accelIn, accelOut);
+FSRPin accel(/*pin*/ FSR_ACCEL_PIN, 1800, 4095, 255, 127);
 
-FSRThrottleLib throttle(accel, brake);
-//------------------------------------------------------------------
+FSRThrottleLib throttle(&accel, &brake, &button35); //------------------------------------------------------------------
 
 #define NUM_RETRIES 5
 #ifndef SEND_TO_BOARD_INTERVAL
@@ -118,9 +118,7 @@ xQueueHandle xCommsStateEventQueue;
 
 #include <features/battery_measure.h>
 #include <core1.h>
-
 #include <peripherals.h>
-#include <Button2.h>
 
 //---------------------------------------------------------------
 
@@ -165,6 +163,7 @@ void setup()
   xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
   xTaskCreatePinnedToCore(commsStateTask_0, "commsStateTask_0", 10000, NULL, /*priority*/ 2, NULL, 0);
+  xTaskCreatePinnedToCore(flasher_task_1, "flasher_task_1", 10000, NULL, /*priority*/ 1, NULL, 1);
 
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xCommsStateEventQueue = xQueueCreate(3, sizeof(uint8_t));
@@ -188,7 +187,7 @@ void loop()
     since_read_trigger = 0;
 
     uint8_t thr = throttle.get();
-    DEBUGVAL(thr, since_read_trigger, millis());
+    // DEBUGVAL(thr, since_read_trigger, millis());
   }
 
   if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)

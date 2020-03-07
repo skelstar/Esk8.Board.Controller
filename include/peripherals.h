@@ -4,10 +4,7 @@
 #include <Button2.h>
 
 #define BUTTON_0 0
-#define BUTTON_35 35
-
 Button2 button0(BUTTON_0);
-Button2 button35(BUTTON_35);
 
 void button0_init()
 {
