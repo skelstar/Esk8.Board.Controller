@@ -12,15 +12,11 @@ private:
        _num = 0;
   uint8_t *_readings;
 
-  void _init_array()
-  {
-  }
-
 public:
   Smoother(byte factor, uint8_t seed, byte numSeed)
   {
     _factor = factor;
-    _readings = new uint8_t[_factor];
+    _readings = new uint8_t[_factor]();
 
     for (int i = 0; i < _factor; i++)
     {
@@ -50,12 +46,14 @@ public:
         runningCount++;
       }
     }
-    return runningTotal / runningCount;
+    return runningCount > 0
+               ? runningTotal / runningCount
+               : 0;
   }
 
   uint8_t getLast()
   {
-    return _pos == 0 ? _readings[_factor - 1] ? _readings[_pos];
+    return _pos == 0 ? _readings[_factor - 1] : _readings[_pos];
   }
 
   void clear(uint8_t seed, byte numSeed)
@@ -63,6 +61,10 @@ public:
     for (int i = 0; i < _factor; i++)
     {
       _readings[i] = NULL;
+    }
+    for (int j = 0; j < numSeed; j++)
+    {
+      _readings[j] = seed;
     }
   }
 };
