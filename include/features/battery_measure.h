@@ -31,6 +31,6 @@ void batteryMeasureTask_0(void *pvParameters)
 void battery_value_changed_cb()
 {
   remote_battery_percent = remote_batt.remote_battery_percent;
-  send_to_display_event_queue(DISP_EV_REFRESH);
+  // send_to_display_event_queue(DISP_EV_REFRESH);
 }
 //--------------------------------------------------------

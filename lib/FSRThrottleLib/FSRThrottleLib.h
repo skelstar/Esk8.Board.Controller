@@ -136,11 +136,15 @@ public:
     return throttle;
   }
 
-  void print(uint8_t width)
+  void print(uint8_t width, uint8_t thrToShow = 999)
   {
-    if (throttle < 127)
+    if (thrToShow == 999)
     {
-      uint8_t printMapped = map(throttle, 0, 127, 0, width);
+      thrToShow = throttle;
+    }
+    if (thrToShow < 127)
+    {
+      uint8_t printMapped = map(thrToShow, 0, 127, 0, width);
       for (uint8_t i = 0; i <= width; i++)
       {
         Serial.printf("%s", i < printMapped ? "-" : "#");
@@ -150,13 +154,13 @@ public:
     else
     {
       Serial.printf("--------------------");
-      uint8_t printMapped = map(throttle, 127, 255, 0, width);
+      uint8_t printMapped = map(thrToShow, 127, 255, 0, width);
       for (uint8_t i = 0; i <= width; i++)
       {
         Serial.printf("%s", i <= printMapped ? "#" : "-");
       }
     }
-    Serial.printf(" : %03d br: %04d acc: %04d\n", throttle, _brakePin->getLastRaw(), _accelPin->getLastRaw());
+    Serial.printf(" : %03d br: %04d acc: %04d\n", thrToShow, _brakePin->getLastRaw(), _accelPin->getLastRaw());
   }
 
 private:

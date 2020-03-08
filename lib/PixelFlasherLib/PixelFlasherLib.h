@@ -25,6 +25,12 @@ public:
     _currentState = FlashCommand::ON;
   }
 
+  void init(int32_t colour)
+  {
+    _currentColour = colour;
+    _currentState = ON;
+  }
+
   /* cycles = 0 is infinite */
   void setFlashes(uint8_t num, uint8_t cycles = 0)
   {
@@ -49,7 +55,7 @@ public:
     _currentColour = colour;
     if (_currentState == ON)
     {
-      _pixel->setPixelColor(_pixelPin, _currentColour);
+      _pixel->setPixelColor(0, _currentColour);
       _pixel->show();
     }
   }
@@ -82,8 +88,6 @@ private:
 
   // Tasker *_flasher;
   Adafruit_NeoPixel *_pixel;
-
-  uint32_t COLOUR_OFF = _pixel->Color(0, 0, 0);
 
   void _setNextState(FlashCommand state)
   {

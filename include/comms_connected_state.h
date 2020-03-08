@@ -58,7 +58,7 @@ public:
         comms_state_connected = true;
         _current = ST_COMMS_CONNECTED;
         print_state("...comms_state_connected");
-        send_to_display_event_queue(DISP_EV_CONNECTED);
+        // send_to_display_event_queue(DISP_EV_CONNECTED);
       }
       break;
     case ST_COMMS_CONNECTED:
@@ -67,7 +67,7 @@ public:
         comms_state_connected = false;
         _current = ST_COMMS_DISCONNECTED;
         print_state("...comms_state_disconnected");
-        send_to_display_event_queue(DISP_EV_DISCONNECTED);
+        // send_to_display_event_queue(DISP_EV_DISCONNECTED);
       }
       break;
     case ST_COMMS_DISCONNECTED:
@@ -76,7 +76,7 @@ public:
         _current = ST_COMMS_CONNECTED;
         comms_state_connected = true;
         print_state("...comms_state_connected");
-        send_to_display_event_queue(DISP_EV_CONNECTED);
+        // send_to_display_event_queue(DISP_EV_CONNECTED);
       }
       break;
     }

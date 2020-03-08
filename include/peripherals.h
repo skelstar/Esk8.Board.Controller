@@ -12,7 +12,7 @@ void button0_init()
 #ifdef FEATURE_CRUISE_CONTROL
     controller_packet.cruise_control = true;
 #endif
-    display_state.trigger(DISP_EV_BUTTON_CLICK);
+    // display_state.trigger(DISP_EV_BUTTON_CLICK);
   });
   button0.setReleasedHandler([](Button2 &btn) {
 #ifdef FEATURE_CRUISE_CONTROL
@@ -20,7 +20,7 @@ void button0_init()
 #endif
   });
   button0.setDoubleClickHandler([](Button2 &btn) {
-    display_state.trigger(DISP_EV_MENU_OPTION_SELECT);
+    // display_state.trigger(DISP_EV_MENU_OPTION_SELECT);
   });
 }
 
