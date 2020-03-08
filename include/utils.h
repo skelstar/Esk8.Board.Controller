@@ -35,9 +35,9 @@ void print_build_status()
 {
   Serial.printf("\n");
 #ifdef RELEASE_BUILD
-  Serial.printf("-----------------------------------------------");
+  Serial.printf("-----------------------------------------------\n");
   Serial.printf("               RELEASE BUILD!! \n");
-  Serial.printf("-----------------------------------------------");
+  Serial.printf("-----------------------------------------------\n");
 #endif
 #ifdef DEBUG_BUILD
   Serial.printf("-----------------------------------------------\n");

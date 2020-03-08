@@ -138,17 +138,19 @@ void setup()
   {
     stats.soft_resets++;
     statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
-    DEBUGVAL("RESET!!! =========> ", stats.soft_resets);
+    Serial.printf("RESET!!! =========> %d\n", stats.soft_resets);
   }
   else if (stats.reset_reason_core0 == RESET_REASON::POWERON_RESET)
   {
     stats.soft_resets = 0;
     statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
-    DEBUG("Storage: cleared resets");
+    Serial.printf("Storage: cleared resets\n");
   }
   statsStore.end();
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
+
+  Serial.printf("FSR_MIN_RAW %d, FSR_MAX_RAW %d \n", FSR_MIN_RAW, FSR_MAX_RAW);
 
   print_build_status();
 

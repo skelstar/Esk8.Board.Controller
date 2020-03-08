@@ -13,9 +13,9 @@
 uint8_t brakeIn[] = {0, 30, 70, 127};
 uint8_t brakeOut[] = {0, 50, 90, 127};
 
+// maps
 uint8_t brakeInConservative[] = {0, 30, 70, 127};
 uint8_t brakeOutConservative[] = {80, 90, 100, 127};
-
 uint8_t accelIn[4] = {127, 180, 200, 255};
 uint8_t accelOut[4] = {127, 140, 170, 255};
 
@@ -32,9 +32,6 @@ FSRThrottleLib throttle(&accel, &brake, &deadman);
 void setup(void)
 {
   Serial.begin(115200);
-
-  // brake.setMaps(brakeIn, brakeOut);
-  // accel.setMaps(accelIn, accelOut);
 }
 
 elapsedMillis since_read_fsr;
@@ -49,11 +46,4 @@ void loop()
     uint8_t t = throttle.get();
     throttle.print(/*width*/ 20);
   }
-
-  // if (millis() > 10000 && !updated)
-  // {
-  //   updated = true;
-  //   brake.setMaps(brakeInConservative, brakeOutConservative);
-  //   DEBUG("updated map");
-  // }
 }

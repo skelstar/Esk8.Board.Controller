@@ -136,7 +136,7 @@ public:
     return throttle;
   }
 
-  void print(uint8_t width, uint8_t thrToShow = 999)
+  void print(uint8_t width, uint16_t thrToShow = 999)
   {
     if (thrToShow == 999)
     {
