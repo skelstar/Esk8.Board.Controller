@@ -7,8 +7,8 @@
 
 #include <FSRThrottleLib.h>
 
-#define FSR_BRAKE_PIN 36
-#define FSR_ACCEL_PIN 39
+#define FSR_BRAKE_PIN 39
+#define FSR_ACCEL_PIN 36
 
 uint8_t brakeIn[] = {0, 30, 70, 127};
 uint8_t brakeOut[] = {0, 50, 90, 127};

@@ -110,8 +110,8 @@ Button2 button35(BUTTON_35);
 
 #include <FSRThrottleLib.h>
 
-#define FSR_BRAKE_PIN 36
-#define FSR_ACCEL_PIN 39
+#define FSR_BRAKE_PIN 39
+#define FSR_ACCEL_PIN 36
 
 FSRPin brake(/*pin*/ FSR_BRAKE_PIN, FSR_MIN_RAW, FSR_MAX_RAW, 0, 127);
 FSRPin accel(/*pin*/ FSR_ACCEL_PIN, FSR_MIN_RAW, FSR_MAX_RAW, 255, 127);
