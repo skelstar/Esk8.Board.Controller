@@ -193,7 +193,7 @@ private:
   uint8_t _getBrakingThrottle(uint8_t val)
   {
     uint8_t t = val;
-#ifdef USE_SMOOTHING
+#ifdef USE_THROTTLE_SMOOTHING
     accelSmoother->clear(/*seed*/ 127, /*numSeed*/ 3);
     brakeSmoother->add(val);
     t = brakeSmoother->get();
@@ -206,7 +206,7 @@ private:
   uint8_t _getAccelThrottle(uint8_t val, bool accelEnabled)
   {
     uint8_t t = val;
-#ifdef USE_SMOOTHING
+#ifdef USE_THROTTLE_SMOOTHING
     brakeSmoother->clear(/*seed*/ 127);
     accelSmoother->add(val);
     t = accelSmoother->get();
@@ -218,7 +218,7 @@ private:
 
   uint8_t _getIdleThrottle()
   {
-#ifdef USE_SMOOTHING
+#ifdef USE_THROTTLE_SMOOTHING
     brakeSmoother->clear(/*seed*/ 127);
     accelSmoother->clear(/*seed*/ 127, 3);
 #endif

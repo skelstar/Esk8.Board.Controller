@@ -13,12 +13,12 @@
 #include <Smoothed.h>
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
-#define SOFT_SPI_MOSI_PIN 19 // Blue
-#define SOFT_SPI_MISO_PIN 23 // Orange
-#define SOFT_SPI_SCK_PIN 18  // Yellow
-// #define SOFT_SPI_MOSI_PIN 13 // Blue
-// #define SOFT_SPI_MISO_PIN 12 // Orange
-// #define SOFT_SPI_SCK_PIN 15  // Yellow
+// #define SOFT_SPI_MOSI_PIN 19 // Blue
+// #define SOFT_SPI_MISO_PIN 23 // Orange
+// #define SOFT_SPI_SCK_PIN 18  // Yellow
+#define SOFT_SPI_MOSI_PIN 13 // Blue
+#define SOFT_SPI_MISO_PIN 12 // Orange
+#define SOFT_SPI_SCK_PIN 15  // Yellow
 
 #define NRF_CE 26
 #define NRF_CS 33
@@ -104,18 +104,15 @@ Button2 button35(BUTTON_35);
 #include <features/battery_measure.h>
 #include <core1.h>
 #include <peripherals.h>
-#include <flashingNeopixel.h>
+// #include <flashingNeopixel.h>
 
 //---------------------------------------------------------------
 
 #include <FSRThrottleLib.h>
 
-#define FSR_BRAKE_PIN 36
-#define FSR_ACCEL_PIN 39
-
 FSRPin brake(/*pin*/ FSR_BRAKE_PIN, FSR_MIN_RAW, FSR_MAX_RAW, 0, 127);
 FSRPin accel(/*pin*/ FSR_ACCEL_PIN, FSR_MIN_RAW, FSR_MAX_RAW, 255, 127);
-FSRThrottleLib throttle(&accel, &brake, &button35);
+FSRThrottleLib throttle(&accel, &brake);
 
 #include <throttle.h>
 
@@ -159,7 +156,7 @@ void setup()
   // core 0
   // xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(commsStateTask_0, "commsStateTask_0", 10000, NULL, /*priority*/ 2, NULL, 0);
-  xTaskCreatePinnedToCore(flasher_task_0, "flasher_task_0", 10000, NULL, /*priority*/ 2, NULL, 0);
+  // xTaskCreatePinnedToCore(flasher_task_0, "flasher_task_0", 10000, NULL, /*priority*/ 2, NULL, 0);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
 
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
@@ -184,7 +181,7 @@ void loop()
   {
     since_read_trigger = 0;
 
-    controller_packet.throttle = throttle.get();
+    controller_packet.throttle = throttle.get(/*enabled*/ true);
     if (old_throttle != controller_packet.throttle)
     {
       old_throttle = controller_packet.throttle;
