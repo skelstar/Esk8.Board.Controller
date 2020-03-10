@@ -81,8 +81,8 @@ public:
     {
       _readings[j].val = seed;
       _readings[j].blank = false;
-      _pos++;
     }
+    _pos = numSeed - 1;
   }
 
   void printBuffer()
