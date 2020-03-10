@@ -94,6 +94,7 @@ class FSRThrottleLib
 {
 public:
   Smoother *accelSmoother;
+  Smoother *brakeSmoother;
 
   FSRThrottleLib(FSRPin *accelPin, FSRPin *brakePin)
   {
@@ -101,6 +102,7 @@ public:
     _brakePin = brakePin;
 
     accelSmoother = new Smoother(/*factor*/ 5, /*seed*/ 127);
+    brakeSmoother = new Smoother(/*factor*/ 5, /*seed*/ 127);
   }
 
   void init()
@@ -112,7 +114,6 @@ public:
   /* set the number of values to smooth over */
   void set(byte factor)
   {
-    _factor = factor;
     accelSmoother = new Smoother(factor, /*seed*/ 127);
   }
 
@@ -137,6 +138,25 @@ public:
       _throttle = _getIdleThrottle();
     }
     return _throttle;
+  }
+
+  enum FSRMode
+  {
+    IDLE,
+    ACCEL,
+    BRAKE
+  };
+
+  void setSmoothing(FSRMode mode, byte factor)
+  {
+    if (mode == ACCEL)
+    {
+      accelSmoother = new Smoother(/*factor*/ factor, /*seed*/ 127);
+    }
+    else if (mode == BRAKE)
+    {
+      brakeSmoother = new Smoother(/*factor*/ factor, /*seed*/ 127);
+    }
   }
 
   void print(uint8_t width, uint16_t thrToShow = 999)
@@ -169,33 +189,38 @@ public:
 private:
   FSRPin *_accelPin, *_brakePin;
   uint8_t _throttle = 127, _last_throttle = 127;
-  byte _factor = 0;
-
+  //----------------
   uint8_t _getBrakingThrottle(uint8_t val)
   {
     uint8_t t = val;
 #ifdef USE_SMOOTHING
     accelSmoother->clear(/*seed*/ 127, /*numSeed*/ 3);
+    brakeSmoother->add(val);
+    t = brakeSmoother->get();
 #endif
     _last_throttle = t;
     return t;
   }
+  //----------------
 
   uint8_t _getAccelThrottle(uint8_t val, bool accelEnabled)
   {
     uint8_t t = val;
 #ifdef USE_SMOOTHING
+    brakeSmoother->clear(/*seed*/ 127);
     accelSmoother->add(val);
     t = accelSmoother->get();
 #endif
     _last_throttle = t;
     return t;
   }
+  //----------------
 
   uint8_t _getIdleThrottle()
   {
 #ifdef USE_SMOOTHING
-    accelSmoother->clear(127, 3);
+    brakeSmoother->clear(/*seed*/ 127);
+    accelSmoother->clear(/*seed*/ 127, 3);
 #endif
     return 127;
   }
