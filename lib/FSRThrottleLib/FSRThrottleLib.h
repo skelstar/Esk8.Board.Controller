@@ -2,12 +2,8 @@
 #include <Arduino.h>
 #endif
 
-#ifndef Smoothed
-#include <Smoothed.h>
-#endif
-
-#ifndef BUtton2
-#include <Button2.h>
+#ifndef Smoother
+#include <Smoother.h>
 #endif
 
 class FSRPin
@@ -97,11 +93,14 @@ private:
 class FSRThrottleLib
 {
 public:
-  FSRThrottleLib(FSRPin *accelPin, FSRPin *brakePin, Button2 *deadman)
+  Smoother *accelSmoother;
+
+  FSRThrottleLib(FSRPin *accelPin, FSRPin *brakePin)
   {
     _accelPin = accelPin;
     _brakePin = brakePin;
-    _deadman = deadman;
+
+    accelSmoother = new Smoother(/*factor*/ 5, /*seed*/ 127);
   }
 
   void init()
@@ -110,37 +109,41 @@ public:
     _accelPin->init();
   }
 
-  uint8_t get()
+  /* set the number of values to smooth over */
+  void set(byte factor)
+  {
+    _factor = factor;
+    accelSmoother = new Smoother(factor, /*seed*/ 127);
+  }
+
+  /* get the smoothed value */
+  uint8_t get(bool accelEnabled)
   {
     uint8_t brakeVal, accelVal;
-
-#ifdef USE_DEADMAN
-    _deadman->loop();
-    if (_deadman->isPressed() == false)
-    {
-      return 127;
-    }
-#endif
 
     brakeVal = _brakePin->get();
     accelVal = _accelPin->get();
 
     if (brakeVal < 127)
     {
-      throttle = brakeVal;
+      _throttle = _getBrakingThrottle(brakeVal);
+    }
+    else if (accelVal > 127 && accelEnabled)
+    {
+      _throttle = _getAccelThrottle(accelVal, accelEnabled);
     }
     else
     {
-      throttle = accelVal;
+      _throttle = _getIdleThrottle();
     }
-    return throttle;
+    return _throttle;
   }
 
   void print(uint8_t width, uint16_t thrToShow = 999)
   {
     if (thrToShow == 999)
     {
-      thrToShow = throttle;
+      thrToShow = _throttle;
     }
     if (thrToShow < 127)
     {
@@ -165,6 +168,35 @@ public:
 
 private:
   FSRPin *_accelPin, *_brakePin;
-  Button2 *_deadman;
-  uint8_t throttle = 127;
+  uint8_t _throttle = 127, _last_throttle = 127;
+  byte _factor = 0;
+
+  uint8_t _getBrakingThrottle(uint8_t val)
+  {
+    uint8_t t = val;
+#ifdef USE_SMOOTHING
+    accelSmoother->clear(/*seed*/ 127, /*numSeed*/ 3);
+#endif
+    _last_throttle = t;
+    return t;
+  }
+
+  uint8_t _getAccelThrottle(uint8_t val, bool accelEnabled)
+  {
+    uint8_t t = val;
+#ifdef USE_SMOOTHING
+    accelSmoother->add(val);
+    t = accelSmoother->get();
+#endif
+    _last_throttle = t;
+    return t;
+  }
+
+  uint8_t _getIdleThrottle()
+  {
+#ifdef USE_SMOOTHING
+    accelSmoother->clear(127, 3);
+#endif
+    return 127;
+  }
 };
