@@ -15,28 +15,26 @@ private:
   };
 
   byte _readingsLen = 10,
-       _pos = 0,
-       _num = 0;
+       _pos = 0;
   Reading *_readings;
 
 public:
-  Smoother(byte factor, uint8_t seed, byte numSeed)
+  Smoother(byte factor, uint8_t seed)
   {
     _readingsLen = factor;
     _readings = new Reading[_readingsLen]();
 
-    clear(seed, numSeed);
+    clear(seed, _readingsLen);
   }
 
   void add(uint8_t x)
   {
-    if (_num < _readingsLen)
-    {
-      _num++;
-    }
+    _pos = _pos < _readingsLen - 1
+               ? _pos + 1
+               : 0;
     _readings[_pos].val = x;
     _readings[_pos].blank = false;
-    _pos = _pos == _readingsLen - 1 ? 0 : _pos + 1;
+    // Serial.printf("adding %d at %d\n", x, _pos);
   }
 
   uint8_t get()
@@ -51,18 +49,23 @@ public:
       }
     }
     return runningCount > 0
-               ? runningTotal / runningCount
+               ? (uint8_t)(runningTotal / runningCount)
                : 0;
   }
 
   uint8_t getLast()
   {
-    return _pos == 0 ? _readings[_readingsLen - 1].val : _readings[_pos - 1].val;
+    return _readings[_pos].val;
   }
 
   uint16_t getIndexed(byte idx)
   {
     return _readings[idx].blank ? 999 : _readings[idx].val;
+  }
+
+  void clear(uint8_t seed)
+  {
+    clear(seed, _readingsLen);
   }
 
   void clear(uint8_t seed, byte numSeed)
