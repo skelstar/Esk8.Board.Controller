@@ -87,6 +87,26 @@ void test_when_we_get_last_then_returns_correct_result()
   TEST_ASSERT_EQUAL(expected, actual);
 }
 
+void test_when_values_wrap_around_then_returns_correct_result()
+{
+  const byte factor = 5;
+  Smoother *sm = new Smoother(factor, 127);
+
+  sm->clear(0);
+
+  for (int i = 0; i < 5 + 2; i++)
+  {
+    sm->add(i);
+  }
+
+  uint8_t actual = sm->getLast();
+  uint8_t expected = 6;
+
+  sm->printBuffer();
+
+  TEST_ASSERT_EQUAL(expected, actual);
+}
+
 void setup()
 {
   UNITY_BEGIN();
@@ -95,6 +115,7 @@ void setup()
   RUN_TEST(test_when_we_add_n_items_then_one_returns_correct_result);
   RUN_TEST(test_when_we_add_n_items_using_clear_then_returns_correct_result);
   RUN_TEST(test_when_we_get_last_then_returns_correct_result);
+  RUN_TEST(test_when_values_wrap_around_then_returns_correct_result);
 
   UNITY_END();
 }
