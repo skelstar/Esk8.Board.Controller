@@ -14,22 +14,22 @@ void updateStatusPixel()
 {
   if (controller_packet.throttle == 0)
   {
-    sendToPixelEventQueue(PIXEL_THROTTLE_MIN);
+    // sendToPixelEventQueue(PIXEL_THROTTLE_MIN);
   }
   else if (controller_packet.throttle < 127)
   {
-    sendToPixelEventQueue(PIXEL_BRAKING);
+    // sendToPixelEventQueue(PIXEL_BRAKING);
   }
   else if (controller_packet.throttle == 255)
   {
-    sendToPixelEventQueue(PIXEL_THROTTLE_MAX);
+    // sendToPixelEventQueue(PIXEL_THROTTLE_MAX);
   }
   else if (controller_packet.throttle > 127)
   {
-    sendToPixelEventQueue(PIXEL_ACCEL);
+    // sendToPixelEventQueue(PIXEL_ACCEL);
   }
   else
   {
-    sendToPixelEventQueue(PIXEL_THROTTLE_IDLE);
+    // sendToPixelEventQueue(PIXEL_THROTTLE_IDLE);
   }
 }

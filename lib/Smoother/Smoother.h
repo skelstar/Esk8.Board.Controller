@@ -70,6 +70,11 @@ public:
 
   void clear(uint8_t seed, byte numSeed)
   {
+    if (numSeed > _readingsLen)
+    {
+      numSeed = _readingsLen;
+    }
+
     for (int i = 0; i < _readingsLen; i++)
     {
       _readings[i].blank = true;
@@ -77,12 +82,12 @@ public:
     }
     _pos = 0;
     // make sure numSeed is less than array size
-    for (int j = 0; j < numSeed && j < _readingsLen; j++)
+    for (int j = 0; j < numSeed; j++)
     {
       _readings[j].val = seed;
       _readings[j].blank = false;
-      _pos++;
     }
+    _pos = numSeed - 1;
   }
 
   void printBuffer()
