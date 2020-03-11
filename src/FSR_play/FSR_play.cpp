@@ -4,6 +4,9 @@
 
 #include <Arduino.h>
 #include <elapsedMillis.h>
+#include <Button2.h>
+
+Button2 button0(0);
 
 #include <FSRThrottleLib.h>
 
@@ -23,11 +26,34 @@ FSRPin accel(/*pin*/ FSR_ACCEL_PIN, FSR_MIN_RAW, FSR_MAX_RAW, 255, 127);
 
 FSRThrottleLib throttle(&accel, &brake);
 
+byte currentFactor = 5;
+
 //------------------------------------------------------------
 
 void setup(void)
 {
   Serial.begin(115200);
+
+  button0.setClickHandler([](Button2 &btn) {
+    switch (currentFactor)
+    {
+    case 10:
+      currentFactor = 5;
+      break;
+    case 5:
+      currentFactor = 3;
+      break;
+    case 3:
+      currentFactor = 10;
+      break;
+    }
+    throttle.setSmoothing(FSRThrottleLib::ACCEL, currentFactor);
+    throttle.setSmoothing(FSRThrottleLib::BRAKE, currentFactor);
+    DEBUGVAL(currentFactor);
+  });
+
+  throttle.setSmoothing(FSRThrottleLib::ACCEL, currentFactor);
+  throttle.setSmoothing(FSRThrottleLib::BRAKE, currentFactor);
 }
 
 elapsedMillis since_read_fsr, since_swapped_smoothers;
@@ -35,6 +61,8 @@ bool updated = false, smoothers_updated = false;
 
 void loop()
 {
+  button0.loop();
+
   if (since_read_fsr > 200)
   {
     since_read_fsr = 0;
@@ -47,13 +75,5 @@ void loop()
 
     uint8_t t = throttle.get(accelEnabled);
     throttle.print(/*width*/ 20);
-  }
-
-  if (since_swapped_smoothers > 5000 && smoothers_updated == false)
-  {
-    smoothers_updated = true;
-    throttle.setSmoothing(FSRThrottleLib::ACCEL, 15);
-    throttle.setSmoothing(FSRThrottleLib::BRAKE, 15);
-    DEBUG("Smoothers updated with 15");
   }
 }
