@@ -9,13 +9,15 @@
 #endif
 #include <i2cEncoderLibV2.h>
 
-#ifndef SMOOTHER_H
-#include <Smoother.h>
+#ifndef Smoothed
+#include <Smoothed.h>
 #endif
+
+// https : //github.com/skelstar/Esk8.Board.Controller/blob/670e83203e9f9d6687bc75beccb61d83b0c71708/include/throttle.h
 
 i2cEncoderLibV2 Encoder(0x01); /* A0 is soldered */
 
-Smoother<float> smoothedThrottle;
+Smoothed<float> smoothedThrottle;
 
 enum ThrottleMap
 {
