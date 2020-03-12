@@ -4,6 +4,13 @@
 
 #include <Arduino.h>
 #include <elapsedMillis.h>
+#include <Button2.h>
+
+Button2 button0(0);
+
+#ifndef READ_TRIGGER_PERIOD
+#define READ_TRIGGER_PERIOD 200
+#endif
 
 #include <EncoderThrottleLib.h>
 
@@ -15,7 +22,7 @@ EncoderThrottleLib encoder;
 
 void encoder_changed(i2cEncoderLibV2 *obj)
 {
-  DEBUG("Changed: ");
+  // uint8_t throttle = encoder.mapCounterToThrottle(/*print*/ true);
 }
 
 void encoder_push(i2cEncoderLibV2 *obj)
@@ -40,9 +47,9 @@ void setup(void)
                /*pushed*/ encoder_push,
                /*double*/ encoder_double_push,
                /*deadman*/ NULL,
-               /*min*/ -10,
-               /*max*/ 10);
-  encoder.setMap(GENTLE);
+               /*min*/ -8,
+               /*max*/ 8);
+  // encoder.setMap(GENTLE);
 }
 
 elapsedMillis since_checked_encoder;
@@ -51,8 +58,10 @@ void loop()
 {
   if (since_checked_encoder > 200)
   {
+    button0.loop();
+
     since_checked_encoder = 0;
     /* Check the status of the encoder and call the callback */
-    encoder.loop();
+    encoder.loop(button0.isPressed());
   }
 }

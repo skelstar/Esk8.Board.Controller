@@ -68,8 +68,8 @@ public:
       EncoderThrottleCb encoderButtonPushedCb,
       EncoderThrottleCb encoderButtonDoubleClickCb,
       EncoderThrottleCb encoderDeadmanChanged,
-      int8_t min,
-      int8_t max)
+      int32_t min,
+      int32_t max)
   {
     _encoderChangedCb = encoderChangedCb;
     _encoderButtonPushedCb = encoderButtonPushedCb;
@@ -99,49 +99,76 @@ public:
                          i2cEncoderLibV2::GP_PULL_EN |
                          i2cEncoderLibV2::GP_INT_DI);
 
-    Encoder.onIncrement = _encoderChangedCb;
-    Encoder.onDecrement = _encoderChangedCb;
+    // Encoder.onIncrement = _encoderChangedCb;
+    // Encoder.onDecrement = _encoderChangedCb;
     Encoder.onButtonPush = _encoderButtonPushedCb;
     Encoder.onButtonDoublePush = _encoderButtonDoubleClickCb;
-    Encoder.onGP2Rise = _encoderDeadmanChanged;
-    Encoder.onGP2Fall = _encoderDeadmanChanged;
+    // Encoder.onGP2Rise = _encoderDeadmanChanged;
+    // Encoder.onGP2Fall = _encoderDeadmanChanged;
 
     Encoder.writeCounter((int32_t)0);    /* Reset the counter value */
-    Encoder.writeMax((int32_t)max);      /* Set the maximum threshold*/
-    Encoder.writeMin((int32_t)min);      /* Set the minimum threshold */
+    Encoder.writeMax(_max);              /* Set the maximum threshold*/
+    Encoder.writeMin(_min);              /* Set the minimum threshold */
     Encoder.writeStep((int32_t)1);       /* Set the step to 1*/
     Encoder.writeAntibouncingPeriod(20); /* Set an anti-bouncing of 200ms */
     Encoder.writeDoublePushPeriod(50);   /*Set a period for the double push of 500ms */
     Encoder.updateStatus();
   }
 
-  bool _deadmanHeld = false;
+  bool _deadmanHeld = true;
 
-  void loop()
+  void loop(bool deadmanHeld)
   {
+    manageDeadmanChange(deadmanHeld);
+
     Encoder.updateStatus();
+
+    uint8_t t = mapCounterToThrottle();
 
     if (_useMap == ThrottleMap::SMOOTHED)
     {
-      uint8_t t = mapCounterToThrottle();
       smoothedThrottle.add(t);
 
-      uint8_t smoothedt = smoothedThrottle.get();
-      if (controller_packet.throttle != smoothedt)
-      {
-        controller_packet.throttle = smoothedt;
-        DEBUGVAL(controller_packet.throttle);
-      }
+      // uint8_t smoothedt = smoothedThrottle.get();
+      // if (currentThrottle != smoothedt)
+      // {
+      //   controller_packet.throttle = smoothedt;
+      //   DEBUGVAL(controller_packet.throttle);
+      // }
       // uint8_t smoothed_throttle = _getThrottleFromMap(Encoder.readCounterByte());
     }
     else
     {
+      if (_oldThrottle != t)
+      {
+        DEBUGVAL(t);
+      }
     }
+    _oldThrottle = t;
   }
 
   void clear()
   {
     Encoder.writeCounter(0);
+  }
+
+  void manageDeadmanChange(bool deadmanHeld)
+  {
+    if (deadmanHeld != _deadmanHeld)
+    {
+      _deadmanHeld = deadmanHeld;
+      if (!_deadmanHeld)
+      {
+        Encoder.writeCounter((int32_t)0);
+        Encoder.writeMax((int32_t)0);
+        DEBUGVAL(_deadmanHeld);
+      }
+      else
+      {
+        Encoder.writeMax(_max);
+        DEBUGVAL(_deadmanHeld);
+      }
+    }
   }
 
   uint8_t _getThrottleFromMap(int counter)
@@ -151,11 +178,11 @@ public:
     case ThrottleMap::LINEAR:
       if (counter >= 0)
       {
-        return map(counter, 0, 8, 127, 255);
+        return map(counter, 0, _max, 127, 255);
       }
       else
       {
-        return map(counter, -8, 0, 0, 127);
+        return map(counter, _min, 0, 0, 127);
       }
     case ThrottleMap::GENTLE:
       // find item in normal map
@@ -168,27 +195,20 @@ public:
       }
       return 127;
     case ThrottleMap::SMOOTHED:
-      uint8_t m = map(counter, -8, 8, 0, 255);
+      uint8_t m = counter >= 0
+                      ? map(counter, 0, _max, 127, 255)
+                      : map(counter, _min, _max, 0, 127);
       smoothedThrottle.add(m);
       return smoothedThrottle.get();
     }
     return 127;
   }
 
-  void resetCounter()
-  {
-    Encoder.writeCounter(0);
-  }
-
-  uint8_t mapCounterToThrottle()
+  uint8_t mapCounterToThrottle(bool print = false)
   {
     int counter = Encoder.readCounterByte();
-    if (counter > 0 && _deadmanHeld == false)
-    {
-      Encoder.writeCounter((int32_t)0);
-      return 127;
-    }
-    return _getThrottleFromMap(counter);
+    uint8_t throttle = _getThrottleFromMap(counter);
+    return throttle;
   }
 
   void setMap(ThrottleMap mapNum)
@@ -207,9 +227,10 @@ private:
   EncoderThrottleCb _encoderButtonDoubleClickCb;
   EncoderThrottleCb _encoderDeadmanChanged;
 
-  int _min, _max;
+  int32_t _min, _max;
   int _mapped_min, _mapped_max;
   ThrottleMap _useMap;
+  uint8_t _oldThrottle;
 };
 
 #endif
