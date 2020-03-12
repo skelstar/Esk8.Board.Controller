@@ -6,7 +6,8 @@
 #include <elapsedMillis.h>
 #include <Button2.h>
 
-Button2 button0(0);
+Button2 deadman(0);
+Button2 mapSwap(35);
 
 #ifndef READ_TRIGGER_PERIOD
 #define READ_TRIGGER_PERIOD 200
@@ -18,21 +19,40 @@ Button2 button0(0);
 
 EncoderThrottleLib encoder;
 
-//------------------------------------------------------------
-
-void encoder_changed(i2cEncoderLibV2 *obj)
-{
-  // uint8_t throttle = encoder.mapCounterToThrottle(/*print*/ true);
-}
-
 void encoder_push(i2cEncoderLibV2 *obj)
 {
+  encoder.clear();
   DEBUG("Encoder is pushed!");
 }
 
 void encoder_double_push(i2cEncoderLibV2 *obj)
 {
   Serial.println("Encoder is double pushed!");
+}
+
+void swapMapDoubleClick(Button2 &btn)
+{
+  switch ((int)encoder.getMap())
+  {
+  case ThrottleMap::LINEAR:
+    encoder.setMap(GENTLE);
+    encoder.clear();
+    DEBUG("ThrottleMap::GENTLE");
+    break;
+  case ThrottleMap::GENTLE:
+    encoder.setMap(SMOOTHED);
+    encoder.clear();
+    DEBUG("ThrottleMap::SMOOTHED");
+    break;
+  case ThrottleMap::SMOOTHED:
+    encoder.setMap(LINEAR);
+    encoder.clear();
+    DEBUG("ThrottleMap::LINEAR");
+    break;
+  default:
+    DEBUG("DEFAULT");
+    break;
+  }
 }
 
 //------------------------------------------------------------
@@ -43,25 +63,28 @@ void setup(void)
   Serial.println("**** I2C Encoder V2 basic example ****");
 
   Wire.begin();
-  encoder.init(/*changed*/ encoder_changed,
-               /*pushed*/ encoder_push,
+  encoder.init(/*pushed*/ encoder_push,
                /*double*/ encoder_double_push,
-               /*deadman*/ NULL,
                /*min*/ -8,
                /*max*/ 8);
   // encoder.setMap(GENTLE);
+  mapSwap.setDoubleClickHandler(swapMapDoubleClick);
 }
 
 elapsedMillis since_checked_encoder;
 
 void loop()
 {
+  mapSwap.loop();
+
   if (since_checked_encoder > 200)
   {
-    button0.loop();
+    deadman.loop();
 
     since_checked_encoder = 0;
     /* Check the status of the encoder and call the callback */
-    encoder.loop(button0.isPressed());
+    uint8_t t = encoder.get(deadman.isPressed());
   }
+
+  delay(1);
 }

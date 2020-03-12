@@ -64,17 +64,13 @@ public:
   }
 
   void init(
-      EncoderThrottleCb encoderChangedCb,
       EncoderThrottleCb encoderButtonPushedCb,
       EncoderThrottleCb encoderButtonDoubleClickCb,
-      EncoderThrottleCb encoderDeadmanChanged,
       int32_t min,
       int32_t max)
   {
-    _encoderChangedCb = encoderChangedCb;
     _encoderButtonPushedCb = encoderButtonPushedCb;
     _encoderButtonDoubleClickCb = encoderButtonDoubleClickCb;
-    _encoderDeadmanChanged = encoderDeadmanChanged;
     _min = min;
     _max = max;
     _mapped_max = 255;
@@ -99,8 +95,6 @@ public:
                          i2cEncoderLibV2::GP_PULL_EN |
                          i2cEncoderLibV2::GP_INT_DI);
 
-    // Encoder.onIncrement = _encoderChangedCb;
-    // Encoder.onDecrement = _encoderChangedCb;
     Encoder.onButtonPush = _encoderButtonPushedCb;
     Encoder.onButtonDoublePush = _encoderButtonDoubleClickCb;
     // Encoder.onGP2Rise = _encoderDeadmanChanged;
@@ -115,41 +109,40 @@ public:
     Encoder.updateStatus();
   }
 
-  bool _deadmanHeld = true;
-
-  void loop(bool deadmanHeld)
+  uint8_t get(bool deadmanHeld)
   {
     manageDeadmanChange(deadmanHeld);
 
     Encoder.updateStatus();
 
-    uint8_t t = mapCounterToThrottle();
+    _rawthrottle = mapCounterToThrottle();
 
     if (_useMap == ThrottleMap::SMOOTHED)
     {
-      smoothedThrottle.add(t);
+      smoothedThrottle.add(_rawthrottle);
 
-      // uint8_t smoothedt = smoothedThrottle.get();
-      // if (currentThrottle != smoothedt)
-      // {
-      //   controller_packet.throttle = smoothedt;
-      //   DEBUGVAL(controller_packet.throttle);
-      // }
-      // uint8_t smoothed_throttle = _getThrottleFromMap(Encoder.readCounterByte());
+      uint8_t smoothedt = smoothedThrottle.get();
+      if (_rawthrottle != smoothedt)
+      {
+        DEBUGVAL(_rawthrottle);
+      }
+      _oldThrottle = _rawthrottle;
+      return smoothedt;
     }
     else
     {
-      if (_oldThrottle != t)
-      {
-        DEBUGVAL(t);
-      }
+      _oldThrottle = _rawthrottle;
+      return _rawthrottle;
     }
-    _oldThrottle = t;
   }
 
   void clear()
   {
     Encoder.writeCounter(0);
+    if (_useMap == SMOOTHED)
+    {
+      smoothedThrottle.clear();
+    }
   }
 
   void manageDeadmanChange(bool deadmanHeld)
@@ -221,16 +214,19 @@ public:
     return _useMap;
   }
 
+  // vars
+  bool _deadmanHeld = true;
+
 private:
-  EncoderThrottleCb _encoderChangedCb;
+  // callbacks
   EncoderThrottleCb _encoderButtonPushedCb;
   EncoderThrottleCb _encoderButtonDoubleClickCb;
-  EncoderThrottleCb _encoderDeadmanChanged;
 
+  // vars
   int32_t _min, _max;
   int _mapped_min, _mapped_max;
   ThrottleMap _useMap;
-  uint8_t _oldThrottle;
+  uint8_t _rawthrottle, _oldThrottle;
 };
 
 #endif
