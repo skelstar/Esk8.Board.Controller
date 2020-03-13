@@ -10,14 +10,16 @@
 #include <i2cEncoderLibV2.h>
 
 #ifndef Smoothed
-#include <Smoothed.h>
+// #include <Smoothed.h>
+#include <Smoother.h>
 #endif
 
 // https : //github.com/skelstar/Esk8.Board.Controller/blob/670e83203e9f9d6687bc75beccb61d83b0c71708/include/throttle.h
 
 i2cEncoderLibV2 Encoder(0x01); /* A0 is soldered */
 
-Smoothed<float> smoothedThrottle;
+Smoother smoothedAccel(3, 127);
+Smoother smoothedBrake(10, 127);
 
 enum ThrottleMap
 {
@@ -79,10 +81,6 @@ public:
 
     _useMap = ThrottleMap::LINEAR;
 
-    uint8_t smoothedBufferLength = 1 * (1000 / READ_TRIGGER_PERIOD);
-    DEBUGVAL(smoothedBufferLength);
-    smoothedThrottle.begin(SMOOTHED_AVERAGE, smoothedBufferLength);
-
     Encoder.reset();
     Encoder.begin(i2cEncoderLibV2::INT_DATA |
                   i2cEncoderLibV2::WRAP_DISABLE |
@@ -111,7 +109,7 @@ public:
 
   uint8_t get(bool deadmanHeld)
   {
-    manageDeadmanChange(deadmanHeld);
+    _manageDeadmanChange(deadmanHeld);
 
     Encoder.updateStatus();
 
@@ -119,12 +117,18 @@ public:
 
     if (_useMap == ThrottleMap::SMOOTHED)
     {
-      smoothedThrottle.add(_rawthrottle);
+      // change between brake/accel smoothers and return smoothed throttle
+      uint8_t smoothedt = _addAndGetSmoothed(_rawthrottle, _oldThrottle);
 
-      uint8_t smoothedt = smoothedThrottle.get();
       if (_rawthrottle != smoothedt)
       {
-        DEBUGVAL(_rawthrottle);
+        Serial.printf("%d %d ", smoothedt, _rawthrottle);
+        for (int i = 0; i < abs(smoothedt - _rawthrottle); i++)
+        {
+          Serial.printf("+");
+        }
+        Serial.println();
+        // DEBUGVAL(smoothedt, _rawthrottle);
       }
       _oldThrottle = _rawthrottle;
       return smoothedt;
@@ -136,16 +140,41 @@ public:
     }
   }
 
+  uint8_t _addAndGetSmoothed(uint8_t _raw, uint8_t _old)
+  {
+    // accelerating/idle
+    if (_raw >= 0)
+    {
+      if (_old < 127)
+      {
+        smoothedAccel.clear(127);
+      }
+      smoothedAccel.add(_raw);
+      return smoothedAccel.get();
+    }
+
+    // braking
+    else
+    {
+      if (_old >= 127)
+      {
+        smoothedBrake.clear(127);
+      }
+      smoothedBrake.add(_raw);
+      return smoothedBrake.get();
+    }
+  }
+
   void clear()
   {
     Encoder.writeCounter(0);
     if (_useMap == SMOOTHED)
     {
-      smoothedThrottle.clear();
+      smoothedAccel.clear(127);
     }
   }
 
-  void manageDeadmanChange(bool deadmanHeld)
+  void _manageDeadmanChange(bool deadmanHeld)
   {
     if (deadmanHeld != _deadmanHeld)
     {
@@ -169,6 +198,7 @@ public:
     switch (_useMap)
     {
     case ThrottleMap::LINEAR:
+    case ThrottleMap::SMOOTHED:
       if (counter >= 0)
       {
         return map(counter, 0, _max, 127, 255);
@@ -187,12 +217,6 @@ public:
         }
       }
       return 127;
-    case ThrottleMap::SMOOTHED:
-      uint8_t m = counter >= 0
-                      ? map(counter, 0, _max, 127, 255)
-                      : map(counter, _min, _max, 0, 127);
-      smoothedThrottle.add(m);
-      return smoothedThrottle.get();
     }
     return 127;
   }

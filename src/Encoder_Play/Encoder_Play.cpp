@@ -7,7 +7,7 @@
 #include <Button2.h>
 
 Button2 deadman(0);
-Button2 mapSwap(35);
+Button2 mapSwapButton(35);
 
 #ifndef READ_TRIGGER_PERIOD
 #define READ_TRIGGER_PERIOD 200
@@ -67,15 +67,16 @@ void setup(void)
                /*double*/ encoder_double_push,
                /*min*/ -8,
                /*max*/ 8);
-  // encoder.setMap(GENTLE);
-  mapSwap.setDoubleClickHandler(swapMapDoubleClick);
+  encoder.setMap(SMOOTHED);
+
+  mapSwapButton.setDoubleClickHandler(swapMapDoubleClick);
 }
 
 elapsedMillis since_checked_encoder;
 
 void loop()
 {
-  mapSwap.loop();
+  mapSwapButton.loop();
 
   if (since_checked_encoder > 200)
   {
