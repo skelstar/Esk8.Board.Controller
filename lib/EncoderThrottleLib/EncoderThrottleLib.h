@@ -142,24 +142,22 @@ public:
 
   uint8_t _addAndGetSmoothed(uint8_t _raw, uint8_t _old)
   {
-    // accelerating/idle
-    if (_raw >= 0)
+    // clear smoothers if idle boundary crossed
+    if ((_raw >= 127 && _old < 127) || (_raw < 127 && _old >= 127))
     {
-      if (_old < 127)
-      {
-        smoothedAccel.clear(127);
-      }
+      smoothedAccel.clear(127);
+      smoothedBrake.clear(127);
+    }
+
+    // add to accel smoother
+    if (_raw >= 127)
+    {
       smoothedAccel.add(_raw);
       return smoothedAccel.get();
     }
-
-    // braking
+    // add to braking smoother
     else
     {
-      if (_old >= 127)
-      {
-        smoothedBrake.clear(127);
-      }
       smoothedBrake.add(_raw);
       return smoothedBrake.get();
     }
