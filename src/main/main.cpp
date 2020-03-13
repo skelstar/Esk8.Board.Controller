@@ -10,7 +10,6 @@
 #include <VescData.h>
 #include <elapsedMillis.h>
 #include <rom/rtc.h> // for reset reason
-#include <Smoothed.h>
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
 // #define SOFT_SPI_MOSI_PIN 19 // Blue
@@ -108,11 +107,9 @@ Button2 button35(BUTTON_35);
 
 //---------------------------------------------------------------
 
-#include <FSRThrottleLib.h>
+#include <EncoderThrottleLib.h>
 
-FSRPin brake(/*pin*/ FSR_BRAKE_PIN, FSR_MIN_RAW, FSR_MAX_RAW, 0, 127);
-FSRPin accel(/*pin*/ FSR_ACCEL_PIN, FSR_MIN_RAW, FSR_MAX_RAW, 255, 127);
-FSRThrottleLib throttle(&accel, &brake);
+EncoderThrottleLib throttle;
 
 #include <throttle.h>
 
@@ -185,7 +182,7 @@ void loop()
     if (old_throttle != controller_packet.throttle)
     {
       old_throttle = controller_packet.throttle;
-      updateStatusPixel();
+      // updateStatusPixel();
 #ifdef PRINT_THROTTLE
       DEBUGVAL(controller_packet.throttle);
 #endif
