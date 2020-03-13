@@ -61,10 +61,11 @@ class EncoderThrottleLib
   typedef void (*EncoderThrottleCb)(i2cEncoderLibV2 *);
 
 public:
+  //-----------------------------------------
   EncoderThrottleLib()
   {
   }
-
+  //-----------------------------------------
   void init(
       EncoderThrottleCb encoderButtonPushedCb,
       EncoderThrottleCb encoderButtonDoubleClickCb,
@@ -106,14 +107,14 @@ public:
     Encoder.writeDoublePushPeriod(50);   /*Set a period for the double push of 500ms */
     Encoder.updateStatus();
   }
-
+  //-----------------------------------------
   uint8_t get(bool deadmanHeld)
   {
     _manageDeadmanChange(deadmanHeld);
 
     Encoder.updateStatus();
 
-    _rawthrottle = mapCounterToThrottle();
+    _rawthrottle = _mapCounterToThrottle();
 
     if (_useMap == ThrottleMap::SMOOTHED)
     {
@@ -128,7 +129,6 @@ public:
           Serial.printf("+");
         }
         Serial.println();
-        // DEBUGVAL(smoothedt, _rawthrottle);
       }
       _oldThrottle = _rawthrottle;
       return smoothedt;
@@ -139,7 +139,41 @@ public:
       return _rawthrottle;
     }
   }
+  //-----------------------------------------
+  void clear()
+  {
+    Encoder.writeCounter(0);
+    if (_useMap == SMOOTHED)
+    {
+      smoothedAccel.clear(127);
+    }
+  }
+  //-----------------------------------------
+  void setMap(ThrottleMap mapNum)
+  {
+    _useMap = mapNum;
+  }
+  //-----------------------------------------
+  ThrottleMap getMap()
+  {
+    return _useMap;
+  }
 
+  // vars
+  bool _deadmanHeld = true;
+
+private:
+  // callbacks
+  EncoderThrottleCb _encoderButtonPushedCb;
+  EncoderThrottleCb _encoderButtonDoubleClickCb;
+
+  // vars
+  int32_t _min, _max;
+  int _mapped_min, _mapped_max;
+  ThrottleMap _useMap;
+  uint8_t _rawthrottle, _oldThrottle;
+
+  //-----------------------------------------
   uint8_t _addAndGetSmoothed(uint8_t _raw, uint8_t _old)
   {
     // clear smoothers if idle boundary crossed
@@ -162,16 +196,7 @@ public:
       return smoothedBrake.get();
     }
   }
-
-  void clear()
-  {
-    Encoder.writeCounter(0);
-    if (_useMap == SMOOTHED)
-    {
-      smoothedAccel.clear(127);
-    }
-  }
-
+  //-----------------------------------------
   void _manageDeadmanChange(bool deadmanHeld)
   {
     if (deadmanHeld != _deadmanHeld)
@@ -190,7 +215,14 @@ public:
       }
     }
   }
-
+  //-----------------------------------------
+  uint8_t _mapCounterToThrottle(bool print = false)
+  {
+    int counter = Encoder.readCounterByte();
+    uint8_t throttle = _getThrottleFromMap(counter);
+    return throttle;
+  }
+  //-----------------------------------------
   uint8_t _getThrottleFromMap(int counter)
   {
     switch (_useMap)
@@ -218,37 +250,6 @@ public:
     }
     return 127;
   }
-
-  uint8_t mapCounterToThrottle(bool print = false)
-  {
-    int counter = Encoder.readCounterByte();
-    uint8_t throttle = _getThrottleFromMap(counter);
-    return throttle;
-  }
-
-  void setMap(ThrottleMap mapNum)
-  {
-    _useMap = mapNum;
-  }
-
-  ThrottleMap getMap()
-  {
-    return _useMap;
-  }
-
-  // vars
-  bool _deadmanHeld = true;
-
-private:
-  // callbacks
-  EncoderThrottleCb _encoderButtonPushedCb;
-  EncoderThrottleCb _encoderButtonDoubleClickCb;
-
-  // vars
-  int32_t _min, _max;
-  int _mapped_min, _mapped_max;
-  ThrottleMap _useMap;
-  uint8_t _rawthrottle, _oldThrottle;
 };
 
 #endif
