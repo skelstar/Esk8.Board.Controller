@@ -1,13 +1,48 @@
 
 
-// uint8_t brakeIn[] = {0, 30, 70, 127};
-// uint8_t brakeOut[] = {0, 50, 90, 127};
+void encoderButtonPushed(i2cEncoderLibV2 *obj)
+{
+  DEBUG("Encoder button pushed");
+  throttle.clear();
+}
 
-// uint8_t accelIn[] = {127, 180, 200, 255};
-// uint8_t accelOut[] = {127, 140, 170, 255};
+void encoderButtonDoublePushed(i2cEncoderLibV2 *obj)
+{
+  DEBUG("Encoder button double-pushed");
+  switch ((int)throttle.getMap())
+  {
+  case ThrottleMap::LINEAR:
+    throttle.setMap(GENTLE);
+    throttle.clear();
+    DEBUG("ThrottleMap::GENTLE");
+    break;
+  case ThrottleMap::GENTLE:
+    throttle.setMap(SMOOTHED);
+    throttle.clear();
+    DEBUG("ThrottleMap::SMOOTHED");
+    break;
+  case ThrottleMap::SMOOTHED:
+    throttle.setMap(LINEAR);
+    throttle.clear();
+    DEBUG("ThrottleMap::LINEAR");
+    break;
+  default:
+    DEBUG("DEFAULT");
+    break;
+  }
+}
 
 void init_throttle()
 {
+  Wire.begin();
+  throttle.init(
+      encoderButtonPushed,
+      encoderButtonDoublePushed,
+      /*min counts*/ -8,
+      /*max counts*/ 8);
+
+  throttle.setSmoothBufferLengths(/*brake*/ 3, /*accel*/ 3);
+  throttle.setMap(SMOOTHED);
 }
 
 void updateStatusPixel()
