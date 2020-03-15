@@ -6,6 +6,9 @@
 #define BUTTON_0 0
 Button2 button0(BUTTON_0);
 
+#define DEADMAN_PIN 27
+Button2 deadman(DEADMAN_PIN);
+
 void button0_init()
 {
   button0.setClickHandler([](Button2 &btn) {
@@ -32,4 +35,8 @@ void button35_init()
   });
   button35.setDoubleClickHandler([](Button2 &btn) {
   });
+}
+
+void deadman_init()
+{
 }
