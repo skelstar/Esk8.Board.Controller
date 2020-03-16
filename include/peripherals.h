@@ -39,4 +39,5 @@ void button35_init()
 
 void deadman_init()
 {
+  bool primeButton = deadman.isPressed();
 }

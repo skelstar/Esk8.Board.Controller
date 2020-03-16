@@ -38,11 +38,11 @@ void init_throttle()
   throttle.init(
       encoderButtonPushed,
       encoderButtonDoublePushed,
-      /*min counts*/ -8,
-      /*max counts*/ 8);
+      /*min counts*/ -ENCODER_BRAKE_COUNTS,
+      /*max counts*/ ENCODER_ACCEL_COUNTS);
 
   throttle.setSmoothBufferLengths(/*brake*/ 3, /*accel*/ 3);
-  throttle.setMap(SMOOTHED);
+  throttle.setMap(LINEAR);
 }
 
 void updateStatusPixel()

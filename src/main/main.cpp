@@ -111,6 +111,9 @@ Button2 button35(BUTTON_35);
 
 EncoderThrottleLib throttle;
 
+#define ENCODER_BRAKE_COUNTS 20
+#define ENCODER_ACCEL_COUNTS 20
+
 #include <throttle.h>
 
 //---------------------------------------------------------------
@@ -159,7 +162,16 @@ void setup()
 
   button0_init();
   button35_init();
+
+#ifdef FEATURE_USE_DEADMAN
   deadman_init();
+  // have to make sure that isPressed is up to date
+  while (deadman.isPressed() == true)
+  {
+    deadman.loop();
+    vTaskDelay(1);
+  }
+#endif
 }
 //---------------------------------------------------------------
 
