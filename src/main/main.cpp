@@ -77,6 +77,9 @@ elapsedMillis
     since_read_trigger;
 
 uint16_t remote_battery_percent = 0;
+bool display_task_initialised = false;
+bool display_task_showing_option_screen = false;
+int oldCounter = 0;
 
 #define SMOOTH_OVER_MILLIS 2000
 
@@ -94,10 +97,11 @@ Button2 button35(BUTTON_35);
 
 #include <utils.h>
 #include <screens.h>
-// #include <menu_system.h>
+#include <menu_options.h>
+#include <menu_system.h>
 #include <comms_connected_state.h>
 
-// #include <display_task_0.h>
+#include <display_task_0.h>
 #include <nrf_comms.h>
 
 #include <features/battery_measure.h>
@@ -152,7 +156,7 @@ void setup()
   init_throttle();
 
   // core 0
-  // xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
+  xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(commsStateTask_0, "commsStateTask_0", 10000, NULL, /*priority*/ 2, NULL, 0);
   // xTaskCreatePinnedToCore(flasher_task_0, "flasher_task_0", 10000, NULL, /*priority*/ 2, NULL, 0);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
@@ -172,6 +176,11 @@ void setup()
     vTaskDelay(1);
   }
 #endif
+
+  while (!display_task_initialised)
+  {
+    vTaskDelay(1);
+  }
 }
 //---------------------------------------------------------------
 
@@ -180,7 +189,17 @@ uint8_t old_throttle;
 
 void loop()
 {
-  if (since_read_trigger > READ_TRIGGER_PERIOD)
+  if (display_task_showing_option_screen)
+  {
+    int8_t counter = throttle.getCounter();
+    if (oldCounter != counter)
+    {
+      send_to_display_event_queue(oldCounter < counter ? DISP_EV_ENCODER_UP : DISP_EV_ENCODER_DN);
+      oldCounter = counter;
+    }
+  }
+
+  else if (since_read_trigger > READ_TRIGGER_PERIOD)
   {
     since_read_trigger = 0;
 
@@ -189,7 +208,6 @@ void loop()
 #else
     bool accelEnabled = true;
 #endif
-
     controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
     if (old_throttle != controller_packet.throttle)
     {

@@ -1,6 +1,4 @@
 
-bool display_task_initialised = false;
-
 #ifndef TFT_H
 #include <tft.h>
 #endif
@@ -17,12 +15,14 @@ void display_task_0(void *pvParameters)
 
   display_task_initialised = true;
 
+#define READ_DISP_EVENT_QUEUE_PERIOD 100
+
   elapsedMillis since_read_disp_event_queue;
 
   while (true)
   {
 
-    if (since_read_disp_event_queue > 100)
+    if (since_read_disp_event_queue > READ_DISP_EVENT_QUEUE_PERIOD)
     {
       since_read_disp_event_queue = 0;
       display_state.run_machine();

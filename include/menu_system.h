@@ -12,9 +12,14 @@ enum DispStateEvent
   DISP_EV_REFRESH,
   DISP_EV_STOPPED,
   DISP_EV_MOVING,
+  DISP_EV_ENCODER_UP,
+  DISP_EV_ENCODER_DN,
+  DISP_EV_ENCODER_DOUBLE_PUSH,
 };
 
-const char *get_event_name(DispStateEvent ev);
+const char *
+get_event_name(DispStateEvent ev);
+//---------------------------------------------------------------
 
 void send_to_display_event_queue(DispStateEvent ev, TickType_t ticks = 10)
 {
@@ -24,6 +29,7 @@ void send_to_display_event_queue(DispStateEvent ev, TickType_t ticks = 10)
   uint8_t e = (uint8_t)ev;
   xQueueSendToBack(xDisplayChangeEventQueue, &e, ticks);
 }
+//---------------------------------------------------------------
 
 DispStateEvent read_from_display_event_queue(TickType_t ticks = 5)
 {
@@ -37,6 +43,9 @@ DispStateEvent read_from_display_event_queue(TickType_t ticks = 5)
   }
   return DISP_EV_NO_EVENT;
 }
+//---------------------------------------------------------------
+
+// prototypes
 
 void print_disp_state(const char *state_name);
 
@@ -59,6 +68,7 @@ State disp_state_stopped_screen(
     [] {
       print_disp_state("...disp_state_stopped_screen");
       screen_with_stats();
+      showOption = Options::NONE;
     },
     NULL, NULL);
 //---------------------------------------------------------------
@@ -70,53 +80,47 @@ State disp_state_moving_screen(
     },
     NULL, NULL);
 //---------------------------------------------------------------
-State disp_state_menu_throttle(
+State disp_state_options(
     [] {
-      print_disp_state("...disp_state_menu_throttle");
-      tft.fillScreen(TFT_DARKGREEN);
-      lcd_message("set map to:", LINE_1, ALIGNED_LEFT);
-
-      // ThrottleMap currentMap = throttle.getMap();
-      // switch (currentMap)
-      // {
-      // case GENTLE:
-      //   lcd_message("linear?", LINE_2, ALIGNED_CENTRE);
-      //   break;
-      // case LINEAR:
-      //   lcd_message("gentle?", LINE_2, ALIGNED_CENTRE);
-      //   break;
-      // case SMOOTHED:
-      //   lcd_message("gentle?", LINE_2, ALIGNED_CENTRE);
-      //   break;
-      // }
+      print_disp_state("...disp_state_options");
+      display_task_showing_option_screen = true;
+      displayCurrentOption();
     },
-    NULL, NULL);
+    NULL,
+    [] {
+      display_task_showing_option_screen = false;
+    });
 //---------------------------------------------------------------
-State disp_state_menu_throttle_selected(
+State disp_state_options_changed_up(
     [] {
-      print_disp_state("...disp_state_menu_throttle_selected");
-      // GENTLE -> LINEAR -> SMOOTHED -> GENTLE
-      // ThrottleMap currentMap = throttle.getMap();
-      // switch (currentMap)
-      // {
-      // case GENTLE:
-      //   throttle.setMap(LINEAR);
-      //   lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
-      //   DEBUG("LINEAR SELECTED");
-      //   break;
-      // case LINEAR:
-      //   throttle.setMap(SMOOTHED);
-      //   lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
-      //   DEBUG("SMOOTHED SELECTED");
-      //   break;
-      // case SMOOTHED:
-      //   throttle.setMap(GENTLE);
-      //   lcd_message("selected!", LINE_3, ALIGNED_CENTRE);
-      //   DEBUG("GENTLE SELECTED");
-      //   break;
-      // }
+      print_disp_state("...disp_state_options_changed_up");
+      display_task_showing_option_screen = true;
     },
-    NULL, NULL);
+    NULL,
+    [] {
+      display_task_showing_option_screen = false;
+    });
+//---------------------------------------------------------------
+State disp_state_options_changed_dn(
+    [] {
+      print_disp_state("...disp_state_options_changed_dn");
+      display_task_showing_option_screen = true;
+    },
+    NULL,
+    [] {
+      display_task_showing_option_screen = false;
+    });
+//---------------------------------------------------------------
+State disp_state_option_selected(
+    [] {
+      print_disp_state("...disp_state_option_selected");
+      selectOption();
+    },
+    NULL,
+    [] {
+      display_task_showing_option_screen = false;
+    });
+
 //---------------------------------------------------------------
 
 Fsm display_state(&disp_state_searching);
@@ -131,21 +135,33 @@ void add_disp_state_transitions()
   display_state.add_transition(&disp_state_moving_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
   // main - stopped
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_REFRESH, NULL);
-  display_state.add_transition(&disp_state_stopped_screen, &disp_state_menu_throttle, DISP_EV_BUTTON_CLICK, NULL);
+  display_state.add_transition(&disp_state_stopped_screen, &disp_state_options, DISP_EV_BUTTON_CLICK, NULL);
   // moving
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_moving_screen, DISP_EV_MOVING, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_REFRESH, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_stopped_screen, DISP_EV_STOPPED, NULL);
 
   // options
-  const uint16_t OPTION_SCREEN_TIMEOUT = 2000;
+  const uint16_t OPTION_SCREEN_TIMEOUT = 5000;
   const uint16_t OPTION_SELECTED_TIMEOUT = 1000;
   // option 1
-  display_state.add_timed_transition(&disp_state_menu_throttle, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
-  display_state.add_transition(&disp_state_menu_throttle, &disp_state_stopped_screen, DISP_EV_BUTTON_CLICK, NULL);
-  display_state.add_transition(&disp_state_menu_throttle, &disp_state_menu_throttle_selected, DISP_EV_MENU_OPTION_SELECT, NULL);
-  // option  1selected
-  display_state.add_timed_transition(&disp_state_menu_throttle_selected, &disp_state_stopped_screen, OPTION_SELECTED_TIMEOUT, NULL);
+  display_state.add_timed_transition(&disp_state_options, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
+  display_state.add_transition(&disp_state_options, &disp_state_options, DISP_EV_BUTTON_CLICK, moveToNextOption);
+  display_state.add_transition(&disp_state_options, &disp_state_option_selected, DISP_EV_MENU_OPTION_SELECT, NULL);
+
+  // disp_state_options_changed_up
+  display_state.add_transition(&disp_state_options, &disp_state_options_changed_up, DISP_EV_ENCODER_UP, NULL);
+  display_state.add_transition(&disp_state_options_changed_up, &disp_state_options_changed_up, DISP_EV_ENCODER_UP, NULL);
+  display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options_changed_up, DISP_EV_ENCODER_UP, NULL);
+  display_state.add_transition(&disp_state_options_changed_up, &disp_state_option_selected, DISP_EV_ENCODER_DOUBLE_PUSH, NULL);
+
+  // disp_state_options_changed_dn
+  display_state.add_transition(&disp_state_options, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
+  display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
+  display_state.add_transition(&disp_state_options_changed_up, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
+  display_state.add_transition(&disp_state_options_changed_dn, &disp_state_option_selected, DISP_EV_ENCODER_DOUBLE_PUSH, NULL);
+  // option 1 selected
+  display_state.add_timed_transition(&disp_state_option_selected, &disp_state_stopped_screen, OPTION_SELECTED_TIMEOUT, NULL);
 }
 
 const char *get_event_name(DispStateEvent ev)
@@ -168,6 +184,12 @@ const char *get_event_name(DispStateEvent ev)
     return "DISP_EV_STOPPED";
   case DISP_EV_MOVING:
     return "DISP_EV_MOVING";
+  case DISP_EV_ENCODER_UP:
+    return "DISP_EV_ENCODER_UP";
+  case DISP_EV_ENCODER_DN:
+    return "DISP_EV_ENCODER_DN";
+  case DISP_EV_ENCODER_DOUBLE_PUSH:
+    return "DISP_EV_ENCODER_DOUBLE_PUSH";
   default:
     char buff[20];
     sprintf(buff, "unhandled ev: %d", (uint8_t)ev);
