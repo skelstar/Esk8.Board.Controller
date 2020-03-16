@@ -111,6 +111,9 @@ Button2 button35(BUTTON_35);
 
 EncoderThrottleLib throttle;
 
+#define ENCODER_BRAKE_COUNTS 20
+#define ENCODER_ACCEL_COUNTS 20
+
 #include <throttle.h>
 
 //---------------------------------------------------------------
@@ -144,8 +147,6 @@ void setup()
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
 
-  Serial.printf("FSR_MIN_RAW %d, FSR_MAX_RAW %d \n", FSR_MIN_RAW, FSR_MAX_RAW);
-
   print_build_status();
 
   init_throttle();
@@ -162,10 +163,15 @@ void setup()
   button0_init();
   button35_init();
 
-  // while (!display_task_initialised)
-  // {
-  //   vTaskDelay(10);
-  // }
+#ifdef FEATURE_USE_DEADMAN
+  deadman_init();
+  // have to make sure that isPressed is up to date
+  while (deadman.isPressed() == true)
+  {
+    deadman.loop();
+    vTaskDelay(1);
+  }
+#endif
 }
 //---------------------------------------------------------------
 
@@ -178,7 +184,13 @@ void loop()
   {
     since_read_trigger = 0;
 
-    controller_packet.throttle = throttle.get(/*enabled*/ true);
+#ifdef FEATURE_USE_DEADMAN
+    bool accelEnabled = deadman.isPressed();
+#else
+    bool accelEnabled = true;
+#endif
+
+    controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
     if (old_throttle != controller_packet.throttle)
     {
       old_throttle = controller_packet.throttle;
@@ -208,6 +220,9 @@ void loop()
 
   button0.loop();
   button35.loop();
+#ifdef FEATURE_USE_DEADMAN
+  deadman.loop();
+#endif
 
   vTaskDelay(1);
 }
