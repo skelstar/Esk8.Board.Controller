@@ -116,8 +116,8 @@ EncoderThrottleLib throttle;
 class Config
 {
 public:
-  uint8_t AccelCounts = ENCODER_ACCEL_COUNTS;
-  uint8_t BrakeCounts = ENCODER_BRAKE_COUNTS;
+  uint8_t accelCounts = ENCODER_ACCEL_COUNTS;
+  uint8_t brakeCounts = ENCODER_BRAKE_COUNTS;
 } config;
 
 #define STORE_CONFIG "config"
@@ -136,6 +136,7 @@ Button2 button35(BUTTON_35);
 
 #include <utils.h>
 #include <screens.h>
+#include <OptionValue.h>
 #include <menu_options.h>
 #include <menu_system.h>
 #include <comms_connected_state.h>
@@ -161,8 +162,8 @@ void setup()
   stats.reset_reason_core1 = rtc_get_reset_reason(1);
 
   configStore.begin(STORE_CONFIG, false);
-  config.AccelCounts = configStore.getUInt(STORE_CONFIG_ACCEL_COUNTS, ENCODER_ACCEL_COUNTS);
-  config.BrakeCounts = configStore.getUInt(STORE_CONFIG_BRAKE_COUNTS, ENCODER_BRAKE_COUNTS);
+  config.accelCounts = configStore.getUInt(STORE_CONFIG_ACCEL_COUNTS, ENCODER_ACCEL_COUNTS);
+  config.brakeCounts = configStore.getUInt(STORE_CONFIG_BRAKE_COUNTS, ENCODER_BRAKE_COUNTS);
 
   Serial.printf("CPU0 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core0));
   Serial.printf("CPU1 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core1));

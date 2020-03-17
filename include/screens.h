@@ -25,7 +25,7 @@ void screen_searching()
 
   uint8_t y = 70;
   char buff[30];
-  sprintf(buff, "enc: -%d->%d", config.BrakeCounts, config.AccelCounts);
+  sprintf(buff, "enc: -%d->%d", config.brakeCounts, config.accelCounts);
   tft.drawString(buff, 10, y);
 }
 //-----------------------------------------------------
@@ -56,7 +56,7 @@ void screen_with_stats(bool connected = true)
   lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, getStatus(stats.total_failed, 0, 1, 2));
   // line 3
   char buff[30];
-  sprintf(buff, "enc: -%d->%d", config.BrakeCounts, config.AccelCounts);
+  sprintf(buff, "enc: -%d->%d", config.brakeCounts, config.accelCounts);
   uint8_t y = 135 - 30;
   lcd_message(buff, LINE_3, Aligned::ALIGNED_LEFT);
 

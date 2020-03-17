@@ -16,21 +16,21 @@ void moveToNextOption()
                    : (Options)((int)showOption + 1);
 }
 //---------------------------------------------------------------
-void selectOption()
+void selectOption(OptionValue *currentOption)
 {
   switch (showOption)
   {
   case Options::NUM_ACCEL_COUNTS:
-    DEBUGVAL("NUM_ACCEL_COUNTS selected", optionVal);
-    configStore.putUInt(STORE_CONFIG_ACCEL_COUNTS, optionVal);
-    throttle.setMax(optionVal);
-    config.AccelCounts = optionVal;
+    DEBUGVAL("NUM_ACCEL_COUNTS selected", currentOption->get());
+    configStore.putUInt(STORE_CONFIG_ACCEL_COUNTS, currentOption->get());
+    throttle.setMax(currentOption->get());
+    config.accelCounts = currentOption->get();
     break;
   case Options::NUM_BRAKE_COUNTS:
-    DEBUGVAL("NUM_BRAKE_COUNTS selected", optionVal);
-    configStore.putUInt(STORE_CONFIG_BRAKE_COUNTS, optionVal);
-    throttle.setMin(optionVal);
-    config.BrakeCounts = optionVal;
+    DEBUGVAL("NUM_BRAKE_COUNTS selected", currentOption->get());
+    configStore.putUInt(STORE_CONFIG_BRAKE_COUNTS, currentOption->get());
+    throttle.setMin(currentOption->get());
+    config.brakeCounts = currentOption->get();
     break;
   }
 }
@@ -47,36 +47,18 @@ void displayCurrentOption()
     DEBUG("NUM_ACCEL_COUNTS");
     tft.fillScreen(TFT_DARKGREEN);
     lcd_message("Accel counts", LINE_1, Aligned::ALIGNED_CENTRE);
-    sprintf(buff2, "%d", config.AccelCounts);
+    sprintf(buff2, "%d", config.accelCounts);
     lcd_message(buff2, LINE_2, Aligned::ALIGNED_CENTRE);
-    optionVal = config.AccelCounts;
+    optionVal = config.accelCounts;
     break;
   case Options::NUM_BRAKE_COUNTS:
     DEBUG("NUM_BRAKE_COUNTS");
     tft.fillScreen(TFT_RED);
     lcd_message("Brake counts", LINE_1, Aligned::ALIGNED_CENTRE);
-    sprintf(buff2, "%d", config.BrakeCounts);
+    sprintf(buff2, "%d", config.brakeCounts);
     lcd_message(buff2, LINE_2, Aligned::ALIGNED_CENTRE);
-    optionVal = config.BrakeCounts;
+    optionVal = config.brakeCounts;
     break;
   }
 }
 //---------------------------------------------------------------
-void optionChange(bool up)
-{
-  uint8_t step = 1;
-  switch (showOption)
-  {
-  case Options::NUM_ACCEL_COUNTS:
-    step = 5;
-    optionVal = up ? optionVal + step : optionVal - step;
-    DEBUGVAL("NUM_ACCEL_COUNTS", optionVal);
-    break;
-  case Options::NUM_BRAKE_COUNTS:
-    step = 5;
-    const uint8_t step = 5;
-    optionVal = up ? optionVal + step : optionVal - step;
-    DEBUGVAL("NUM_BRAKE_COUNTS", optionVal);
-    break;
-  }
-}

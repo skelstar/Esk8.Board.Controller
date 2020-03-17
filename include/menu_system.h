@@ -31,6 +31,8 @@ DispStateEvent read_from_display_event_queue(TickType_t ticks = 5)
 }
 //---------------------------------------------------------------
 
+OptionValue *currentOption;
+
 // prototypes
 
 void print_disp_state(const char *state_name);
@@ -72,6 +74,17 @@ State disp_state_options(
       print_disp_state("...disp_state_options");
       display_task_showing_option_screen = true;
       displayCurrentOption();
+
+      switch (showOption)
+      {
+      case Options::NUM_ACCEL_COUNTS:
+        currentOption = new OptionValue(/*min*/ 0, /*max*/ 50, /*curr*/ config.accelCounts, /*step*/ 5);
+        break;
+      case Options::NUM_BRAKE_COUNTS:
+        currentOption = new OptionValue(/*min*/ 0, /*max*/ 50, /*curr*/ config.brakeCounts, /*step*/ 5);
+        break;
+      }
+
       throttle.setMode(EncoderMode::MENU_OPTION);
     },
     NULL,
@@ -83,7 +96,7 @@ State disp_state_options_changed_up(
     [] {
       print_disp_state("...disp_state_options_changed_up");
       display_task_showing_option_screen = true;
-      optionChange(/*up*/ true);
+      currentOption->up();
     },
     NULL,
     [] {
@@ -94,7 +107,7 @@ State disp_state_options_changed_dn(
     [] {
       print_disp_state("...disp_state_options_changed_dn");
       display_task_showing_option_screen = true;
-      optionChange(/*up*/ false);
+      currentOption->dn();
     },
     NULL,
     [] {
@@ -104,7 +117,7 @@ State disp_state_options_changed_dn(
 State disp_state_option_selected(
     [] {
       print_disp_state("...disp_state_option_selected");
-      selectOption();
+      selectOption(currentOption);
     },
     NULL,
     [] {
