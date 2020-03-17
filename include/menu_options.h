@@ -16,18 +16,16 @@ void moveToNextOption()
                    : (Options)((int)showOption + 1);
 }
 //---------------------------------------------------------------
-void selectOption(OptionValue *currentOption)
+void storeOption(OptionValue *currentOption)
 {
   switch (showOption)
   {
   case Options::NUM_ACCEL_COUNTS:
-    DEBUGVAL("NUM_ACCEL_COUNTS selected", currentOption->get());
     configStore.putUInt(STORE_CONFIG_ACCEL_COUNTS, currentOption->get());
     throttle.setMax(currentOption->get());
     config.accelCounts = currentOption->get();
     break;
   case Options::NUM_BRAKE_COUNTS:
-    DEBUGVAL("NUM_BRAKE_COUNTS selected", currentOption->get());
     configStore.putUInt(STORE_CONFIG_BRAKE_COUNTS, currentOption->get());
     throttle.setMin(currentOption->get());
     config.brakeCounts = currentOption->get();

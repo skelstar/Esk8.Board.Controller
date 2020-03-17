@@ -32,6 +32,13 @@ public:
     return _current;
   }
 
+  void setBgColour(uint32_t bgcol)
+  {
+    bgcolour = bgcol;
+  }
+
+  uint32_t bgcolour;
+
 private:
   int16_t _min, _max, _current;
   uint8_t _step;

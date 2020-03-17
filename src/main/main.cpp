@@ -135,8 +135,8 @@ Preferences configStore;
 Button2 button35(BUTTON_35);
 
 #include <utils.h>
-#include <screens.h>
 #include <OptionValue.h>
+#include <screens.h>
 #include <menu_options.h>
 #include <menu_system.h>
 #include <comms_connected_state.h>

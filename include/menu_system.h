@@ -2,8 +2,7 @@
 #include <Fsm.h>
 #endif
 
-const char *
-get_event_name(DispStateEvent ev);
+const char *get_event_name(DispStateEvent ev);
 //---------------------------------------------------------------
 
 void send_to_display_event_queue(DispStateEvent ev)
@@ -28,6 +27,13 @@ DispStateEvent read_from_display_event_queue(TickType_t ticks = 5)
     return (DispStateEvent)e;
   }
   return DISP_EV_NO_EVENT;
+}
+//---------------------------------------------------------------
+void clearDisplayEventQueue()
+{
+  while (read_from_display_event_queue() != DISP_EV_NO_EVENT)
+  {
+  }
 }
 //---------------------------------------------------------------
 
@@ -75,13 +81,17 @@ State disp_state_options(
       display_task_showing_option_screen = true;
       displayCurrentOption();
 
+      clearDisplayEventQueue();
+
       switch (showOption)
       {
       case Options::NUM_ACCEL_COUNTS:
         currentOption = new OptionValue(/*min*/ 0, /*max*/ 50, /*curr*/ config.accelCounts, /*step*/ 5);
+        currentOption->setBgColour(TFT_DARKGREEN);
         break;
       case Options::NUM_BRAKE_COUNTS:
         currentOption = new OptionValue(/*min*/ 0, /*max*/ 50, /*curr*/ config.brakeCounts, /*step*/ 5);
+        currentOption->setBgColour(TFT_RED);
         break;
       }
 
@@ -97,6 +107,7 @@ State disp_state_options_changed_up(
       print_disp_state("...disp_state_options_changed_up");
       display_task_showing_option_screen = true;
       currentOption->up();
+      screenShowOptionValue(currentOption);
     },
     NULL,
     [] {
@@ -108,6 +119,7 @@ State disp_state_options_changed_dn(
       print_disp_state("...disp_state_options_changed_dn");
       display_task_showing_option_screen = true;
       currentOption->dn();
+      screenShowOptionValue(currentOption);
     },
     NULL,
     [] {
@@ -117,7 +129,8 @@ State disp_state_options_changed_dn(
 State disp_state_option_selected(
     [] {
       print_disp_state("...disp_state_option_selected");
-      selectOption(currentOption);
+      screenShowOptionValueSelected();
+      storeOption(currentOption);
     },
     NULL,
     [] {
