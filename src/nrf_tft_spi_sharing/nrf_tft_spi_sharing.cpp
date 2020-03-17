@@ -10,8 +10,8 @@
 #define SOFT_SPI_MISO_PIN 12 // Orange
 #define SOFT_SPI_SCK_PIN 15  // Yellow
 
-#define NRF_CE 26
-#define NRF_CS 33
+#define NRF_CE 17
+#define NRF_CS 2
 
 #include <RF24.h>
 #include <RF24Network.h>

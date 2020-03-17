@@ -12,9 +12,6 @@
 #include <rom/rtc.h> // for reset reason
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
-// #define SOFT_SPI_MOSI_PIN 19 // Blue
-// #define SOFT_SPI_MISO_PIN 23 // Orange
-// #define SOFT_SPI_SCK_PIN 18  // Yellow
 #define SOFT_SPI_MOSI_PIN 13 // Blue
 #define SOFT_SPI_MISO_PIN 12 // Orange
 #define SOFT_SPI_SCK_PIN 15  // Yellow
@@ -104,6 +101,7 @@ enum DispStateEvent
   DISP_EV_ENCODER_DOUBLE_PUSH,
 };
 
+// menu_system - prototypes
 void send_to_display_event_queue(DispStateEvent ev);
 
 //------------------------------------------------------------------
