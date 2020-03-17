@@ -107,7 +107,7 @@ State disp_state_options_changed_up(
       print_disp_state("...disp_state_options_changed_up");
       display_task_showing_option_screen = true;
       currentOption->up();
-      screenShowOptionValue(currentOption);
+      screenShowOptionValue(getTitleForMenuOption(showOption), currentOption);
     },
     NULL,
     [] {
@@ -119,7 +119,7 @@ State disp_state_options_changed_dn(
       print_disp_state("...disp_state_options_changed_dn");
       display_task_showing_option_screen = true;
       currentOption->dn();
-      screenShowOptionValue(currentOption);
+      screenShowOptionValue(getTitleForMenuOption(showOption), currentOption);
     },
     NULL,
     [] {
@@ -152,7 +152,7 @@ void add_disp_state_transitions()
   display_state.add_transition(&disp_state_moving_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
   // main - stopped
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_REFRESH, NULL);
-  display_state.add_transition(&disp_state_stopped_screen, &disp_state_options, DISP_EV_BUTTON_CLICK, NULL);
+  display_state.add_transition(&disp_state_stopped_screen, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, NULL);
   // moving
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_moving_screen, DISP_EV_MOVING, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_REFRESH, NULL);
@@ -161,22 +161,28 @@ void add_disp_state_transitions()
   // options
   const uint16_t OPTION_SCREEN_TIMEOUT = 5000;
   const uint16_t OPTION_SELECTED_TIMEOUT = 1000;
+
   // option 1
   display_state.add_timed_transition(&disp_state_options, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
-  display_state.add_transition(&disp_state_options, &disp_state_options, DISP_EV_BUTTON_CLICK, moveToNextOption);
+  display_state.add_transition(&disp_state_options, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, moveToNextMenuItem);
   display_state.add_transition(&disp_state_options, &disp_state_option_selected, DISP_EV_MENU_OPTION_SELECT, NULL);
 
   // disp_state_options_changed_up
+  display_state.add_transition(&disp_state_options_changed_up, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, moveToNextMenuItem);
   display_state.add_transition(&disp_state_options, &disp_state_options_changed_up, DISP_EV_ENCODER_UP, NULL);
   display_state.add_transition(&disp_state_options_changed_up, &disp_state_options_changed_up, DISP_EV_ENCODER_UP, NULL);
   display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options_changed_up, DISP_EV_ENCODER_UP, NULL);
   display_state.add_transition(&disp_state_options_changed_up, &disp_state_option_selected, DISP_EV_ENCODER_DOUBLE_PUSH, NULL);
 
   // disp_state_options_changed_dn
+  display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, moveToNextMenuItem);
   display_state.add_transition(&disp_state_options, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
   display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
   display_state.add_transition(&disp_state_options_changed_up, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
+
+  // disp_state_selected_option
   display_state.add_transition(&disp_state_options_changed_dn, &disp_state_option_selected, DISP_EV_ENCODER_DOUBLE_PUSH, NULL);
+
   // option 1 selected
   display_state.add_timed_transition(&disp_state_option_selected, &disp_state_stopped_screen, OPTION_SELECTED_TIMEOUT, NULL);
 }
@@ -191,8 +197,8 @@ const char *get_event_name(DispStateEvent ev)
     return "DISP_EV_CONNECTED";
   case DISP_EV_DISCONNECTED:
     return "DISP_EV_DISCONNECTED";
-  case DISP_EV_BUTTON_CLICK:
-    return "DISP_EV_BUTTON_CLICK";
+  case DISP_EV_MENU_BUTTON_CLICKED:
+    return "DISP_EV_MENU_BUTTON_CLICKED";
   case DISP_EV_MENU_OPTION_SELECT:
     return "DISP_EV_MENU_OPTION_SELECT";
   case DISP_EV_REFRESH:

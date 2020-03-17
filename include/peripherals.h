@@ -12,7 +12,7 @@ Button2 deadman(DEADMAN_PIN);
 void button0_init()
 {
   button0.setClickHandler([](Button2 &btn) {
-    display_state.trigger(DISP_EV_BUTTON_CLICK);
+    display_state.trigger(DISP_EV_MENU_BUTTON_CLICKED);
   });
   button0.setDoubleClickHandler([](Button2 &btn) {
     display_state.trigger(DISP_EV_MENU_OPTION_SELECT);
@@ -31,5 +31,4 @@ void button35_init()
 
 void deadman_init()
 {
-  bool primeButton = deadman.isPressed();
 }

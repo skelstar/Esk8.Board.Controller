@@ -9,7 +9,7 @@ enum Options
 int16_t optionVal = 0;
 
 //---------------------------------------------------------------
-void moveToNextOption()
+void moveToNextMenuItem()
 {
   showOption = (int)showOption == (int)NUM_BRAKE_COUNTS
                    ? NUM_ACCEL_COUNTS
@@ -56,6 +56,19 @@ void displayCurrentOption()
     sprintf(buff2, "%d", config.brakeCounts);
     lcd_message(buff2, LINE_2, Aligned::ALIGNED_CENTRE);
     optionVal = config.brakeCounts;
+    break;
+  }
+}
+//---------------------------------------------------------------
+char *getTitleForMenuOption(Options option)
+{
+  switch (option)
+  {
+  case Options::NUM_ACCEL_COUNTS:
+    return "Accel counts";
+    break;
+  case Options::NUM_BRAKE_COUNTS:
+    return "Brake counts";
     break;
   }
 }

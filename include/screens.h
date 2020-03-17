@@ -86,16 +86,17 @@ void screen_moving()
   //u8g2.sendBuffer();
 }
 //-----------------------------------------------------
-void screenShowOptionValue(OptionValue *opt)
+void screenShowOptionValue(char *title, OptionValue *opt)
 {
   tft.fillScreen(opt->bgcolour);
   tft.setTextDatum(MC_DATUM);
+  tft.drawString(title, LCD_WIDTH / 2, 20);
   tft.drawNumber(opt->get(), LCD_WIDTH / 2, LCD_HEIGHT / 2);
 }
 //-----------------------------------------------------
 void screenShowOptionValueSelected()
 {
   tft.setTextDatum(MC_DATUM);
-  tft.drawString("selected!", LCD_WIDTH / 2, LCD_HEIGHT / 2 + 40);
+  tft.drawString("selected!", LCD_WIDTH / 2, LCD_HEIGHT / 2 + 30);
 }
 //-----------------------------------------------------
