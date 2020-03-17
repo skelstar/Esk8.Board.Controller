@@ -6,6 +6,8 @@ enum Options
   NUM_BRAKE_COUNTS,
 } showOption;
 
+int16_t optionVal = 0;
+
 //---------------------------------------------------------------
 void moveToNextOption()
 {
@@ -19,10 +21,14 @@ void selectOption()
   switch (showOption)
   {
   case Options::NUM_ACCEL_COUNTS:
-    DEBUG("NUM_ACCEL_COUNTS selected");
+    DEBUGVAL("NUM_ACCEL_COUNTS selected", optionVal);
+    configStore.putUInt(STORE_CONFIG_ACCEL_COUNTS, optionVal);
+    throttle.setMax(optionVal);
     break;
   case Options::NUM_BRAKE_COUNTS:
-    DEBUG("NUM_BRAKE_COUNTS selected");
+    DEBUGVAL("NUM_BRAKE_COUNTS selected", optionVal);
+    configStore.putUInt(STORE_CONFIG_BRAKE_COUNTS, optionVal);
+    throttle.setMin(optionVal);
     break;
   }
 }
@@ -42,3 +48,21 @@ void displayCurrentOption()
   }
 }
 //---------------------------------------------------------------
+void optionChange(bool up)
+{
+  uint8_t step = 1;
+  switch (showOption)
+  {
+  case Options::NUM_ACCEL_COUNTS:
+    step = 5;
+    optionVal = up ? optionVal + step : optionVal - step;
+    DEBUGVAL("NUM_ACCEL_COUNTS", optionVal);
+    break;
+  case Options::NUM_BRAKE_COUNTS:
+    step = 5;
+    const uint8_t step = 5;
+    optionVal = up ? optionVal + step : optionVal - step;
+    DEBUGVAL("NUM_BRAKE_COUNTS", optionVal);
+    break;
+  }
+}

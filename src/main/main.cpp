@@ -89,6 +89,47 @@ xQueueHandle xDisplayChangeEventQueue;
 xQueueHandle xCommsStateEventQueue;
 
 //------------------------------------------------------------------
+enum DispStateEvent
+{
+  DISP_EV_NO_EVENT = 0,
+  DISP_EV_CONNECTED,
+  DISP_EV_DISCONNECTED,
+  DISP_EV_BUTTON_CLICK,
+  DISP_EV_MENU_OPTION_SELECT,
+  DISP_EV_REFRESH,
+  DISP_EV_STOPPED,
+  DISP_EV_MOVING,
+  DISP_EV_ENCODER_UP,
+  DISP_EV_ENCODER_DN,
+  DISP_EV_ENCODER_DOUBLE_PUSH,
+};
+
+void send_to_display_event_queue(DispStateEvent ev);
+
+//------------------------------------------------------------------
+
+#include <EncoderThrottleLib.h>
+
+EncoderThrottleLib throttle;
+
+#define ENCODER_BRAKE_COUNTS 20
+#define ENCODER_ACCEL_COUNTS 20
+
+class Config
+{
+public:
+  uint8_t AccelCounts = ENCODER_ACCEL_COUNTS;
+  uint8_t BrakeCounts = ENCODER_BRAKE_COUNTS;
+} config;
+
+#define STORE_CONFIG "config"
+#define STORE_CONFIG_ACCEL_COUNTS "accel counts"
+#define STORE_CONFIG_BRAKE_COUNTS "brake counts"
+Preferences configStore;
+
+#include <throttle.h>
+
+//---------------------------------------------------------------
 
 #include <Button2.h>
 
@@ -111,17 +152,6 @@ Button2 button35(BUTTON_35);
 
 //---------------------------------------------------------------
 
-#include <EncoderThrottleLib.h>
-
-EncoderThrottleLib throttle;
-
-#define ENCODER_BRAKE_COUNTS 20
-#define ENCODER_ACCEL_COUNTS 20
-
-#include <throttle.h>
-
-//---------------------------------------------------------------
-
 void setup()
 {
   Serial.begin(115200);
@@ -131,6 +161,10 @@ void setup()
 
   stats.reset_reason_core0 = rtc_get_reset_reason(0);
   stats.reset_reason_core1 = rtc_get_reset_reason(1);
+
+  configStore.begin(STORE_CONFIG, false);
+  config.AccelCounts = configStore.getUInt(STORE_CONFIG_ACCEL_COUNTS, ENCODER_ACCEL_COUNTS);
+  config.BrakeCounts = configStore.getUInt(STORE_CONFIG_BRAKE_COUNTS, ENCODER_BRAKE_COUNTS);
 
   Serial.printf("CPU0 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core0));
   Serial.printf("CPU1 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core1));

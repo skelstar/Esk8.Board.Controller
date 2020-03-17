@@ -2,27 +2,13 @@
 #include <Fsm.h>
 #endif
 
-enum DispStateEvent
-{
-  DISP_EV_NO_EVENT = 0,
-  DISP_EV_CONNECTED,
-  DISP_EV_DISCONNECTED,
-  DISP_EV_BUTTON_CLICK,
-  DISP_EV_MENU_OPTION_SELECT,
-  DISP_EV_REFRESH,
-  DISP_EV_STOPPED,
-  DISP_EV_MOVING,
-  DISP_EV_ENCODER_UP,
-  DISP_EV_ENCODER_DN,
-  DISP_EV_ENCODER_DOUBLE_PUSH,
-};
-
 const char *
 get_event_name(DispStateEvent ev);
 //---------------------------------------------------------------
 
-void send_to_display_event_queue(DispStateEvent ev, TickType_t ticks = 10)
+void send_to_display_event_queue(DispStateEvent ev)
 {
+  TickType_t ticks = 10;
 #ifdef PRINT_DISP_STATE_EVENT
   Serial.printf("-> SEND: %s\n", get_event_name((DispStateEvent)ev));
 #endif
@@ -69,6 +55,7 @@ State disp_state_stopped_screen(
       print_disp_state("...disp_state_stopped_screen");
       screen_with_stats();
       showOption = Options::NONE;
+      throttle.setMode(EncoderMode::THROTTLE);
     },
     NULL, NULL);
 //---------------------------------------------------------------
@@ -85,6 +72,7 @@ State disp_state_options(
       print_disp_state("...disp_state_options");
       display_task_showing_option_screen = true;
       displayCurrentOption();
+      throttle.setMode(EncoderMode::MENU_OPTION);
     },
     NULL,
     [] {
@@ -95,6 +83,7 @@ State disp_state_options_changed_up(
     [] {
       print_disp_state("...disp_state_options_changed_up");
       display_task_showing_option_screen = true;
+      optionChange(/*up*/ true);
     },
     NULL,
     [] {
@@ -105,6 +94,7 @@ State disp_state_options_changed_dn(
     [] {
       print_disp_state("...disp_state_options_changed_dn");
       display_task_showing_option_screen = true;
+      optionChange(/*up*/ false);
     },
     NULL,
     [] {
@@ -118,6 +108,7 @@ State disp_state_option_selected(
     },
     NULL,
     [] {
+      throttle.setMode(EncoderMode::THROTTLE);
       display_task_showing_option_screen = false;
     });
 
