@@ -21,7 +21,7 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
   // update display state if motion change
   if (old_board_packet.moving != board_packet.moving)
   {
-    // send_to_display_event_queue(board_packet.moving ? DISP_EV_MOVING : DISP_EV_STOPPED);
+    send_to_display_event_queue(board_packet.moving ? DISP_EV_MOVING : DISP_EV_STOPPED);
   }
 
   old_board_packet = board_packet;
@@ -72,7 +72,6 @@ void manage_responses()
   else
   {
     stats.consecutive_resps = 0;
-    DEBUG("disconnect because ids don't match");
   }
   manage_responses(response_ok);
 }

@@ -15,22 +15,18 @@
 
 void screen_searching()
 {
+  tft.setTextDatum(TL_DATUM);
   tft.fillScreen(TFT_BLUE);
+
   lcd_message("Searching...", LINE_1, Aligned::ALIGNED_CENTRE);
   // send interval
   tft.drawString("interval: ", 10, 40);
   tft.drawNumber(SEND_TO_BOARD_INTERVAL, tft.textWidth("interval: ") + 10, 40);
-  // throttle map
-  // switch (throttle.getMap())
-  // {
-  // case ThrottleMap::GENTLE:
-  //   tft.drawString("map: GENTLE", 10, 70);
-  //   break;
-  // case ThrottleMap::LINEAR:
-  //   tft.drawString("map: LINEAR", 10, 70);
-  //   break;
-  // }
-  // tft.drawString("interval", 10, 40);
+
+  uint8_t y = 70;
+  char buff[30];
+  sprintf(buff, "enc: -%d->%d", config.brakeCounts, config.accelCounts);
+  tft.drawString(buff, 10, y);
 }
 //-----------------------------------------------------
 
@@ -59,6 +55,11 @@ void screen_with_stats(bool connected = true)
   sprintf(buff2, "total f: %lu", stats.total_failed);
   lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, getStatus(stats.total_failed, 0, 1, 2));
   // line 3
+  char buff[30];
+  sprintf(buff, "enc: -%d->%d", config.brakeCounts, config.accelCounts);
+  uint8_t y = 135 - 30;
+  lcd_message(buff, LINE_3, Aligned::ALIGNED_LEFT);
+
   // char buff3[20];
   // sprintf(buff3, "w/rt: %lu", stats.num_packets_with_retries);
   // lcd_message(buff3, LINE_3, Aligned::ALIGNED_LEFT, getStatus(stats.num_packets_with_retries, 0, 10, 50));
@@ -83,5 +84,18 @@ void screen_moving()
   // chunky_digit.draw_float(TR_DATUM, buff, NULL);
   // draw_trigger_state(throttle.get_current_state(), BR_DATUM);
   //u8g2.sendBuffer();
+}
+//-----------------------------------------------------
+void screenShowOptionValue(OptionValue *opt)
+{
+  tft.fillScreen(opt->bgcolour);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawNumber(opt->get(), LCD_WIDTH / 2, LCD_HEIGHT / 2);
+}
+//-----------------------------------------------------
+void screenShowOptionValueSelected()
+{
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("selected!", LCD_WIDTH / 2, LCD_HEIGHT / 2 + 40);
 }
 //-----------------------------------------------------

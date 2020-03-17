@@ -12,9 +12,6 @@
 #include <rom/rtc.h> // for reset reason
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
-// #define SOFT_SPI_MOSI_PIN 19 // Blue
-// #define SOFT_SPI_MISO_PIN 23 // Orange
-// #define SOFT_SPI_SCK_PIN 18  // Yellow
 #define SOFT_SPI_MOSI_PIN 13 // Blue
 #define SOFT_SPI_MISO_PIN 12 // Orange
 #define SOFT_SPI_SCK_PIN 15  // Yellow
@@ -77,6 +74,9 @@ elapsedMillis
     since_read_trigger;
 
 uint16_t remote_battery_percent = 0;
+bool display_task_initialised = false;
+bool display_task_showing_option_screen = false;
+int oldCounter = 0;
 
 #define SMOOTH_OVER_MILLIS 2000
 
@@ -86,26 +86,25 @@ xQueueHandle xDisplayChangeEventQueue;
 xQueueHandle xCommsStateEventQueue;
 
 //------------------------------------------------------------------
+enum DispStateEvent
+{
+  DISP_EV_NO_EVENT = 0,
+  DISP_EV_CONNECTED,
+  DISP_EV_DISCONNECTED,
+  DISP_EV_BUTTON_CLICK,
+  DISP_EV_MENU_OPTION_SELECT,
+  DISP_EV_REFRESH,
+  DISP_EV_STOPPED,
+  DISP_EV_MOVING,
+  DISP_EV_ENCODER_UP,
+  DISP_EV_ENCODER_DN,
+  DISP_EV_ENCODER_DOUBLE_PUSH,
+};
 
-#include <Button2.h>
+// menu_system - prototypes
+void send_to_display_event_queue(DispStateEvent ev);
 
-#define BUTTON_35 35
-Button2 button35(BUTTON_35);
-
-#include <utils.h>
-#include <screens.h>
-// #include <menu_system.h>
-#include <comms_connected_state.h>
-
-// #include <display_task_0.h>
-#include <nrf_comms.h>
-
-#include <features/battery_measure.h>
-#include <core1.h>
-#include <peripherals.h>
-// #include <flashingNeopixel.h>
-
-//---------------------------------------------------------------
+//------------------------------------------------------------------
 
 #include <EncoderThrottleLib.h>
 
@@ -114,7 +113,41 @@ EncoderThrottleLib throttle;
 #define ENCODER_BRAKE_COUNTS 20
 #define ENCODER_ACCEL_COUNTS 20
 
+class Config
+{
+public:
+  uint8_t accelCounts = ENCODER_ACCEL_COUNTS;
+  uint8_t brakeCounts = ENCODER_BRAKE_COUNTS;
+} config;
+
+#define STORE_CONFIG "config"
+#define STORE_CONFIG_ACCEL_COUNTS "accel counts"
+#define STORE_CONFIG_BRAKE_COUNTS "brake counts"
+Preferences configStore;
+
 #include <throttle.h>
+
+//---------------------------------------------------------------
+
+#include <Button2.h>
+
+#define BUTTON_35 35
+Button2 button35(BUTTON_35);
+
+#include <utils.h>
+#include <OptionValue.h>
+#include <screens.h>
+#include <menu_options.h>
+#include <menu_system.h>
+#include <comms_connected_state.h>
+
+#include <display_task_0.h>
+#include <nrf_comms.h>
+
+#include <features/battery_measure.h>
+#include <core1.h>
+#include <peripherals.h>
+// #include <flashingNeopixel.h>
 
 //---------------------------------------------------------------
 
@@ -127,6 +160,10 @@ void setup()
 
   stats.reset_reason_core0 = rtc_get_reset_reason(0);
   stats.reset_reason_core1 = rtc_get_reset_reason(1);
+
+  configStore.begin(STORE_CONFIG, false);
+  config.accelCounts = configStore.getUInt(STORE_CONFIG_ACCEL_COUNTS, ENCODER_ACCEL_COUNTS);
+  config.brakeCounts = configStore.getUInt(STORE_CONFIG_BRAKE_COUNTS, ENCODER_BRAKE_COUNTS);
 
   Serial.printf("CPU0 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core0));
   Serial.printf("CPU1 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core1));
@@ -152,7 +189,7 @@ void setup()
   init_throttle();
 
   // core 0
-  // xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
+  xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(commsStateTask_0, "commsStateTask_0", 10000, NULL, /*priority*/ 2, NULL, 0);
   // xTaskCreatePinnedToCore(flasher_task_0, "flasher_task_0", 10000, NULL, /*priority*/ 2, NULL, 0);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
@@ -172,6 +209,11 @@ void setup()
     vTaskDelay(1);
   }
 #endif
+
+  while (!display_task_initialised)
+  {
+    vTaskDelay(1);
+  }
 }
 //---------------------------------------------------------------
 
@@ -180,7 +222,17 @@ uint8_t old_throttle;
 
 void loop()
 {
-  if (since_read_trigger > READ_TRIGGER_PERIOD)
+  if (display_task_showing_option_screen)
+  {
+    int8_t counter = throttle.getCounter();
+    if (oldCounter != counter)
+    {
+      send_to_display_event_queue(oldCounter < counter ? DISP_EV_ENCODER_UP : DISP_EV_ENCODER_DN);
+      oldCounter = counter;
+    }
+  }
+
+  else if (since_read_trigger > READ_TRIGGER_PERIOD)
   {
     since_read_trigger = 0;
 
@@ -189,7 +241,6 @@ void loop()
 #else
     bool accelEnabled = true;
 #endif
-
     controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
     if (old_throttle != controller_packet.throttle)
     {

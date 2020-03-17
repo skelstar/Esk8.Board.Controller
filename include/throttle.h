@@ -9,27 +9,8 @@ void encoderButtonPushed(i2cEncoderLibV2 *obj)
 void encoderButtonDoublePushed(i2cEncoderLibV2 *obj)
 {
   DEBUG("Encoder button double-pushed");
-  switch ((int)throttle.getMap())
-  {
-  case ThrottleMap::LINEAR:
-    throttle.setMap(GENTLE);
-    throttle.clear();
-    DEBUG("ThrottleMap::GENTLE");
-    break;
-  case ThrottleMap::GENTLE:
-    throttle.setMap(SMOOTHED);
-    throttle.clear();
-    DEBUG("ThrottleMap::SMOOTHED");
-    break;
-  case ThrottleMap::SMOOTHED:
-    throttle.setMap(LINEAR);
-    throttle.clear();
-    DEBUG("ThrottleMap::LINEAR");
-    break;
-  default:
-    DEBUG("DEFAULT");
-    break;
-  }
+
+  send_to_display_event_queue(DISP_EV_ENCODER_DOUBLE_PUSH);
 }
 
 void init_throttle()
@@ -49,22 +30,17 @@ void updateStatusPixel()
 {
   if (controller_packet.throttle == 0)
   {
-    // sendToPixelEventQueue(PIXEL_THROTTLE_MIN);
   }
   else if (controller_packet.throttle < 127)
   {
-    // sendToPixelEventQueue(PIXEL_BRAKING);
   }
   else if (controller_packet.throttle == 255)
   {
-    // sendToPixelEventQueue(PIXEL_THROTTLE_MAX);
   }
   else if (controller_packet.throttle > 127)
   {
-    // sendToPixelEventQueue(PIXEL_ACCEL);
   }
   else
   {
-    // sendToPixelEventQueue(PIXEL_THROTTLE_IDLE);
   }
 }
