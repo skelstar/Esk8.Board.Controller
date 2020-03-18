@@ -76,37 +76,10 @@ void lcd_message(const char *message, uint8_t line, Aligned aligned, MessageStat
   }
 }
 //--------------------------------------------------------------------------------
-void draw_fw_graph(uint8_t y, uint8_t height, float pc, uint16_t colour = TFT_WHITE)
+void drawGraphFullWidth(uint8_t y, uint8_t height, float pc, uint16_t colour = TFT_WHITE)
 {
   tft.fillRect(0, y, LCD_WIDTH, height, TFT_BLUE);
   tft.fillRect(0, y, (LCD_WIDTH * pc), height, colour);
-}
-//--------------------------------------------------------------------------------
-void draw_response_graph()
-{
-  // float pc = stats.resp_time / 200.0;
-  // draw_fw_graph(0, TOP_BAR, pc);
-}
-//--------------------------------------------------------------------------------
-void draw_throttle(uint8_t throttle)
-{
-  if (throttle > 127)
-  {
-    float r = (throttle - 127.0) / 127.0;
-    int w = (LCD_WIDTH / 2) * r;
-    tft.fillRect(LCD_WIDTH / 2, 20, w, 5, TFT_GREEN);
-  }
-  else if (throttle < 127)
-  {
-    float r = (127.0 - throttle) / 127.0;
-    int w = (LCD_WIDTH / 2) * r;
-    tft.fillRect((LCD_WIDTH / 2) - w, 20, w, 5, TFT_RED);
-  }
-  else
-  {
-    tft.fillRect(0, 20, LCD_WIDTH, 5, TFT_BLUE);
-    // tft.drawLine(LCD_WIDTH/2, 20, LCD_WIDTH/2+1, 25, TFT_WHITE);
-  }
 }
 //--------------------------------------------------------------------------------
 
@@ -152,7 +125,7 @@ void drawBattery(int percent, bool update)
 #define SM_BATT_KNOB_WIDTH 3
 
 //--------------------------------------------------------------------------------
-void draw_small_battery(uint8_t percent, uint16_t x, uint16_t y, uint8_t datum)
+void drawSmallBattery(uint8_t percent, uint16_t x, uint16_t y, uint8_t datum)
 {
   uint32_t colour = percent > 50 ? TFT_WHITE : percent > 30 ? TFT_YELLOW : TFT_ORANGE;
 
@@ -189,8 +162,8 @@ uint16_t get_x_from_datum(uint16_t x, uint16_t width, uint8_t datum)
   }
   return 0;
 }
-
-/// returns the top of the object from y being the bottom/top/middle depending on datum
+//--------------------------------------------------------------------------------
+// returns the top of the object from y being the bottom/top/middle depending on datum
 uint16_t get_y_from_datum(uint16_t y, uint16_t height, uint8_t datum)
 {
   switch (datum)
@@ -212,23 +185,18 @@ uint16_t get_y_from_datum(uint16_t y, uint16_t height, uint8_t datum)
     break;
   }
 }
-// //--------------------------------------------------------------------------------
-// char *getIntString(char *buff, int val)
-// {
-//   itoa(val, buff, 10);
-//   return buff;
-// }
-// //--------------------------------------------------------------------------------
-// char *getFloatString(char *buff, float val, uint8_t upper, uint8_t lower)
-// {
-//   dtostrf(val, upper, lower, buff);
-//   return buff;
-// }
-// //--------------------------------------------------------------------------------
-// char *getParamFloatString(char *buff, float val, uint8_t upper, uint8_t lower, char *param)
-// {
-//   dtostrf(val, upper, lower, buff);
-//   sprintf(buff, param, buff);
-//   return buff;
-// }
+//--------------------------------------------------------------------------------
+
+MessageStatus getStatus(uint8_t val, uint8_t okay, uint8_t warn, uint8_t crit)
+{
+  if (val >= crit)
+  {
+    return CRITICAL;
+  }
+  else if (val >= warn)
+  {
+    return WARNING;
+  }
+  return OKAY;
+}
 //--------------------------------------------------------------------------------

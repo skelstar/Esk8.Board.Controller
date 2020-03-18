@@ -30,19 +30,6 @@ void screen_searching()
 }
 //-----------------------------------------------------
 
-MessageStatus getStatus(uint8_t val, uint8_t okay, uint8_t warn, uint8_t crit)
-{
-  if (val >= crit)
-  {
-    return CRITICAL;
-  }
-  else if (val >= warn)
-  {
-    return WARNING;
-  }
-  return OKAY;
-}
-
 void screen_with_stats(bool connected = true)
 {
   tft.fillScreen(TFT_BLUE);
@@ -60,11 +47,7 @@ void screen_with_stats(bool connected = true)
   uint8_t y = 135 - 30;
   lcd_message(buff, LINE_3, Aligned::ALIGNED_LEFT);
 
-  // char buff3[20];
-  // sprintf(buff3, "w/rt: %lu", stats.num_packets_with_retries);
-  // lcd_message(buff3, LINE_3, Aligned::ALIGNED_LEFT, getStatus(stats.num_packets_with_retries, 0, 10, 50));
-  // battery
-  draw_small_battery(remote_battery_percent, LCD_WIDTH - MARGIN, 0 + MARGIN, TR_DATUM);
+  drawSmallBattery(remote_battery_percent, LCD_WIDTH - MARGIN, 0 + MARGIN, TR_DATUM);
 
   if (!connected)
   {
@@ -91,12 +74,17 @@ void screenShowOptionValue(char *title, OptionValue *opt)
   tft.fillScreen(opt->bgcolour);
   tft.setTextDatum(MC_DATUM);
   tft.drawString(title, LCD_WIDTH / 2, 20);
-  tft.drawNumber(opt->get(), LCD_WIDTH / 2, LCD_HEIGHT / 2);
+
+  ChunkyDigit chunky_digit(&tft, 10, 10, opt->bgcolour);
+
+  char buff[6];
+  sprintf(buff, "%d", opt->get());
+  chunky_digit.draw_float(MC_DATUM, buff, NULL);
 }
 //-----------------------------------------------------
 void screenShowOptionValueSelected()
 {
   tft.setTextDatum(MC_DATUM);
-  tft.drawString("selected!", LCD_WIDTH / 2, LCD_HEIGHT / 2 + 30);
+  tft.drawString("selected!", LCD_WIDTH / 2, LCD_HEIGHT - 20);
 }
 //-----------------------------------------------------

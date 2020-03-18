@@ -1,6 +1,6 @@
-// #ifndef // u8g2lib
-// #include <// u8g2lib.h>
-// #endif
+#ifndef _TFT_eSPIH_
+#include <TFT_eSPI.h>
+#endif
 
 class ChunkyDigit
 {
@@ -85,12 +85,13 @@ class ChunkyDigit
       }};
 
 public:
-  // ChunkyDigit(// u8g2_SSD1306_128X64_NONAME_F_SW_I2C *u8, uint8_t pixel_size, uint8_t spacing)
-  // {
-  //   // _u8g2 = u8;
-  //   _pixel_size = pixel_size;
-  //   _spacing = spacing;
-  // }
+  ChunkyDigit(TFT_eSPI *tft, uint8_t pixel_size, uint8_t spacing, uint32_t bgColour)
+  {
+    _tft = tft;
+    _pixel_size = pixel_size;
+    _spacing = spacing;
+    _bgColour = bgColour;
+  }
   //--------------------------------------------------------------------------------
   int get_str_width(char *number)
   {
@@ -106,22 +107,14 @@ public:
     }
     return width; // (num_chars * char_width) + _pixel_size + ((num_chars - 1) * _spacing);
   }
+
   //--------------------------------------------------------------------------------
   void draw_float(uint8_t datum, char *number, char *units)
   {
     int number_len = strlen(number);
     int width = get_str_width(number);
-
-    int cursor_x = datum == TL_DATUM || datum == ML_DATUM || datum == BL_DATUM
-                       ? 0
-                       : datum == TC_DATUM || datum == MC_DATUM || datum == BC_DATUM
-                             ? (LCD_WIDTH / 2) - (width / 2)
-                             : LCD_WIDTH - width;
-    int y = datum == TL_DATUM || datum == TC_DATUM || datum == TR_DATUM
-                ? 0
-                : datum == ML_DATUM || datum == MC_DATUM || datum == MR_DATUM
-                      ? LCD_HEIGHT / 2
-                      : LCD_HEIGHT - (_pixel_size * 5);
+    int cursor_x = _getX(datum, width);
+    int y = _getY(datum);
 
     for (int i = 0; i < number_len; i++)
     {
@@ -129,13 +122,12 @@ public:
       uint8_t spc = i == number_len - 1 ? 0 : _spacing;
       if (ch >= '0' and ch <= '9')
       {
-        DEBUGVAL(cursor_x, spc, width);
         chunky_draw_digit(ch - '0', cursor_x, y, _pixel_size);
         cursor_x += 3 * _pixel_size + spc;
       }
       else if (ch == '.')
       {
-        // _u8g2->drawBox(cursor_x, y + 4 * _pixel_size, _pixel_size, _pixel_size);
+        _tft->fillRect(cursor_x, y + 4 * _pixel_size, _pixel_size, _pixel_size, TFT_WHITE);
         cursor_x += _pixel_size + spc;
       }
       else if (ch == '-')
@@ -160,9 +152,9 @@ public:
   }
 
 private:
-  // u8g2_SSD1306_128X64_NONAME_F_SW_I2C *// _u8g2;
-  uint8_t _pixel_size;
-  uint8_t _spacing;
+  TFT_eSPI *_tft;
+  uint32_t _bgColour;
+  uint8_t _pixel_size, _spacing;
 
   void chunky_draw_digit(
       uint8_t digit,
@@ -176,9 +168,38 @@ private:
       {
         int x1 = x + xx * _pixel_size;
         int y1 = y + yy * _pixel_size;
-        // _u8g2->setDrawColor(FONT_DIGITS_3x5[digit][yy][xx]);
-        // _u8g2->drawBox(x1, y1, _pixel_size, _pixel_size);
+        uint32_t pixelColour = FONT_DIGITS_3x5[digit][yy][xx] ? TFT_WHITE : _bgColour;
+        _tft->fillRect(x1, y1, _pixel_size, _pixel_size, pixelColour);
       }
     }
+  }
+
+  int _getX(uint8_t datum, int width)
+  {
+
+    if (datum == TL_DATUM || datum == ML_DATUM || datum == BL_DATUM)
+    {
+      return 0;
+    }
+    else if (datum == TC_DATUM || datum == MC_DATUM || datum == BC_DATUM)
+    {
+      return (LCD_WIDTH / 2) - (width / 2);
+    }
+    return LCD_WIDTH - width;
+  }
+
+  int _getY(uint8_t datum)
+  {
+    uint8_t height = 5 * _pixel_size;
+
+    if (datum == TL_DATUM || datum == TC_DATUM || datum == TR_DATUM)
+    {
+      return 0;
+    }
+    else if (datum == ML_DATUM || datum == MC_DATUM || datum == MR_DATUM)
+    {
+      return (LCD_HEIGHT / 2) - (height / 2);
+    }
+    return LCD_WIDTH - height;
   }
 };
