@@ -63,7 +63,10 @@ State disp_state_stopped_screen(
       print_disp_state("...disp_state_stopped_screen");
       screen_with_stats();
       showOption = Options::NONE;
-      throttle.setMode(EncoderMode::THROTTLE);
+      if (throttle.getMode() != EncoderMode::THROTTLE)
+      {
+        throttle.setMode(EncoderMode::THROTTLE);
+      }
     },
     NULL, NULL);
 //---------------------------------------------------------------
@@ -104,7 +107,10 @@ State disp_state_options(
         break;
       }
 
-      throttle.setMode(EncoderMode::MENU_OPTION);
+      if (throttle.getMode() != EncoderMode::THROTTLE)
+      {
+        throttle.setMode(EncoderMode::MENU_OPTION);
+      }
     },
     NULL,
     [] {
@@ -162,9 +168,11 @@ void add_disp_state_transitions()
   // main - stopped
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_REFRESH, NULL);
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, NULL);
+  display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_THROTTLE_CHANGED, NULL);
   // moving
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_moving_screen, DISP_EV_MOVING, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_REFRESH, NULL);
+  display_state.add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_THROTTLE_CHANGED, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_stopped_screen, DISP_EV_STOPPED, NULL);
 
   // options

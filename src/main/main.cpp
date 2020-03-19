@@ -99,6 +99,7 @@ enum DispStateEvent
   DISP_EV_ENCODER_UP,
   DISP_EV_ENCODER_DN,
   DISP_EV_OPTION_SELECT_VALUE,
+  DISP_EV_THROTTLE_CHANGED,
 };
 
 // menu_system - prototypes
@@ -145,7 +146,6 @@ Button2 button35(BUTTON_35);
 #include <nrf_comms.h>
 
 #include <features/battery_measure.h>
-#include <core1.h>
 #include <peripherals.h>
 // #include <flashingNeopixel.h>
 
@@ -245,6 +245,7 @@ void loop()
     if (old_throttle != controller_packet.throttle)
     {
       old_throttle = controller_packet.throttle;
+      send_to_display_event_queue(DISP_EV_THROTTLE_CHANGED);
       // updateStatusPixel();
 #ifdef PRINT_THROTTLE
       DEBUGVAL(controller_packet.throttle);

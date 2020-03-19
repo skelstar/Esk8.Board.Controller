@@ -184,6 +184,7 @@ uint16_t get_y_from_datum(uint16_t y, uint16_t height, uint8_t datum)
     return y - height;
     break;
   }
+  return 0;
 }
 //--------------------------------------------------------------------------------
 

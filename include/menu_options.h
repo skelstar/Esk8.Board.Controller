@@ -20,6 +20,8 @@ void storeOption(OptionValue *currentOption)
 {
   switch (showOption)
   {
+  case Options::NONE:
+    break;
   case Options::NUM_ACCEL_COUNTS:
     configStore.putUInt(STORE_CONFIG_ACCEL_COUNTS, currentOption->get());
     throttle.setMax(currentOption->get());
@@ -64,12 +66,12 @@ char *getTitleForMenuOption(Options option)
 {
   switch (option)
   {
+  case Options::NONE:
+    return "";
   case Options::NUM_ACCEL_COUNTS:
     return "Accel counts";
-    break;
   case Options::NUM_BRAKE_COUNTS:
     return "Brake counts";
-    break;
   }
 }
 //---------------------------------------------------------------
