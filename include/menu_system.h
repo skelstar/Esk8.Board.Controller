@@ -79,19 +79,28 @@ State disp_state_options(
     [] {
       print_disp_state("...disp_state_options");
       display_task_showing_option_screen = true;
-      displayCurrentOption();
 
       clearDisplayEventQueue();
+
+      if (showOption == Options::NONE)
+      {
+        showOption = NUM_ACCEL_COUNTS;
+      }
 
       switch (showOption)
       {
       case Options::NUM_ACCEL_COUNTS:
         currentOption = new OptionValue(/*min*/ 0, /*max*/ 50, /*curr*/ config.accelCounts, /*step*/ 5);
         currentOption->setBgColour(TFT_DARKGREEN);
+        screenShowOptionWithValue(getTitleForMenuOption(showOption), currentOption);
         break;
       case Options::NUM_BRAKE_COUNTS:
         currentOption = new OptionValue(/*min*/ 0, /*max*/ 50, /*curr*/ config.brakeCounts, /*step*/ 5);
         currentOption->setBgColour(TFT_RED);
+        screenShowOptionWithValue(getTitleForMenuOption(showOption), currentOption);
+        break;
+      default:
+        Serial.printf("No showOption or unhandled: %d", showOption);
         break;
       }
 
@@ -107,7 +116,7 @@ State disp_state_options_changed_up(
       print_disp_state("...disp_state_options_changed_up");
       display_task_showing_option_screen = true;
       currentOption->up();
-      screenShowOptionValue(getTitleForMenuOption(showOption), currentOption);
+      screenShowOptionWithValue(getTitleForMenuOption(showOption), currentOption);
     },
     NULL,
     [] {
@@ -119,7 +128,7 @@ State disp_state_options_changed_dn(
       print_disp_state("...disp_state_options_changed_dn");
       display_task_showing_option_screen = true;
       currentOption->dn();
-      screenShowOptionValue(getTitleForMenuOption(showOption), currentOption);
+      screenShowOptionWithValue(getTitleForMenuOption(showOption), currentOption);
     },
     NULL,
     [] {
@@ -172,7 +181,7 @@ void add_disp_state_transitions()
   display_state.add_transition(&disp_state_options, &disp_state_options_changed_up, DISP_EV_ENCODER_UP, NULL);
   display_state.add_transition(&disp_state_options_changed_up, &disp_state_options_changed_up, DISP_EV_ENCODER_UP, NULL);
   display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options_changed_up, DISP_EV_ENCODER_UP, NULL);
-  display_state.add_transition(&disp_state_options_changed_up, &disp_state_option_selected, DISP_EV_ENCODER_DOUBLE_PUSH, NULL);
+  display_state.add_transition(&disp_state_options_changed_up, &disp_state_option_selected, DISP_EV_OPTION_SELECT_VALUE, NULL);
 
   // disp_state_options_changed_dn
   display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, moveToNextMenuItem);
@@ -181,7 +190,7 @@ void add_disp_state_transitions()
   display_state.add_transition(&disp_state_options_changed_up, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
 
   // disp_state_selected_option
-  display_state.add_transition(&disp_state_options_changed_dn, &disp_state_option_selected, DISP_EV_ENCODER_DOUBLE_PUSH, NULL);
+  display_state.add_transition(&disp_state_options_changed_dn, &disp_state_option_selected, DISP_EV_OPTION_SELECT_VALUE, NULL);
 
   // option 1 selected
   display_state.add_timed_transition(&disp_state_option_selected, &disp_state_stopped_screen, OPTION_SELECTED_TIMEOUT, NULL);
@@ -211,8 +220,8 @@ const char *get_event_name(DispStateEvent ev)
     return "DISP_EV_ENCODER_UP";
   case DISP_EV_ENCODER_DN:
     return "DISP_EV_ENCODER_DN";
-  case DISP_EV_ENCODER_DOUBLE_PUSH:
-    return "DISP_EV_ENCODER_DOUBLE_PUSH";
+  case DISP_EV_OPTION_SELECT_VALUE:
+    return "DISP_EV_OPTION_SELECT_VALUE";
   default:
     char buff[20];
     sprintf(buff, "unhandled ev: %d", (uint8_t)ev);

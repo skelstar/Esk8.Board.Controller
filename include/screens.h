@@ -69,7 +69,7 @@ void screen_moving()
   //u8g2.sendBuffer();
 }
 //-----------------------------------------------------
-void screenShowOptionValue(char *title, OptionValue *opt)
+void screenShowOptionWithValue(char *title, OptionValue *opt)
 {
   tft.fillScreen(opt->bgcolour);
   tft.setTextDatum(MC_DATUM);

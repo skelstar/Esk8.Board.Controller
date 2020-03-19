@@ -4,13 +4,12 @@ void encoderButtonPushed(i2cEncoderLibV2 *obj)
 {
   DEBUG("Encoder button pushed");
   throttle.clear();
+  send_to_display_event_queue(DISP_EV_OPTION_SELECT_VALUE);
 }
 
 void encoderButtonDoublePushed(i2cEncoderLibV2 *obj)
 {
   DEBUG("Encoder button double-pushed");
-
-  send_to_display_event_queue(DISP_EV_ENCODER_DOUBLE_PUSH);
 }
 
 void init_throttle()

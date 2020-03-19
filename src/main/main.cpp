@@ -98,7 +98,7 @@ enum DispStateEvent
   DISP_EV_MOVING,
   DISP_EV_ENCODER_UP,
   DISP_EV_ENCODER_DN,
-  DISP_EV_ENCODER_DOUBLE_PUSH,
+  DISP_EV_OPTION_SELECT_VALUE,
 };
 
 // menu_system - prototypes
