@@ -70,8 +70,8 @@ State disp_state_stopped_screen(
 State disp_state_moving_screen(
     [] {
       print_disp_state("...disp_state_moving_screen");
-      // screen_moving();
-      screen_with_stats();
+      screen_moving();
+      // screen_with_stats();
     },
     NULL, NULL);
 //---------------------------------------------------------------

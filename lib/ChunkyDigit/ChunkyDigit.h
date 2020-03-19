@@ -112,9 +112,12 @@ public:
   void draw_float(uint8_t datum, char *number, char *units)
   {
     int number_len = strlen(number);
-    int width = get_str_width(number);
-    int cursor_x = _getX(datum, width);
+    int unitsWidth = (int)_tft->textWidth(units);
+    int width = get_str_width(number) + unitsWidth;
+    uint8_t cursor_x = _getX(datum, width);
     int y = _getY(datum);
+
+    DEBUGVAL(cursor_x, y, number, units, strlen(units), width);
 
     for (int i = 0; i < number_len; i++)
     {
@@ -146,8 +149,8 @@ public:
     // units
     if (units != NULL)
     {
-      // _u8g2->setFont(// u8g2_font_profont15_tr);
-      // _u8g2->drawStr(cursor_x + _spacing, y + // _u8g2->getMaxCharHeight(), units);
+      int unitsY = y + (_pixel_size * 5 - _tft->fontHeight());
+      _tft->drawString(units, cursor_x + 10, unitsY);
     }
   }
 
@@ -200,6 +203,6 @@ private:
     {
       return (LCD_HEIGHT / 2) - (height / 2);
     }
-    return LCD_WIDTH - height;
+    return LCD_HEIGHT - height;
   }
 };

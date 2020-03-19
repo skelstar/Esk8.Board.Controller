@@ -58,15 +58,17 @@ void screen_with_stats(bool connected = true)
 
 void screen_moving()
 {
+  uint32_t bgColour = TFT_DARKGREEN;
+  tft.fillScreen(TFT_DARKGREEN);
+
   char buff[10];
 
-  // ChunkyDigit chunky_digit(&tft, 6, 3);
+  // line 1 amps
 
-  //u8g2.clearBuffer();
-  // sprintf(buff, "%.1f%%", retry_log.get());
-  // chunky_digit.draw_float(TR_DATUM, buff, NULL);
-  // draw_trigger_state(throttle.get_current_state(), BR_DATUM);
-  //u8g2.sendBuffer();
+  // line 2+ throttle
+  ChunkyDigit chunky_digit(&tft, 10, 8, bgColour);
+  sprintf(buff, "%d", controller_packet.throttle);
+  chunky_digit.draw_float(BR_DATUM, buff, "Thr");
 }
 //-----------------------------------------------------
 void screenShowOptionWithValue(char *title, OptionValue *opt)
