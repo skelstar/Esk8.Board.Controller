@@ -168,11 +168,11 @@ void add_disp_state_transitions()
   // main - stopped
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_REFRESH, NULL);
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, NULL);
-  display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_THROTTLE_CHANGED, NULL);
+  display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_UPDATE, NULL);
   // moving
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_moving_screen, DISP_EV_MOVING, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_REFRESH, NULL);
-  display_state.add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_THROTTLE_CHANGED, NULL);
+  display_state.add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_UPDATE, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_stopped_screen, DISP_EV_STOPPED, NULL);
 
   // options
