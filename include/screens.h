@@ -63,6 +63,9 @@ void screen_moving()
   char buff[10];
 
   // line 1 amps
+  ChunkyDigit chunkAmps(&tft, 10, 8, bgColour);
+  sprintf(buff, "%.1f", board_packet.ampHours);
+  chunkAmps.draw_float(TC_DATUM, buff, "Ah");
 
   // line 2+ throttle
   ChunkyDigit chunky_digit(&tft, 10, 8, bgColour);

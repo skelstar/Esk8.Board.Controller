@@ -2,6 +2,7 @@
 void send_packet_to_board(PacketType packetType);
 void manage_responses();
 void manage_responses(bool success);
+bool valuesChanged(VescData oldVals, VescData newVals);
 
 //------------------------------------------------------------------
 void packet_available_cb(uint16_t from_id, uint8_t type)
@@ -18,10 +19,15 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
     send_packet_to_board(CONFIG);
   }
 
-  // update display state if motion change
+  // chnage display state if motion change
   if (old_board_packet.moving != board_packet.moving)
   {
     send_to_display_event_queue(board_packet.moving ? DISP_EV_MOVING : DISP_EV_STOPPED);
+  }
+  // update if something changed
+  else if (valuesChanged(old_board_packet, board_packet))
+  {
+    send_to_display_event_queue(DISP_EV_UPDATE);
   }
 
   old_board_packet = board_packet;
@@ -57,8 +63,8 @@ void send_packet_to_board(PacketType packetType)
     manage_responses(false);
   }
 }
-//------------------------------------------------------------------
 
+//------------------------------------------------------------------
 // checks board_packet.id
 void manage_responses()
 {
@@ -76,6 +82,7 @@ void manage_responses()
   manage_responses(response_ok);
 }
 
+//------------------------------------------------------------------
 void manage_responses(bool success)
 {
   if (!comms_state_connected && success)
@@ -91,4 +98,10 @@ void manage_responses(bool success)
 #endif
     send_to_comms_state_event_queue(EV_COMMS_DISCONNECTED);
   }
+}
+
+//------------------------------------------------------------------
+bool valuesChanged(VescData oldVals, VescData newVals)
+{
+  return oldVals.ampHours != newVals.ampHours;
 }

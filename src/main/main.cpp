@@ -99,7 +99,7 @@ enum DispStateEvent
   DISP_EV_ENCODER_UP,
   DISP_EV_ENCODER_DN,
   DISP_EV_OPTION_SELECT_VALUE,
-  DISP_EV_THROTTLE_CHANGED,
+  DISP_EV_UPDATE,
 };
 
 // menu_system - prototypes
@@ -245,7 +245,7 @@ void loop()
     if (old_throttle != controller_packet.throttle)
     {
       old_throttle = controller_packet.throttle;
-      send_to_display_event_queue(DISP_EV_THROTTLE_CHANGED);
+      send_to_display_event_queue(DISP_EV_UPDATE);
       // updateStatusPixel();
 #ifdef PRINT_THROTTLE
       DEBUGVAL(controller_packet.throttle);
