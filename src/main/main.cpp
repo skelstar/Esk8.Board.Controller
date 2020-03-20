@@ -191,7 +191,11 @@ void setup()
 
   init_throttle();
 
-  endLightInit();
+  endLight.init(&endLights);
+  endLight.toggle();
+  vTaskDelay(10);
+  endLight.toggle();
+
   vTaskDelay(100);
 
   // core 0
@@ -278,7 +282,7 @@ void loop()
 
   button0.loop();
   button35.loop();
-  endLightLoop();
+  endLight.loop();
 
 #ifdef FEATURE_USE_DEADMAN
   deadman.loop();

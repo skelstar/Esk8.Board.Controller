@@ -105,14 +105,17 @@ public:
         w += _spacing;
       width += w;
     }
-    return width; // (num_chars * char_width) + _pixel_size + ((num_chars - 1) * _spacing);
+    return width;
   }
 
   //--------------------------------------------------------------------------------
-  void draw_float(uint8_t datum, char *number, char *units)
+  void draw_float(uint8_t datum, char *number, char *units = "")
   {
     int number_len = strlen(number);
-    int unitsWidth = (int)_tft->textWidth(units);
+    bool unitsNotEmpty = units[0] != '\0';
+    int unitsWidth = unitsNotEmpty
+                         ? (int)_tft->textWidth(units)
+                         : 0;
     int width = get_str_width(number) + unitsWidth;
     uint8_t cursor_x = _getX(datum, width);
     int y = _getY(datum);
@@ -147,7 +150,7 @@ public:
       }
     }
     // units
-    if (units != NULL)
+    if (unitsNotEmpty)
     {
       int unitsY = y + (_pixel_size * 5 - _tft->fontHeight());
       _tft->drawString(units, cursor_x + 10, unitsY);

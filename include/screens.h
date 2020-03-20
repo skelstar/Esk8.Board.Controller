@@ -83,7 +83,7 @@ void screenShowOptionWithValue(char *title, OptionValue *opt)
 
   char buff[6];
   sprintf(buff, "%d", opt->get());
-  chunky_digit.draw_float(MC_DATUM, buff, NULL);
+  chunky_digit.draw_float(MC_DATUM, buff);
 }
 //-----------------------------------------------------
 void screenShowOptionValueSelected()

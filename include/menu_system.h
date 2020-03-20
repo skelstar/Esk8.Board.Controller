@@ -93,12 +93,12 @@ State disp_state_options(
       switch (showOption)
       {
       case Options::NUM_ACCEL_COUNTS:
-        currentOption = new OptionValue(/*min*/ 0, /*max*/ 50, /*curr*/ config.accelCounts, /*step*/ 5);
+        currentOption = new OptionValue(/*min*/ 10, /*max*/ 50, /*curr*/ config.accelCounts, /*step*/ 5);
         currentOption->setBgColour(TFT_DARKGREEN);
         screenShowOptionWithValue(getTitleForMenuOption(showOption), currentOption);
         break;
       case Options::NUM_BRAKE_COUNTS:
-        currentOption = new OptionValue(/*min*/ 0, /*max*/ 50, /*curr*/ config.brakeCounts, /*step*/ 5);
+        currentOption = new OptionValue(/*min*/ 10, /*max*/ 50, /*curr*/ config.brakeCounts, /*step*/ 5);
         currentOption->setBgColour(TFT_RED);
         screenShowOptionWithValue(getTitleForMenuOption(showOption), currentOption);
         break;

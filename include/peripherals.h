@@ -41,6 +41,15 @@ public:
     }
   }
 
+  void loop()
+  {
+    uint8_t e;
+    if (xEndLightEventQueue != NULL && xQueueReceive(xEndLightEventQueue, &e, (TickType_t)1) == pdPASS)
+    {
+      toggle();
+    }
+  }
+
 private:
   enum LightState
   {
@@ -66,20 +75,6 @@ private:
 
 EndLight endLight;
 
-void endLightInit()
-{
-  endLight.init(&endLights);
-}
-
-void endLightLoop()
-{
-  uint8_t e;
-  if (xEndLightEventQueue != NULL && xQueueReceive(xEndLightEventQueue, &e, (TickType_t)1) == pdPASS)
-  {
-    endLight.toggle();
-  }
-}
-
 //---------------------------------------------------------
 void button0_init()
 {
@@ -93,7 +88,6 @@ void button0_init()
     }
     else
     {
-      // endLight.toggle();
     }
   });
 }
