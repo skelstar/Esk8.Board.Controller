@@ -9,6 +9,9 @@ void encoderButtonPushed(i2cEncoderLibV2 *obj)
 
 void encoderButtonDoublePushed(i2cEncoderLibV2 *obj)
 {
+  uint8_t e = (uint8_t)1;
+  xQueueSendToBack(xEndLightEventQueue, &e, (TickType_t)1);
+
   DEBUG("Encoder button double-pushed");
 }
 

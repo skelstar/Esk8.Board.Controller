@@ -11,6 +11,8 @@
 #include <elapsedMillis.h>
 #include <rom/rtc.h> // for reset reason
 
+#include <Adafruit_NeoPixel.h>
+
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
 #define SOFT_SPI_MOSI_PIN 13 // Blue
 #define SOFT_SPI_MISO_PIN 12 // Orange
@@ -84,6 +86,7 @@ int oldCounter = 0;
 
 xQueueHandle xDisplayChangeEventQueue;
 xQueueHandle xCommsStateEventQueue;
+xQueueHandle xEndLightEventQueue;
 
 //------------------------------------------------------------------
 enum DispStateEvent
@@ -188,6 +191,9 @@ void setup()
 
   init_throttle();
 
+  endLightInit();
+  vTaskDelay(100);
+
   // core 0
   xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(commsStateTask_0, "commsStateTask_0", 10000, NULL, /*priority*/ 2, NULL, 0);
@@ -196,6 +202,7 @@ void setup()
 
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xCommsStateEventQueue = xQueueCreate(3, sizeof(uint8_t));
+  xEndLightEventQueue = xQueueCreate(1, sizeof(uint8_t));
 
   button0_init();
   button35_init();
@@ -231,7 +238,6 @@ void loop()
       oldCounter = counter;
     }
   }
-
   else if (since_read_trigger > READ_TRIGGER_PERIOD)
   {
     since_read_trigger = 0;
@@ -272,6 +278,8 @@ void loop()
 
   button0.loop();
   button35.loop();
+  endLightLoop();
+
 #ifdef FEATURE_USE_DEADMAN
   deadman.loop();
 #endif
