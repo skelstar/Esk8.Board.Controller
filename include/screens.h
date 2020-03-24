@@ -64,13 +64,13 @@ void screen_moving()
 
   // line 1 amps
   ChunkyDigit chunkAmps(&tft, 10, 8, bgColour);
-  sprintf(buff, "%.1f", board_packet.ampHours);
-  chunkAmps.draw_float(TC_DATUM, buff, "Ah");
+  sprintf(buff, "%.1f", board_packet.motorCurrent);
+  chunkAmps.draw_float(TC_DATUM, ChunkyDigit::LINE1_OF_2, buff, "Ah");
 
-  // line 2+ throttle
+  // line 2 throttle
   ChunkyDigit chunky_digit(&tft, 10, 8, bgColour);
   sprintf(buff, "%d", controller_packet.throttle);
-  chunky_digit.draw_float(BR_DATUM, buff, "Thr");
+  chunkAmps.draw_float(BC_DATUM, ChunkyDigit::LINE2_OF_2, buff, "Thr");
 }
 //-----------------------------------------------------
 void screenShowOptionWithValue(char *title, OptionValue *opt)

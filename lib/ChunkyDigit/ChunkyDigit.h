@@ -85,6 +85,15 @@ class ChunkyDigit
       }};
 
 public:
+  enum ScreenLine
+  {
+    LINE1_OF_3,
+    LINE2_OF_3,
+    LINE3_OF_3,
+    LINE1_OF_2,
+    LINE2_OF_2,
+  };
+
   ChunkyDigit(TFT_eSPI *tft, uint8_t pixel_size, uint8_t spacing, uint32_t bgColour)
   {
     _tft = tft;
@@ -109,16 +118,26 @@ public:
   }
 
   //--------------------------------------------------------------------------------
-  void draw_float(uint8_t datum, char *number, char *units = "")
+
+  int getWidth(char *number, char *units = "")
   {
     int number_len = strlen(number);
     bool unitsNotEmpty = units[0] != '\0';
     int unitsWidth = unitsNotEmpty
                          ? (int)_tft->textWidth(units)
                          : 0;
-    int width = get_str_width(number) + unitsWidth;
-    uint8_t cursor_x = _getX(datum, width);
-    int y = _getY(datum);
+    return get_str_width(number) + unitsWidth;
+  }
+
+  void draw_float(uint8_t x, int y, char *number, char *units = "")
+  {
+    int number_len = strlen(number);
+    bool unitsNotEmpty = units[0] != '\0';
+    int unitsWidth = unitsNotEmpty
+                         ? (int)_tft->textWidth(units)
+                         : 0;
+    int width = getWidth(number, units);
+    uint8_t cursor_x = x;
 
     DEBUGVAL(cursor_x, y, number, units, strlen(units), width);
 
@@ -157,6 +176,44 @@ public:
     }
   }
 
+  void draw_float(uint8_t datum, char *number, char *units = "")
+  {
+    int number_len = strlen(number);
+    bool unitsNotEmpty = units[0] != '\0';
+    int unitsWidth = unitsNotEmpty
+                         ? (int)_tft->textWidth(units)
+                         : 0;
+    int width = get_str_width(number) + unitsWidth;
+    int y = _getY(datum);
+
+    draw_float(getX(datum, width), _getY(datum), number, units);
+  }
+
+  void draw_float(uint8_t datum, ScreenLine line, char *number, char *units)
+  {
+    bool unitsNotEmpty = units[0] != '\0';
+    int unitsWidth = unitsNotEmpty
+                         ? (int)_tft->textWidth(units)
+                         : 0;
+    int width = get_str_width(number) + unitsWidth;
+
+    draw_float(getX(datum, width), _getY(line), number, units);
+  }
+
+  int getX(uint8_t datum, int width)
+  {
+
+    if (datum == TL_DATUM || datum == ML_DATUM || datum == BL_DATUM)
+    {
+      return 0;
+    }
+    else if (datum == TC_DATUM || datum == MC_DATUM || datum == BC_DATUM)
+    {
+      return (LCD_WIDTH / 2) - (width / 2);
+    }
+    return LCD_WIDTH - width;
+  }
+
 private:
   TFT_eSPI *_tft;
   uint32_t _bgColour;
@@ -180,18 +237,28 @@ private:
     }
   }
 
-  int _getX(uint8_t datum, int width)
+  int _getY(ScreenLine line)
+  /*
+  returns the top of the line
+  */
   {
-
-    if (datum == TL_DATUM || datum == ML_DATUM || datum == BL_DATUM)
+    const uint8_t lines3margin = 3, lines2margin = 10;
+    uint8_t digitHeight = _pixel_size * 5;
+    switch (line)
     {
-      return 0;
+    case LINE1_OF_3:
+      return lines3margin;
+    case LINE2_OF_3:
+      return LCD_HEIGHT / 2 - digitHeight / 2;
+    case LINE3_OF_3:
+      return LCD_HEIGHT - lines3margin - digitHeight;
+    case LINE1_OF_2:
+      return lines2margin;
+      break;
+    case LINE2_OF_2:
+      return LCD_HEIGHT - lines2margin - digitHeight;
+      break;
     }
-    else if (datum == TC_DATUM || datum == MC_DATUM || datum == BC_DATUM)
-    {
-      return (LCD_WIDTH / 2) - (width / 2);
-    }
-    return LCD_WIDTH - width;
   }
 
   int _getY(uint8_t datum)
