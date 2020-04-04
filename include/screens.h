@@ -86,6 +86,16 @@ void screenShowOptionWithValue(char *title, OptionValue *opt)
   chunky_digit.draw_float(MC_DATUM, buff);
 }
 //-----------------------------------------------------
+void screenShowOptionWithValue(char *title, char *opt, uint32_t bgcolour)
+{
+  tft.fillScreen(bgcolour);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(title, LCD_WIDTH / 2, 20);
+
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(opt, LCD_WIDTH / 2, 80);
+}
+//-----------------------------------------------------
 void screenShowOptionValueSelected()
 {
   tft.setTextDatum(MC_DATUM);
