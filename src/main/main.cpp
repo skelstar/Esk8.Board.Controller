@@ -110,18 +110,12 @@ void send_to_display_event_queue(DispStateEvent ev);
 
 //------------------------------------------------------------------
 
-#include <EncoderThrottleLib.h>
-
-EncoderThrottleLib throttle;
-
 #define ENCODER_BRAKE_COUNTS 20
 #define ENCODER_ACCEL_COUNTS 20
 
 class Config
 {
 public:
-  uint8_t accelCounts = ENCODER_ACCEL_COUNTS;
-  uint8_t brakeCounts = ENCODER_BRAKE_COUNTS;
 } config;
 
 #define STORE_CONFIG "config"
@@ -130,6 +124,8 @@ public:
 Preferences configStore;
 
 #include <throttle.h>
+
+ThrottleClass throttle;
 
 //---------------------------------------------------------------
 
@@ -165,8 +161,6 @@ void setup()
   stats.reset_reason_core1 = rtc_get_reset_reason(1);
 
   configStore.begin(STORE_CONFIG, false);
-  config.accelCounts = configStore.getUInt(STORE_CONFIG_ACCEL_COUNTS, ENCODER_ACCEL_COUNTS);
-  config.brakeCounts = configStore.getUInt(STORE_CONFIG_BRAKE_COUNTS, ENCODER_BRAKE_COUNTS);
 
   Serial.printf("CPU0 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core0));
   Serial.printf("CPU1 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core1));
@@ -189,19 +183,18 @@ void setup()
 
   print_build_status();
 
-  init_throttle();
+  throttle.init(/*pin*/ 27);
 
-  endLight.init(&endLights);
-  endLight.toggle();
-  vTaskDelay(10);
-  endLight.toggle();
+  // endLight.init(&endLights);
+  // endLight.toggle();
+  // vTaskDelay(10);
+  // endLight.toggle();
 
   vTaskDelay(100);
 
   // core 0
   xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(commsStateTask_0, "commsStateTask_0", 10000, NULL, /*priority*/ 2, NULL, 0);
-  // xTaskCreatePinnedToCore(flasher_task_0, "flasher_task_0", 10000, NULL, /*priority*/ 2, NULL, 0);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
 
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
@@ -235,12 +228,12 @@ void loop()
 {
   if (display_task_showing_option_screen)
   {
-    int8_t counter = throttle.getCounter();
-    if (oldCounter != counter)
-    {
-      send_to_display_event_queue(oldCounter < counter ? DISP_EV_ENCODER_UP : DISP_EV_ENCODER_DN);
-      oldCounter = counter;
-    }
+    // int8_t thr = throttle.get();
+    // if (oldCounter != thr)
+    // {
+    //   send_to_display_event_queue(oldCounter < thr ? DISP_EV_ENCODER_UP : DISP_EV_ENCODER_DN);
+    //   oldCounter = counter;
+    // }
   }
   else if (since_read_trigger > READ_TRIGGER_PERIOD)
   {
@@ -256,10 +249,9 @@ void loop()
     {
       old_throttle = controller_packet.throttle;
       send_to_display_event_queue(DISP_EV_UPDATE);
-      // updateStatusPixel();
-#ifdef PRINT_THROTTLE
-      DEBUGVAL(controller_packet.throttle);
-#endif
+      // #ifdef PRINT_THROTTLE
+      //       DEBUGVAL(controller_packet.throttle);
+      // #endif
     }
   }
 

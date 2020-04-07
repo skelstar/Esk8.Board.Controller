@@ -139,8 +139,6 @@ public:
     int width = getWidth(number, units);
     uint8_t cursor_x = x;
 
-    DEBUGVAL(cursor_x, y, number, units, strlen(units), width);
-
     for (int i = 0; i < number_len; i++)
     {
       char ch = number[i];

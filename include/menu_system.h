@@ -63,10 +63,6 @@ State disp_state_stopped_screen(
       print_disp_state("...disp_state_stopped_screen");
       screen_with_stats();
       showOption = Options::NONE;
-      if (throttle.getMode() != EncoderMode::THROTTLE)
-      {
-        throttle.setMode(EncoderMode::THROTTLE);
-      }
     },
     NULL, NULL);
 //---------------------------------------------------------------
@@ -81,36 +77,6 @@ State disp_state_moving_screen(
 State disp_state_options(
     [] {
       print_disp_state("...disp_state_options");
-      display_task_showing_option_screen = true;
-
-      clearDisplayEventQueue();
-
-      if (showOption == Options::NONE)
-      {
-        showOption = NUM_ACCEL_COUNTS;
-      }
-
-      switch (showOption)
-      {
-      case Options::NUM_ACCEL_COUNTS:
-        currentOption = new OptionValue(/*min*/ 10, /*max*/ 50, /*curr*/ config.accelCounts, /*step*/ 5);
-        currentOption->setBgColour(TFT_DARKGREEN);
-        screenShowOptionWithValue(getTitleForMenuOption(showOption), currentOption);
-        break;
-      case Options::NUM_BRAKE_COUNTS:
-        currentOption = new OptionValue(/*min*/ 10, /*max*/ 50, /*curr*/ config.brakeCounts, /*step*/ 5);
-        currentOption->setBgColour(TFT_RED);
-        screenShowOptionWithValue(getTitleForMenuOption(showOption), currentOption);
-        break;
-      default:
-        Serial.printf("No showOption or unhandled: %d", showOption);
-        break;
-      }
-
-      if (throttle.getMode() != EncoderMode::THROTTLE)
-      {
-        throttle.setMode(EncoderMode::MENU_OPTION);
-      }
     },
     NULL,
     [] {
@@ -120,9 +86,6 @@ State disp_state_options(
 State disp_state_options_changed_up(
     [] {
       print_disp_state("...disp_state_options_changed_up");
-      display_task_showing_option_screen = true;
-      currentOption->up();
-      screenShowOptionWithValue(getTitleForMenuOption(showOption), currentOption);
     },
     NULL,
     [] {
@@ -132,9 +95,6 @@ State disp_state_options_changed_up(
 State disp_state_options_changed_dn(
     [] {
       print_disp_state("...disp_state_options_changed_dn");
-      display_task_showing_option_screen = true;
-      currentOption->dn();
-      screenShowOptionWithValue(getTitleForMenuOption(showOption), currentOption);
     },
     NULL,
     [] {
@@ -144,12 +104,9 @@ State disp_state_options_changed_dn(
 State disp_state_option_selected(
     [] {
       print_disp_state("...disp_state_option_selected");
-      screenShowOptionValueSelected();
-      storeOption(currentOption);
     },
     NULL,
     [] {
-      throttle.setMode(EncoderMode::THROTTLE);
       display_task_showing_option_screen = false;
     });
 
