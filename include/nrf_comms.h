@@ -1,6 +1,8 @@
 
-void send_config_packet_to_board();
-void manage_retries(uint8_t retries);
+void send_packet_to_board(PacketType packetType);
+void manage_responses();
+void manage_responses(bool success);
+bool vescValuesChanged(VescData oldVals, VescData newVals);
 
 //------------------------------------------------------------------
 void packet_available_cb(uint16_t from_id, uint8_t type)
@@ -9,101 +11,99 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
   nrf24.read_into(buff, sizeof(VescData));
   memcpy(&board_packet, &buff, sizeof(VescData));
 
+  manage_responses();
+
   if (board_packet.id == 0)
   {
-    DEBUG("*** first packet!! ***");
-#ifdef FEATURE_CRUISE_CONTROL
-    controller_config.cruise_control_enabled = true;
-#else
-    controller_config.cruise_control_enabled = false;
-#endif
-    send_config_packet_to_board();
+    DEBUG("*** board's first packet!! ***");
+    send_packet_to_board(CONFIG);
   }
 
-#ifdef FEATURE_PUSH_TO_ENABLE
-  throttle_enabled = board_packet.moving;
-#endif
-
-  switch (board_packet.reason)
+  // chnage display state if motion change
+  if (old_board_packet.moving != board_packet.moving)
   {
-  case ReasonType::BOARD_STOPPED:
-    DEBUG("***Stopped!***");
-    send_to_display_event_queue(DISP_EV_STOPPED);
-    break;
-
-  case ReasonType::BOARD_MOVING:
-    DEBUG("***Moving!***");
-    send_to_display_event_queue(DISP_EV_MOVING);
-    break;
-
-  default:
-    DEBUGVAL(from_id, board_packet.id, since_sent_to_board);
-    break;
+    send_to_display_event_queue(board_packet.moving ? DISP_EV_MOVING : DISP_EV_STOPPED);
+  }
+  // update if something changed
+  else if (vescValuesChanged(old_board_packet, board_packet))
+  {
+    send_to_display_event_queue(DISP_EV_UPDATE);
   }
 
-  comms_state_event(EV_COMMS_CONNECTED);
+  old_board_packet = board_packet;
+
+  send_to_comms_state_event_queue(EV_COMMS_CONNECTED);
 }
 //------------------------------------------------------------------
 
 elapsedMillis since_sent_request;
 
-void send_control_packet_to_board()
+void send_packet_to_board(PacketType packetType)
 {
-  if (since_sent_request > 5000 || comms_state_connected == false)
+  bool success = false;
+  if (packetType == PacketType::CONTROL)
   {
-    since_sent_request = 0;
-    controller_packet.command = 1; // REQUEST
+    uint8_t bs[sizeof(ControllerData)];
+    memcpy(bs, &controller_packet, sizeof(ControllerData));
+
+    success = nrf24.send_packet(/*to*/ COMMS_BOARD, /*type*/ packetType, bs, sizeof(ControllerData));
+    controller_packet.id++;
+  }
+  else if (packetType == PacketType::CONFIG)
+  {
+    controller_config.id = controller_packet.id;
+    uint8_t bs[sizeof(ControllerConfig)];
+    memcpy(bs, &controller_config, sizeof(ControllerConfig));
+
+    success = nrf24.send_packet(/*to*/ COMMS_BOARD, /*type*/ packetType, bs, sizeof(ControllerConfig));
+    controller_packet.id++;
+  }
+  if (false == success)
+  {
+    manage_responses(false);
+  }
+}
+
+//------------------------------------------------------------------
+// checks board_packet.id
+void manage_responses()
+{
+  bool response_ok = board_packet.id == controller_packet.id - 1 ||
+                     board_packet.id == controller_config.id - 1;
+  if (response_ok)
+  {
+    stats.consecutive_resps++;
+    comms_session_started = stats.consecutive_resps > 3;
+  }
+  else
+  {
+    stats.consecutive_resps = 0;
+  }
+  manage_responses(response_ok);
+}
+
+//------------------------------------------------------------------
+void manage_responses(bool success)
+{
+  if (!comms_state_connected && success)
+  {
+    send_to_comms_state_event_queue(EV_COMMS_CONNECTED);
   }
 
-  uint8_t bs[sizeof(ControllerData)];
-  memcpy(bs, &controller_packet, sizeof(ControllerData));
+  if (comms_session_started && !success)
+  {
+    stats.total_failed++;
+#ifdef PRINT_RETRIES
+    DEBUGVAL(success, stats.total_failed);
+#endif
+    send_to_comms_state_event_queue(EV_COMMS_DISCONNECTED);
+  }
+}
 
-  uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ PacketType::CONTROL, bs, sizeof(ControllerData), NUM_RETRIES);
-
-  manage_retries(retries);
-
-  controller_packet.command = 0;
-  controller_packet.id++;
+//------------------------------------------------------------------
+bool vescValuesChanged(VescData oldVals, VescData newVals)
+{
+  return oldVals.ampHours != newVals.ampHours ||
+         oldVals.motorCurrent != newVals.motorCurrent;
 }
 //------------------------------------------------------------------
-void send_config_packet_to_board()
-{
-  uint8_t bs[sizeof(ControllerConfig)];
-  memcpy(bs, &controller_config, sizeof(ControllerConfig));
-
-  uint8_t retries = nrf24.send_with_retries(/*to*/ COMMS_BOARD, /*type*/ PacketType::CONFIG, bs, sizeof(ControllerConfig), NUM_RETRIES);
-  if (retries > 0)
-  {
-    DEBUGVAL(retries);
-  }
-  controller_packet.id++;
-}
-//------------------------------------------------------------------
-
-float old_retry_rate = 0.0;
-
-void manage_retries(uint8_t retries)
-{
-  if (comms_session_started)
-  {
-    retry_log.add(retries > 0);
-
-    float retry_rate = retry_log.get();
-
-    if (retries > 0)
-    {
-      stats.num_packets_with_retries++;
-      send_to_display_event_queue(DISP_EV_REFRESH);
-      if (retries >= NUM_RETRIES)
-      {
-        stats.total_failed++;
-        comms_state_event(EV_COMMS_DISCONNECTED);
-      }
-    }
-    else if (old_retry_rate != retry_rate)
-    {
-      old_retry_rate = retry_rate;
-      send_to_display_event_queue(DISP_EV_REFRESH);
-    }
-  }
-}

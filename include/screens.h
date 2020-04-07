@@ -1,66 +1,104 @@
 #include <ChunkyDigit.h>
 #include <math.h>
 
+#ifndef TFT_H
+#include <tft.h>
+#endif
+
 #define LINE_1 1
 #define LINE_2 2
 #define LINE_3 3
 
 // prototypes
-void screen_with_stats();
 
 //-----------------------------------------------------
 
 void screen_searching()
 {
-  u8g2.clearBuffer();
-  lcd_message("Searching...", MC_DATUM);
-  u8g2.sendBuffer();
+  tft.setTextDatum(TL_DATUM);
+  tft.fillScreen(TFT_BLUE);
+
+  lcd_message("Searching...", LINE_1, Aligned::ALIGNED_CENTRE);
+  // send interval
+  tft.drawString("interval: ", 10, 40);
+  tft.drawNumber(SEND_TO_BOARD_INTERVAL, tft.textWidth("interval: ") + 10, 40);
+
+  uint8_t y = 70;
+  char buff[30];
+  sprintf(buff, "enc: -%d->%d", config.brakeCounts, config.accelCounts);
+  tft.drawString(buff, 10, y);
 }
 //-----------------------------------------------------
 
-void screen_disconnected()
+void screen_with_stats(bool connected = true)
 {
-  u8g2.clearBuffer();
-  lcd_message("ِDisconnected :(", MC_DATUM);
-  u8g2.sendBuffer();
-  // screen_with_stats();
-}
-//-----------------------------------------------------
-
-void screen_with_stats()
-{
-  u8g2.clearBuffer();
+  tft.fillScreen(TFT_BLUE);
   // line 1
   char buff1[20];
-  float retry_rate = retry_log.get();
-  sprintf(buff1, "rate: %.1f%%", isnan(retry_rate) ? 0.0 : retry_rate);
-  lcd_message(1, buff1, Aligned::ALIGNED_LEFT);
+  sprintf(buff1, "rsts: %d", stats.soft_resets);
+  lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, getStatus(stats.soft_resets, 0, 1, 1));
   // line 2
   char buff2[20];
-  sprintf(buff2, "total: %lu", stats.total_failed);
-  lcd_message(2, buff2, Aligned::ALIGNED_LEFT);
+  sprintf(buff2, "total f: %lu", stats.total_failed);
+  lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, getStatus(stats.total_failed, 0, 1, 2));
   // line 3
-  char buff3[20];
-  sprintf(buff3, "w/rt: %lu", stats.num_packets_with_retries);
-  lcd_message(3, buff3, Aligned::ALIGNED_LEFT);
-  // battery
-  draw_small_battery(remote_battery_percent, 128 - SM_BATT_WIDTH, 0);
-  // deadman
-  draw_trigger_state(trigger.get_current_state(), BR_DATUM);
-  u8g2.sendBuffer();
+  char buff[30];
+  sprintf(buff, "enc: -%d->%d", config.brakeCounts, config.accelCounts);
+  lcd_message(buff, LINE_3, Aligned::ALIGNED_LEFT);
+
+  drawSmallBattery(remote_battery_percent, LCD_WIDTH - MARGIN, 0 + MARGIN, TR_DATUM);
+
+  if (!connected)
+  {
+    tft.drawRect(0, 0, LCD_WIDTH, LCD_HEIGHT, TFT_RED);
+  }
 }
 //-----------------------------------------------------
 
 void screen_moving()
 {
+  uint32_t bgColour = TFT_DARKGREEN;
+  tft.fillScreen(TFT_DARKGREEN);
+
   char buff[10];
 
-  ChunkyDigit chunky_digit(&u8g2, 6, 3);
+  // line 1 amps
+  ChunkyDigit chunkAmps(&tft, 10, 8, bgColour);
+  sprintf(buff, "%.1f", board_packet.motorCurrent);
+  chunkAmps.draw_float(TC_DATUM, ChunkyDigit::LINE1_OF_2, buff, "Ah");
 
-  u8g2.clearBuffer();
-  sprintf(buff, "%.1f%%", retry_log.get());
-  chunky_digit.draw_float(TR_DATUM, buff, NULL);
-  draw_trigger_state(trigger.get_current_state(), BR_DATUM);
-  u8g2.sendBuffer();
+  // line 2 throttle
+  ChunkyDigit chunky_digit(&tft, 10, 8, bgColour);
+  sprintf(buff, "%d", controller_packet.throttle);
+  chunkAmps.draw_float(BC_DATUM, ChunkyDigit::LINE2_OF_2, buff, "Thr");
+}
+//-----------------------------------------------------
+void screenShowOptionWithValue(char *title, OptionValue *opt)
+{
+  tft.fillScreen(opt->bgcolour);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(title, LCD_WIDTH / 2, 20);
+
+  ChunkyDigit chunky_digit(&tft, 10, 10, opt->bgcolour);
+
+  char buff[6];
+  sprintf(buff, "%d", opt->get());
+  chunky_digit.draw_float(MC_DATUM, buff);
+}
+//-----------------------------------------------------
+void screenShowOptionWithValue(char *title, char *opt, uint32_t bgcolour)
+{
+  tft.fillScreen(bgcolour);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(title, LCD_WIDTH / 2, 20);
+
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(opt, LCD_WIDTH / 2, 80);
+}
+//-----------------------------------------------------
+void screenShowOptionValueSelected()
+{
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("selected!", LCD_WIDTH / 2, LCD_HEIGHT - 20);
 }
 //-----------------------------------------------------

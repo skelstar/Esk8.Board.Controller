@@ -1,5 +1,5 @@
-#ifndef U8g2lib
-#include <U8g2lib.h>
+#ifndef _TFT_eSPIH_
+#include <TFT_eSPI.h>
 #endif
 
 class ChunkyDigit
@@ -85,11 +85,21 @@ class ChunkyDigit
       }};
 
 public:
-  ChunkyDigit(U8G2_SSD1306_128X64_NONAME_F_SW_I2C *u8, uint8_t pixel_size, uint8_t spacing)
+  enum ScreenLine
   {
-    _u8g2 = u8;
+    LINE1_OF_3,
+    LINE2_OF_3,
+    LINE3_OF_3,
+    LINE1_OF_2,
+    LINE2_OF_2,
+  };
+
+  ChunkyDigit(TFT_eSPI *tft, uint8_t pixel_size, uint8_t spacing, uint32_t bgColour)
+  {
+    _tft = tft;
     _pixel_size = pixel_size;
     _spacing = spacing;
+    _bgColour = bgColour;
   }
   //--------------------------------------------------------------------------------
   int get_str_width(char *number)
@@ -97,31 +107,39 @@ public:
     uint8_t num_chars = strlen(number);
     uint8_t char_width = 3 * _pixel_size;
     uint8_t width = 0;
-    for (int i=0; i<num_chars; i++)
+    for (int i = 0; i < num_chars; i++)
     {
       uint8_t w = number[i] == '.' ? 1 * _pixel_size : char_width;
       if (i < num_chars - 1)
         w += _spacing;
       width += w;
     }
-    return width; // (num_chars * char_width) + _pixel_size + ((num_chars - 1) * _spacing);
+    return width;
   }
+
   //--------------------------------------------------------------------------------
-  void draw_float(DatumPoint datum, char *number, char *units)
+
+  int getWidth(char *number, char *units = "")
   {
     int number_len = strlen(number);
-    int width = get_str_width(number);
+    bool unitsNotEmpty = units[0] != '\0';
+    int unitsWidth = unitsNotEmpty
+                         ? (int)_tft->textWidth(units)
+                         : 0;
+    return get_str_width(number) + unitsWidth;
+  }
 
-    int cursor_x = datum == TL_DATUM || datum == ML_DATUM || datum == BL_DATUM
-                       ? 0
-                       : datum == TC_DATUM || datum == MC_DATUM || datum == BC_DATUM
-                             ? (LCD_WIDTH / 2) - (width / 2)
-                             : LCD_WIDTH - width;
-    int y = datum == TL_DATUM || datum == TC_DATUM || datum == TR_DATUM
-                ? 0
-                : datum == ML_DATUM || datum == MC_DATUM || datum == MR_DATUM
-                      ? LCD_HEIGHT / 2
-                      : LCD_HEIGHT - (_pixel_size * 5);
+  void draw_float(uint8_t x, int y, char *number, char *units = "")
+  {
+    int number_len = strlen(number);
+    bool unitsNotEmpty = units[0] != '\0';
+    int unitsWidth = unitsNotEmpty
+                         ? (int)_tft->textWidth(units)
+                         : 0;
+    int width = getWidth(number, units);
+    uint8_t cursor_x = x;
+
+    DEBUGVAL(cursor_x, y, number, units, strlen(units), width);
 
     for (int i = 0; i < number_len; i++)
     {
@@ -129,13 +147,12 @@ public:
       uint8_t spc = i == number_len - 1 ? 0 : _spacing;
       if (ch >= '0' and ch <= '9')
       {
-        DEBUGVAL(cursor_x, spc, width);
         chunky_draw_digit(ch - '0', cursor_x, y, _pixel_size);
         cursor_x += 3 * _pixel_size + spc;
       }
       else if (ch == '.')
       {
-        _u8g2->drawBox(cursor_x, y + 4 * _pixel_size, _pixel_size, _pixel_size);
+        _tft->fillRect(cursor_x, y + 4 * _pixel_size, _pixel_size, _pixel_size, TFT_WHITE);
         cursor_x += _pixel_size + spc;
       }
       else if (ch == '-')
@@ -152,17 +169,55 @@ public:
       }
     }
     // units
-    if (units != NULL)
+    if (unitsNotEmpty)
     {
-      _u8g2->setFont(u8g2_font_profont15_tr);
-      _u8g2->drawStr(cursor_x + _spacing, y + _u8g2->getMaxCharHeight(), units);
+      int unitsY = y + (_pixel_size * 5 - _tft->fontHeight());
+      _tft->drawString(units, cursor_x + 10, unitsY);
     }
   }
 
+  void draw_float(uint8_t datum, char *number, char *units = "")
+  {
+    int number_len = strlen(number);
+    bool unitsNotEmpty = units[0] != '\0';
+    int unitsWidth = unitsNotEmpty
+                         ? (int)_tft->textWidth(units)
+                         : 0;
+    int width = get_str_width(number) + unitsWidth;
+    int y = _getY(datum);
+
+    draw_float(getX(datum, width), _getY(datum), number, units);
+  }
+
+  void draw_float(uint8_t datum, ScreenLine line, char *number, char *units)
+  {
+    bool unitsNotEmpty = units[0] != '\0';
+    int unitsWidth = unitsNotEmpty
+                         ? (int)_tft->textWidth(units)
+                         : 0;
+    int width = get_str_width(number) + unitsWidth;
+
+    draw_float(getX(datum, width), _getY(line), number, units);
+  }
+
+  int getX(uint8_t datum, int width)
+  {
+
+    if (datum == TL_DATUM || datum == ML_DATUM || datum == BL_DATUM)
+    {
+      return 0;
+    }
+    else if (datum == TC_DATUM || datum == MC_DATUM || datum == BC_DATUM)
+    {
+      return (LCD_WIDTH / 2) - (width / 2);
+    }
+    return LCD_WIDTH - width;
+  }
+
 private:
-  U8G2_SSD1306_128X64_NONAME_F_SW_I2C *_u8g2;
-  uint8_t _pixel_size;
-  uint8_t _spacing;
+  TFT_eSPI *_tft;
+  uint32_t _bgColour;
+  uint8_t _pixel_size, _spacing;
 
   void chunky_draw_digit(
       uint8_t digit,
@@ -176,9 +231,48 @@ private:
       {
         int x1 = x + xx * _pixel_size;
         int y1 = y + yy * _pixel_size;
-        _u8g2->setDrawColor(FONT_DIGITS_3x5[digit][yy][xx]);
-        _u8g2->drawBox(x1, y1, _pixel_size, _pixel_size);
+        uint32_t pixelColour = FONT_DIGITS_3x5[digit][yy][xx] ? TFT_WHITE : _bgColour;
+        _tft->fillRect(x1, y1, _pixel_size, _pixel_size, pixelColour);
       }
     }
+  }
+
+  int _getY(ScreenLine line)
+  /*
+  returns the top of the line
+  */
+  {
+    const uint8_t lines3margin = 3, lines2margin = 10;
+    uint8_t digitHeight = _pixel_size * 5;
+    switch (line)
+    {
+    case LINE1_OF_3:
+      return lines3margin;
+    case LINE2_OF_3:
+      return LCD_HEIGHT / 2 - digitHeight / 2;
+    case LINE3_OF_3:
+      return LCD_HEIGHT - lines3margin - digitHeight;
+    case LINE1_OF_2:
+      return lines2margin;
+      break;
+    case LINE2_OF_2:
+      return LCD_HEIGHT - lines2margin - digitHeight;
+      break;
+    }
+  }
+
+  int _getY(uint8_t datum)
+  {
+    uint8_t height = 5 * _pixel_size;
+
+    if (datum == TL_DATUM || datum == TC_DATUM || datum == TR_DATUM)
+    {
+      return 0;
+    }
+    else if (datum == ML_DATUM || datum == MC_DATUM || datum == MR_DATUM)
+    {
+      return (LCD_HEIGHT / 2) - (height / 2);
+    }
+    return LCD_HEIGHT - height;
   }
 };
