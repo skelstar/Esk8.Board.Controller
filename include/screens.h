@@ -30,8 +30,8 @@ void screen_with_stats(bool connected = true)
   tft.fillScreen(TFT_BLUE);
   // line 1
   char buff1[20];
-  sprintf(buff1, "rsts: %d", stats.soft_resets);
-  lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, getStatus(stats.soft_resets, 0, 1, 1));
+  sprintf(buff1, "bd rsts: %d", stats.boardResets);
+  lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, getStatus(stats.boardResets, 0, 1, 1));
   // line 2
   char buff2[20];
   sprintf(buff2, "total f: %lu", stats.total_failed);

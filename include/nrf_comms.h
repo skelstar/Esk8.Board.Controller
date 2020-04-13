@@ -13,9 +13,10 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
 
   manage_responses();
 
-  if (board_packet.id == 0)
+  if (board_packet.reason == FIRST_PACKET)
   {
     DEBUG("*** board's first packet!! ***");
+    send_to_comms_state_event_queue(EV_COMMS_BD_RESET, 5);
     send_packet_to_board(CONFIG);
   }
 

@@ -7,6 +7,7 @@ enum CommsStateEvent
   EV_COMMS_NO_EVENT,
   EV_COMMS_CONNECTED,
   EV_COMMS_DISCONNECTED,
+  EV_COMMS_BD_RESET,
 };
 
 enum CommsStateId
@@ -69,6 +70,11 @@ public:
         print_state("...comms_state_disconnected");
         send_to_display_event_queue(DISP_EV_DISCONNECTED);
       }
+      else if (event == EV_COMMS_BD_RESET)
+      {
+        stats.boardResets++;
+        send_to_display_event_queue(DISP_EV_UPDATE);
+      }
       break;
     case ST_COMMS_DISCONNECTED:
       if (event == EV_COMMS_CONNECTED)
@@ -77,6 +83,11 @@ public:
         comms_state_connected = true;
         print_state("...comms_state_connected");
         send_to_display_event_queue(DISP_EV_CONNECTED);
+      }
+      else if (event == EV_COMMS_BD_RESET)
+      {
+        stats.boardResets++;
+        send_to_display_event_queue(DISP_EV_UPDATE);
       }
       break;
     }

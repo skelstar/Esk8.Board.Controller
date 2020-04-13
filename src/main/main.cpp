@@ -65,6 +65,7 @@ public:
   RESET_REASON reset_reason_core0;
   RESET_REASON reset_reason_core1;
   uint16_t soft_resets = 0;
+  uint8_t boardResets = 0;
 } stats;
 
 #define STORE_STATS "stats"
