@@ -3,15 +3,16 @@
 
 #include <Button2.h>
 
-#define END_LIGHT_PIN 32
-
-Adafruit_NeoPixel endLights(/*num*/ 5, END_LIGHT_PIN, NEO_GRB + NEO_KHZ800);
-
-#define BUTTON_0 0
-Button2 button0(BUTTON_0);
+#define BUTTON_35 35
+Button2 menuButton(BUTTON_35);
 
 #define DEADMAN_PIN 27
 Button2 deadman(DEADMAN_PIN);
+
+#ifdef FEATURE_ENDLIGHT
+#define END_LIGHT_PIN 32
+
+Adafruit_NeoPixel endLights(/*num*/ 5, END_LIGHT_PIN, NEO_GRB + NEO_KHZ800);
 
 class EndLight
 {
@@ -74,31 +75,19 @@ private:
 };
 
 EndLight endLight;
+#endif
 
 //---------------------------------------------------------
-void button0_init()
+void menuButton_init()
 {
-  button0.setClickHandler([](Button2 &btn) {
+  menuButton.setClickHandler([](Button2 &btn) {
     display_state.trigger(DISP_EV_MENU_BUTTON_CLICKED);
   });
-  button0.setDoubleClickHandler([](Button2 &btn) {
+  menuButton.setDoubleClickHandler([](Button2 &btn) {
     if (display_task_showing_option_screen)
     {
-      send_to_display_event_queue(DISP_EV_MENU_OPTION_SELECT);
+      send_to_display_event_queue(DISP_EV_MENU_BUTTON_DOUBLE_CLICKED);
     }
-    else
-    {
-    }
-  });
-}
-
-void button35_init()
-{
-  button35.setClickHandler([](Button2 &btn) {
-  });
-  button35.setReleasedHandler([](Button2 &btn) {
-  });
-  button35.setDoubleClickHandler([](Button2 &btn) {
   });
 }
 

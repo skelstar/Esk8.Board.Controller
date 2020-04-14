@@ -9,7 +9,7 @@ void send_to_display_event_queue(DispStateEvent ev)
 {
   TickType_t ticks = 10;
 #ifdef PRINT_DISP_STATE_EVENT
-  Serial.printf("-> SEND: %s\n", get_event_name((DispStateEvent)ev));
+  // Serial.printf("-> SEND: %s\n", get_event_name((DispStateEvent)ev));
 #endif
   uint8_t e = (uint8_t)ev;
   xQueueSendToBack(xDisplayChangeEventQueue, &e, ticks);
@@ -22,7 +22,7 @@ DispStateEvent read_from_display_event_queue(TickType_t ticks = 5)
   if (xDisplayChangeEventQueue != NULL && xQueueReceive(xDisplayChangeEventQueue, &e, ticks) == pdPASS)
   {
 #ifdef PRINT_DISP_STATE_EVENT
-    Serial.printf("<- RX: %s\n", get_event_name((DispStateEvent)e));
+    Serial.printf("<- %s\n", get_event_name((DispStateEvent)e));
 #endif
     return (DispStateEvent)e;
   }
@@ -77,33 +77,61 @@ State disp_state_moving_screen(
 State disp_state_options(
     [] {
       print_disp_state("...disp_state_options");
+
+      if (showOption == NONE)
+      {
+        showOption = HEADLIGHT_MODE;
+      }
+
+      switch (showOption)
+      {
+      case HEADLIGHT_MODE:
+        currentOption = new OptionValue(/*min*/ 0, /*max*/ 1, /*curr*/ config.headlightMode, /*step*/ 1, /*wrap*/ true);
+        currentOption->setBgColour(TFT_BLACK);
+        screenShowOptionWithValue(getTitleForMenuOption(Options::HEADLIGHT_MODE), currentOption);
+        display_task_showing_option_screen = true;
+        break;
+      }
     },
     NULL,
     [] {
       display_task_showing_option_screen = false;
     });
 //---------------------------------------------------------------
-State disp_state_options_changed_up(
+State disp_state_options_cycled(
     [] {
-      print_disp_state("...disp_state_options_changed_up");
+      print_disp_state("...disp_state_options_cycled");
+      display_task_showing_option_screen = true;
+      currentOption->up();
+      screenShowOptionWithValue(getTitleForMenuOption(Options::HEADLIGHT_MODE), currentOption);
     },
     NULL,
     [] {
       display_task_showing_option_screen = false;
     });
 //---------------------------------------------------------------
-State disp_state_options_changed_dn(
-    [] {
-      print_disp_state("...disp_state_options_changed_dn");
-    },
-    NULL,
-    [] {
-      display_task_showing_option_screen = false;
-    });
+// State disp_state_options_changed_dn(
+//     [] {
+//       print_disp_state("...disp_state_options_changed_dn");
+//     },
+//     NULL,
+//     [] {
+//       display_task_showing_option_screen = false;
+//     });
 //---------------------------------------------------------------
 State disp_state_option_selected(
     [] {
       print_disp_state("...disp_state_option_selected");
+      screenShowOptionValueSelected();
+      if (showOption == Options::HEADLIGHT_MODE)
+      {
+        config.headlightMode = currentOption->get();
+        DEBUG("Stored!");
+      }
+      else
+      {
+        DEBUG("Unhandled option");
+      }
     },
     NULL,
     [] {
@@ -134,28 +162,27 @@ void add_disp_state_transitions()
 
   // options
   const uint16_t OPTION_SCREEN_TIMEOUT = 5000;
-  const uint16_t OPTION_SELECTED_TIMEOUT = 1000;
+  const uint16_t OPTION_SELECTED_TIMEOUT = 2000;
 
-  // option 1
+  // option
   display_state.add_timed_transition(&disp_state_options, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
-  display_state.add_transition(&disp_state_options, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, moveToNextMenuItem);
-  display_state.add_transition(&disp_state_options, &disp_state_option_selected, DISP_EV_MENU_OPTION_SELECT, NULL);
+  // display_state.add_transition(&disp_state_options, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, moveToNextMenuItem);
+  display_state.add_transition(&disp_state_options, &disp_state_options_cycled, DISP_EV_MENU_BUTTON_DOUBLE_CLICKED, NULL);
+  // display_state.add_transition(&disp_state_options, &disp_state_option_selected, DISP_EV_MENU_BUTTON_DOUBLE_CLICKED, NULL);
 
-  // disp_state_options_changed_up
-  display_state.add_transition(&disp_state_options_changed_up, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, moveToNextMenuItem);
-  display_state.add_transition(&disp_state_options, &disp_state_options_changed_up, DISP_EV_ENCODER_UP, NULL);
-  display_state.add_transition(&disp_state_options_changed_up, &disp_state_options_changed_up, DISP_EV_ENCODER_UP, NULL);
-  display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options_changed_up, DISP_EV_ENCODER_UP, NULL);
-  display_state.add_transition(&disp_state_options_changed_up, &disp_state_option_selected, DISP_EV_OPTION_SELECT_VALUE, NULL);
+  // disp_state_options_cycled
+  // display_state.add_transition(&disp_state_options, &disp_state_options_cycled, DISP_EV_MENU_BUTTON_CLICKED, NULL);
+  display_state.add_transition(&disp_state_options_cycled, &disp_state_options_cycled, DISP_EV_MENU_BUTTON_CLICKED, NULL);
+  display_state.add_transition(&disp_state_options_cycled, &disp_state_option_selected, DISP_EV_MENU_BUTTON_DOUBLE_CLICKED, NULL);
 
   // disp_state_options_changed_dn
-  display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, moveToNextMenuItem);
-  display_state.add_transition(&disp_state_options, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
-  display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
-  display_state.add_transition(&disp_state_options_changed_up, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
+  // display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, moveToNextMenuItem);
+  // display_state.add_transition(&disp_state_options, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
+  // display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
+  // display_state.add_transition(&disp_state_options_changed_up, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
 
   // disp_state_selected_option
-  display_state.add_transition(&disp_state_options_changed_dn, &disp_state_option_selected, DISP_EV_OPTION_SELECT_VALUE, NULL);
+  // display_state.add_transition(&disp_state_options_changed_dn, &disp_state_option_selected, DISP_EV_OPTION_SELECT_VALUE, NULL);
 
   // option 1 selected
   display_state.add_timed_transition(&disp_state_option_selected, &disp_state_stopped_screen, OPTION_SELECTED_TIMEOUT, NULL);
@@ -172,9 +199,9 @@ const char *get_event_name(DispStateEvent ev)
   case DISP_EV_DISCONNECTED:
     return "DISP_EV_DISCONNECTED";
   case DISP_EV_MENU_BUTTON_CLICKED:
-    return "DISP_EV_MENU_BUTTON_CLICKED";
-  case DISP_EV_MENU_OPTION_SELECT:
-    return "DISP_EV_MENU_OPTION_SELECT";
+    return "DISP_EV_BTN_CLICKED";
+  case DISP_EV_MENU_BUTTON_DOUBLE_CLICKED:
+    return "DISP_EV_BTN_DBL_CLICKED";
   case DISP_EV_REFRESH:
     return "DISP_EV_REFRESH";
   case DISP_EV_STOPPED:
@@ -187,8 +214,10 @@ const char *get_event_name(DispStateEvent ev)
     return "DISP_EV_ENCODER_DN";
   case DISP_EV_OPTION_SELECT_VALUE:
     return "DISP_EV_OPTION_SELECT_VALUE";
+  case DISP_EV_UPDATE:
+    return "DISP_EV_UPDATE";
   default:
-    char buff[20];
+    char buff[30];
     sprintf(buff, "unhandled ev: %d", (uint8_t)ev);
     return buff;
   }

@@ -96,7 +96,7 @@ enum DispStateEvent
   DISP_EV_CONNECTED,
   DISP_EV_DISCONNECTED,
   DISP_EV_MENU_BUTTON_CLICKED,
-  DISP_EV_MENU_OPTION_SELECT,
+  DISP_EV_MENU_BUTTON_DOUBLE_CLICKED,
   DISP_EV_REFRESH,
   DISP_EV_STOPPED,
   DISP_EV_MOVING,
@@ -117,6 +117,7 @@ void send_to_display_event_queue(DispStateEvent ev);
 class Config
 {
 public:
+  uint8_t headlightMode;
 } config;
 
 #define STORE_CONFIG "config"
@@ -131,9 +132,6 @@ ThrottleClass throttle;
 //---------------------------------------------------------------
 
 #include <Button2.h>
-
-#define BUTTON_35 35
-Button2 button35(BUTTON_35);
 
 #include <utils.h>
 #include <OptionValue.h>
@@ -186,10 +184,12 @@ void setup()
 
   throttle.init(/*pin*/ 27);
 
-  // endLight.init(&endLights);
-  // endLight.toggle();
-  // vTaskDelay(10);
-  // endLight.toggle();
+#ifdef FEATURE_ENDLIGHT
+  endLight.init(&endLights);
+  endLight.toggle();
+  vTaskDelay(10);
+  endLight.toggle();
+#endif
 
   vTaskDelay(100);
 
@@ -202,8 +202,7 @@ void setup()
   xCommsStateEventQueue = xQueueCreate(3, sizeof(uint8_t));
   xEndLightEventQueue = xQueueCreate(1, sizeof(uint8_t));
 
-  button0_init();
-  button35_init();
+  menuButton_init();
 
 #ifdef FEATURE_USE_DEADMAN
   deadman_init();
@@ -273,9 +272,11 @@ void loop()
 
   nrf24.update();
 
-  button0.loop();
-  button35.loop();
+  menuButton.loop();
+
+#ifdef FEATURE_ENDLIGHT
   endLight.loop();
+#endif
 
 #ifdef FEATURE_USE_DEADMAN
   deadman.loop();

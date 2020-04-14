@@ -4,6 +4,7 @@ enum Options
   NONE,
   NUM_ACCEL_COUNTS,
   NUM_BRAKE_COUNTS,
+  HEADLIGHT_MODE,
 } showOption;
 
 int16_t optionVal = 0;
@@ -34,6 +35,8 @@ char *getTitleForMenuOption(Options option)
     return "Accel counts";
   case Options::NUM_BRAKE_COUNTS:
     return "Brake counts";
+  case Options::HEADLIGHT_MODE:
+    return "Headlight";
   }
 }
 //---------------------------------------------------------------
