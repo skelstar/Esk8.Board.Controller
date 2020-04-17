@@ -30,6 +30,7 @@ void display_task_0(void *pvParameters)
       DispStateEvent ev = read_from_display_event_queue();
       if (ev != DISP_EV_NO_EVENT)
       {
+        lastDispEvent = ev;
         display_state.trigger(ev);
       }
     }

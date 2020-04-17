@@ -2,7 +2,7 @@
 #include <Fsm.h>
 #endif
 
-const char *get_event_name(DispStateEvent ev);
+const char *eventToString(DispStateEvent ev);
 //---------------------------------------------------------------
 
 void send_to_display_event_queue(DispStateEvent ev)
@@ -22,7 +22,7 @@ DispStateEvent read_from_display_event_queue(TickType_t ticks = 5)
   if (xDisplayChangeEventQueue != NULL && xQueueReceive(xDisplayChangeEventQueue, &e, ticks) == pdPASS)
   {
 #ifdef PRINT_DISP_STATE_EVENT
-    Serial.printf("<- %s\n", get_event_name((DispStateEvent)e));
+    Serial.printf("<- %s\n", eventToString((DispStateEvent)e));
 #endif
     return (DispStateEvent)e;
   }
@@ -38,9 +38,11 @@ void clearDisplayEventQueue()
 //---------------------------------------------------------------
 
 OptionValue *currentOption;
+DispStateEvent lastDispEvent;
 
 // prototypes
 
+void print_disp_state(const char *state_name, const char *event);
 void print_disp_state(const char *state_name);
 
 //---------------------------------------------------------------
@@ -60,7 +62,7 @@ State disp_state_disconnected(
 //---------------------------------------------------------------
 State disp_state_stopped_screen(
     [] {
-      print_disp_state("...disp_state_stopped_screen");
+      print_disp_state("...disp_state_stopped_screen", eventToString(lastDispEvent));
       screen_with_stats();
       showOption = Options::NONE;
     },
@@ -150,14 +152,19 @@ void add_disp_state_transitions()
   // disconnected
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
+  display_state.add_transition(&disp_state_disconnected, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
+
   // main - stopped
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_REFRESH, NULL);
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, NULL);
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_UPDATE, NULL);
+  display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_BD_RSTS_CHANGED, NULL);
+
   // moving
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_moving_screen, DISP_EV_MOVING, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_REFRESH, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_UPDATE, NULL);
+  display_state.add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_THROTTLE_CHANGED, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_stopped_screen, DISP_EV_STOPPED, NULL);
 
   // options
@@ -188,7 +195,7 @@ void add_disp_state_transitions()
   display_state.add_timed_transition(&disp_state_option_selected, &disp_state_stopped_screen, OPTION_SELECTED_TIMEOUT, NULL);
 }
 
-const char *get_event_name(DispStateEvent ev)
+const char *eventToString(DispStateEvent ev)
 {
   switch (ev)
   {
@@ -216,6 +223,10 @@ const char *get_event_name(DispStateEvent ev)
     return "DISP_EV_OPTION_SELECT_VALUE";
   case DISP_EV_UPDATE:
     return "DISP_EV_UPDATE";
+  case DISP_EV_THROTTLE_CHANGED:
+    return "DISP_EV_THROTTLE_CHANGED";
+  case DISP_EV_BD_RSTS_CHANGED:
+    return "DISP_EV_BD_RSTS_CHANGED";
   default:
     char buff[30];
     sprintf(buff, "unhandled ev: %d", (uint8_t)ev);
@@ -223,9 +234,16 @@ const char *get_event_name(DispStateEvent ev)
   }
 }
 
+void print_disp_state(const char *state_name, const char *event)
+{
+#ifdef PRINT_DISP_STATE
+  Serial.printf("%s --> %s\n", state_name, event);
+#endif
+}
+
 void print_disp_state(const char *state_name)
 {
 #ifdef PRINT_DISP_STATE
-  DEBUG(state_name);
+  Serial.printf("%s\n", state_name);
 #endif
 }

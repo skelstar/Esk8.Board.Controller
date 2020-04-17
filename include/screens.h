@@ -27,23 +27,19 @@ void screen_searching()
 
 void screen_with_stats(bool connected = true)
 {
-  tft.fillScreen(TFT_BLUE);
+  uint32_t bgColour = connected ? TFT_BLUE : TFT_RED;
+  tft.fillScreen(bgColour);
+  // battery
+  drawSmallBattery(remote_battery_percent, LCD_WIDTH - MARGIN, 0 + MARGIN, TR_DATUM);
   // line 1
   char buff1[20];
   sprintf(buff1, "bd rsts: %d", stats.boardResets);
   lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, getStatus(stats.boardResets, 0, 1, 1));
   // line 2
   char buff2[20];
-  sprintf(buff2, "total f: %lu", stats.total_failed);
-  lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, getStatus(stats.total_failed, 0, 1, 2));
+  sprintf(buff2, "failed tx: %lu", stats.total_failed_sending);
+  lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, getStatus(stats.total_failed_sending, 0, 1, 2));
   // line 3
-
-  drawSmallBattery(remote_battery_percent, LCD_WIDTH - MARGIN, 0 + MARGIN, TR_DATUM);
-
-  if (!connected)
-  {
-    tft.drawRect(0, 0, LCD_WIDTH, LCD_HEIGHT, TFT_RED);
-  }
 }
 //-----------------------------------------------------
 

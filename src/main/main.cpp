@@ -60,7 +60,7 @@ TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 class Stats
 {
 public:
-  unsigned long total_failed;
+  unsigned long total_failed_sending;
   unsigned long consecutive_resps;
   RESET_REASON reset_reason_core0;
   RESET_REASON reset_reason_core1;
@@ -74,14 +74,13 @@ Preferences statsStore;
 
 elapsedMillis
     since_sent_to_board,
+    sinceLastBoardPacket,
     since_read_trigger;
 
 uint16_t remote_battery_percent = 0;
 bool display_task_initialised = false;
 bool display_task_showing_option_screen = false;
 int oldCounter = 0;
-
-#define SMOOTH_OVER_MILLIS 2000
 
 //------------------------------------------------------------
 
@@ -104,6 +103,8 @@ enum DispStateEvent
   DISP_EV_ENCODER_DN,
   DISP_EV_OPTION_SELECT_VALUE,
   DISP_EV_UPDATE,
+  DISP_EV_THROTTLE_CHANGED,
+  DISP_EV_BD_RSTS_CHANGED,
 };
 
 // menu_system - prototypes
@@ -138,14 +139,14 @@ ThrottleClass throttle;
 #include <screens.h>
 #include <menu_options.h>
 #include <menu_system.h>
-#include <comms_connected_state.h>
 
 #include <display_task_0.h>
+#include <comms_connected_state.h>
+
 #include <nrf_comms.h>
 
 #include <features/battery_measure.h>
 #include <peripherals.h>
-// #include <flashingNeopixel.h>
 
 //---------------------------------------------------------------
 
@@ -199,7 +200,7 @@ void setup()
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
 
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
-  xCommsStateEventQueue = xQueueCreate(3, sizeof(uint8_t));
+  xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xEndLightEventQueue = xQueueCreate(1, sizeof(uint8_t));
 
   menuButton_init();
@@ -226,16 +227,7 @@ uint8_t old_throttle;
 
 void loop()
 {
-  if (display_task_showing_option_screen)
-  {
-    // int8_t thr = throttle.get();
-    // if (oldCounter != thr)
-    // {
-    //   send_to_display_event_queue(oldCounter < thr ? DISP_EV_ENCODER_UP : DISP_EV_ENCODER_DN);
-    //   oldCounter = counter;
-    // }
-  }
-  else if (since_read_trigger > READ_TRIGGER_PERIOD)
+  if (since_read_trigger > READ_TRIGGER_PERIOD)
   {
     since_read_trigger = 0;
 
@@ -247,11 +239,8 @@ void loop()
     controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
     if (old_throttle != controller_packet.throttle)
     {
+      send_to_display_event_queue(DISP_EV_THROTTLE_CHANGED);
       old_throttle = controller_packet.throttle;
-      send_to_display_event_queue(DISP_EV_UPDATE);
-      // #ifdef PRINT_THROTTLE
-      //       DEBUGVAL(controller_packet.throttle);
-      // #endif
     }
   }
 
@@ -268,6 +257,11 @@ void loop()
     {
       send_packet_to_board(CONTROL);
     }
+  }
+
+  if (boardTimedOut() && currentCommsState == ST_COMMS_CONNECTED)
+  {
+    sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
   }
 
   nrf24.update();

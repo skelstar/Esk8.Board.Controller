@@ -1,39 +1,39 @@
 
 void send_packet_to_board(PacketType packetType);
-void manage_responses();
+void checkBoardPacketId();
 void manage_responses(bool success);
 bool vescValuesChanged(VescData oldVals, VescData newVals);
 
 //------------------------------------------------------------------
 void packet_available_cb(uint16_t from_id, uint8_t type)
 {
+  sinceLastBoardPacket = 0;
+
+  old_board_packet = board_packet;
+
   uint8_t buff[sizeof(VescData)];
   nrf24.read_into(buff, sizeof(VescData));
   memcpy(&board_packet, &buff, sizeof(VescData));
 
-  manage_responses();
-
   if (board_packet.reason == FIRST_PACKET)
   {
     DEBUG("*** board's first packet!! ***");
-    send_to_comms_state_event_queue(EV_COMMS_BD_RESET, 5);
+
+    sendToCommsEventStateQueue(EV_COMMS_BD_RESET);
     send_packet_to_board(CONFIG);
   }
-
-  // chnage display state if motion change
-  if (old_board_packet.moving != board_packet.moving)
+  else if (old_board_packet.moving != board_packet.moving)
   {
     send_to_display_event_queue(board_packet.moving ? DISP_EV_MOVING : DISP_EV_STOPPED);
   }
-  // update if something changed
   else if (vescValuesChanged(old_board_packet, board_packet))
   {
     send_to_display_event_queue(DISP_EV_UPDATE);
   }
-
-  old_board_packet = board_packet;
-
-  send_to_comms_state_event_queue(EV_COMMS_CONNECTED);
+  else
+  {
+    sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
+  }
 }
 //------------------------------------------------------------------
 
@@ -57,7 +57,7 @@ void send_packet_to_board(PacketType packetType)
     memcpy(bs, &controller_config, sizeof(ControllerConfig));
 
     success = nrf24.send_packet(/*to*/ COMMS_BOARD, /*type*/ packetType, bs, sizeof(ControllerConfig));
-    controller_packet.id++;
+    // controller_packet.id++;
   }
   if (false == success)
   {
@@ -66,8 +66,9 @@ void send_packet_to_board(PacketType packetType)
 }
 
 //------------------------------------------------------------------
+
 // checks board_packet.id
-void manage_responses()
+void checkBoardPacketId()
 {
   bool response_ok = board_packet.id == controller_packet.id - 1 ||
                      board_packet.id == controller_config.id - 1;
@@ -79,6 +80,7 @@ void manage_responses()
   else
   {
     stats.consecutive_resps = 0;
+    DEBUGVAL(board_packet.id, controller_packet.id, controller_config.id);
   }
   manage_responses(response_ok);
 }
@@ -86,18 +88,27 @@ void manage_responses()
 //------------------------------------------------------------------
 void manage_responses(bool success)
 {
-  if (!comms_state_connected && success)
+  if (success)
   {
-    send_to_comms_state_event_queue(EV_COMMS_CONNECTED);
+    if (false == comms_state_connected)
+    {
+      sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
+    }
   }
-
-  if (comms_session_started && !success)
+  else
   {
-    stats.total_failed++;
+    if (comms_session_started)
+    {
+      stats.total_failed_sending++;
 #ifdef PRINT_RETRIES
-    DEBUGVAL(success, stats.total_failed);
+      DEBUGVAL(success, stats.total_failed_sending);
 #endif
-    send_to_comms_state_event_queue(EV_COMMS_DISCONNECTED);
+      sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
+    }
+    else
+    {
+      DEBUGVAL(comms_session_started);
+    }
   }
 }
 
@@ -108,3 +119,7 @@ bool vescValuesChanged(VescData oldVals, VescData newVals)
          oldVals.motorCurrent != newVals.motorCurrent;
 }
 //------------------------------------------------------------------
+bool boardTimedOut()
+{
+  return sinceLastBoardPacket > ((SEND_TO_BOARD_INTERVAL * CONSECUTIVE_MISSED_PACKETS_MEANS_DISCONNECTED) + 100);
+}
