@@ -18,6 +18,7 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
   if (board_packet.reason == FIRST_PACKET)
   {
     DEBUG("*** board's first packet!! ***");
+    controller_packet.id = 0;
 
     sendToCommsEventStateQueue(EV_COMMS_BD_RESET);
     send_packet_to_board(CONFIG);
@@ -116,7 +117,9 @@ void manage_responses(bool success)
 bool vescValuesChanged(VescData oldVals, VescData newVals)
 {
   return oldVals.ampHours != newVals.ampHours ||
-         oldVals.motorCurrent != newVals.motorCurrent;
+         oldVals.motorCurrent != newVals.motorCurrent ||
+         oldVals.missedPackets != newVals.missedPackets ||
+         oldVals.unsuccessfulSends != newVals.unsuccessfulSends;
 }
 //------------------------------------------------------------------
 bool boardTimedOut()

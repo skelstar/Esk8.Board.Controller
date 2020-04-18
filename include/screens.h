@@ -40,6 +40,15 @@ void screen_with_stats(bool connected = true)
   sprintf(buff2, "failed tx: %lu", stats.total_failed_sending);
   lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, getStatus(stats.total_failed_sending, 0, 1, 2));
   // line 3
+  if (board_packet.missedPackets > 0 || board_packet.unsuccessfulSends > 0)
+  {
+    char buff3_1[12];
+    sprintf(buff3_1, "bd ms:%d", board_packet.missedPackets);
+    lcd_message(buff3_1, LINE_3, Aligned::ALIGNED_LEFT, getStatus(board_packet.missedPackets, 0, 1, 2));
+    char buff3_2[12];
+    sprintf(buff3_2, "us:%d", board_packet.unsuccessfulSends);
+    lcd_message(buff3_2, LINE_3, Aligned::ALIGNED_RIGHT, getStatus(board_packet.unsuccessfulSends, 0, 1, 2));
+  }
 }
 //-----------------------------------------------------
 
