@@ -27,22 +27,26 @@ class WidgetClass
 public:
   WidgetClass()
   {
+    tft.setTextColor(TFT_WHITE);
   }
 
-  WidgetClass(uint32_t bgColour)
+  WidgetClass(uint32_t bgColour, uint32_t fgColour = TFT_WHITE)
   {
     _bgColour = bgColour;
+    tft.setTextColor(fgColour);
   }
 
   WidgetClass(uint8_t x,
               uint8_t y,
               WidgetSize size,
-              uint32_t bgColour)
+              uint32_t bgColour,
+              uint32_t fgColour = TFT_WHITE)
   {
     _x = x;
     _y = y;
     _width = size == Wide ? (LCD_WIDTH / 3) * 2 : LCD_WIDTH / 2;
     _height = LCD_HEIGHT / 2;
+    tft.setTextColor(fgColour);
   }
 
   void setStatusLevels(T warn, T crit, bool statusDirectionSwapped = false)
@@ -78,6 +82,11 @@ public:
     _height = LCD_HEIGHT / 2;
   }
 
+  void setForegroundColour(uint32_t colour)
+  {
+    tft.setTextColor(colour);
+  }
+
   void setBackgroundColour(uint32_t colour)
   {
     _bgColour = colour;
@@ -99,7 +108,6 @@ public:
       tft->drawRect(_x, _y, _width, _height, TFT_WHITE);
     }
 
-    tft->setTextColor(TFT_WHITE);
     tft->setTextDatum(TC_DATUM);
     tft->setTextSize(3);
     if (std::is_same<T, float>::value)

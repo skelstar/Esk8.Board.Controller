@@ -68,7 +68,8 @@ void screenWithWidgets(bool connected = true)
   widgetFail->setStatusLevels(2, 5);
   widgetFail->draw(&tft, stats.total_failed_sending, "FAIL");
 
-  WidgetClass<uint16_t> *widgetThrottle = new WidgetClass<uint16_t>(TFT_DARKGREEN);
+  WidgetClass<uint16_t> *widgetThrottle = new WidgetClass<uint16_t>(TFT_GREEN);
+  widgetThrottle->setForegroundColour(TFT_BLACK);
   widgetThrottle->setPosition(WidgetPos::TOP_RIGHT, WidgetSize::Normal);
   widgetThrottle->draw(&tft, controller_packet.throttle, "THR");
 
