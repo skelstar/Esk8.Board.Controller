@@ -63,7 +63,7 @@ State disp_state_disconnected(
 State disp_state_stopped_screen(
     [] {
       print_disp_state("...disp_state_stopped_screen", eventToString(lastDispEvent));
-      screen_with_stats();
+      screenWithWidgets(/*connected*/ true);
       showOption = Options::NONE;
     },
     NULL, NULL);
@@ -71,8 +71,7 @@ State disp_state_stopped_screen(
 State disp_state_moving_screen(
     [] {
       print_disp_state("...disp_state_moving_screen");
-      screen_moving();
-      // screen_with_stats();
+      screenWithWidgets(/*connected*/ true);
     },
     NULL, NULL);
 //---------------------------------------------------------------
@@ -156,6 +155,7 @@ void add_disp_state_transitions()
 
   // main - stopped
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_REFRESH, NULL);
+  display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_THROTTLE_CHANGED, NULL);
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, NULL);
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_UPDATE, NULL);
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_BD_RSTS_CHANGED, NULL);
@@ -173,23 +173,11 @@ void add_disp_state_transitions()
 
   // option
   display_state.add_timed_transition(&disp_state_options, &disp_state_stopped_screen, OPTION_SCREEN_TIMEOUT, NULL);
-  // display_state.add_transition(&disp_state_options, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, moveToNextMenuItem);
   display_state.add_transition(&disp_state_options, &disp_state_options_cycled, DISP_EV_MENU_BUTTON_DOUBLE_CLICKED, NULL);
-  // display_state.add_transition(&disp_state_options, &disp_state_option_selected, DISP_EV_MENU_BUTTON_DOUBLE_CLICKED, NULL);
 
   // disp_state_options_cycled
-  // display_state.add_transition(&disp_state_options, &disp_state_options_cycled, DISP_EV_MENU_BUTTON_CLICKED, NULL);
   display_state.add_transition(&disp_state_options_cycled, &disp_state_options_cycled, DISP_EV_MENU_BUTTON_CLICKED, NULL);
   display_state.add_transition(&disp_state_options_cycled, &disp_state_option_selected, DISP_EV_MENU_BUTTON_DOUBLE_CLICKED, NULL);
-
-  // disp_state_options_changed_dn
-  // display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, moveToNextMenuItem);
-  // display_state.add_transition(&disp_state_options, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
-  // display_state.add_transition(&disp_state_options_changed_dn, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
-  // display_state.add_transition(&disp_state_options_changed_up, &disp_state_options_changed_dn, DISP_EV_ENCODER_DN, NULL);
-
-  // disp_state_selected_option
-  // display_state.add_transition(&disp_state_options_changed_dn, &disp_state_option_selected, DISP_EV_OPTION_SELECT_VALUE, NULL);
 
   // option 1 selected
   display_state.add_timed_transition(&disp_state_option_selected, &disp_state_stopped_screen, OPTION_SELECTED_TIMEOUT, NULL);

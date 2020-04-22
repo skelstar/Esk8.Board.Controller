@@ -60,7 +60,7 @@ TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 class Stats
 {
 public:
-  unsigned long total_failed_sending;
+  uint16_t total_failed_sending;
   unsigned long consecutive_resps;
   RESET_REASON reset_reason_core0;
   RESET_REASON reset_reason_core1;

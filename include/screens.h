@@ -1,6 +1,8 @@
 #include <ChunkyDigit.h>
 #include <math.h>
 
+#include <WidgetClass.h>
+
 #ifndef TFT_H
 #include <tft.h>
 #endif
@@ -49,6 +51,46 @@ void screen_with_stats(bool connected = true)
     sprintf(buff3_2, "us:%d", board_packet.unsuccessfulSends);
     lcd_message(buff3_2, LINE_3, Aligned::ALIGNED_RIGHT, getStatus(board_packet.unsuccessfulSends, 0, 1, 2));
   }
+}
+//-----------------------------------------------------
+
+void screenWithWidgets(bool connected = true)
+{
+  tft.fillScreen(connected ? TFT_BLUE : TFT_RED);
+
+  WidgetClass<uint8_t> *widgetRsts = new WidgetClass<uint8_t>();
+  widgetRsts->setPosition(WidgetPos::TOP_LEFT, WidgetSize::Normal);
+  widgetRsts->setStatusLevels(1, 1);
+  widgetRsts->draw(&tft, stats.boardResets, "RSTS");
+
+  WidgetClass<uint16_t> *widgetFail = new WidgetClass<uint16_t>();
+  widgetFail->setPosition(WidgetPos::TOP_CENTRE, WidgetSize::Normal);
+  widgetFail->setStatusLevels(2, 5);
+  widgetFail->draw(&tft, stats.total_failed_sending, "FAIL");
+
+  WidgetClass<uint16_t> *widgetThrottle = new WidgetClass<uint16_t>(TFT_DARKGREEN);
+  widgetThrottle->setPosition(WidgetPos::TOP_RIGHT, WidgetSize::Normal);
+  widgetThrottle->draw(&tft, controller_packet.throttle, "THR");
+
+  if (board_packet.missedPackets > 0)
+  {
+    WidgetClass<uint16_t> *widgetMissed = new WidgetClass<uint16_t>();
+    widgetMissed->setPosition(WidgetPos::BOTTOM_LEFT, WidgetSize::Normal);
+    widgetMissed->setStatusLevels(1, 3);
+    widgetMissed->draw(&tft, board_packet.missedPackets, "MISSED");
+  }
+  if (board_packet.unsuccessfulSends > 0)
+  {
+    WidgetClass<uint16_t> *widgetUnsuccessful = new WidgetClass<uint16_t>();
+    widgetUnsuccessful->setPosition(WidgetPos::BOTTOM_CENTRE, WidgetSize::Normal);
+    widgetUnsuccessful->setStatusLevels(1, 3);
+    widgetUnsuccessful->draw(&tft, board_packet.unsuccessfulSends, "SENDS");
+  }
+  // battery
+  WidgetClass<float> *widgetVolts = new WidgetClass<float>();
+  widgetVolts->setPosition(WidgetPos::BOTTOM_RIGHT, WidgetSize::Normal);
+  widgetVolts->setStatusLevels(/*warn*/ 37.4, /*crit*/ 35.0, /*swapped*/ true);
+  widgetVolts->draw(&tft, board_packet.batteryVoltage, "BATT");
 }
 //-----------------------------------------------------
 
