@@ -8,20 +8,12 @@ public:
     _pin = pin;
     pinMode(pin, INPUT);
     _oldMapped = 127;
-    _state = NORMAL;
   }
 
   uint8_t get(bool accelEnabled)
   {
     _raw = _getRaw();
     uint8_t mapped = getMappedFromRaw();
-
-#ifdef THROTTLE_PROTECTION
-    if (throttleIsDangerous(mapped))
-    {
-      return 127;
-    }
-#endif
 
 #ifdef PRINT_THROTTLE
     DEBUGVAL(_raw, mapped);
@@ -31,14 +23,6 @@ public:
   }
 
 private:
-  enum State
-  {
-    NORMAL,
-    DANGEROUS_THROTTLE,
-  };
-
-  State _state;
-
   uint8_t _pin;
   uint16_t _raw;
   uint8_t _oldMapped;
@@ -76,37 +60,5 @@ private:
       return map(_raw, centreHigh, _max, 128, 255);
     }
     return 127;
-  }
-
-  bool throttleIsDangerous(uint8_t mapped)
-  {
-    uint8_t diff = abs(_oldMapped - mapped);
-    bool dangerousAccel = _oldMapped < mapped &&
-                          mapped > 128 &&
-                          diff > THROTTLE_PROTECTION;
-    bool dangerousBraking = _oldMapped > mapped &&
-                            mapped < 127 &&
-                            diff > THROTTLE_PROTECTION;
-
-    switch (_state)
-    {
-    case NORMAL:
-      if (dangerousAccel || dangerousBraking)
-      {
-        DEBUGVAL("-> DANGEROUS_THROTTLE", _oldMapped, mapped);
-        _state = DANGEROUS_THROTTLE;
-        return true;
-      }
-      break;
-    case DANGEROUS_THROTTLE:
-      if (getMappedFromRaw() == 127)
-      {
-        DEBUGVAL("-> NORMAL", _oldMapped, mapped);
-        _oldMapped = mapped;
-        _state = NORMAL;
-      }
-      return true;
-    }
-    return false;
   }
 };
