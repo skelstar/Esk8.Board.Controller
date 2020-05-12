@@ -75,6 +75,17 @@ State disp_state_moving_screen(
     },
     NULL, NULL);
 //---------------------------------------------------------------
+void initWidgetsDisplay()
+{
+  tft.fillScreen(TFT_BLUE);
+  widgetRsts->reset();
+  widgetFail->reset();
+  widgetThrottle->reset();
+  widgetMissed->reset();
+  widgetUnsuccessful->reset();
+  widgetVolts->reset();
+}
+//---------------------------------------------------------------
 State disp_state_options(
     [] {
       print_disp_state("...disp_state_options");
@@ -146,8 +157,8 @@ Fsm display_state(&disp_state_searching);
 void add_disp_state_transitions()
 {
   // searcing
-  display_state.add_transition(&disp_state_searching, &disp_state_stopped_screen, DISP_EV_CONNECTED, NULL);
-  display_state.add_transition(&disp_state_disconnected, &disp_state_stopped_screen, DISP_EV_CONNECTED, NULL);
+  display_state.add_transition(&disp_state_searching, &disp_state_stopped_screen, DISP_EV_CONNECTED, initWidgetsDisplay);
+  display_state.add_transition(&disp_state_disconnected, &disp_state_stopped_screen, DISP_EV_CONNECTED, initWidgetsDisplay);
   // disconnected
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
   display_state.add_transition(&disp_state_moving_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
@@ -156,7 +167,7 @@ void add_disp_state_transitions()
   // main - stopped
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_REFRESH, NULL);
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_THROTTLE_CHANGED, NULL);
-  display_state.add_transition(&disp_state_stopped_screen, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, NULL);
+  display_state.add_transition(&disp_state_stopped_screen, &disp_state_options, DISP_EV_MENU_BUTTON_CLICKED, initWidgetsDisplay);
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_UPDATE, NULL);
   display_state.add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_BD_RSTS_CHANGED, NULL);
 

@@ -54,44 +54,45 @@ void screen_with_stats(bool connected = true)
 }
 //-----------------------------------------------------
 
+WidgetClass<uint8_t> *widgetRsts;
+WidgetClass<uint16_t> *widgetFail;
+WidgetClass<uint16_t> *widgetThrottle;
+WidgetClass<uint16_t> *widgetMissed;
+WidgetClass<uint16_t> *widgetUnsuccessful;
+WidgetClass<float> *widgetVolts;
+
+void initWidgets()
+{
+  widgetRsts = new WidgetClass<uint8_t>(WidgetPos::TOP_LEFT, WidgetSize::Normal);
+  widgetRsts->setStatusLevels(1, 1);
+  widgetRsts->setOnlyShowNonZero(true);
+
+  widgetFail = new WidgetClass<uint16_t>(WidgetPos::TOP_CENTRE, WidgetSize::Normal);
+  widgetFail->setStatusLevels(2, 5);
+  widgetFail->setOnlyShowNonZero(true);
+
+  widgetThrottle = new WidgetClass<uint16_t>(WidgetPos::TOP_RIGHT, WidgetSize::Normal, TFT_GREEN, TFT_BLACK);
+
+  widgetMissed = new WidgetClass<uint16_t>(WidgetPos::BOTTOM_LEFT, WidgetSize::Normal);
+  widgetMissed->setStatusLevels(1, 3);
+  widgetMissed->setOnlyShowNonZero(true);
+
+  widgetUnsuccessful = new WidgetClass<uint16_t>(WidgetPos::BOTTOM_CENTRE, WidgetSize::Normal);
+  widgetUnsuccessful->setStatusLevels(1, 3);
+  widgetUnsuccessful->setOnlyShowNonZero(true);
+
+  widgetVolts = new WidgetClass<float>(WidgetPos::BOTTOM_RIGHT, WidgetSize::Normal);
+  widgetVolts->setStatusLevels(/*warn*/ 37.4, /*crit*/ 35.0, /*swapped*/ true);
+}
+
 void screenWithWidgets(bool connected = true)
 {
-  tft.fillScreen(connected ? TFT_BLUE : TFT_RED);
-
-  WidgetClass<uint8_t> *widgetRsts = new WidgetClass<uint8_t>();
-  widgetRsts->setPosition(WidgetPos::TOP_LEFT, WidgetSize::Normal);
-  widgetRsts->setStatusLevels(1, 1);
-  widgetRsts->draw(&tft, stats.boardResets, "RSTS");
-
-  WidgetClass<uint16_t> *widgetFail = new WidgetClass<uint16_t>();
-  widgetFail->setPosition(WidgetPos::TOP_CENTRE, WidgetSize::Normal);
-  widgetFail->setStatusLevels(2, 5);
-  widgetFail->draw(&tft, stats.total_failed_sending, "FAIL");
-
-  WidgetClass<uint16_t> *widgetThrottle = new WidgetClass<uint16_t>(TFT_GREEN);
-  widgetThrottle->setForegroundColour(TFT_BLACK);
-  widgetThrottle->setPosition(WidgetPos::TOP_RIGHT, WidgetSize::Normal);
-  widgetThrottle->draw(&tft, controller_packet.throttle, "THR");
-
-  if (board_packet.missedPackets > 0)
-  {
-    WidgetClass<uint16_t> *widgetMissed = new WidgetClass<uint16_t>();
-    widgetMissed->setPosition(WidgetPos::BOTTOM_LEFT, WidgetSize::Normal);
-    widgetMissed->setStatusLevels(1, 3);
-    widgetMissed->draw(&tft, board_packet.missedPackets, "MISSED");
-  }
-  if (board_packet.unsuccessfulSends > 0)
-  {
-    WidgetClass<uint16_t> *widgetUnsuccessful = new WidgetClass<uint16_t>();
-    widgetUnsuccessful->setPosition(WidgetPos::BOTTOM_CENTRE, WidgetSize::Normal);
-    widgetUnsuccessful->setStatusLevels(1, 3);
-    widgetUnsuccessful->draw(&tft, board_packet.unsuccessfulSends, "SENDS");
-  }
-  // battery
-  WidgetClass<float> *widgetVolts = new WidgetClass<float>();
-  widgetVolts->setPosition(WidgetPos::BOTTOM_RIGHT, WidgetSize::Normal);
-  widgetVolts->setStatusLevels(/*warn*/ 37.4, /*crit*/ 35.0, /*swapped*/ true);
-  widgetVolts->draw(&tft, board_packet.batteryVoltage, "BATT");
+  widgetRsts->draw(stats.boardResets, "RSTS");
+  widgetFail->draw(stats.total_failed_sending, "FAIL");
+  widgetThrottle->draw(controller_packet.throttle, "THR");
+  widgetMissed->draw(board_packet.missedPackets, "MISSED");
+  widgetUnsuccessful->draw(board_packet.unsuccessfulSends, "SENDS");
+  widgetVolts->draw(board_packet.batteryVoltage, "BATT");
 }
 //-----------------------------------------------------
 

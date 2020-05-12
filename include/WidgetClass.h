@@ -25,28 +25,19 @@ template <typename T>
 class WidgetClass
 {
 public:
-  WidgetClass()
-  {
-    tft.setTextColor(TFT_WHITE);
-  }
-
-  WidgetClass(uint32_t bgColour, uint32_t fgColour = TFT_WHITE)
+  WidgetClass(WidgetPos pos, WidgetSize size, uint32_t bgColour = TFT_BLUE, uint32_t fgColour = TFT_WHITE)
   {
     _bgColour = bgColour;
-    tft.setTextColor(fgColour);
+    _spr.setTextColor(fgColour);
+    _spr.setTextFont(1);
+    _setPosition(pos, size);
+    _spr.fillScreen(bgColour);
   }
 
-  WidgetClass(uint8_t x,
-              uint8_t y,
-              WidgetSize size,
-              uint32_t bgColour,
-              uint32_t fgColour = TFT_WHITE)
+  void reset()
   {
-    _x = x;
-    _y = y;
-    _width = size == Wide ? (LCD_WIDTH / 3) * 2 : LCD_WIDTH / 2;
-    _height = LCD_HEIGHT / 2;
-    tft.setTextColor(fgColour);
+    _first = true;
+    DEBUG("reset()");
   }
 
   void setStatusLevels(T warn, T crit, bool statusDirectionSwapped = false)
@@ -57,7 +48,78 @@ public:
     _levelsSet = true;
   }
 
-  void setPosition(WidgetPos pos, WidgetSize size)
+  void setOnlyShowNonZero(bool show)
+  {
+    _showOnlyNonZero = show;
+  }
+
+  //--------------------------------------------------------------------------------
+
+  void setForegroundColour(uint32_t colour)
+  {
+    _spr.setTextColor(colour);
+  }
+  //--------------------------------------------------------------------------------
+
+  void setBackgroundColour(uint32_t colour)
+  {
+    _bgColour = colour;
+  }
+  //--------------------------------------------------------------------------------
+
+  void draw(T number, const char *title, bool border = false)
+  {
+    if (number != _lastValue || _first)
+    {
+      if (_showOnlyNonZero && number == 0)
+      {
+        // clear widget
+        _spr.fillScreen(TFT_BLUE);
+        _spr.pushSprite(_x, _y);
+      }
+      else
+      {
+        _first = false; // force displaying first time
+        _spr.fillScreen(_bgColour);
+        _spr.setTextFont(1);
+
+        _spr.setTextDatum(TC_DATUM);
+        _spr.setTextSize(3);
+        if (std::is_same<T, float>::value)
+        {
+          _spr.drawFloat(number, 1, _width / 2, 12);
+        }
+        else
+        {
+          _spr.drawNumber(number, _width / 2, 12);
+        }
+
+        _spr.setTextDatum(BC_DATUM);
+        _spr.setTextSize(2);
+        _spr.drawString(title, _width / 2, _height - 6);
+        _spr.pushSprite(_x, _y);
+      }
+    }
+    else
+    {
+      DEBUGVAL(title, number, _lastValue, _first);
+    }
+    _lastValue = number;
+  }
+  //--------------------------------------------------------------------------------
+
+private:
+  MessageStatus _getStatusLevel(T val)
+  {
+    bool swapped = _statusDirSwapped;
+    return ((val >= _crit && !swapped) || (val <= _crit && swapped))
+               ? CRITICAL
+               : ((val >= _warn && !swapped) || (val <= _warn && swapped))
+                     ? WARNING
+                     : OKAY;
+  }
+
+  void _setPosition(WidgetPos pos, WidgetSize size)
   {
     switch (pos)
     {
@@ -80,64 +142,13 @@ public:
 
     _width = size == Wide ? (LCD_WIDTH / 3) * 2 : LCD_WIDTH / 3;
     _height = LCD_HEIGHT / 2;
-  }
-
-  void setForegroundColour(uint32_t colour)
-  {
-    tft.setTextColor(colour);
-  }
-
-  void setBackgroundColour(uint32_t colour)
-  {
-    _bgColour = colour;
-  }
-
-  void draw(TFT_eSPI *tft, T number, const char *title, bool border = false)
-  {
-    if (_levelsSet)
-    {
-      tft->fillRect(_x, _y, _width, _height, status_colours[_getStatusLevel(number)]);
-    }
-    else if (_bgColour != 0)
-    {
-      tft->fillRect(_x, _y, _width, _height, _bgColour);
-    }
-
-    if (border)
-    {
-      tft->drawRect(_x, _y, _width, _height, TFT_WHITE);
-    }
-
-    tft->setTextDatum(TC_DATUM);
-    tft->setTextSize(3);
-    if (std::is_same<T, float>::value)
-    {
-      tft->drawFloat(number, 1, _x + (_width / 2), _y + 10);
-    }
-    else
-    {
-      tft->drawNumber(number, _x + (_width / 2), _y + 10);
-    }
-
-    tft->setTextDatum(BC_DATUM);
-    tft->setTextSize(2);
-    tft->drawString(title, _x + (_width / 2), _y + _height - 6);
-  }
-
-private:
-  MessageStatus _getStatusLevel(T val)
-  {
-    bool swapped = _statusDirSwapped;
-    return ((val >= _crit && !swapped) || (val <= _crit && swapped))
-               ? CRITICAL
-               : ((val >= _warn && !swapped) || (val <= _warn && swapped))
-                     ? WARNING
-                     : OKAY;
+    _spr.createSprite(_width, _height);
   }
 
   uint8_t _pixelWidth, _spacing;
   uint8_t _x, _y, _width, _height;
   uint32_t _bgColour;
-  bool _levelsSet = false, _statusDirSwapped = false;
-  T _warn = 0, _crit = 0;
+  bool _levelsSet = false, _statusDirSwapped = false, _first = true, _showOnlyNonZero = false;
+  T _warn = 0, _crit = 0, _lastValue;
+  TFT_eSprite _spr = TFT_eSprite(&tft);
 };

@@ -11,6 +11,8 @@ void display_task_0(void *pvParameters)
 
   Serial.printf("display_task_0 running on core %d\n", xPortGetCoreID());
 
+  initWidgets();
+
   display_state.run_machine();
 
   display_task_initialised = true;
