@@ -7,17 +7,22 @@
 class OptionValue
 {
 public:
-  OptionValue(int16_t min, int16_t max, int16_t current, uint8_t step)
+  OptionValue(int16_t min, int16_t max, int16_t current, uint8_t step, bool wrap = false)
   {
     _min = min;
     _max = max;
     _current = current;
     _step = step;
+    _wrap = wrap;
   }
 
   void up()
   {
     _current += _step;
+    if (_wrap && _current > _max)
+    {
+      _current = _min;
+    }
     _current = constrain(_current, _min, _max);
   }
 
@@ -42,4 +47,5 @@ public:
 private:
   int16_t _min, _max, _current;
   uint8_t _step;
+  bool _wrap;
 };

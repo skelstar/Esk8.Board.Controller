@@ -1,6 +1,8 @@
 #include <ChunkyDigit.h>
 #include <math.h>
 
+#include <WidgetClass.h>
+
 #ifndef TFT_H
 #include <tft.h>
 #endif
@@ -22,36 +24,75 @@ void screen_searching()
   // send interval
   tft.drawString("interval: ", 10, 40);
   tft.drawNumber(SEND_TO_BOARD_INTERVAL, tft.textWidth("interval: ") + 10, 40);
-
-  uint8_t y = 70;
-  char buff[30];
-  sprintf(buff, "enc: -%d->%d", config.brakeCounts, config.accelCounts);
-  tft.drawString(buff, 10, y);
 }
 //-----------------------------------------------------
 
 void screen_with_stats(bool connected = true)
 {
-  tft.fillScreen(TFT_BLUE);
+  uint32_t bgColour = connected ? TFT_BLUE : TFT_RED;
+  tft.fillScreen(bgColour);
+  // battery
+  drawSmallBattery(remote_battery_percent, LCD_WIDTH - MARGIN, 0 + MARGIN, TR_DATUM);
   // line 1
   char buff1[20];
-  sprintf(buff1, "rsts: %d", stats.soft_resets);
-  lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, getStatus(stats.soft_resets, 0, 1, 1));
+  sprintf(buff1, "bd rsts: %d", stats.boardResets);
+  lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, getStatus(stats.boardResets, 0, 1, 1));
   // line 2
   char buff2[20];
-  sprintf(buff2, "total f: %lu", stats.total_failed);
-  lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, getStatus(stats.total_failed, 0, 1, 2));
+  sprintf(buff2, "failed tx: %lu", stats.total_failed_sending);
+  lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, getStatus(stats.total_failed_sending, 0, 1, 2));
   // line 3
-  char buff[30];
-  sprintf(buff, "enc: -%d->%d", config.brakeCounts, config.accelCounts);
-  lcd_message(buff, LINE_3, Aligned::ALIGNED_LEFT);
-
-  drawSmallBattery(remote_battery_percent, LCD_WIDTH - MARGIN, 0 + MARGIN, TR_DATUM);
-
-  if (!connected)
+  if (board_packet.missedPackets > 0 || board_packet.unsuccessfulSends > 0)
   {
-    tft.drawRect(0, 0, LCD_WIDTH, LCD_HEIGHT, TFT_RED);
+    char buff3_1[12];
+    sprintf(buff3_1, "bd ms:%d", board_packet.missedPackets);
+    lcd_message(buff3_1, LINE_3, Aligned::ALIGNED_LEFT, getStatus(board_packet.missedPackets, 0, 1, 2));
+    char buff3_2[12];
+    sprintf(buff3_2, "us:%d", board_packet.unsuccessfulSends);
+    lcd_message(buff3_2, LINE_3, Aligned::ALIGNED_RIGHT, getStatus(board_packet.unsuccessfulSends, 0, 1, 2));
   }
+}
+//-----------------------------------------------------
+
+WidgetClass<uint8_t> *widgetRsts;
+WidgetClass<uint16_t> *widgetFail;
+WidgetClass<uint16_t> *widgetThrottle;
+WidgetClass<uint16_t> *widgetMissed;
+WidgetClass<uint16_t> *widgetUnsuccessful;
+WidgetClass<float> *widgetVolts;
+
+void initWidgets()
+{
+  widgetRsts = new WidgetClass<uint8_t>(WidgetPos::TOP_LEFT, WidgetSize::Normal);
+  widgetRsts->setStatusLevels(1, 1);
+  widgetRsts->setOnlyShowNonZero(true);
+
+  widgetFail = new WidgetClass<uint16_t>(WidgetPos::TOP_CENTRE, WidgetSize::Normal);
+  widgetFail->setStatusLevels(2, 5);
+  widgetFail->setOnlyShowNonZero(true);
+
+  widgetThrottle = new WidgetClass<uint16_t>(WidgetPos::TOP_RIGHT, WidgetSize::Normal, TFT_GREEN, TFT_BLACK);
+
+  widgetMissed = new WidgetClass<uint16_t>(WidgetPos::BOTTOM_LEFT, WidgetSize::Normal);
+  widgetMissed->setStatusLevels(1, 3);
+  widgetMissed->setOnlyShowNonZero(true);
+
+  widgetUnsuccessful = new WidgetClass<uint16_t>(WidgetPos::BOTTOM_CENTRE, WidgetSize::Normal);
+  widgetUnsuccessful->setStatusLevels(1, 3);
+  widgetUnsuccessful->setOnlyShowNonZero(true);
+
+  widgetVolts = new WidgetClass<float>(WidgetPos::BOTTOM_RIGHT, WidgetSize::Normal);
+  widgetVolts->setStatusLevels(/*warn*/ 37.4, /*crit*/ 35.0, /*swapped*/ true);
+}
+
+void screenWithWidgets(bool connected = true)
+{
+  widgetRsts->draw(stats.boardResets, "RSTS");
+  widgetFail->draw(stats.total_failed_sending, "FAIL");
+  widgetThrottle->draw(controller_packet.throttle, "THR");
+  widgetMissed->draw(board_packet.missedPackets, "MISSED");
+  widgetUnsuccessful->draw(board_packet.unsuccessfulSends, "SENDS");
+  widgetVolts->draw(board_packet.batteryVoltage, "BATT");
 }
 //-----------------------------------------------------
 

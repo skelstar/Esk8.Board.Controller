@@ -60,11 +60,12 @@ TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 class Stats
 {
 public:
-  unsigned long total_failed;
+  uint16_t total_failed_sending;
   unsigned long consecutive_resps;
   RESET_REASON reset_reason_core0;
   RESET_REASON reset_reason_core1;
   uint16_t soft_resets = 0;
+  uint8_t boardResets = 0;
 } stats;
 
 #define STORE_STATS "stats"
@@ -73,14 +74,13 @@ Preferences statsStore;
 
 elapsedMillis
     since_sent_to_board,
+    sinceLastBoardPacket,
     since_read_trigger;
 
 uint16_t remote_battery_percent = 0;
 bool display_task_initialised = false;
 bool display_task_showing_option_screen = false;
 int oldCounter = 0;
-
-#define SMOOTH_OVER_MILLIS 2000
 
 //------------------------------------------------------------
 
@@ -95,7 +95,7 @@ enum DispStateEvent
   DISP_EV_CONNECTED,
   DISP_EV_DISCONNECTED,
   DISP_EV_MENU_BUTTON_CLICKED,
-  DISP_EV_MENU_OPTION_SELECT,
+  DISP_EV_MENU_BUTTON_DOUBLE_CLICKED,
   DISP_EV_REFRESH,
   DISP_EV_STOPPED,
   DISP_EV_MOVING,
@@ -103,6 +103,8 @@ enum DispStateEvent
   DISP_EV_ENCODER_DN,
   DISP_EV_OPTION_SELECT_VALUE,
   DISP_EV_UPDATE,
+  DISP_EV_THROTTLE_CHANGED,
+  DISP_EV_BD_RSTS_CHANGED,
 };
 
 // menu_system - prototypes
@@ -110,18 +112,13 @@ void send_to_display_event_queue(DispStateEvent ev);
 
 //------------------------------------------------------------------
 
-#include <EncoderThrottleLib.h>
-
-EncoderThrottleLib throttle;
-
 #define ENCODER_BRAKE_COUNTS 20
 #define ENCODER_ACCEL_COUNTS 20
 
 class Config
 {
 public:
-  uint8_t accelCounts = ENCODER_ACCEL_COUNTS;
-  uint8_t brakeCounts = ENCODER_BRAKE_COUNTS;
+  uint8_t headlightMode;
 } config;
 
 #define STORE_CONFIG "config"
@@ -131,26 +128,25 @@ Preferences configStore;
 
 #include <throttle.h>
 
+ThrottleClass throttle;
+
 //---------------------------------------------------------------
 
 #include <Button2.h>
-
-#define BUTTON_35 35
-Button2 button35(BUTTON_35);
 
 #include <utils.h>
 #include <OptionValue.h>
 #include <screens.h>
 #include <menu_options.h>
 #include <menu_system.h>
-#include <comms_connected_state.h>
 
 #include <display_task_0.h>
+#include <comms_connected_state.h>
+
 #include <nrf_comms.h>
 
 #include <features/battery_measure.h>
 #include <peripherals.h>
-// #include <flashingNeopixel.h>
 
 //---------------------------------------------------------------
 
@@ -165,8 +161,6 @@ void setup()
   stats.reset_reason_core1 = rtc_get_reset_reason(1);
 
   configStore.begin(STORE_CONFIG, false);
-  config.accelCounts = configStore.getUInt(STORE_CONFIG_ACCEL_COUNTS, ENCODER_ACCEL_COUNTS);
-  config.brakeCounts = configStore.getUInt(STORE_CONFIG_BRAKE_COUNTS, ENCODER_BRAKE_COUNTS);
 
   Serial.printf("CPU0 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core0));
   Serial.printf("CPU1 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core1));
@@ -189,27 +183,27 @@ void setup()
 
   print_build_status();
 
-  init_throttle();
+  throttle.init(/*pin*/ 27);
 
+#ifdef FEATURE_ENDLIGHT
   endLight.init(&endLights);
   endLight.toggle();
   vTaskDelay(10);
   endLight.toggle();
+#endif
 
   vTaskDelay(100);
 
   // core 0
   xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
   xTaskCreatePinnedToCore(commsStateTask_0, "commsStateTask_0", 10000, NULL, /*priority*/ 2, NULL, 0);
-  // xTaskCreatePinnedToCore(flasher_task_0, "flasher_task_0", 10000, NULL, /*priority*/ 2, NULL, 0);
   xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
 
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
-  xCommsStateEventQueue = xQueueCreate(3, sizeof(uint8_t));
+  xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xEndLightEventQueue = xQueueCreate(1, sizeof(uint8_t));
 
-  button0_init();
-  button35_init();
+  menuButton_init();
 
 #ifdef FEATURE_USE_DEADMAN
   deadman_init();
@@ -233,16 +227,7 @@ uint8_t old_throttle;
 
 void loop()
 {
-  if (display_task_showing_option_screen)
-  {
-    int8_t counter = throttle.getCounter();
-    if (oldCounter != counter)
-    {
-      send_to_display_event_queue(oldCounter < counter ? DISP_EV_ENCODER_UP : DISP_EV_ENCODER_DN);
-      oldCounter = counter;
-    }
-  }
-  else if (since_read_trigger > READ_TRIGGER_PERIOD)
+  if (since_read_trigger > READ_TRIGGER_PERIOD)
   {
     since_read_trigger = 0;
 
@@ -254,12 +239,8 @@ void loop()
     controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
     if (old_throttle != controller_packet.throttle)
     {
+      send_to_display_event_queue(DISP_EV_THROTTLE_CHANGED);
       old_throttle = controller_packet.throttle;
-      send_to_display_event_queue(DISP_EV_UPDATE);
-      // updateStatusPixel();
-#ifdef PRINT_THROTTLE
-      DEBUGVAL(controller_packet.throttle);
-#endif
     }
   }
 
@@ -278,11 +259,18 @@ void loop()
     }
   }
 
+  if (boardTimedOut() && currentCommsState == ST_COMMS_CONNECTED)
+  {
+    sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
+  }
+
   nrf24.update();
 
-  button0.loop();
-  button35.loop();
+  menuButton.loop();
+
+#ifdef FEATURE_ENDLIGHT
   endLight.loop();
+#endif
 
 #ifdef FEATURE_USE_DEADMAN
   deadman.loop();

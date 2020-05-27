@@ -1,48 +1,64 @@
 
 
-void encoderButtonPushed(i2cEncoderLibV2 *obj)
+class ThrottleClass
 {
-  DEBUG("Encoder button pushed");
-  throttle.clear();
-  send_to_display_event_queue(DISP_EV_OPTION_SELECT_VALUE);
-}
-
-void encoderButtonDoublePushed(i2cEncoderLibV2 *obj)
-{
-  uint8_t e = (uint8_t)1;
-  xQueueSendToBack(xEndLightEventQueue, &e, (TickType_t)1);
-
-  DEBUG("Encoder button double-pushed");
-}
-
-void init_throttle()
-{
-  Wire.begin();
-  throttle.init(
-      encoderButtonPushed,
-      encoderButtonDoublePushed,
-      /*min counts*/ -ENCODER_BRAKE_COUNTS,
-      /*max counts*/ ENCODER_ACCEL_COUNTS);
-
-  throttle.setSmoothBufferLengths(/*brake*/ 3, /*accel*/ 3);
-  throttle.setMap(LINEAR);
-}
-
-void updateStatusPixel()
-{
-  if (controller_packet.throttle == 0)
+public:
+  void init(int pin)
   {
+    _pin = pin;
+    pinMode(pin, INPUT);
+    _oldMapped = 127;
   }
-  else if (controller_packet.throttle < 127)
+
+  uint8_t get(bool accelEnabled)
   {
+    _raw = _getRaw();
+    uint8_t mapped = getMappedFromRaw();
+
+#ifdef PRINT_THROTTLE
+    DEBUGVAL(_raw, mapped);
+#endif
+    _oldMapped = mapped;
+    return mapped;
   }
-  else if (controller_packet.throttle == 255)
+
+private:
+  uint8_t _pin;
+  uint16_t _raw;
+  uint8_t _oldMapped;
+  uint16_t _centre = 1946, _min = 240, _max = 4095;
+  uint16_t _deadband = 50;
+
+  uint16_t _getRaw()
   {
+    return analogRead(_pin);
   }
-  else if (controller_packet.throttle > 127)
+
+  uint8_t getMappedFromRaw()
   {
+    if (_raw > _max)
+    {
+      _max = _raw;
+    }
+    if (_raw < _min)
+    {
+      _min = _raw;
+    }
+
+    uint16_t centreLow = _centre - _deadband;
+    uint16_t centreHigh = _centre + _deadband;
+
+    bool braking = _raw < centreLow;
+    bool acceling = _raw > centreHigh;
+
+    if (braking)
+    {
+      return map(_raw, _min, centreLow, 0, 127);
+    }
+    else if (acceling)
+    {
+      return map(_raw, centreHigh, _max, 128, 255);
+    }
+    return 127;
   }
-  else
-  {
-  }
-}
+};
