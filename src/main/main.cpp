@@ -85,7 +85,6 @@ int oldCounter = 0;
 
 xQueueHandle xDisplayChangeEventQueue;
 xQueueHandle xCommsStateEventQueue;
-xQueueHandle xEndLightEventQueue;
 
 //------------------------------------------------------------------
 enum DispStateEvent
@@ -189,13 +188,34 @@ void setup()
   vTaskDelay(100);
 
   // core 0
-  xTaskCreatePinnedToCore(display_task_0, "display_task_0", 10000, NULL, /*priority*/ 3, NULL, /*core*/ 0);
-  xTaskCreatePinnedToCore(commsStateTask_0, "commsStateTask_0", 10000, NULL, /*priority*/ 2, NULL, 0);
-  xTaskCreatePinnedToCore(batteryMeasureTask_0, "batteryMeasureTask_0", 10000, NULL, /*priority*/ 1, NULL, 0);
+  xTaskCreatePinnedToCore(
+      display_task_0,
+      "display_task_0",
+      10000,
+      NULL,
+      /*priority*/ 3,
+      NULL,
+      /*core*/ 0);
+  xTaskCreatePinnedToCore(
+      commsStateTask_0,
+      "commsStateTask_0",
+      10000,
+      NULL,
+      /*priority*/ 2,
+      NULL,
+      0);
+  xTaskCreatePinnedToCore(
+      batteryMeasureTask_0,
+      "batteryMeasureTask_0",
+      10000,
+      NULL,
+      /*priority*/
+      1,
+      NULL,
+      0);
 
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
-  xEndLightEventQueue = xQueueCreate(1, sizeof(uint8_t));
 
   while (!display_task_initialised)
   {
