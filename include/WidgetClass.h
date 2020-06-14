@@ -102,7 +102,7 @@ public:
     }
     else
     {
-      DEBUGVAL(title, number, _lastValue, _first);
+      // DEBUGVAL(title, number, _lastValue, _first);
     }
     _lastValue = number;
   }

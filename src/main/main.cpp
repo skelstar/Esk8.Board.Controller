@@ -25,7 +25,6 @@
 #include <NRF24L01Lib.h>
 
 #include <TFT_eSPI.h>
-#include <Wire.h>
 #include <Preferences.h>
 
 //------------------------------------------------------------------
@@ -185,12 +184,7 @@ void setup()
 
   throttle.init(/*pin*/ 27);
 
-#ifdef FEATURE_ENDLIGHT
-  endLight.init(&endLights);
-  endLight.toggle();
-  vTaskDelay(10);
-  endLight.toggle();
-#endif
+  primaryButtonInit();
 
   vTaskDelay(100);
 
@@ -202,18 +196,6 @@ void setup()
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xEndLightEventQueue = xQueueCreate(1, sizeof(uint8_t));
-
-  menuButton_init();
-
-#ifdef FEATURE_USE_DEADMAN
-  deadman_init();
-  // have to make sure that isPressed is up to date
-  while (deadman.isPressed() == true)
-  {
-    deadman.loop();
-    vTaskDelay(1);
-  }
-#endif
 
   while (!display_task_initialised)
   {
@@ -231,11 +213,12 @@ void loop()
   {
     since_read_trigger = 0;
 
-#ifdef FEATURE_USE_DEADMAN
-    bool accelEnabled = deadman.isPressed();
+#ifdef FEATURE_MOVING_TO_ENABLE
+    bool accelEnabled = board_packet.moving;
 #else
     bool accelEnabled = true;
 #endif
+
     controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
     if (old_throttle != controller_packet.throttle)
     {
@@ -255,6 +238,7 @@ void loop()
     }
     else
     {
+      controller_packet.cruise_control = primaryButton.isPressed();
       send_packet_to_board(CONTROL);
     }
   }
@@ -266,15 +250,7 @@ void loop()
 
   nrf24.update();
 
-  menuButton.loop();
-
-#ifdef FEATURE_ENDLIGHT
-  endLight.loop();
-#endif
-
-#ifdef FEATURE_USE_DEADMAN
-  deadman.loop();
-#endif
+  primaryButton.loop();
 
   vTaskDelay(1);
 }
