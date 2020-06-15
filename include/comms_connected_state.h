@@ -39,8 +39,7 @@ CommsStateEvent lastCommsEvent = EV_COMMS_NO_EVENT;
 State stateCommsSearching([] {
   printStateName("stateCommsSearching");
   currentCommsState = ST_COMMS_SEARCHING;
-},
-                          NULL, NULL);
+});
 
 State stateCommsConnected([] {
   if (false == skipOnEnter)
@@ -52,8 +51,7 @@ State stateCommsConnected([] {
     currentCommsState = ST_COMMS_CONNECTED;
   }
   skipOnEnter = false;
-},
-                          NULL, NULL);
+});
 
 State stateCommsDisconnected([] {
   if (false == skipOnEnter)
@@ -64,13 +62,13 @@ State stateCommsDisconnected([] {
     currentCommsState = ST_COMMS_DISCONNECTED;
   }
   skipOnEnter = false;
-},
-                             NULL, NULL);
+});
+//-----------------------------------------------------
 
 void handleBdResetEvent()
 {
   stats.boardResets++;
-  send_to_display_event_queue(DISP_EV_BD_RSTS_CHANGED);
+  send_to_display_event_queue(DISP_EV_UPDATE);
   skipOnEnter = true;
 }
 
@@ -79,11 +77,12 @@ Fsm commsFsm(&stateCommsSearching);
 //-----------------------------------------------------
 void addCommsStateTransitions()
 {
+  // EV_COMMS_PKT_RXD
   commsFsm.add_transition(&stateCommsSearching, &stateCommsConnected, EV_COMMS_PKT_RXD, NULL);
-  commsFsm.add_transition(&stateCommsConnected, &stateCommsDisconnected, EV_COMMS_BOARD_TIMEDOUT, NULL);
   commsFsm.add_transition(&stateCommsDisconnected, &stateCommsConnected, EV_COMMS_PKT_RXD, NULL);
 
-  commsFsm.add_transition(&stateCommsDisconnected, &stateCommsDisconnected, EV_COMMS_BOARD_TIMEDOUT, NULL);
+  // EV_COMMS_BOARD_TIMEDOUT
+  commsFsm.add_transition(&stateCommsConnected, &stateCommsDisconnected, EV_COMMS_BOARD_TIMEDOUT, NULL);
 
   // EV_COMMS_BD_RESET
   commsFsm.add_transition(&stateCommsConnected, &stateCommsConnected, EV_COMMS_BD_RESET, handleBdResetEvent);

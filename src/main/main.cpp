@@ -44,7 +44,6 @@ RF24Network network(radio);
 
 //------------------------------------------------------------------
 
-#define NUM_RETRIES 5
 #ifndef SEND_TO_BOARD_INTERVAL
 #define SEND_TO_BOARD_INTERVAL 200
 #endif
@@ -73,7 +72,8 @@ Preferences statsStore;
 
 elapsedMillis
     since_sent_to_board,
-    sinceLastBoardPacket,
+    sinceLastBoardPacketRx,
+    sinceSentRequest,
     since_read_trigger;
 
 uint16_t remote_battery_percent = 0;
@@ -92,17 +92,11 @@ enum DispStateEvent
   DISP_EV_NO_EVENT = 0,
   DISP_EV_CONNECTED,
   DISP_EV_DISCONNECTED,
-  DISP_EV_MENU_BUTTON_CLICKED,
-  DISP_EV_MENU_BUTTON_DOUBLE_CLICKED,
   DISP_EV_REFRESH,
   DISP_EV_STOPPED,
   DISP_EV_MOVING,
-  DISP_EV_ENCODER_UP,
-  DISP_EV_ENCODER_DN,
-  DISP_EV_OPTION_SELECT_VALUE,
   DISP_EV_UPDATE,
   DISP_EV_THROTTLE_CHANGED,
-  DISP_EV_BD_RSTS_CHANGED,
 };
 
 // menu_system - prototypes
@@ -177,7 +171,7 @@ void setup()
   }
   statsStore.end();
 
-  nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
+  nrf24.begin(&radio, &network, COMMS_CONTROLLER, packetAvailable_cb);
 
   print_build_status();
 
@@ -233,7 +227,7 @@ void loop()
   {
     since_read_trigger = 0;
 
-#ifdef FEATURE_MOVING_TO_ENABLE
+#ifdef PUSH_TO_START
     bool accelEnabled = board_packet.moving;
 #else
     bool accelEnabled = true;
@@ -254,16 +248,22 @@ void loop()
     if (comms_state_connected == false)
     {
       controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
-      send_packet_to_board(CONFIG);
+      bool success = sendConfigToBoard();
+      manageResponses(success);
     }
     else
     {
+#ifdef FEATURE_CRUISE_CONTROL
       controller_packet.cruise_control = primaryButton.isPressed();
-      send_packet_to_board(CONTROL);
+#else
+      controller_packet.cruise_control = false;
+#endif
+      bool success = sendPacketToBoard();
+      manageResponses(success);
     }
   }
 
-  if (boardTimedOut() && currentCommsState == ST_COMMS_CONNECTED)
+  if (boardTimedOut())
   {
     sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
   }

@@ -1,13 +1,13 @@
 
-void send_packet_to_board(PacketType packetType);
-void checkBoardPacketId();
-void manage_responses(bool success);
+bool sendConfigToBoard();
+bool sendPacketToBoard(PacketType packetType);
+void manageResponses(bool success);
 bool vescValuesChanged(VescData oldVals, VescData newVals);
 
 //------------------------------------------------------------------
-void packet_available_cb(uint16_t from_id, uint8_t type)
+void packetAvailable_cb(uint16_t from_id, uint8_t type)
 {
-  sinceLastBoardPacket = 0;
+  sinceLastBoardPacketRx = 0;
 
   old_board_packet = board_packet;
 
@@ -17,18 +17,25 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
 
   if (board_packet.reason == FIRST_PACKET)
   {
+    /*
+    - set controller_packet.id = 0
+    - send board reset event to commsState
+    - send CONFIG packet to board
+    */
     DEBUG("*** board's first packet!! ***");
     controller_packet.id = 0;
-
     sendToCommsEventStateQueue(EV_COMMS_BD_RESET);
-    send_packet_to_board(CONFIG);
+
+    bool success = sendConfigToBoard();
   }
   else if (old_board_packet.moving != board_packet.moving)
   {
+    // board is moving
     send_to_display_event_queue(board_packet.moving ? DISP_EV_MOVING : DISP_EV_STOPPED);
   }
   else if (vescValuesChanged(old_board_packet, board_packet))
   {
+    // important values have changed
     send_to_display_event_queue(DISP_EV_UPDATE);
   }
   else
@@ -38,78 +45,54 @@ void packet_available_cb(uint16_t from_id, uint8_t type)
 }
 //------------------------------------------------------------------
 
-elapsedMillis since_sent_request;
-
-void send_packet_to_board(PacketType packetType)
+bool sendConfigToBoard()
 {
-  bool success = false;
-  if (packetType == PacketType::CONTROL)
-  {
-    uint8_t bs[sizeof(ControllerData)];
-    memcpy(bs, &controller_packet, sizeof(ControllerData));
+  controller_config.id = controller_packet.id;
+  uint8_t bs[sizeof(ControllerConfig)];
+  memcpy(bs, &controller_config, sizeof(ControllerConfig));
 
-    success = nrf24.send_packet(/*to*/ COMMS_BOARD, /*type*/ packetType, bs, sizeof(ControllerData));
-    controller_packet.id++;
-  }
-  else if (packetType == PacketType::CONFIG)
+  bool success = nrf24.send_packet(/*to*/ COMMS_BOARD, PacketType::CONFIG, bs, sizeof(ControllerConfig));
+  if (success)
   {
-    controller_config.id = controller_packet.id;
-    uint8_t bs[sizeof(ControllerConfig)];
-    memcpy(bs, &controller_config, sizeof(ControllerConfig));
-
-    success = nrf24.send_packet(/*to*/ COMMS_BOARD, /*type*/ packetType, bs, sizeof(ControllerConfig));
-    // controller_packet.id++;
-  }
-  if (false == success)
-  {
-    manage_responses(false);
-  }
-}
-
-//------------------------------------------------------------------
-
-// checks board_packet.id
-void checkBoardPacketId()
-{
-  bool response_ok = board_packet.id == controller_packet.id - 1 ||
-                     board_packet.id == controller_config.id - 1;
-  if (response_ok)
-  {
-    stats.consecutive_resps++;
-    comms_session_started = stats.consecutive_resps > 3;
+    sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
   }
   else
   {
-    stats.consecutive_resps = 0;
-    DEBUGVAL(board_packet.id, controller_packet.id, controller_config.id);
+    sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
   }
-  manage_responses(response_ok);
+  // controller_packet.id++;
+  return success;
+}
+//------------------------------------------------------------------
+
+bool sendPacketToBoard()
+{
+  uint8_t bs[sizeof(ControllerData)];
+  memcpy(bs, &controller_packet, sizeof(ControllerData));
+
+  bool success = nrf24.send_packet(/*to*/ COMMS_BOARD, PacketType::CONTROL, bs, sizeof(ControllerData));
+  if (success)
+  {
+    sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
+  }
+  else
+  {
+    sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
+  }
+  controller_packet.id++;
+  return success;
 }
 
 //------------------------------------------------------------------
-void manage_responses(bool success)
+void manageResponses(bool success)
 {
   if (success)
   {
-    if (false == comms_state_connected)
-    {
-      sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
-    }
+    sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
   }
   else
   {
-    if (comms_session_started)
-    {
-      stats.total_failed_sending++;
-#ifdef PRINT_RETRIES
-      DEBUGVAL(success, stats.total_failed_sending);
-#endif
-      sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
-    }
-    else
-    {
-      // DEBUGVAL(comms_session_started);
-    }
+    sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
   }
 }
 
@@ -124,5 +107,6 @@ bool vescValuesChanged(VescData oldVals, VescData newVals)
 //------------------------------------------------------------------
 bool boardTimedOut()
 {
-  return sinceLastBoardPacket > ((SEND_TO_BOARD_INTERVAL * CONSECUTIVE_MISSED_PACKETS_MEANS_DISCONNECTED) + 100);
+  unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
+  return sinceLastBoardPacketRx > (timeout + 100);
 }

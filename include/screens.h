@@ -22,8 +22,19 @@ void screen_searching()
 
   lcd_message("Searching...", LINE_1, Aligned::ALIGNED_CENTRE);
   // send interval
-  tft.drawString("interval: ", 10, 40);
-  tft.drawNumber(SEND_TO_BOARD_INTERVAL, tft.textWidth("interval: ") + 10, 40);
+  int y = 40;
+  tft.drawString("interval: ", 10, y);
+  tft.drawNumber(SEND_TO_BOARD_INTERVAL, tft.textWidth("interval: ") + 10, y);
+#ifdef FEATURE_CRUISE_CONTROL
+  tft.setTextDatum(TC_DATUM);
+  y += 30;
+  tft.drawString("cruise ctrl", 10, y);
+#endif
+#ifdef PUSH_TO_START
+  tft.setTextDatum(TC_DATUM);
+  y += 30;
+  tft.drawString("push to start", 10, y);
+#endif
 }
 //-----------------------------------------------------
 
