@@ -12,14 +12,20 @@ public:
 
   uint8_t get(bool accelEnabled)
   {
-    _raw = _getRaw();
-    uint8_t mapped = getMappedFromRaw();
-
+    if (accelEnabled)
+    {
+      _raw = _getRaw();
+      uint8_t mapped = getMappedFromRaw();
 #ifdef PRINT_THROTTLE
-    DEBUGVAL(_raw, mapped);
+      DEBUGVAL(_raw, mapped);
 #endif
-    _oldMapped = mapped;
-    return mapped;
+      _oldMapped = mapped;
+      return mapped;
+    }
+    else
+    {
+      return 127;
+    }
   }
 
 private:

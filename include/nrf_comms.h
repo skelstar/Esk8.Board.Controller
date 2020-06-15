@@ -108,7 +108,7 @@ void manage_responses(bool success)
     }
     else
     {
-      DEBUGVAL(comms_session_started);
+      // DEBUGVAL(comms_session_started);
     }
   }
 }
