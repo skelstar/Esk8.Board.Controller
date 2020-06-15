@@ -1,7 +1,6 @@
 
 bool sendConfigToBoard();
 bool sendPacketToBoard(PacketType packetType);
-void manageResponses(bool success);
 bool vescValuesChanged(VescData oldVals, VescData newVals);
 
 //------------------------------------------------------------------
@@ -26,7 +25,7 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
     controller_packet.id = 0;
     sendToCommsEventStateQueue(EV_COMMS_BD_RESET);
 
-    bool success = sendConfigToBoard();
+    sendConfigToBoard();
   }
   else if (old_board_packet.moving != board_packet.moving)
   {
@@ -81,19 +80,6 @@ bool sendPacketToBoard()
   }
   controller_packet.id++;
   return success;
-}
-
-//------------------------------------------------------------------
-void manageResponses(bool success)
-{
-  if (success)
-  {
-    sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
-  }
-  else
-  {
-    sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
-  }
 }
 
 //------------------------------------------------------------------

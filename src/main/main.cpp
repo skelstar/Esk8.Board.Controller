@@ -92,14 +92,12 @@ enum DispStateEvent
   DISP_EV_NO_EVENT = 0,
   DISP_EV_CONNECTED,
   DISP_EV_DISCONNECTED,
-  DISP_EV_REFRESH,
   DISP_EV_STOPPED,
   DISP_EV_MOVING,
   DISP_EV_UPDATE,
-  DISP_EV_THROTTLE_CHANGED,
 };
 
-// menu_system - prototypes
+// displayState - prototypes
 void send_to_display_event_queue(DispStateEvent ev);
 
 //------------------------------------------------------------------
@@ -129,8 +127,7 @@ ThrottleClass throttle;
 #include <utils.h>
 #include <OptionValue.h>
 #include <screens.h>
-#include <menu_options.h>
-#include <menu_system.h>
+#include <displayState.h>
 
 #include <display_task_0.h>
 #include <comms_connected_state.h>
@@ -223,33 +220,20 @@ uint8_t old_throttle;
 
 void loop()
 {
-  if (since_read_trigger > READ_TRIGGER_PERIOD)
+  if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
   {
-    since_read_trigger = 0;
-
 #ifdef PUSH_TO_START
     bool accelEnabled = board_packet.moving;
 #else
     bool accelEnabled = true;
 #endif
-
     controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
-    if (old_throttle != controller_packet.throttle)
-    {
-      send_to_display_event_queue(DISP_EV_THROTTLE_CHANGED);
-      old_throttle = controller_packet.throttle;
-    }
-  }
-
-  if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
-  {
     since_sent_to_board = 0;
 
     if (comms_state_connected == false)
     {
       controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
-      bool success = sendConfigToBoard();
-      manageResponses(success);
+      sendConfigToBoard();
     }
     else
     {
@@ -258,8 +242,7 @@ void loop()
 #else
       controller_packet.cruise_control = false;
 #endif
-      bool success = sendPacketToBoard();
-      manageResponses(success);
+      sendPacketToBoard();
     }
   }
 

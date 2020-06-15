@@ -125,32 +125,3 @@ void screen_moving()
   chunkAmps.draw_float(BC_DATUM, ChunkyDigit::LINE2_OF_2, buff, "Thr");
 }
 //-----------------------------------------------------
-void screenShowOptionWithValue(char *title, OptionValue *opt)
-{
-  tft.fillScreen(opt->bgcolour);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString(title, LCD_WIDTH / 2, 20);
-
-  ChunkyDigit chunky_digit(&tft, 10, 10, opt->bgcolour);
-
-  char buff[6];
-  sprintf(buff, "%d", opt->get());
-  chunky_digit.draw_float(MC_DATUM, buff);
-}
-//-----------------------------------------------------
-void screenShowOptionWithValue(char *title, char *opt, uint32_t bgcolour)
-{
-  tft.fillScreen(bgcolour);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString(title, LCD_WIDTH / 2, 20);
-
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString(opt, LCD_WIDTH / 2, 80);
-}
-//-----------------------------------------------------
-void screenShowOptionValueSelected()
-{
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString("selected!", LCD_WIDTH / 2, LCD_HEIGHT - 20);
-}
-//-----------------------------------------------------
