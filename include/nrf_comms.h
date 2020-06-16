@@ -1,25 +1,26 @@
 
 bool sendConfigToBoard();
 bool sendPacketToBoard(PacketType packetType);
-bool vescValuesChanged(VescData oldVals, VescData newVals);
 
 //------------------------------------------------------------------
 void packetAvailable_cb(uint16_t from_id, uint8_t type)
 {
-  sinceLastBoardPacketRx = 0;
+  VescData board_packet;
 
-  old_board_packet = board_packet;
+  sinceLastBoardPacketRx = 0;
 
   uint8_t buff[sizeof(VescData)];
   nrf24.read_into(buff, sizeof(VescData));
   memcpy(&board_packet, &buff, sizeof(VescData));
 
-  if (board_packet.reason == FIRST_PACKET)
+  board.save(board_packet);
+
+  if (board.packet.reason == FIRST_PACKET)
   {
     /*
-    - set controller_packet.id = 0
-    - send board reset event to commsState
-    - send CONFIG packet to board
+    * set controller_packet.id = 0
+    * send board reset event to commsState
+    * send controller "CONFIG" packet to board
     */
     DEBUG("*** board's first packet!! ***");
     controller_packet.id = 0;
@@ -27,20 +28,19 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
 
     sendConfigToBoard();
   }
-  else if (old_board_packet.moving != board_packet.moving)
+  else if (board.startedMoving())
   {
-    // board is moving
-    send_to_display_event_queue(board_packet.moving ? DISP_EV_MOVING : DISP_EV_STOPPED);
+    send_to_display_event_queue(DISP_EV_MOVING);
   }
-  else if (vescValuesChanged(old_board_packet, board_packet))
+  else if (board.hasStopped())
   {
-    // important values have changed
+    send_to_display_event_queue(DISP_EV_STOPPED);
+  }
+  else if (board.valuesChanged())
+  {
     send_to_display_event_queue(DISP_EV_UPDATE);
   }
-  else
-  {
-    sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
-  }
+  sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
 }
 //------------------------------------------------------------------
 
@@ -83,16 +83,8 @@ bool sendPacketToBoard()
 }
 
 //------------------------------------------------------------------
-bool vescValuesChanged(VescData oldVals, VescData newVals)
-{
-  return oldVals.ampHours != newVals.ampHours ||
-         oldVals.motorCurrent != newVals.motorCurrent ||
-         oldVals.missedPackets != newVals.missedPackets ||
-         oldVals.unsuccessfulSends != newVals.unsuccessfulSends;
-}
-//------------------------------------------------------------------
 bool boardTimedOut()
 {
   unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
-  return sinceLastBoardPacketRx > (timeout + 100);
+  return board.sinceLastPacket > (timeout + 100);
 }

@@ -32,9 +32,41 @@
 #define COMMS_BOARD 00
 #define COMMS_CONTROLLER 01
 
-VescData board_packet, old_board_packet;
 ControllerData controller_packet;
 ControllerConfig controller_config;
+
+class BoardClass
+{
+public:
+  /*
+  * saves VescData
+  * updates _changed
+  * records last rx time
+  */
+  void save(VescData latest)
+  {
+    _old = packet;
+    packet = latest;
+    _changed = packet.ampHours != _old.ampHours ||
+               packet.batteryVoltage != _old.batteryVoltage ||
+               packet.motorCurrent != _old.motorCurrent ||
+               packet.odometer != _old.odometer ||
+               packet.vescOnline != _old.vescOnline;
+    sinceLastPacket = 0;
+  }
+  bool valuesChanged() { return _changed; }
+  bool startedMoving() { return packet.moving && !_old.moving; }
+  bool hasStopped() { return !packet.moving && _old.moving; }
+
+  VescData packet;
+  elapsedMillis sinceLastPacket;
+
+private:
+  VescData _old;
+  bool _changed = false;
+  // unsigned long _lastRxTime;
+} board;
+
 //------------------------------------------------------------------
 
 NRF24L01Lib nrf24;
@@ -223,7 +255,7 @@ void loop()
   if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
   {
 #ifdef PUSH_TO_START
-    bool accelEnabled = board_packet.moving;
+    bool accelEnabled = board.packet.moving;
 #else
     bool accelEnabled = true;
 #endif

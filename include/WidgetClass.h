@@ -37,7 +37,6 @@ public:
   void reset()
   {
     _first = true;
-    DEBUG("reset()");
   }
 
   void setStatusLevels(T warn, T crit, bool statusDirectionSwapped = false)

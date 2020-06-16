@@ -53,14 +53,14 @@ void screen_with_stats(bool connected = true)
   sprintf(buff2, "failed tx: %lu", stats.total_failed_sending);
   lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, getStatus(stats.total_failed_sending, 0, 1, 2));
   // line 3
-  if (board_packet.missedPackets > 0 || board_packet.unsuccessfulSends > 0)
+  if (board.packet.missedPackets > 0 || board.packet.unsuccessfulSends > 0)
   {
     char buff3_1[12];
-    sprintf(buff3_1, "bd ms:%d", board_packet.missedPackets);
-    lcd_message(buff3_1, LINE_3, Aligned::ALIGNED_LEFT, getStatus(board_packet.missedPackets, 0, 1, 2));
+    sprintf(buff3_1, "bd ms:%d", board.packet.missedPackets);
+    lcd_message(buff3_1, LINE_3, Aligned::ALIGNED_LEFT, getStatus(board.packet.missedPackets, 0, 1, 2));
     char buff3_2[12];
-    sprintf(buff3_2, "us:%d", board_packet.unsuccessfulSends);
-    lcd_message(buff3_2, LINE_3, Aligned::ALIGNED_RIGHT, getStatus(board_packet.unsuccessfulSends, 0, 1, 2));
+    sprintf(buff3_2, "us:%d", board.packet.unsuccessfulSends);
+    lcd_message(buff3_2, LINE_3, Aligned::ALIGNED_RIGHT, getStatus(board.packet.unsuccessfulSends, 0, 1, 2));
   }
 }
 //-----------------------------------------------------
@@ -101,9 +101,9 @@ void screenWithWidgets(bool connected = true)
   widgetRsts->draw(stats.boardResets, "RSTS");
   widgetFail->draw(stats.total_failed_sending, "FAIL");
   widgetThrottle->draw(controller_packet.throttle, "THR");
-  widgetMissed->draw(board_packet.missedPackets, "MISSED");
-  widgetUnsuccessful->draw(board_packet.unsuccessfulSends, "SENDS");
-  widgetVolts->draw(board_packet.batteryVoltage, "BATT");
+  widgetMissed->draw(board.packet.missedPackets, "MISSED");
+  widgetUnsuccessful->draw(board.packet.unsuccessfulSends, "SENDS");
+  widgetVolts->draw(board.packet.batteryVoltage, "BATT");
 }
 //-----------------------------------------------------
 
@@ -116,7 +116,7 @@ void screen_moving()
 
   // line 1 amps
   ChunkyDigit chunkAmps(&tft, 10, 8, bgColour);
-  sprintf(buff, "%.1f", board_packet.motorCurrent);
+  sprintf(buff, "%.1f", board.packet.motorCurrent);
   chunkAmps.draw_float(TC_DATUM, ChunkyDigit::LINE1_OF_2, buff, "Ah");
 
   // line 2 throttle

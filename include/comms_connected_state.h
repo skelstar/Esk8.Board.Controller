@@ -36,33 +36,14 @@ bool skipOnEnter = false;
 CommsStateEvent lastCommsEvent = EV_COMMS_NO_EVENT;
 //------------------------------------------
 
-State stateCommsSearching([] {
-  printStateName("stateCommsSearching");
-  currentCommsState = ST_COMMS_SEARCHING;
-});
+/* prototypes */
+void commsSearching_onEnter();
+void commsConnected_OnEnter();
+void commsDisconneced_onEnter();
 
-State stateCommsConnected([] {
-  if (false == skipOnEnter)
-  {
-    printStateName("stateCommsConnected", commsEventToString(lastCommsEvent));
-    comms_session_started = true;
-    comms_state_connected = true;
-    send_to_display_event_queue(DISP_EV_CONNECTED);
-    currentCommsState = ST_COMMS_CONNECTED;
-  }
-  skipOnEnter = false;
-});
-
-State stateCommsDisconnected([] {
-  if (false == skipOnEnter)
-  {
-    printStateName("stateCommsDisconnected", commsEventToString(lastCommsEvent));
-    comms_state_connected = false;
-    send_to_display_event_queue(DISP_EV_DISCONNECTED);
-    currentCommsState = ST_COMMS_DISCONNECTED;
-  }
-  skipOnEnter = false;
-});
+State stateCommsSearching(commsSearching_onEnter, NULL, NULL);
+State stateCommsConnected(commsConnected_OnEnter, NULL, NULL);
+State stateCommsDisconnected(commsDisconneced_onEnter, NULL, NULL);
 //-----------------------------------------------------
 
 void handleBdResetEvent()
@@ -105,6 +86,13 @@ char *commsEventToString(CommsStateEvent ev)
     return "Handled event";
   }
 }
+//-----------------------------------------------------
+
+char *commsEventToString(int ev)
+{
+  return commsEventToString((CommsStateEvent)ev);
+}
+//-----------------------------------------------------
 
 void triggerCommsEvent(CommsStateEvent ev)
 {
@@ -119,7 +107,7 @@ void triggerCommsEvent(CommsStateEvent ev)
     Serial.printf("--> CommsEvent: %s\n", commsEventToString(ev));
   }
 #endif
-  lastCommsEvent = ev;
+  // lastCommsEvent = ev;
   commsFsm.trigger(ev);
 }
 
@@ -180,12 +168,14 @@ CommsStateEvent readFromCommsStateEventQueue(TickType_t ticks)
   return CommsStateEvent::EV_COMMS_NO_EVENT;
 }
 
+//-----------------------------------------------------
 void printStateName(const char *state_name)
 {
 #ifdef PRINT_COMMS_STATE
   DEBUG(state_name);
 #endif
 }
+//-----------------------------------------------------
 
 void printStateName(const char *state_name, const char *event)
 {
@@ -194,3 +184,35 @@ void printStateName(const char *state_name, const char *event)
 #endif
 }
 //------------------------------------------------------------
+void commsSearching_onEnter()
+{
+  printStateName("stateCommsSearching");
+  currentCommsState = ST_COMMS_SEARCHING;
+}
+//-----------------------------------------------------
+
+void commsConnected_OnEnter()
+{
+  if (false == skipOnEnter)
+  {
+    printStateName("stateCommsConnected", commsEventToString(commsFsm.lastEvent()));
+    comms_session_started = true;
+    comms_state_connected = true;
+    send_to_display_event_queue(DISP_EV_CONNECTED);
+    currentCommsState = ST_COMMS_CONNECTED;
+  }
+  skipOnEnter = false;
+}
+//-----------------------------------------------------
+void commsDisconneced_onEnter()
+{
+  if (false == skipOnEnter)
+  {
+    printStateName("stateCommsDisconnected", commsEventToString(commsFsm.lastEvent()));
+    comms_state_connected = false;
+    send_to_display_event_queue(DISP_EV_DISCONNECTED);
+    currentCommsState = ST_COMMS_DISCONNECTED;
+  }
+  skipOnEnter = false;
+}
+//-----------------------------------------------------
