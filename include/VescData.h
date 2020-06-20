@@ -20,6 +20,12 @@ enum PacketType
   CONFIG,
 };
 
+enum CommandFlag
+{
+  MISSED_PACKET,
+  UNSUCCESSFUL_REPLY
+};
+
 class VescData
 {
 public:
@@ -33,7 +39,10 @@ public:
   ReasonType reason;
   // debugging
   uint16_t missedPackets;
-  uint16_t unsuccessfulSends;
+  uint16_t unsuccessfulReplies;
+
+  uint32_t flags;
+  uint16_t flagValue;
 };
 
 class ControllerData
@@ -43,7 +52,23 @@ public:
   unsigned long id;
   uint8_t command;
   bool cruise_control;
+  uint32_t ackFlags;
 };
+
+void clearFlags(uint16_t flags)
+{
+  flags = 0;
+}
+
+void clearFlag(uint16_t flags, CommandFlag flag)
+{
+  flags &= ~(1UL << (int)flag);
+}
+
+void setFlag(uint16_t flags, CommandFlag flag)
+{
+  flags |= 1UL << (int)flag;
+}
 
 class ControllerConfig
 {
