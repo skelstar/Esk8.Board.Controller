@@ -11,8 +11,6 @@
 #include <elapsedMillis.h>
 #include <rom/rtc.h> // for reset reason
 
-#include <Adafruit_NeoPixel.h>
-
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
 #define SOFT_SPI_MOSI_PIN 13 // Blue
 #define SOFT_SPI_MISO_PIN 12 // Orange
@@ -57,6 +55,11 @@ public:
   bool valuesChanged() { return _changed; }
   bool startedMoving() { return packet.moving && !_old.moving; }
   bool hasStopped() { return !packet.moving && _old.moving; }
+  bool hasTimedout()
+  {
+    unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
+    return sinceLastPacket > (timeout + 100);
+  }
 
   VescData packet;
   elapsedMillis sinceLastPacket;
@@ -103,7 +106,7 @@ public:
 Preferences statsStore;
 
 elapsedMillis
-    since_sent_to_board,
+    sinceSentToBoard,
     sinceLastBoardPacketRx,
     sinceSentRequest,
     since_read_trigger;
@@ -131,6 +134,7 @@ enum DispStateEvent
 
 // displayState - prototypes
 void send_to_display_event_queue(DispStateEvent ev);
+void sendToBoard();
 
 //------------------------------------------------------------------
 
@@ -157,7 +161,6 @@ ThrottleClass throttle;
 #include <Button2.h>
 
 #include <utils.h>
-#include <OptionValue.h>
 #include <screens.h>
 #include <displayState.h>
 
@@ -252,33 +255,12 @@ uint8_t old_throttle;
 
 void loop()
 {
-  if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
+  if (sinceSentToBoard > SEND_TO_BOARD_INTERVAL)
   {
-#ifdef PUSH_TO_START
-    bool accelEnabled = board.packet.moving;
-#else
-    bool accelEnabled = true;
-#endif
-    controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
-    since_sent_to_board = 0;
-
-    if (comms_state_connected == false)
-    {
-      controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
-      sendConfigToBoard();
-    }
-    else
-    {
-#ifdef FEATURE_CRUISE_CONTROL
-      controller_packet.cruise_control = primaryButton.isPressed();
-#else
-      controller_packet.cruise_control = false;
-#endif
-      sendPacketToBoard();
-    }
+    sendToBoard();
   }
 
-  if (boardTimedOut())
+  if (board.hasTimedout())
   {
     sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
   }
@@ -288,6 +270,17 @@ void loop()
   primaryButton.loop();
 
   vTaskDelay(1);
+}
+//------------------------------------------------------------------
+
+void sendToBoard()
+{
+  bool accelEnabled = board.packet.moving || !FEATURE_PUSH_TO_START;
+
+  controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
+  sinceSentToBoard = 0;
+  controller_packet.cruise_control = primaryButton.isPressed() || !FEATURE_CRUISE_CONTROL;
+  sendPacketToBoard();
 }
 //------------------------------------------------------------------
 

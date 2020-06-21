@@ -25,16 +25,20 @@ void screen_searching()
   int y = 40;
   tft.drawString("interval: ", 10, y);
   tft.drawNumber(SEND_TO_BOARD_INTERVAL, tft.textWidth("interval: ") + 10, y);
-#ifdef FEATURE_CRUISE_CONTROL
-  tft.setTextDatum(TC_DATUM);
-  y += 30;
-  tft.drawString("cruise ctrl", 10, y);
-#endif
-#ifdef PUSH_TO_START
-  tft.setTextDatum(TC_DATUM);
-  y += 30;
-  tft.drawString("push to start", 10, y);
-#endif
+
+  if (FEATURE_CRUISE_CONTROL)
+  {
+    tft.setTextDatum(TC_DATUM);
+    y += 30;
+    tft.drawString("cruise ctrl", 10, y);
+  }
+
+  if (FEATURE_PUSH_TO_START)
+  {
+    tft.setTextDatum(TC_DATUM);
+    y += 30;
+    tft.drawString("push to start", 10, y);
+  }
 }
 //-----------------------------------------------------
 
@@ -53,15 +57,6 @@ void screen_with_stats(bool connected = true)
   sprintf(buff2, "failed tx: %lu", stats.total_failed_sending);
   lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, getStatus(stats.total_failed_sending, 0, 1, 2));
   // line 3
-  if (board.packet.missedPackets > 0 || board.packet.unsuccessfulSends > 0)
-  {
-    char buff3_1[12];
-    sprintf(buff3_1, "bd ms:%d", board.packet.missedPackets);
-    lcd_message(buff3_1, LINE_3, Aligned::ALIGNED_LEFT, getStatus(board.packet.missedPackets, 0, 1, 2));
-    char buff3_2[12];
-    sprintf(buff3_2, "us:%d", board.packet.unsuccessfulSends);
-    lcd_message(buff3_2, LINE_3, Aligned::ALIGNED_RIGHT, getStatus(board.packet.unsuccessfulSends, 0, 1, 2));
-  }
 }
 //-----------------------------------------------------
 
@@ -101,8 +96,8 @@ void screenWithWidgets(bool connected = true)
   widgetRsts->draw(stats.boardResets, "RSTS");
   widgetFail->draw(stats.total_failed_sending, "FAIL");
   widgetThrottle->draw(controller_packet.throttle, "THR");
-  widgetMissed->draw(board.packet.missedPackets, "MISSED");
-  widgetUnsuccessful->draw(board.packet.unsuccessfulSends, "SENDS");
+  // widgetMissed->draw(board.packet.missedPackets, "MISSED");
+  // widgetUnsuccessful->draw(board.packet.unsuccessfulReplies, "SENDS");
   widgetVolts->draw(board.packet.batteryVoltage, "BATT");
 }
 //-----------------------------------------------------

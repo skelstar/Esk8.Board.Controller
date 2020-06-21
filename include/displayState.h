@@ -37,7 +37,6 @@ void clearDisplayEventQueue()
 }
 //---------------------------------------------------------------
 
-OptionValue *currentOption;
 DispStateEvent lastDispEvent;
 
 void searching_onEnter();
