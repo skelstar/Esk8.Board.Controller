@@ -54,13 +54,6 @@ void sendConfigToBoard()
   uint8_t len = sizeof(ControllerConfig);
 
   sendPacket(bs, len, PacketType::CONFIG);
-
-  // if (!sendPacketWithRetries(bs, len, PacketType::CONFIG, MAX_SEND_ATTEMPTS))
-  // {
-  //   sendToCommsEventStateQueue(EV_COMMS_FAILED_SEND_TO_BOARD);
-  // }
-
-  // controller_packet.id++;
 }
 //------------------------------------------------------------------
 
@@ -71,11 +64,6 @@ void sendPacketToBoard()
   uint8_t len = sizeof(ControllerData);
 
   sendPacket(bs, sizeof(ControllerData), PacketType::CONTROL);
-
-  // if (!sendPacketWithRetries(bs, sizeof(ControllerData), PacketType::CONTROL, MAX_SEND_ATTEMPTS))
-  // {
-  //   sendToCommsEventStateQueue(EV_COMMS_FAILED_SEND_TO_BOARD);
-  // }
 
   controller_packet.id++;
 }
