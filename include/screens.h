@@ -18,7 +18,7 @@
 void screen_searching()
 {
   tft.setTextDatum(TL_DATUM);
-  tft.fillScreen(TFT_BLUE);
+  tft.fillScreen(TFT_DEFAULT_BG);
 
   lcd_message("Searching...", LINE_1, Aligned::ALIGNED_CENTRE);
   // send interval
@@ -44,7 +44,7 @@ void screen_searching()
 
 void screen_with_stats(bool connected = true)
 {
-  uint32_t bgColour = connected ? TFT_BLUE : TFT_RED;
+  uint32_t bgColour = connected ? TFT_DEFAULT_BG : TFT_RED;
   tft.fillScreen(bgColour);
   // battery
   drawSmallBattery(remote_battery_percent, LCD_WIDTH - MARGIN, 0 + MARGIN, TR_DATUM);

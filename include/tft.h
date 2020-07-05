@@ -36,8 +36,8 @@ void setupLCD()
 {
   tft.init();
   tft.setRotation(1);
-  tft.fillScreen(TFT_BLUE);
-  tft.setTextColor(TFT_WHITE, TFT_BLUE);
+  tft.fillScreen(TFT_DEFAULT_BG);
+  tft.setTextColor(TFT_WHITE, TFT_DEFAULT_BG);
   tft.setTextSize(3);
   tft.drawString("ready", 20, 20);
 }

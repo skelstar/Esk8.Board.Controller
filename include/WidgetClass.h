@@ -25,7 +25,7 @@ template <typename T>
 class WidgetClass
 {
 public:
-  WidgetClass(WidgetPos pos, WidgetSize size, uint32_t bgColour = TFT_BLUE, uint32_t fgColour = TFT_WHITE)
+  WidgetClass(WidgetPos pos, WidgetSize size, uint32_t bgColour = TFT_DEFAULT_BG, uint32_t fgColour = TFT_WHITE)
   {
     _bgColour = bgColour;
     _spr.setTextColor(fgColour);
@@ -73,7 +73,7 @@ public:
       if (_showOnlyNonZero && number == 0)
       {
         // clear widget
-        _spr.fillScreen(TFT_BLUE);
+        _spr.fillScreen(_bgColour);
         _spr.pushSprite(_x, _y);
       }
       else

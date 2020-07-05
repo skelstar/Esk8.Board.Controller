@@ -101,6 +101,8 @@ BatteryLib remote_batt(BATTERY_MEASURE_PIN);
 #define LCD_WIDTH 240
 #define LCD_HEIGHT 135
 
+#define TFT_DEFAULT_BG TFT_BLACK
+
 TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 //------------------------------------------------------------------
 
