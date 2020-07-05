@@ -1,6 +1,8 @@
 
-bool sendConfigToBoard();
+void sendConfigToBoard();
 void sendPacketToBoard();
+bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType);
+bool sendPacketWithRetries(uint8_t *d, uint8_t len, uint8_t packetType, uint8_t numRetries);
 
 //------------------------------------------------------------------
 void packetAvailable_cb(uint16_t from_id, uint8_t type)
@@ -44,25 +46,21 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
 }
 //------------------------------------------------------------------
 
-bool sendConfigToBoard()
+void sendConfigToBoard()
 {
-  sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
-
   controller_config.id = controller_packet.id;
   uint8_t bs[sizeof(ControllerConfig)];
   memcpy(bs, &controller_config, sizeof(ControllerConfig));
+  uint8_t len = sizeof(ControllerConfig);
 
-  bool success = nrf24.send_packet(/*to*/ COMMS_BOARD, PacketType::CONFIG, bs, sizeof(ControllerConfig));
-  if (success)
-  {
-    sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
-  }
-  else
-  {
-    sendToCommsEventStateQueue(EV_COMMS_FAILED_SEND_TO_BOARD);
-  }
+  sendPacket(bs, len, PacketType::CONFIG);
+
+  // if (!sendPacketWithRetries(bs, len, PacketType::CONFIG, MAX_SEND_ATTEMPTS))
+  // {
+  //   sendToCommsEventStateQueue(EV_COMMS_FAILED_SEND_TO_BOARD);
+  // }
+
   // controller_packet.id++;
-  return success;
 }
 //------------------------------------------------------------------
 
@@ -70,32 +68,46 @@ void sendPacketToBoard()
 {
   uint8_t bs[sizeof(ControllerData)];
   memcpy(bs, &controller_packet, sizeof(ControllerData));
+  uint8_t len = sizeof(ControllerData);
 
-  bool sent = false;
-  int sendRetries = 0;
-  while (!sent)
-  {
-    sent = !nrf24.send_packet(/*to*/ COMMS_BOARD, PacketType::CONTROL, bs, sizeof(ControllerData));
-    if (!sent && sendRetries > 3)
-    {
-      sendToCommsEventStateQueue(EV_COMMS_FAILED_SEND_TO_BOARD);
-    }
-  }
+  sendPacket(bs, sizeof(ControllerData), PacketType::CONTROL);
 
-  // bool success = nrf24.send_packet(/*to*/ COMMS_BOARD, PacketType::CONTROL, bs, sizeof(ControllerData));
-  // if (success)
-  // {
-  //   sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
-  // }
-  // else
+  // if (!sendPacketWithRetries(bs, sizeof(ControllerData), PacketType::CONTROL, MAX_SEND_ATTEMPTS))
   // {
   //   sendToCommsEventStateQueue(EV_COMMS_FAILED_SEND_TO_BOARD);
   // }
 
   controller_packet.id++;
 }
-
 //------------------------------------------------------------------
+
+bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType)
+{
+  bool sent = nrf24.send_packet(COMMS_BOARD, packetType, d, len);
+
+  return sent;
+}
+//------------------------------------------------------------------
+
+bool sendPacketWithRetries(uint8_t *d, uint8_t len, uint8_t packetType, uint8_t maxTries)
+{
+  bool sent = false;
+  int tries = 0;
+  while (!sent && tries++ < maxTries)
+  {
+    sent = nrf24.send_packet(COMMS_BOARD, packetType, d, len);
+    if (!sent)
+      vTaskDelay(10);
+  }
+#ifdef PRINT_SEND_RETRIES
+  if (tries > 1)
+    DEBUGMVAL("Retried: ", tries, sent);
+#endif
+
+  return sent;
+}
+//------------------------------------------------------------------
+
 bool boardTimedOut()
 {
   unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;

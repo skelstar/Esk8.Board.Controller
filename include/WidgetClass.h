@@ -105,6 +105,70 @@ public:
     }
     _lastValue = number;
   }
+
+#define BATT_WIDTH 36
+#define BATT_HEIGHT 20
+#define BORDER_SIZE 2
+#define KNOB_HEIGHT 10
+#define KNOB_WIDTH 4
+
+  void drawBattery(BatteryLib batt)
+  {
+    uint32_t colour = TFT_WHITE;
+    uint8_t x = _spr.width() / 2 - BATT_WIDTH / 2 - KNOB_WIDTH / 2;
+    uint8_t y = _spr.height() / 2 - BATT_HEIGHT / 2;
+
+    // knob
+    _spr.fillRect(x, y + ((BATT_HEIGHT - KNOB_HEIGHT) / 2), KNOB_WIDTH, KNOB_HEIGHT, colour);
+
+    // body - outline
+    x += KNOB_WIDTH;
+    uint8_t w = BATT_WIDTH;
+    uint8_t h = BATT_HEIGHT;
+    _spr.fillRect(x, y, w, h, colour);
+
+    // body - empty inside
+    x += BORDER_SIZE;
+    y += BORDER_SIZE;
+    w -= BORDER_SIZE * 2;
+    h -= BORDER_SIZE * 2;
+    _spr.fillRect(x, y, w, h, _bgColour);
+
+    // capacity
+    w -= BORDER_SIZE * 2;
+    h -= BORDER_SIZE * 2;
+
+    if (!batt.isCharging)
+    {
+      x += BORDER_SIZE;
+      y += BORDER_SIZE;
+      _spr.fillRect(x, y, w, h, colour); // solid
+      // black rect for used part
+      w = w * (1 - (batt.chargePercent / 100.0));
+      _spr.fillRect(x, y, w, h, _bgColour);
+      DEBUGVAL(batt.chargePercent);
+    }
+    else
+    {
+      x += BORDER_SIZE;
+      y += BORDER_SIZE;
+      // fill the batt
+      _spr.fillRect(x, y, w, h, colour);
+      // plus
+      const int plus = 4, edge = 3;
+      _spr.fillRect(x + (w / 2) - (edge + (plus / 2)),
+                    y + (h / 2) - (plus / 2),
+                    edge + plus + edge,
+                    plus,
+                    _bgColour);
+      _spr.fillRect(x + (w / 2) - (plus / 2),
+                    y + (h / 2) - (edge + (plus / 2)),
+                    plus,
+                    edge + plus + edge,
+                    _bgColour);
+    }
+    _spr.pushSprite(_x, _y);
+  }
   //--------------------------------------------------------------------------------
 
 private:
