@@ -63,31 +63,45 @@ void screen_with_stats(bool connected = true)
 WidgetClass<uint8_t> *widgetRsts;
 WidgetClass<uint16_t> *widgetFail;
 WidgetClass<uint16_t> *widgetThrottle;
-WidgetClass<uint16_t> *widgetMissed;
-WidgetClass<uint16_t> *widgetUnsuccessful;
+WidgetClass<uint16_t> *widgetRemoteBatt;
+WidgetClass<uint16_t> *widgetRawRemoteBatt;
 WidgetClass<float> *widgetVolts;
 
 void initWidgets()
 {
-  widgetRsts = new WidgetClass<uint8_t>(WidgetPos::TOP_LEFT, WidgetSize::Normal);
+  widgetRsts = new WidgetClass<uint8_t>(
+      WidgetPos::TOP_LEFT,
+      WidgetSize::Normal);
   widgetRsts->setStatusLevels(1, 1);
   widgetRsts->setOnlyShowNonZero(true);
 
-  widgetFail = new WidgetClass<uint16_t>(WidgetPos::TOP_CENTRE, WidgetSize::Normal);
+  widgetFail = new WidgetClass<uint16_t>(
+      WidgetPos::TOP_CENTRE,
+      WidgetSize::Normal);
   widgetFail->setStatusLevels(2, 5);
   widgetFail->setOnlyShowNonZero(true);
 
-  widgetThrottle = new WidgetClass<uint16_t>(WidgetPos::TOP_RIGHT, WidgetSize::Normal, TFT_GREEN, TFT_BLACK);
+  widgetThrottle = new WidgetClass<uint16_t>(
+      WidgetPos::TOP_RIGHT,
+      WidgetSize::Normal,
+      TFT_GREEN,
+      TFT_BLACK);
 
-  widgetMissed = new WidgetClass<uint16_t>(WidgetPos::BOTTOM_LEFT, WidgetSize::Normal);
-  widgetMissed->setStatusLevels(1, 3);
-  widgetMissed->setOnlyShowNonZero(true);
+  widgetRemoteBatt = new WidgetClass<uint16_t>(
+      WidgetPos::BOTTOM_LEFT,
+      WidgetSize::Normal,
+      TFT_BLACK);
 
-  widgetUnsuccessful = new WidgetClass<uint16_t>(WidgetPos::BOTTOM_CENTRE, WidgetSize::Normal);
-  widgetUnsuccessful->setStatusLevels(1, 3);
-  widgetUnsuccessful->setOnlyShowNonZero(true);
+#ifdef DEBUG_BUILD
+  widgetRawRemoteBatt = new WidgetClass<uint16_t>(
+      WidgetPos::BOTTOM_CENTRE,
+      WidgetSize::Normal,
+      TFT_BLACK);
+#endif
 
-  widgetVolts = new WidgetClass<float>(WidgetPos::BOTTOM_RIGHT, WidgetSize::Normal);
+  widgetVolts = new WidgetClass<float>(
+      WidgetPos::BOTTOM_RIGHT,
+      WidgetSize::Normal);
   widgetVolts->setStatusLevels(/*warn*/ 37.4, /*crit*/ 35.0, /*swapped*/ true);
 }
 
@@ -96,8 +110,10 @@ void screenWithWidgets(bool connected = true)
   widgetRsts->draw(stats.boardResets, "RSTS");
   widgetFail->draw(stats.total_failed_sending, "FAIL");
   widgetThrottle->draw(controller_packet.throttle, "THR");
-  // widgetMissed->draw(board.packet.missedPackets, "MISSED");
-  // widgetUnsuccessful->draw(board.packet.unsuccessfulReplies, "SENDS");
+  widgetRemoteBatt->drawBattery(remote_batt);
+#ifdef DEBUG_BUILD
+  widgetRawRemoteBatt->draw(remote_batt.rawAnalogCount(), "RAW");
+#endif
   widgetVolts->draw(board.packet.batteryVoltage, "BATT");
 }
 //-----------------------------------------------------

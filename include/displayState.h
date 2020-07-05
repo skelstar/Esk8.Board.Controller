@@ -56,12 +56,14 @@ State disp_state_moving_screen(moving_onEnter, NULL, NULL);
 //---------------------------------------------------------------
 void initWidgetsDisplay()
 {
-  tft.fillScreen(TFT_BLUE);
+  tft.fillScreen(TFT_BLACK);
   widgetRsts->reset();
   widgetFail->reset();
   widgetThrottle->reset();
-  widgetMissed->reset();
-  widgetUnsuccessful->reset();
+  widgetRemoteBatt->reset();
+#ifdef DEBUG_BUILD
+  widgetRawRemoteBatt->reset();
+#endif
   widgetVolts->reset();
 }
 //---------------------------------------------------------------

@@ -24,6 +24,14 @@
 
 #include <TFT_eSPI.h>
 #include <Preferences.h>
+#include <BatteryLib.h>
+
+#ifndef FEATURE_CRUISE_CONTROL
+#define FEATURE_CRUISE_CONTROL false
+#endif
+#ifndef FEATURE_PUSH_TO_START
+#define FEATURE_PUSH_TO_START false
+#endif
 
 //------------------------------------------------------------------
 
@@ -79,6 +87,12 @@ RF24Network network(radio);
 
 //------------------------------------------------------------------
 
+#define BATTERY_MEASURE_PIN 34
+
+BatteryLib remote_batt(BATTERY_MEASURE_PIN);
+
+//------------------------------------------------------------------
+
 #ifndef SEND_TO_BOARD_INTERVAL
 #define SEND_TO_BOARD_INTERVAL 200
 #endif
@@ -112,6 +126,7 @@ elapsedMillis
     since_read_trigger;
 
 uint16_t remote_battery_percent = 0;
+bool remoteBattCharging = false;
 bool display_task_initialised = false;
 bool display_task_showing_option_screen = false;
 int oldCounter = 0;
@@ -166,10 +181,10 @@ ThrottleClass throttle;
 
 #include <display_task_0.h>
 #include <comms_connected_state.h>
+#include <features/battery_measure.h>
 
 #include <nrf_comms.h>
 
-#include <features/battery_measure.h>
 #include <peripherals.h>
 
 //---------------------------------------------------------------
@@ -275,11 +290,19 @@ void loop()
 
 void sendToBoard()
 {
-  bool accelEnabled = board.packet.moving || !FEATURE_PUSH_TO_START;
+  bool accelEnabled =
+      board.packet.moving ||
+      !FEATURE_PUSH_TO_START ||
+      (FEATURE_PUSH_TO_START && primaryButton.isPressed());
+
+  bool cruiseControlActive =
+      board.packet.moving &&
+      FEATURE_CRUISE_CONTROL &&
+      primaryButton.isPressed();
 
   controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
   sinceSentToBoard = 0;
-  controller_packet.cruise_control = primaryButton.isPressed() || !FEATURE_CRUISE_CONTROL;
+  controller_packet.cruise_control = cruiseControlActive;
   sendPacketToBoard();
 }
 //------------------------------------------------------------------

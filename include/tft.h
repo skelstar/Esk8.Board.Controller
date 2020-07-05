@@ -83,11 +83,6 @@ void drawGraphFullWidth(uint8_t y, uint8_t height, float pc, uint16_t colour = T
 }
 //--------------------------------------------------------------------------------
 
-#define BATTERY_WIDTH 100
-#define BATTERY_HEIGHT 50
-#define BORDER_SIZE 6
-#define KNOB_HEIGHT 20
-
 void drawBattery(int percent, bool update)
 {
   // if (!update)
