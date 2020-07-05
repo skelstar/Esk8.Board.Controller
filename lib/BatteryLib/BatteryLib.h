@@ -50,16 +50,7 @@ private:
   {
     isCharging = raw_battery > REMOTE_BATTERY_FULL + 100;
 
-    // int limited = constrain(raw_battery, REMOTE_BATTERY_EMPTY, REMOTE_BATTERY_FULL);
-
-    // should return 0, 10, 20 ... 100
-
     return 10 * _mapper.constrainedMap(raw_battery);
-    //  map(limited,
-    //                 REMOTE_BATTERY_EMPTY,
-    //                 REMOTE_BATTERY_FULL,
-    //                 0,
-    //                 10);
   }
 
 private:
