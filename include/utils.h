@@ -37,11 +37,15 @@ void print_build_status()
 #ifdef RELEASE_BUILD
   Serial.printf("-----------------------------------------------\n");
   Serial.printf("               RELEASE BUILD!! \n");
+  Serial.printf("                 %s \n", __TIME__);
+  Serial.printf("                 %s \n", __DATE__);
   Serial.printf("-----------------------------------------------\n");
 #endif
 #ifdef DEBUG_BUILD
   Serial.printf("-----------------------------------------------\n");
   Serial.printf("               DEBUG BUILD!! \n");
+  Serial.printf("                 %s \n", __TIME__);
+  Serial.printf("                 %s \n", __DATE__);
   Serial.printf("-----------------------------------------------\n");
 #endif
   Serial.printf("\n");
@@ -51,7 +55,7 @@ char *get_reset_reason_text(RESET_REASON reason)
 {
   switch (reason)
   {
-  case 1:
+  case RESET_REASON::POWERON_RESET:
     return "POWERON_RESET"; /**<1, Vbat power on reset*/
   case 3:
     return "SW_RESET"; /**<3, Software reset digital core*/

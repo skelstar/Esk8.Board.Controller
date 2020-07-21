@@ -23,42 +23,30 @@ enum PacketType
 class VescData
 {
 public:
+  unsigned long id;
   float batteryVoltage;
   bool moving;
   float ampHours;
   float motorCurrent;
   float odometer; // in kilometers
   bool vescOnline;
-  unsigned long id;
   ReasonType reason;
-  // debugging
-  uint16_t missedPackets;
-  uint16_t unsuccessfulSends;
 };
 
 class ControllerData
 {
 public:
-  uint8_t throttle;
   unsigned long id;
-  uint8_t command;
+  uint8_t throttle;
   bool cruise_control;
+  uint8_t command;
 };
 
 class ControllerConfig
 {
 public:
+  unsigned long id;
   uint16_t send_interval;
-  bool cruise_control_enabled;
-  unsigned long id;
 };
-
-class BoardConfig
-{
-public:
-  unsigned long id;
-};
-
-#define COMMAND_REQUEST_UPDATE 1
 
 #endif

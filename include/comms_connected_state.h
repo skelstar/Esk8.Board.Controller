@@ -7,24 +7,17 @@ enum CommsStateEvent
   EV_COMMS_NO_EVENT,
   EV_COMMS_PKT_RXD,
   EV_COMMS_BOARD_TIMEDOUT,
+  EV_COMMS_FAILED_SEND_TO_BOARD,
   EV_COMMS_BD_RESET,
 };
-
-enum CommsStateId
-{
-  ST_COMMS_SEARCHING,
-  ST_COMMS_CONNECTED,
-  ST_COMMS_DISCONNECTED
-} currentCommsState;
 
 //------------------------------------------
 
 /* prototypes */
 void sendToCommsEventStateQueue(CommsStateEvent ev, TickType_t ticks = 5);
 CommsStateEvent readFromCommsStateEventQueue(TickType_t ticks = 5);
-char *commsEventToString(CommsStateEvent ev);
-void printStateName(const char *state_name);
-void printStateName(const char *state_name, const char *event);
+const char *commsEventToString(CommsStateEvent ev);
+const char *commsEventToString(int ev);
 //------------------------------------------
 
 bool comms_session_started = false;
@@ -34,63 +27,70 @@ bool commsStateTask_initialised = false;
 bool skipOnEnter = false;
 
 CommsStateEvent lastCommsEvent = EV_COMMS_NO_EVENT;
-//------------------------------------------
 
+Fsm *commsFsm;
+
+/* prototypes */
+
+//------------------------------------------
 State stateCommsSearching([] {
-  printStateName("stateCommsSearching");
-  currentCommsState = ST_COMMS_SEARCHING;
-},
-                          NULL, NULL);
+#ifdef PRINT_COMMS_STATE
+  commsFsm->print("stateCommsSearching", false);
+#endif
+});
 
 State stateCommsConnected([] {
-  if (false == skipOnEnter)
+  if (commsFsm->lastEvent() == EV_COMMS_BD_RESET)
   {
-    printStateName("stateCommsConnected", commsEventToString(lastCommsEvent));
-    comms_session_started = true;
-    comms_state_connected = true;
-    send_to_display_event_queue(DISP_EV_CONNECTED);
-    currentCommsState = ST_COMMS_CONNECTED;
+    stats.boardResets++;
+    send_to_display_event_queue(DISP_EV_UPDATE);
   }
-  skipOnEnter = false;
-},
-                          NULL, NULL);
+#ifdef PRINT_COMMS_STATE
+  commsFsm->print("stateCommsConnected");
+#endif
+
+  comms_session_started = true;
+  comms_state_connected = true;
+  send_to_display_event_queue(DISP_EV_CONNECTED);
+  send_to_display_event_queue(DISP_EV_UPDATE);
+});
 
 State stateCommsDisconnected([] {
-  if (false == skipOnEnter)
+  if (commsFsm->lastEvent() == EV_COMMS_BD_RESET)
   {
-    printStateName("stateCommsDisconnected", commsEventToString(lastCommsEvent));
-    comms_state_connected = false;
-    send_to_display_event_queue(DISP_EV_DISCONNECTED);
-    currentCommsState = ST_COMMS_DISCONNECTED;
+    stats.boardResets++;
+    send_to_display_event_queue(DISP_EV_UPDATE);
   }
-  skipOnEnter = false;
-},
-                             NULL, NULL);
 
-void handleBdResetEvent()
-{
-  stats.boardResets++;
-  send_to_display_event_queue(DISP_EV_BD_RSTS_CHANGED);
-  skipOnEnter = true;
-}
+#ifdef PRINT_COMMS_STATE
+  commsFsm->print("stateCommsDisconnected");
+  DEBUGMVAL("timed out", board.sinceLastPacket);
+#endif
 
-Fsm commsFsm(&stateCommsSearching);
-
+  comms_state_connected = false;
+  send_to_display_event_queue(DISP_EV_DISCONNECTED);
+});
 //-----------------------------------------------------
+
 void addCommsStateTransitions()
 {
-  commsFsm.add_transition(&stateCommsSearching, &stateCommsConnected, EV_COMMS_PKT_RXD, NULL);
-  commsFsm.add_transition(&stateCommsConnected, &stateCommsDisconnected, EV_COMMS_BOARD_TIMEDOUT, NULL);
-  commsFsm.add_transition(&stateCommsDisconnected, &stateCommsConnected, EV_COMMS_PKT_RXD, NULL);
+  // EV_COMMS_PKT_RXD
+  commsFsm->add_transition(&stateCommsSearching, &stateCommsConnected, EV_COMMS_PKT_RXD, NULL);
+  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsConnected, EV_COMMS_PKT_RXD, NULL);
 
-  commsFsm.add_transition(&stateCommsDisconnected, &stateCommsDisconnected, EV_COMMS_BOARD_TIMEDOUT, NULL);
+  // EV_COMMS_BOARD_TIMEDOUT
+  commsFsm->add_transition(&stateCommsConnected, &stateCommsDisconnected, EV_COMMS_BOARD_TIMEDOUT, NULL);
+
+  // EV_COMMS_FAILED_SEND_TO_BOARD
+  commsFsm->add_transition(&stateCommsConnected, &stateCommsDisconnected, EV_COMMS_FAILED_SEND_TO_BOARD, NULL);
 
   // EV_COMMS_BD_RESET
-  commsFsm.add_transition(&stateCommsConnected, &stateCommsConnected, EV_COMMS_BD_RESET, handleBdResetEvent);
-  commsFsm.add_transition(&stateCommsDisconnected, &stateCommsDisconnected, EV_COMMS_BD_RESET, handleBdResetEvent);
+  commsFsm->add_transition(&stateCommsConnected, &stateCommsConnected, EV_COMMS_BD_RESET, NULL);
+  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsDisconnected, EV_COMMS_BD_RESET, NULL);
 }
 //-----------------------------------------------------
-char *commsEventToString(CommsStateEvent ev)
+
+const char *commsEventToString(CommsStateEvent ev)
 {
   switch (ev)
   {
@@ -98,6 +98,8 @@ char *commsEventToString(CommsStateEvent ev)
     return "EV_COMMS_PKT_RXD";
   case EV_COMMS_BOARD_TIMEDOUT:
     return "EV_COMMS_BOARD_TIMEDOUT";
+  case EV_COMMS_FAILED_SEND_TO_BOARD:
+    return "EV_COMMS_FAILED_SEND_TO_BOARD";
   case EV_COMMS_BD_RESET:
     return "EV_COMMS_BD_RESET";
   case EV_COMMS_NO_EVENT:
@@ -106,6 +108,13 @@ char *commsEventToString(CommsStateEvent ev)
     return "Handled event";
   }
 }
+//-----------------------------------------------------
+
+const char *commsEventToString(int ev)
+{
+  return commsEventToString((CommsStateEvent)ev);
+}
+//-----------------------------------------------------
 
 void triggerCommsEvent(CommsStateEvent ev)
 {
@@ -120,8 +129,8 @@ void triggerCommsEvent(CommsStateEvent ev)
     Serial.printf("--> CommsEvent: %s\n", commsEventToString(ev));
   }
 #endif
-  lastCommsEvent = ev;
-  commsFsm.trigger(ev);
+  // lastCommsEvent = ev;
+  commsFsm->trigger(ev);
 }
 
 //-------------------------------------------------
@@ -132,6 +141,9 @@ void commsStateTask_0(void *pvParameters)
   Serial.printf("commsStateTask_0 running on core %d\n", xPortGetCoreID());
 
   commsStateTask_initialised = true;
+
+  commsFsm = new Fsm(&stateCommsSearching);
+  commsFsm->setGetEventName(commsEventToString);
 
   addCommsStateTransitions();
 
@@ -147,7 +159,7 @@ void commsStateTask_0(void *pvParameters)
     {
       triggerCommsEvent(ev);
     }
-    commsFsm.run_machine();
+    commsFsm->run_machine();
 
     vTaskDelay(10);
   }
@@ -161,7 +173,7 @@ void sendToCommsEventStateQueue(CommsStateEvent ev, TickType_t ticks)
   xQueueSendToBack(xCommsStateEventQueue, &e, ticks);
   if (ev == EV_COMMS_BD_RESET)
   {
-    DEBUG(commsEventToString(ev));
+    // DEBUG(commsEventToString(ev));
   }
 }
 //------------------------------------------------------------
@@ -173,7 +185,6 @@ CommsStateEvent readFromCommsStateEventQueue(TickType_t ticks)
   {
     if ((CommsStateEvent)e == EV_COMMS_BD_RESET)
     {
-      DEBUG(commsEventToString((CommsStateEvent)e));
     }
 
     return (CommsStateEvent)e;
@@ -181,17 +192,4 @@ CommsStateEvent readFromCommsStateEventQueue(TickType_t ticks)
   return CommsStateEvent::EV_COMMS_NO_EVENT;
 }
 
-void printStateName(const char *state_name)
-{
-#ifdef PRINT_COMMS_STATE
-  DEBUG(state_name);
-#endif
-}
-
-void printStateName(const char *state_name, const char *event)
-{
-#ifdef PRINT_COMMS_STATE
-  Serial.printf("%s --> %s\n", state_name, event);
-#endif
-}
-//------------------------------------------------------------
+//-----------------------------------------------------

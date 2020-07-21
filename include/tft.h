@@ -36,8 +36,8 @@ void setupLCD()
 {
   tft.init();
   tft.setRotation(1);
-  tft.fillScreen(TFT_BLUE);
-  tft.setTextColor(TFT_WHITE, TFT_BLUE);
+  tft.fillScreen(TFT_DEFAULT_BG);
+  tft.setTextColor(TFT_WHITE, TFT_DEFAULT_BG);
   tft.setTextSize(3);
   tft.drawString("ready", 20, 20);
 }
@@ -82,11 +82,6 @@ void drawGraphFullWidth(uint8_t y, uint8_t height, float pc, uint16_t colour = T
   tft.fillRect(0, y, (LCD_WIDTH * pc), height, colour);
 }
 //--------------------------------------------------------------------------------
-
-#define BATTERY_WIDTH 100
-#define BATTERY_HEIGHT 50
-#define BORDER_SIZE 6
-#define KNOB_HEIGHT 20
 
 void drawBattery(int percent, bool update)
 {

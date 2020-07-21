@@ -45,7 +45,7 @@ TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 
 //------------------------------------------------------------------
 
-void packet_available_cb(uint16_t from_id, uint8_t type)
+void packetAvailable_cb(uint16_t from_id, uint8_t type)
 {
   uint8_t buff[sizeof(VescData)];
   nrf24.read_into(buff, sizeof(VescData));
@@ -69,7 +69,7 @@ void init_tft()
 
 void init_nrf()
 {
-  nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
+  nrf24.begin(&radio, &network, COMMS_CONTROLLER, packetAvailable_cb);
 }
 
 bool update_display;

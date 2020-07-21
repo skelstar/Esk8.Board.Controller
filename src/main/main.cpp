@@ -11,8 +11,6 @@
 #include <elapsedMillis.h>
 #include <rom/rtc.h> // for reset reason
 
-#include <Adafruit_NeoPixel.h>
-
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
 #define SOFT_SPI_MOSI_PIN 13 // Blue
 #define SOFT_SPI_MISO_PIN 12 // Orange
@@ -26,15 +24,60 @@
 
 #include <TFT_eSPI.h>
 #include <Preferences.h>
+#include <BatteryLib.h>
+
+#ifndef FEATURE_CRUISE_CONTROL
+#define FEATURE_CRUISE_CONTROL false
+#endif
+#ifndef FEATURE_PUSH_TO_START
+#define FEATURE_PUSH_TO_START false
+#endif
 
 //------------------------------------------------------------------
 
 #define COMMS_BOARD 00
 #define COMMS_CONTROLLER 01
 
-VescData board_packet, old_board_packet;
 ControllerData controller_packet;
 ControllerConfig controller_config;
+
+class BoardClass
+{
+public:
+  /*
+  * saves VescData
+  * updates _changed
+  * records last rx time
+  */
+  void save(VescData latest)
+  {
+    _old = packet;
+    packet = latest;
+    _changed = packet.ampHours != _old.ampHours ||
+               packet.batteryVoltage != _old.batteryVoltage ||
+               packet.motorCurrent != _old.motorCurrent ||
+               packet.odometer != _old.odometer ||
+               packet.vescOnline != _old.vescOnline;
+    sinceLastPacket = 0;
+  }
+  bool valuesChanged() { return _changed; }
+  bool startedMoving() { return packet.moving && !_old.moving; }
+  bool hasStopped() { return !packet.moving && _old.moving; }
+  bool hasTimedout()
+  {
+    unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
+    return sinceLastPacket > (timeout + 100);
+  }
+
+  VescData packet;
+  elapsedMillis sinceLastPacket;
+
+private:
+  VescData _old;
+  bool _changed = false;
+  // unsigned long _lastRxTime;
+} board;
+
 //------------------------------------------------------------------
 
 NRF24L01Lib nrf24;
@@ -44,7 +87,12 @@ RF24Network network(radio);
 
 //------------------------------------------------------------------
 
-#define NUM_RETRIES 5
+#define BATTERY_MEASURE_PIN 34
+
+BatteryLib remote_batt(BATTERY_MEASURE_PIN);
+
+//------------------------------------------------------------------
+
 #ifndef SEND_TO_BOARD_INTERVAL
 #define SEND_TO_BOARD_INTERVAL 200
 #endif
@@ -52,6 +100,8 @@ RF24Network network(radio);
 
 #define LCD_WIDTH 240
 #define LCD_HEIGHT 135
+
+#define TFT_DEFAULT_BG TFT_BLACK
 
 TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 //------------------------------------------------------------------
@@ -72,11 +122,13 @@ public:
 Preferences statsStore;
 
 elapsedMillis
-    since_sent_to_board,
-    sinceLastBoardPacket,
+    sinceSentToBoard,
+    sinceLastBoardPacketRx,
+    sinceSentRequest,
     since_read_trigger;
 
 uint16_t remote_battery_percent = 0;
+bool remoteBattCharging = false;
 bool display_task_initialised = false;
 bool display_task_showing_option_screen = false;
 int oldCounter = 0;
@@ -92,21 +144,14 @@ enum DispStateEvent
   DISP_EV_NO_EVENT = 0,
   DISP_EV_CONNECTED,
   DISP_EV_DISCONNECTED,
-  DISP_EV_MENU_BUTTON_CLICKED,
-  DISP_EV_MENU_BUTTON_DOUBLE_CLICKED,
-  DISP_EV_REFRESH,
   DISP_EV_STOPPED,
   DISP_EV_MOVING,
-  DISP_EV_ENCODER_UP,
-  DISP_EV_ENCODER_DN,
-  DISP_EV_OPTION_SELECT_VALUE,
   DISP_EV_UPDATE,
-  DISP_EV_THROTTLE_CHANGED,
-  DISP_EV_BD_RSTS_CHANGED,
 };
 
-// menu_system - prototypes
+// displayState - prototypes
 void send_to_display_event_queue(DispStateEvent ev);
+void sendToBoard();
 
 //------------------------------------------------------------------
 
@@ -133,17 +178,15 @@ ThrottleClass throttle;
 #include <Button2.h>
 
 #include <utils.h>
-#include <OptionValue.h>
 #include <screens.h>
-#include <menu_options.h>
-#include <menu_system.h>
+#include <displayState.h>
 
 #include <display_task_0.h>
 #include <comms_connected_state.h>
+#include <features/battery_measure.h>
 
 #include <nrf_comms.h>
 
-#include <features/battery_measure.h>
 #include <peripherals.h>
 
 //---------------------------------------------------------------
@@ -177,7 +220,7 @@ void setup()
   }
   statsStore.end();
 
-  nrf24.begin(&radio, &network, COMMS_CONTROLLER, packet_available_cb);
+  nrf24.begin(&radio, &network, COMMS_CONTROLLER, packetAvailable_cb);
 
   print_build_status();
 
@@ -229,41 +272,12 @@ uint8_t old_throttle;
 
 void loop()
 {
-  if (since_read_trigger > READ_TRIGGER_PERIOD)
+  if (sinceSentToBoard > SEND_TO_BOARD_INTERVAL)
   {
-    since_read_trigger = 0;
-
-#ifdef FEATURE_MOVING_TO_ENABLE
-    bool accelEnabled = board_packet.moving;
-#else
-    bool accelEnabled = true;
-#endif
-
-    controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
-    if (old_throttle != controller_packet.throttle)
-    {
-      send_to_display_event_queue(DISP_EV_THROTTLE_CHANGED);
-      old_throttle = controller_packet.throttle;
-    }
+    sendToBoard();
   }
 
-  if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
-  {
-    since_sent_to_board = 0;
-
-    if (comms_state_connected == false)
-    {
-      controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
-      send_packet_to_board(CONFIG);
-    }
-    else
-    {
-      controller_packet.cruise_control = primaryButton.isPressed();
-      send_packet_to_board(CONTROL);
-    }
-  }
-
-  if (boardTimedOut() && currentCommsState == ST_COMMS_CONNECTED)
+  if (board.hasTimedout())
   {
     sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
   }
@@ -273,6 +287,25 @@ void loop()
   primaryButton.loop();
 
   vTaskDelay(1);
+}
+//------------------------------------------------------------------
+
+void sendToBoard()
+{
+  bool accelEnabled =
+      board.packet.moving ||
+      !FEATURE_PUSH_TO_START ||
+      (FEATURE_PUSH_TO_START && primaryButton.isPressed());
+
+  bool cruiseControlActive =
+      board.packet.moving &&
+      FEATURE_CRUISE_CONTROL &&
+      primaryButton.isPressed();
+
+  controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
+  sinceSentToBoard = 0;
+  controller_packet.cruise_control = cruiseControlActive;
+  sendPacketToBoard();
 }
 //------------------------------------------------------------------
 

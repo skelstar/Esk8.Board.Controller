@@ -7,7 +7,6 @@ TriggerLib trigger(0);
 
 void setUp()
 {
-  
 }
 
 void tearDown()
@@ -15,8 +14,8 @@ void tearDown()
 }
 
 void test_when_moving_and_accel_then_accel()
-{ 
-  uint8_t throttle = trigger.get_push_to_start_throttle(130, /*moving*/true);
+{
+  uint8_t throttle = trigger.get_FEATURE_PUSH_TO_START_throttle(130, /*moving*/ true);
   uint8_t expected = 130;
 
   TEST_ASSERT_EQUAL(expected, throttle);
@@ -24,7 +23,7 @@ void test_when_moving_and_accel_then_accel()
 
 void test_when_moving_and_braking_then_will_brake()
 {
-  uint8_t throttle = trigger.get_push_to_start_throttle(100, /*moving*/true);
+  uint8_t throttle = trigger.get_FEATURE_PUSH_TO_START_throttle(100, /*moving*/ true);
   uint8_t expected = 100;
 
   TEST_ASSERT_EQUAL(expected, throttle);
@@ -32,7 +31,7 @@ void test_when_moving_and_braking_then_will_brake()
 
 void test_when_not_moving_then_wont_accel()
 {
-  uint8_t throttle = trigger.get_push_to_start_throttle(130, /*moving*/false);
+  uint8_t throttle = trigger.get_FEATURE_PUSH_TO_START_throttle(130, /*moving*/ false);
   uint8_t expected = 127;
 
   TEST_ASSERT_EQUAL(expected, throttle);
@@ -40,7 +39,7 @@ void test_when_not_moving_then_wont_accel()
 
 void test_when_not_moving_and_braking_then_will_brake()
 {
-  uint8_t throttle = trigger.get_push_to_start_throttle(100, /*moving*/false);
+  uint8_t throttle = trigger.get_FEATURE_PUSH_TO_START_throttle(100, /*moving*/ false);
   uint8_t expected = 100;
 
   TEST_ASSERT_EQUAL(expected, throttle);

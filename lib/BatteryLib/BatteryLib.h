@@ -2,66 +2,60 @@
 #include <Arduino.h>
 #endif
 
+#include <FastMap.h>
+
 class BatteryLib
 {
   typedef void (*BatteryValueChangedCallback)();
 
+#define REMOTE_BATTERY_FULL 2300
+#define REMOTE_BATTERY_EMPTY 1520
+
 public:
-  BatteryLib(uint8_t pin, uint8_t gnd_pin = 99)
+  BatteryLib(uint8_t pin)
   {
     _pin = pin;
-    _gnd_pin = gnd_pin;
+
+    _mapper.init(REMOTE_BATTERY_EMPTY, REMOTE_BATTERY_FULL, 0, 10);
   }
 
-  void setup(BatteryValueChangedCallback cb, uint8_t rounding = 100)
+  void setup(BatteryValueChangedCallback cb)
   {
     _battery_value_changed_cb = cb;
-    _rounding = rounding;
     pinMode(_pin, INPUT);
-    if (_gnd_pin != 99)
-    {
-      pinMode(_gnd_pin, OUTPUT);
-      digitalWrite(_gnd_pin, LOW);
-    }
     vTaskDelay(10);
     read_remote_battery();
   }
 
   void read_remote_battery()
   {
-    uint16_t remote_battery_volts_raw = analogRead(_pin);
-    remote_battery_percent = get_remote_battery_percent(remote_battery_volts_raw);
-    if (remote_battery_percent != _old_remote_battery_percent)
-    {
-      _old_remote_battery_percent = remote_battery_percent;
-      if (_battery_value_changed_cb != NULL)
-      {
-        _battery_value_changed_cb();
-      }
-    }
+    _rawVolts = analogRead(_pin);
+    chargePercent = _get_remote_battery_percent(_rawVolts);
+    // removed logic comparing old to latest batt volts
+    _battery_value_changed_cb();
   }
 
-  uint8_t remote_battery_percent = 0;
+  bool isCharging = false;
+
+  uint16_t rawAnalogCount()
+  {
+    return _rawVolts;
+  }
+
+public:
+  uint8_t chargePercent = 0;
 
 private:
-#define REMOTE_BATTERY_FULL 2300
-#define REMOTE_BATTERY_EMPTY 1520
-
-  uint8_t get_remote_battery_percent(uint16_t raw_battery)
+  uint8_t _get_remote_battery_percent(uint16_t raw_battery)
   {
-    uint16_t numerator = raw_battery > REMOTE_BATTERY_EMPTY
-                             ? raw_battery < REMOTE_BATTERY_FULL
-                                   ? raw_battery - REMOTE_BATTERY_EMPTY
-                                   : REMOTE_BATTERY_FULL - REMOTE_BATTERY_EMPTY
-                             : 1;
+    isCharging = raw_battery > REMOTE_BATTERY_FULL + 100;
 
-    uint16_t denominator = REMOTE_BATTERY_FULL - REMOTE_BATTERY_EMPTY;
-    float ratio = numerator / (denominator * 1.0);
-    // make low_poly
-    return (uint8_t)((ratio * 100) / _rounding) * _rounding;
+    return 10 * _mapper.constrainedMap(raw_battery);
   }
 
+private:
   BatteryValueChangedCallback _battery_value_changed_cb;
-  uint8_t _pin, _gnd_pin, _rounding;
-  uint8_t _old_remote_battery_percent = 0;
+  uint8_t _pin;
+  uint16_t _rawVolts;
+  FastMap _mapper;
 };
