@@ -20,11 +20,16 @@ void screen_searching()
   tft.setTextDatum(TL_DATUM);
   tft.fillScreen(TFT_DEFAULT_BG);
 
+  tft.setFreeFont(&Orbitron_Light_24);
+  tft.setTextSize(1);
+
   lcd_message("Searching...", LINE_1, Aligned::ALIGNED_CENTRE);
-  // send interval
+  // // send interval
   int y = 40;
-  tft.drawString("interval: ", 10, y);
-  tft.drawNumber(SEND_TO_BOARD_INTERVAL, tft.textWidth("interval: ") + 10, y);
+  // tft.drawString("interval: ", 10, y);
+  // tft.drawNumber(SEND_TO_BOARD_INTERVAL, tft.textWidth("interval: ") + 10, y);
+
+  tft.setTextColor(TFT_DARKGREY);
 
   if (FEATURE_CRUISE_CONTROL)
   {

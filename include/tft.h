@@ -3,6 +3,9 @@
 #include <TFT_eSPI.h>
 #endif
 
+// #include <fonts/Custom/Orbitron_Light_24.h>
+#define CF_ORBL24 &Orbitron_Light_24
+
 #define TOP_BAR 10
 #define LINE_1 1
 #define LINE_2 2
@@ -49,7 +52,7 @@ void lcd_message(const char *message, uint8_t line, Aligned aligned, MessageStat
   uint8_t x = MARGIN,
           y = TOP_BAR + ((line - 1) * line_height);
 
-  tft.setTextSize(3);
+  // tft.setTextSize(3);
   if (status != OKAY)
   {
     tft.setTextColor(TFT_WHITE, status_colours[status]);
