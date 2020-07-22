@@ -24,14 +24,13 @@ public:
     _battery_value_changed_cb = cb;
     pinMode(_pin, INPUT);
     vTaskDelay(10);
-    read_remote_battery();
+    update();
   }
 
-  void read_remote_battery()
+  void update()
   {
     _rawVolts = analogRead(_pin);
-    chargePercent = _get_remote_battery_percent(_rawVolts);
-    // removed logic comparing old to latest batt volts
+    chargePercent = _get_percent(_rawVolts);
     _battery_value_changed_cb();
   }
 
@@ -46,7 +45,7 @@ public:
   uint8_t chargePercent = 0;
 
 private:
-  uint8_t _get_remote_battery_percent(uint16_t raw_battery)
+  uint8_t _get_percent(uint16_t raw_battery)
   {
     isCharging = raw_battery > REMOTE_BATTERY_FULL + 100;
 
