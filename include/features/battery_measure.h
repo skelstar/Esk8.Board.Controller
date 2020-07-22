@@ -4,12 +4,12 @@
 elapsedMillis since_measure_battery;
 
 // prototypes
-void battery_value_changed_cb();
+void battVoltsChanged_cb();
 
 //--------------------------------------------------------
 void batteryMeasureTask_0(void *pvParameters)
 {
-  remote_batt.setup(battery_value_changed_cb);
+  remote_batt.setup(battVoltsChanged_cb);
 
   Serial.printf("batteryMeasureTask_0 running on core %d\n", xPortGetCoreID());
 
@@ -18,14 +18,14 @@ void batteryMeasureTask_0(void *pvParameters)
     if (since_measure_battery > BATTERY_MEASURE_INTERVAL)
     {
       since_measure_battery = 0;
-      remote_batt.read_remote_battery();
+      remote_batt.update();
     }
     vTaskDelay(10);
   }
   vTaskDelete(NULL);
 }
 //--------------------------------------------------------
-void battery_value_changed_cb()
+void battVoltsChanged_cb()
 {
   send_to_display_event_queue(DISP_EV_UPDATE);
 }
