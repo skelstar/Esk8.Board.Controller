@@ -46,7 +46,32 @@ void setupLCD()
 }
 
 //--------------------------------------------------------------------------------
-void lcd_message(const char *message, uint8_t line, Aligned aligned, MessageStatus status = OKAY)
+
+int getX(Aligned aligned)
+{
+  switch (aligned)
+  {
+  case ALIGNED_LEFT:
+    tft.setTextDatum(TL_DATUM);
+    break;
+  case ALIGNED_CENTRE:
+    tft.setTextDatum(TC_DATUM);
+    break;
+  case ALIGNED_RIGHT:
+  default:
+    tft.setTextDatum(TR_DATUM);
+    break;
+  }
+  return MARGIN;
+}
+
+int getY(uint8_t line)
+{
+  uint8_t line_height = (LCD_HEIGHT - TOP_BAR) / 3;
+  return TOP_BAR + ((line - 1) * line_height);
+}
+
+void lcd_message(const char *message, uint8_t line, Aligned aligned, int textSize = 3, MessageStatus status = OKAY)
 {
   uint8_t line_height = (LCD_HEIGHT - TOP_BAR) / 3;
   uint8_t x = MARGIN,

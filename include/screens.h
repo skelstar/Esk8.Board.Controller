@@ -23,9 +23,12 @@ void screen_searching()
   tft.setFreeFont(&Orbitron_Light_24);
   tft.setTextSize(1);
 
-  lcd_message("Searching...", LINE_1, Aligned::ALIGNED_CENTRE);
+  uint16_t x = getX(ALIGNED_CENTRE),
+           y = getY(LINE_1);
+  tft.drawString("Searching...", x, y);
+
   // // send interval
-  int y = 40;
+  y = 40;
   // tft.drawString("interval: ", 10, y);
   // tft.drawNumber(SEND_TO_BOARD_INTERVAL, tft.textWidth("interval: ") + 10, y);
 
@@ -35,14 +38,14 @@ void screen_searching()
   {
     tft.setTextDatum(TC_DATUM);
     y += 30;
-    tft.drawString("cruise ctrl", 10, y);
+    tft.drawString("- cruise ctrl", 10, y);
   }
 
   if (FEATURE_PUSH_TO_START)
   {
     tft.setTextDatum(TC_DATUM);
     y += 30;
-    tft.drawString("push to start", 10, y);
+    tft.drawString("- push to start", 10, y);
   }
 }
 //-----------------------------------------------------
