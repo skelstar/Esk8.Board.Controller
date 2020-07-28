@@ -10,8 +10,15 @@
 #define LINE_1 1
 #define LINE_2 2
 #define LINE_3 3
+#define LINE_4 4
+
+#define CHUNKY_PIXEL_MED 10
+#define CHUNKY_SPACING_MED 8
+
+#define STRIPE_HEIGHT 10
 
 // prototypes
+void setupScreen(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour);
 
 //-----------------------------------------------------
 
@@ -20,7 +27,7 @@ void screen_searching()
   tft.setTextDatum(TL_DATUM);
   tft.fillScreen(TFT_DEFAULT_BG);
 
-  tft.setFreeFont(&Orbitron_Light_24);
+  tft.setFreeFont(FONT_LG);
   tft.setTextSize(1);
 
   uint16_t x = getX(ALIGNED_CENTRE),
@@ -59,88 +66,89 @@ void screen_with_stats(bool connected = true)
   // line 1
   char buff1[20];
   sprintf(buff1, "bd rsts: %d", stats.boardResets);
-  lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, getStatus(stats.boardResets, 0, 1, 1));
+  lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, FontSize::LG, getStatus(stats.boardResets, 0, 1, 1));
   // line 2
   char buff2[20];
   sprintf(buff2, "failed tx: %lu", stats.total_failed_sending);
-  lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, getStatus(stats.total_failed_sending, 0, 1, 2));
+  lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, FontSize::LG, getStatus(stats.total_failed_sending, 0, 1, 2));
   // line 3
 }
 //-----------------------------------------------------
 
-WidgetClass<uint8_t> *widgetRsts;
-WidgetClass<uint16_t> *widgetFail;
-WidgetClass<uint16_t> *widgetThrottle;
-WidgetClass<uint16_t> *widgetRemoteBatt;
-WidgetClass<uint16_t> *widgetRawRemoteBatt;
-WidgetClass<float> *widgetVolts;
-
-void initWidgets()
+template <typename T>
+class IndicatorClass
 {
-  widgetRsts = new WidgetClass<uint8_t>(
-      WidgetPos::TOP_LEFT,
-      WidgetSize::Normal);
-  widgetRsts->setStatusLevels(1, 1);
-  widgetRsts->setOnlyShowNonZero(true);
+public:
+  IndicatorClass(uint32_t bgColour)
+  {
+    _bgColour = bgColour;
+  }
 
-  widgetFail = new WidgetClass<uint16_t>(
-      WidgetPos::TOP_CENTRE,
-      WidgetSize::Normal);
-  widgetFail->setStatusLevels(2, 5);
-  widgetFail->setOnlyShowNonZero(true);
+  void Init(uint32_t stripeColour, char *title, uint32_t titleColour)
+  {
+    uint8_t y = 30;
+    tft.fillScreen(_bgColour);
+    tft.fillRect(0, 0, LCD_WIDTH, STRIPE_HEIGHT, stripeColour);
+    tft.setFreeFont(FONT_MED);
+    tft.setTextColor(titleColour);
+    tft.setTextDatum(TC_DATUM);
+    tft.drawString("MOTOR AMPS", LCD_WIDTH / 2, y);
+  }
 
-  widgetThrottle = new WidgetClass<uint16_t>(
-      WidgetPos::TOP_RIGHT,
-      WidgetSize::Normal,
-      TFT_GREEN,
-      TFT_BLACK);
+private:
+  uint32_t _bgColour;
+};
+//-----------------------------------------------------
 
-  widgetRemoteBatt = new WidgetClass<uint16_t>(
-      WidgetPos::BOTTOM_LEFT,
-      WidgetSize::Normal,
-      TFT_BLACK);
+ChunkyDigit *chunkyDigit;
 
-#ifdef DEBUG_BUILD
-  widgetRawRemoteBatt = new WidgetClass<uint16_t>(
-      WidgetPos::BOTTOM_CENTRE,
-      WidgetSize::Normal,
-      TFT_BLACK);
-#endif
-
-  widgetVolts = new WidgetClass<float>(
-      WidgetPos::BOTTOM_RIGHT,
-      WidgetSize::Normal);
-  widgetVolts->setStatusLevels(/*warn*/ 37.4, /*crit*/ 35.0, /*swapped*/ true);
-}
-
-void screenWithWidgets(bool connected = true)
+void screenOneMetricWithStripe(float value, char *title, uint32_t stripeColour, bool init)
 {
-  widgetRsts->draw(stats.boardResets, "RSTS");
-  widgetFail->draw(stats.total_failed_sending, "FAIL");
-  widgetThrottle->draw(controller_packet.throttle, "THR");
-  widgetRemoteBatt->drawBattery(remote_batt);
-#ifdef DEBUG_BUILD
-  widgetRawRemoteBatt->draw(remote_batt.rawAnalogCount(), "RAW");
-#endif
-  widgetVolts->draw(board.packet.batteryVoltage, "BATT");
+  uint8_t x = 200,
+          y = 30;
+  // setup
+  if (init || chunkyDigit == NULL)
+  {
+    DEBUGVAL(init, (chunkyDigit == NULL));
+    setupScreen(/*bg*/ TFT_DEFAULT_BG, /*fg*/ TFT_WHITE, stripeColour);
+
+    tft.setFreeFont(FONT_MED);
+    tft.setTextColor(TFT_DARKGREY);
+    tft.setTextDatum(TC_DATUM);
+    tft.drawString(title, LCD_WIDTH / 2, y);
+
+    chunkyDigit = new ChunkyDigit(&_spr, CHUNKY_PIXEL_MED, CHUNKY_SPACING_MED, TFT_DEFAULT_BG);
+  }
+
+  _spr.fillSprite(TFT_DEFAULT_BG);
+
+  char buff[20];
+  sprintf(buff, "%.1f", value);
+  _spr.setFreeFont(FONT_XL);
+
+  int w = chunkyDigit->getWidth(buff);
+  chunkyDigit->draw_float(x - w, /*y*/ 0, buff);
+  _spr.pushSprite(0, y + 25);
 }
 //-----------------------------------------------------
 
-void screen_moving()
+void screenWhenStopped(bool init = false)
 {
-  uint32_t bgColour = TFT_DARKGREEN;
-  tft.fillScreen(TFT_DARKGREEN);
-
-  char buff[10];
-
-  // line 1 amps
-  ChunkyDigit chunkAmps(&tft, 10, 8, bgColour);
-  sprintf(buff, "%.1f", board.packet.motorCurrent);
-  chunkAmps.draw_float(TC_DATUM, ChunkyDigit::LINE1_OF_2, buff, "Ah");
-
-  // line 2 throttle
-  ChunkyDigit chunky_digit(&tft, 10, 8, bgColour);
-  sprintf(buff, "%d", controller_packet.throttle);
-  chunkAmps.draw_float(BC_DATUM, ChunkyDigit::LINE2_OF_2, buff, "Thr");
+  screenOneMetricWithStripe(board.packet.batteryVoltage, "BATT VOLTS", TFT_DARKGREY, init);
 }
 //-----------------------------------------------------
+
+void screenWhenMoving(bool init = false)
+{
+  screenOneMetricWithStripe(board.packet.motorCurrent, "MOTOR", TFT_DARKGREEN, init);
+}
+//-----------------------------------------------------
+
+void setupScreen(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour)
+{
+  tft.fillScreen(bgColour);
+  tft.fillRect(0, 0, LCD_WIDTH, STRIPE_HEIGHT, stripeColour);
+  _spr.setTextColor(fgColour);
+  _spr.setFreeFont(FONT_MED);
+  _spr.createSprite(LCD_WIDTH, LCD_HEIGHT - 50);
+}

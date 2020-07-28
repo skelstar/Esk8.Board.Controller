@@ -4,13 +4,28 @@
 #endif
 
 // #include <fonts/Custom/Orbitron_Light_24.h>
-#define CF_ORBL24 &Orbitron_Light_24
+#include <fonts/Orbitron_Med_12.h>
+#include <fonts/Orbitron_Med_16.h>
+#include <fonts/Orbitron_Bold_48.h>
+
+#define FONT_SM &Orbitron_Medium_12
+#define FONT_MED &Orbitron_Medium_16
+#define FONT_LG &Orbitron_Light_24
+#define FONT_XL &Orbitron_Light_32
 
 #define TOP_BAR 10
 #define LINE_1 1
 #define LINE_2 2
 #define LINE_3 3
 #define MARGIN 5
+
+enum FontSize
+{
+  SM,
+  MED,
+  LG,
+  XL
+};
 
 #define TFT_H
 
@@ -32,6 +47,8 @@ uint16_t status_colours[3] = {TFT_BLUE, TFT_ORANGE, TFT_RED};
 
 uint16_t get_x_from_datum(uint16_t x, uint16_t width, uint8_t datum);
 uint16_t get_y_from_datum(uint16_t y, uint16_t height, uint8_t datum);
+
+TFT_eSprite _spr = TFT_eSprite(&tft);
 
 // https://github.com/skelstar/esk8Project/blob/master/Controller/Display.h
 
@@ -71,13 +88,28 @@ int getY(uint8_t line)
   return TOP_BAR + ((line - 1) * line_height);
 }
 
-void lcd_message(const char *message, uint8_t line, Aligned aligned, int textSize = 3, MessageStatus status = OKAY)
+void lcd_message(const char *message, uint8_t line, Aligned aligned, FontSize size = FontSize::MED, MessageStatus status = OKAY)
 {
-  uint8_t line_height = (LCD_HEIGHT - TOP_BAR) / 3;
+  uint8_t line_height = (LCD_HEIGHT - TOP_BAR) / 4;
   uint8_t x = MARGIN,
           y = TOP_BAR + ((line - 1) * line_height);
 
-  // tft.setTextSize(3);
+  switch (size)
+  {
+  case FontSize::SM:
+    tft.setFreeFont(FONT_SM);
+    break;
+  case FontSize::MED:
+    tft.setFreeFont(FONT_MED);
+    break;
+  case FontSize::LG:
+    tft.setFreeFont(FONT_LG);
+    break;
+  case FontSize::XL:
+    tft.setFreeFont(FONT_XL);
+    break;
+  }
+
   if (status != OKAY)
   {
     tft.setTextColor(TFT_WHITE, status_colours[status]);
