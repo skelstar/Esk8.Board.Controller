@@ -56,6 +56,23 @@ void screen_searching()
   }
 }
 //-----------------------------------------------------
+void screenWhenDisconnected()
+{
+  tft.fillScreen(TFT_RED);
+  // line 1
+  char buff1[20];
+  sprintf(buff1, "bd rsts: %d", stats.boardResets);
+  lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, FontSize::LG);
+  // line 2
+  char buff2[20];
+  sprintf(buff2, "failed tx: %lu", stats.total_failed_sending);
+  lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, FontSize::LG);
+  // line 3
+  char buff3[20];
+  sprintf(buff3, "amphours: %lu", board.packet.ampHours);
+  lcd_message(buff3, LINE_3, Aligned::ALIGNED_LEFT, FontSize::LG);
+}
+//-----------------------------------------------------
 
 void screen_with_stats(bool connected = true)
 {
@@ -75,47 +92,21 @@ void screen_with_stats(bool connected = true)
 }
 //-----------------------------------------------------
 
-template <typename T>
-class IndicatorClass
-{
-public:
-  IndicatorClass(uint32_t bgColour)
-  {
-    _bgColour = bgColour;
-  }
-
-  void Init(uint32_t stripeColour, char *title, uint32_t titleColour)
-  {
-    uint8_t y = 30;
-    tft.fillScreen(_bgColour);
-    tft.fillRect(0, 0, LCD_WIDTH, STRIPE_HEIGHT, stripeColour);
-    tft.setFreeFont(FONT_MED);
-    tft.setTextColor(titleColour);
-    tft.setTextDatum(TC_DATUM);
-    tft.drawString("MOTOR AMPS", LCD_WIDTH / 2, y);
-  }
-
-private:
-  uint32_t _bgColour;
-};
-//-----------------------------------------------------
-
 ChunkyDigit *chunkyDigit;
 
 void screenOneMetricWithStripe(float value, char *title, uint32_t stripeColour, bool init)
 {
-  uint8_t x = 200,
+  uint8_t x_right = 200,
           y = 30;
   // setup
   if (init || chunkyDigit == NULL)
   {
-    DEBUGVAL(init, (chunkyDigit == NULL));
     setupScreen(/*bg*/ TFT_DEFAULT_BG, /*fg*/ TFT_WHITE, stripeColour);
 
     tft.setFreeFont(FONT_MED);
     tft.setTextColor(TFT_DARKGREY);
-    tft.setTextDatum(TC_DATUM);
-    tft.drawString(title, LCD_WIDTH / 2, y);
+    tft.setTextDatum(TL_DATUM);
+    tft.drawString(title, x_right - tft.textWidth(title), y);
 
     chunkyDigit = new ChunkyDigit(&_spr, CHUNKY_PIXEL_MED, CHUNKY_SPACING_MED, TFT_DEFAULT_BG);
   }
@@ -123,24 +114,24 @@ void screenOneMetricWithStripe(float value, char *title, uint32_t stripeColour, 
   _spr.fillSprite(TFT_DEFAULT_BG);
 
   char buff[20];
-  sprintf(buff, "%.1f", value);
+  sprintf(buff, value < 1000.0 ? "%.1f" : "%.0f", value);
   _spr.setFreeFont(FONT_XL);
 
   int w = chunkyDigit->getWidth(buff);
-  chunkyDigit->draw_float(x - w, /*y*/ 0, buff);
+  chunkyDigit->draw_float(x_right - w, /*y*/ 0, buff);
   _spr.pushSprite(0, y + 25);
 }
 //-----------------------------------------------------
 
 void screenWhenStopped(bool init = false)
 {
-  screenOneMetricWithStripe(board.packet.batteryVoltage, "BATT VOLTS", TFT_DARKGREY, init);
+  screenOneMetricWithStripe(board.packet.ampHours, "TRIP AHrs", TFT_DARKGREY, init);
 }
 //-----------------------------------------------------
 
 void screenWhenMoving(bool init = false)
 {
-  screenOneMetricWithStripe(board.packet.motorCurrent, "MOTOR", TFT_DARKGREEN, init);
+  screenOneMetricWithStripe(board.packet.motorCurrent, "MOTOR AMPS", TFT_DARKGREEN, init);
 }
 //-----------------------------------------------------
 

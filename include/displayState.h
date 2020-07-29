@@ -25,12 +25,13 @@ State disp_state_searching([] {
 State disp_state_disconnected([] {
   print_disp_state("...disp_state_disconnected");
   screen_with_stats(/*connected*/ false);
+  screenWhenDisconnected();
 });
 //---------------------------------------------------------------
 State disp_state_stopped_screen(
     [] {
       print_disp_state("...disp_state_stopped_screen", eventToString(lastDispEvent));
-      screenWhenStopped();
+      screenWhenStopped(/*init*/ true);
     },
     [] {
       if (update_display)
@@ -43,8 +44,8 @@ State disp_state_stopped_screen(
 //---------------------------------------------------------------
 State disp_state_moving_screen(
     [] {
-      print_disp_state("...disp_state_moving_screen");
-      screenWhenMoving();
+      print_disp_state("...disp_state_moving_screen", eventToString(lastDispEvent));
+      screenWhenMoving(/*init*/ true);
     },
     [] {
       if (update_display)
