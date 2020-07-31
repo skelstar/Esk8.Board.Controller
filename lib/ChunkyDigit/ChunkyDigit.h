@@ -121,7 +121,6 @@ public:
 
   int getWidth(char *number, char *units = "")
   {
-    int number_len = strlen(number);
     bool unitsNotEmpty = units[0] != '\0';
     int unitsWidth = unitsNotEmpty
                          ? (int)_tft->textWidth(units)
@@ -133,10 +132,6 @@ public:
   {
     int number_len = strlen(number);
     bool unitsNotEmpty = units[0] != '\0';
-    int unitsWidth = unitsNotEmpty
-                         ? (int)_tft->textWidth(units)
-                         : 0;
-    int width = getWidth(number, units);
     uint8_t cursor_x = x;
 
     for (int i = 0; i < number_len; i++)
@@ -176,13 +171,11 @@ public:
 
   void draw_float(uint8_t datum, char *number, char *units = "")
   {
-    int number_len = strlen(number);
     bool unitsNotEmpty = units[0] != '\0';
     int unitsWidth = unitsNotEmpty
                          ? (int)_tft->textWidth(units)
                          : 0;
     int width = get_str_width(number) + unitsWidth;
-    int y = _getY(datum);
 
     draw_float(getX(datum, width), _getY(datum), number, units);
   }

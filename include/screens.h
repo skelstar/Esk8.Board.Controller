@@ -78,7 +78,7 @@ void screenWhenDisconnected()
 
   // line 2
   char buff2[20];
-  sprintf(buff2, "failed tx: %lu", stats.total_failed_sending);
+  sprintf(buff2, "failed tx: %d", stats.total_failed_sending);
   lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, FontSize::LG);
 
   // line 3
@@ -106,7 +106,7 @@ void screen_with_stats(bool connected = true)
   lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, FontSize::LG, getStatus(stats.boardResets, 0, 1, 1));
   // line 2
   char buff2[20];
-  sprintf(buff2, "failed tx: %lu", stats.total_failed_sending);
+  sprintf(buff2, "failed tx: %d", stats.total_failed_sending);
   lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, FontSize::LG, getStatus(stats.total_failed_sending, 0, 1, 2));
   // line 3
 }

@@ -71,7 +71,6 @@ void sendPacketToBoard()
 
   uint8_t bs[sizeof(ControllerData)];
   memcpy(bs, &controller_packet, sizeof(ControllerData));
-  uint8_t len = sizeof(ControllerData);
 
   sendPacket(bs, sizeof(ControllerData), PacketType::CONTROL);
 
