@@ -31,7 +31,8 @@ public:
   {
     _rawVolts = analogRead(_pin);
     chargePercent = _get_percent(_rawVolts);
-    _battery_value_changed_cb();
+    if (_battery_value_changed_cb != NULL)
+      _battery_value_changed_cb();
   }
 
   bool isCharging = false;

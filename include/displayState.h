@@ -22,11 +22,12 @@ State disp_state_searching([] {
   screen_searching();
 });
 //---------------------------------------------------------------
-State disp_state_disconnected([] {
-  print_disp_state("...disp_state_disconnected");
-  screen_with_stats(/*connected*/ false);
-  screenWhenDisconnected();
-});
+State disp_state_disconnected(
+    [] {
+      print_disp_state("...disp_state_disconnected");
+      screenWhenDisconnected();
+    },
+    NULL, NULL);
 //---------------------------------------------------------------
 State disp_state_stopped_screen(
     [] {

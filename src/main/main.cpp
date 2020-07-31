@@ -125,7 +125,8 @@ elapsedMillis
     sinceSentToBoard,
     sinceLastBoardPacketRx,
     sinceSentRequest,
-    since_read_trigger;
+    since_read_trigger,
+    sinceBoardConnected;
 
 uint16_t remote_battery_percent = 0;
 bool remoteBattCharging = false;

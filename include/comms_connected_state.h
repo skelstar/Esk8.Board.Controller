@@ -7,8 +7,7 @@ enum CommsStateEvent
   EV_COMMS_NO_EVENT,
   EV_COMMS_PKT_RXD,
   EV_COMMS_BOARD_TIMEDOUT,
-  EV_COMMS_FAILED_SEND_TO_BOARD,
-  EV_COMMS_BD_RESET,
+  EV_COMMS_BD_FIRST_PACKET,
 };
 
 //------------------------------------------
@@ -40,7 +39,7 @@ State stateCommsSearching([] {
 });
 
 State stateCommsConnected([] {
-  if (commsFsm->lastEvent() == EV_COMMS_BD_RESET)
+  if (commsFsm->lastEvent() == EV_COMMS_BD_FIRST_PACKET)
   {
     stats.boardResets++;
     send_to_display_event_queue(DISP_EV_UPDATE);
@@ -55,21 +54,23 @@ State stateCommsConnected([] {
   send_to_display_event_queue(DISP_EV_UPDATE);
 });
 
-State stateCommsDisconnected([] {
-  if (commsFsm->lastEvent() == EV_COMMS_BD_RESET)
-  {
-    stats.boardResets++;
-    send_to_display_event_queue(DISP_EV_UPDATE);
-  }
+State stateCommsDisconnected(
+    [] {
+      if (commsFsm->lastEvent() == EV_COMMS_BD_FIRST_PACKET)
+      {
+        stats.boardResets++;
+        send_to_display_event_queue(DISP_EV_UPDATE);
+      }
 
 #ifdef PRINT_COMMS_STATE
-  commsFsm->print("stateCommsDisconnected");
-  DEBUGMVAL("timed out", board.sinceLastPacket);
+      commsFsm->print("stateCommsDisconnected");
+      DEBUGMVAL("timed out", board.sinceLastPacket);
 #endif
 
-  comms_state_connected = false;
-  send_to_display_event_queue(DISP_EV_DISCONNECTED);
-});
+      comms_state_connected = false;
+      send_to_display_event_queue(DISP_EV_DISCONNECTED);
+    },
+    NULL, NULL);
 //-----------------------------------------------------
 
 void addCommsStateTransitions()
@@ -81,12 +82,9 @@ void addCommsStateTransitions()
   // EV_COMMS_BOARD_TIMEDOUT
   commsFsm->add_transition(&stateCommsConnected, &stateCommsDisconnected, EV_COMMS_BOARD_TIMEDOUT, NULL);
 
-  // EV_COMMS_FAILED_SEND_TO_BOARD
-  commsFsm->add_transition(&stateCommsConnected, &stateCommsDisconnected, EV_COMMS_FAILED_SEND_TO_BOARD, NULL);
-
   // EV_COMMS_BD_RESET
-  commsFsm->add_transition(&stateCommsConnected, &stateCommsConnected, EV_COMMS_BD_RESET, NULL);
-  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsDisconnected, EV_COMMS_BD_RESET, NULL);
+  commsFsm->add_transition(&stateCommsConnected, &stateCommsConnected, EV_COMMS_BD_FIRST_PACKET, NULL);
+  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsDisconnected, EV_COMMS_BD_FIRST_PACKET, NULL);
 }
 //-----------------------------------------------------
 
@@ -98,10 +96,8 @@ const char *commsEventToString(CommsStateEvent ev)
     return "EV_COMMS_PKT_RXD";
   case EV_COMMS_BOARD_TIMEDOUT:
     return "EV_COMMS_BOARD_TIMEDOUT";
-  case EV_COMMS_FAILED_SEND_TO_BOARD:
-    return "EV_COMMS_FAILED_SEND_TO_BOARD";
-  case EV_COMMS_BD_RESET:
-    return "EV_COMMS_BD_RESET";
+  case EV_COMMS_BD_FIRST_PACKET:
+    return "EV_COMMS_BD_FIRST_PACKET";
   case EV_COMMS_NO_EVENT:
     return "EV_COMMS_NO_EVENT";
   default:
@@ -171,7 +167,7 @@ void sendToCommsEventStateQueue(CommsStateEvent ev, TickType_t ticks)
 {
   uint8_t e = (uint8_t)ev;
   xQueueSendToBack(xCommsStateEventQueue, &e, ticks);
-  if (ev == EV_COMMS_BD_RESET)
+  if (ev == EV_COMMS_BD_FIRST_PACKET)
   {
     // DEBUG(commsEventToString(ev));
   }
@@ -183,7 +179,7 @@ CommsStateEvent readFromCommsStateEventQueue(TickType_t ticks)
   uint8_t e;
   if (xCommsStateEventQueue != NULL && xQueueReceive(xCommsStateEventQueue, &e, ticks) == pdPASS)
   {
-    if ((CommsStateEvent)e == EV_COMMS_BD_RESET)
+    if ((CommsStateEvent)e == EV_COMMS_BD_FIRST_PACKET)
     {
     }
 

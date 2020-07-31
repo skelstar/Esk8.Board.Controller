@@ -13,8 +13,6 @@ void display_task_0(void *pvParameters)
 
   Serial.printf("display_task_0 running on core %d\n", xPortGetCoreID());
 
-  // initWidgets();
-
   display_state->run_machine();
 
   display_task_initialised = true;
@@ -25,7 +23,6 @@ void display_task_0(void *pvParameters)
 
   while (true)
   {
-
     if (since_read_disp_event_queue > READ_DISP_EVENT_QUEUE_PERIOD)
     {
       since_read_disp_event_queue = 0;

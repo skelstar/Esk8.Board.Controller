@@ -24,10 +24,12 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
     * send controller "CONFIG" packet to board
     */
     DEBUG("*** board's first packet!! ***");
-    sendToCommsEventStateQueue(EV_COMMS_BD_RESET);
+    sendToCommsEventStateQueue(EV_COMMS_BD_FIRST_PACKET);
 
     controller_packet.id = 0;
     sendConfigToBoard();
+
+    sinceBoardConnected = 0;
   }
   else if (board.startedMoving())
   {
@@ -59,6 +61,14 @@ void sendConfigToBoard()
 
 void sendPacketToBoard()
 {
+  bool rxLastResponse = board.packet.id == controller_packet.id - 1 &&
+                        board.packet.id > 0;
+  if (!rxLastResponse && comms_state_connected)
+  {
+    stats.total_failed_sending += 1;
+    DEBUGVAL(board.packet.id, controller_packet.id);
+  }
+
   uint8_t bs[sizeof(ControllerData)];
   memcpy(bs, &controller_packet, sizeof(ControllerData));
   uint8_t len = sizeof(ControllerData);

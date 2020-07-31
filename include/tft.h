@@ -59,7 +59,6 @@ void setupLCD()
   tft.fillScreen(TFT_DEFAULT_BG);
   tft.setTextColor(TFT_WHITE, TFT_DEFAULT_BG);
   tft.setTextSize(3);
-  tft.drawString("ready", 20, 20);
 }
 
 //--------------------------------------------------------------------------------
@@ -143,35 +142,66 @@ void drawGraphFullWidth(uint8_t y, uint8_t height, float pc, uint16_t colour = T
 }
 //--------------------------------------------------------------------------------
 
-void drawBattery(int percent, bool update)
+void drawBattery(BatteryLib batt, uint8_t x1, uint8_t y1, uint8_t width, uint8_t height, uint32_t colour = TFT_WHITE)
 {
-  // if (!update)
-  // {
-  //   return;
-  // }
 
-  // u8g2.clearBuffer();
-  // int outsideX = (LCD_WIDTH - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
-  // int outsideY = (LCD_HEIGHT - BATTERY_HEIGHT) / 2;
-  // u8g2.drawBox(outsideX, outsideY, BATTERY_WIDTH, BATTERY_HEIGHT);
-  // u8g2.drawBox(
-  //     outsideX + BATTERY_WIDTH,
-  //     outsideY + (BATTERY_HEIGHT - KNOB_HEIGHT) / 2,
-  //     BORDER_SIZE,
-  //     KNOB_HEIGHT); // knob
-  // u8g2.setDrawColor(0);
-  // u8g2.drawBox(
-  //     outsideX + BORDER_SIZE,
-  //     outsideY + BORDER_SIZE,
-  //     BATTERY_WIDTH - BORDER_SIZE * 2,
-  //     BATTERY_HEIGHT - BORDER_SIZE * 2);
-  // u8g2.setDrawColor(1);
-  // u8g2.drawBox(
-  //     outsideX + BORDER_SIZE * 2,
-  //     outsideY + BORDER_SIZE * 2,
-  //     (BATTERY_WIDTH - BORDER_SIZE * 4) * percent / 100,
-  //     BATTERY_HEIGHT - BORDER_SIZE * 4);
-  // u8g2.sendBuffer();
+#define BORDER_SIZE 2
+
+  _spr.createSprite(/*width*/ width, /*height*/ height);
+
+  uint8_t
+      x = 0,
+      y = 0,
+      knobWidth = 4,
+      knobHeight = 10,
+      w = width - knobWidth,
+      h = height;
+
+  // knob
+  _spr.fillRect(x, y + ((h - knobHeight) / 2), knobWidth, knobHeight, colour);
+
+  // body - outline
+  x += knobWidth;
+  _spr.fillRect(x, y, w, h, colour);
+
+  // body - empty inside
+  x += BORDER_SIZE;
+  y += BORDER_SIZE;
+  w -= BORDER_SIZE * 2;
+  h -= BORDER_SIZE * 2;
+  _spr.fillRect(x, y, w, h, TFT_BLACK);
+
+  // capacity
+  w -= BORDER_SIZE * 2;
+  h -= BORDER_SIZE * 2;
+
+  x += BORDER_SIZE;
+  y += BORDER_SIZE;
+  _spr.fillRect(x, y, w, h, colour); // solid
+
+  if (false == batt.isCharging)
+  {
+    // black rect for used part
+    w = w * (1 - (batt.chargePercent / 100.0));
+    _spr.fillRect(x, y, w, h, TFT_BLACK);
+    DEBUGVAL(batt.chargePercent);
+  }
+  else
+  {
+    // plus
+    const int plus = 4, edge = 3;
+    _spr.fillRect(x + (w / 2) - (edge + (plus / 2)),
+                  y + (h / 2) - (plus / 2),
+                  edge + plus + edge,
+                  plus,
+                  TFT_BLACK);
+    _spr.fillRect(x + (w / 2) - (plus / 2),
+                  y + (h / 2) - (edge + (plus / 2)),
+                  plus,
+                  edge + plus + edge,
+                  TFT_BLACK);
+  }
+  _spr.pushSprite(x1, y1);
 }
 //--------------------------------------------------------------------------------
 

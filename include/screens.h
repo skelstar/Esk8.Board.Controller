@@ -34,12 +34,22 @@ void screen_searching()
            y = getY(LINE_1);
   tft.drawString("Searching...", x, y);
 
-  // // send interval
   y = 40;
-  // tft.drawString("interval: ", 10, y);
-  // tft.drawNumber(SEND_TO_BOARD_INTERVAL, tft.textWidth("interval: ") + 10, y);
 
   tft.setTextColor(TFT_DARKGREY);
+
+  // draw remote battery
+
+  BatteryLib remote_batt(BATTERY_MEASURE_PIN);
+
+  uint8_t w = 40,
+          h = 20,
+          x1 = LCD_WIDTH - w - 5, /*margin*/
+      y1 = 5;                     /*margin*/
+  remote_batt.setup(NULL);
+  remote_batt.update();
+
+  drawBattery(remote_batt, x1, y1, w, h, TFT_DARKGREY);
 
   if (FEATURE_CRUISE_CONTROL)
   {
@@ -58,19 +68,29 @@ void screen_searching()
 //-----------------------------------------------------
 void screenWhenDisconnected()
 {
-  tft.fillScreen(TFT_RED);
+  setupScreen(/*bg*/
+              TFT_DEFAULT_BG, /*fg*/ TFT_WHITE, TFT_RED);
+
   // line 1
   char buff1[20];
-  sprintf(buff1, "bd rsts: %d", stats.boardResets);
+  sprintf(buff1, "board resets: %d", stats.boardResets);
   lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, FontSize::LG);
+
   // line 2
   char buff2[20];
   sprintf(buff2, "failed tx: %lu", stats.total_failed_sending);
   lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, FontSize::LG);
+
   // line 3
   char buff3[20];
-  sprintf(buff3, "amphours: %lu", board.packet.ampHours);
+  sprintf(buff3, "trip Ah: %.1f", board.packet.ampHours);
   lcd_message(buff3, LINE_3, Aligned::ALIGNED_LEFT, FontSize::LG);
+
+  // line 4
+  char buff4[20];
+  int timeMins = (sinceBoardConnected / 1000) / 60;
+  sprintf(buff4, "time (mins): %d", timeMins);
+  lcd_message(buff4, LINE_4, Aligned::ALIGNED_LEFT, FontSize::LG);
 }
 //-----------------------------------------------------
 
@@ -125,7 +145,7 @@ void screenOneMetricWithStripe(float value, char *title, uint32_t stripeColour, 
 
 void screenWhenStopped(bool init = false)
 {
-  screenOneMetricWithStripe(board.packet.ampHours, "TRIP AHrs", TFT_DARKGREY, init);
+  screenOneMetricWithStripe(board.packet.ampHours, "TRIP Ah", TFT_DARKGREY, init);
 }
 //-----------------------------------------------------
 
