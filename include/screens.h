@@ -128,7 +128,7 @@ void screenOneMetricWithStripe(float value, char *title, uint32_t stripeColour, 
     tft.setTextDatum(TL_DATUM);
     tft.drawString(title, x_right - tft.textWidth(title), y);
 
-    chunkyDigit = new ChunkyDigit(&_spr, CHUNKY_PIXEL_MED, CHUNKY_SPACING_MED, TFT_DEFAULT_BG);
+    chunkyDigit = new ChunkyDigit(&tft, CHUNKY_PIXEL_MED, CHUNKY_SPACING_MED, TFT_DEFAULT_BG);
   }
 
   _spr.fillSprite(TFT_DEFAULT_BG);
@@ -138,8 +138,8 @@ void screenOneMetricWithStripe(float value, char *title, uint32_t stripeColour, 
   _spr.setFreeFont(FONT_XL);
 
   int w = chunkyDigit->getWidth(buff);
-  chunkyDigit->draw_float(x_right - w, /*y*/ 0, buff);
-  _spr.pushSprite(0, y + 25);
+  chunkyDigit->draw_float(x_right - w, /*y*/ y + 25, buff);
+  // _spr.pushSprite(0, y + 25);
 }
 //-----------------------------------------------------
 
