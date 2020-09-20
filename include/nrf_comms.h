@@ -98,7 +98,8 @@ bool sendPacketWithRetries(uint8_t *d, uint8_t len, uint8_t packetType, uint8_t 
   }
 #ifdef PRINT_SEND_RETRIES
   if (tries > 1)
-    DEBUGMVAL("Retried: ", tries, sent);
+    // DEBUGMVAL("Retried: ", tries, sent);
+    DEBUGVAL("Retried: ", tries, sent);
 #endif
 
   return sent;

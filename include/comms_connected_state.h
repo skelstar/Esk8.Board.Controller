@@ -64,7 +64,8 @@ State stateCommsDisconnected(
 
 #ifdef PRINT_COMMS_STATE
       commsFsm->print("stateCommsDisconnected");
-      DEBUGMVAL("timed out", board.sinceLastPacket);
+      // DEBUGMVAL("timed out", board.sinceLastPacket);
+      DEBUGVAL(board.sinceLastPacket);
 #endif
 
       comms_state_connected = false;

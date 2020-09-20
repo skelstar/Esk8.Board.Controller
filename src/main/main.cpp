@@ -3,8 +3,11 @@
 #ifdef DEBUG_SERIAL
 #define DEBUG_OUT Serial
 #endif
-#define PRINTSTREAM_FALLBACK
-#include "Debug.hpp"
+// #define PRINTSTREAM_FALLBACK
+// #include "Debug.hpp"
+
+#include <Arduino_Helpers.h>
+#include <AH/Debug/Debug.hpp>
 
 #include <Arduino.h>
 #include <VescData.h>
