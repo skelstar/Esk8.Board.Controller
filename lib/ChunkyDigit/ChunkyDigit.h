@@ -128,6 +128,11 @@ public:
     return get_str_width(number) + unitsWidth;
   }
 
+  int getHeight()
+  {
+    return 5 * _pixel_size;
+  }
+
   void draw_float(uint8_t x, int y, char *number, char *units = "")
   {
     int number_len = strlen(number);

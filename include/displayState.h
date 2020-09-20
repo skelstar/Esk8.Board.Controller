@@ -29,35 +29,27 @@ State disp_state_disconnected(
     },
     NULL, NULL);
 //---------------------------------------------------------------
-
-elapsedMillis sinceDebugValue;
-float debugVal = 0.0;
-
 State disp_state_stopped_screen(
     [] {
       print_disp_state("...disp_state_stopped_screen", eventToString(lastDispEvent));
       screenWhenStopped(/*init*/ true);
     },
     [] {
-      // if (update_display)
-      // {
-      //   update_display = false;
-      //   screenWhenStopped(/*init*/ false);
-      // }
-      // else
-      if (sinceDebugValue > 1000)
+      if (update_display)
       {
-        sinceDebugValue = 0;
-        debugVal += 10.1;
-        board.packet.ampHours = debugVal;
-        screenWhenStopped(false);
+        update_display = false;
+        screenWhenStopped(/*init*/ false);
       }
     },
     NULL);
 //---------------------------------------------------------------
+
+elapsedMillis sinceStoredMovingTime;
+
 State disp_state_moving_screen(
     [] {
       print_disp_state("...disp_state_moving_screen", eventToString(lastDispEvent));
+      sinceStoredMovingTime = 0;
       screenWhenMoving(/*init*/ true);
     },
     [] {
@@ -66,8 +58,15 @@ State disp_state_moving_screen(
         update_display = false;
         screenWhenMoving(/*init*/ false);
       }
+      if (sinceStoredMovingTime > 200)
+      {
+        stats.timeMovingMS += sinceStoredMovingTime;
+        sinceStoredMovingTime = 0;
+      }
     },
-    NULL);
+    [] {
+      // stats.timeMovingMS += sinceStoredMovingTime;
+    });
 //---------------------------------------------------------------
 
 void add_disp_state_transitions()

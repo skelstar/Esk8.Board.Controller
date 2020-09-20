@@ -12,7 +12,9 @@
 #define LINE_3 3
 #define LINE_4 4
 
+#define CHUNKY_PIXEL_SML 4
 #define CHUNKY_PIXEL_MED 10
+#define CHUNKY_SPACING_SML 4
 #define CHUNKY_SPACING_MED 8
 
 #define STRIPE_HEIGHT 10
@@ -140,11 +142,81 @@ void screenOneMetricWithStripe(float value, char *title, uint32_t stripeColour, 
   int w = chunkyDigit->getWidth(buff);
   chunkyDigit->draw_float(x_right - w, /*y*/ y + 25, buff);
 }
+
+enum QuarterPosition
+{
+  TOP_LEFT_QRTR,
+  TOP_RIGHT_QRTR,
+  BOTTOM_LEFT_QRTR,
+  BOTTOM_RIGHT_QRTR
+};
+
+int getQuarterX(QuarterPosition pos)
+{
+  switch (pos)
+  {
+  case TOP_LEFT_QRTR:
+  case BOTTOM_LEFT_QRTR:
+    return 0;
+  case TOP_RIGHT_QRTR:
+  case BOTTOM_RIGHT_QRTR:
+    return LCD_WIDTH / 2;
+  }
+}
+
+int getQuarterY(QuarterPosition pos)
+{
+  switch (pos)
+  {
+  case TOP_LEFT_QRTR:
+  case TOP_RIGHT_QRTR:
+    return STRIPE_HEIGHT;
+  case BOTTOM_LEFT_QRTR:
+  case BOTTOM_RIGHT_QRTR:
+    return (LCD_HEIGHT - STRIPE_HEIGHT) / 2 + STRIPE_HEIGHT;
+  }
+}
+
+void quarterScreen(QuarterPosition position, char *buff, char *title)
+{
+  int x = getQuarterX(position);
+  int y = getQuarterY(position);
+  int qrtrHeight = (LCD_HEIGHT - STRIPE_HEIGHT) / 2;
+  // tft.drawRect(x, y, LCD_WIDTH / 2, qrtrHeight, TFT_DARKGREY);
+
+  const uint8_t RIGHT_MARGIN = 5;
+  const uint8_t TOP_MARGIN = 2;
+  const uint8_t BOTTOM_MARGIN = 5;
+  tft.setTextDatum(TR_DATUM);
+  tft.drawString(title, x + (LCD_WIDTH / 2) - RIGHT_MARGIN, y + TOP_MARGIN);
+
+  chunkyDigit = new ChunkyDigit(&tft, /*pixel*/ 6, /*spacing*/ 5, TFT_DEFAULT_BG);
+
+  int w = chunkyDigit->getWidth(buff);
+  chunkyDigit->draw_float(x + (LCD_WIDTH / 2) - w - RIGHT_MARGIN, y + qrtrHeight - chunkyDigit->getHeight() - BOTTOM_MARGIN, buff);
+}
+
+void quarterScreenFloat(QuarterPosition position, float value, char *title)
+{
+  char buff[20];
+  sprintf(buff, value < 1000.0 ? "%.1f" : "%.0f", value);
+
+  quarterScreen(position, buff, title);
+}
 //-----------------------------------------------------
 
 void screenWhenStopped(bool init = false)
 {
-  screenOneMetricWithStripe(board.packet.ampHours, "TRIP Ah", TFT_DARKGREY, init);
+  if (init || chunkyDigit == NULL)
+  {
+    setupScreen(/*bg*/ TFT_DEFAULT_BG, /*fg*/ TFT_WHITE, TFT_DARKGREY);
+    tft.setFreeFont(FONT_MED);
+  }
+  quarterScreenFloat(TOP_LEFT_QRTR, board.packet.odometer, "trip (km)");
+  quarterScreenFloat(TOP_RIGHT_QRTR, stats.timeMovingMS / (60 * 1000.0), "time (m)");
+  quarterScreenFloat(BOTTOM_LEFT_QRTR, board.packet.ampHours, "mAH");
+  quarterScreenFloat(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHours(board.packet.ampHours), "mAH/s");
+  // screenOneMetricWithStripe(board.packet.ampHours, "TRIP Ah", TFT_DARKGREY, init);
 }
 //-----------------------------------------------------
 

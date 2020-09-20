@@ -118,6 +118,14 @@ public:
   RESET_REASON reset_reason_core1;
   uint16_t soft_resets = 0;
   uint8_t boardResets = 0;
+  unsigned long timeMovingMS = 0;
+
+  float getAverageAmpHours(float amphours)
+  {
+    return timeMovingMS > 0
+               ? amphours / (timeMovingMS / 1000.0)
+               : 0;
+  }
 } stats;
 
 #define STORE_STATS "stats"
