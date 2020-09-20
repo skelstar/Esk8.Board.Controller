@@ -29,16 +29,28 @@ State disp_state_disconnected(
     },
     NULL, NULL);
 //---------------------------------------------------------------
+
+elapsedMillis sinceDebugValue;
+float debugVal = 0.0;
+
 State disp_state_stopped_screen(
     [] {
       print_disp_state("...disp_state_stopped_screen", eventToString(lastDispEvent));
       screenWhenStopped(/*init*/ true);
     },
     [] {
-      if (update_display)
+      // if (update_display)
+      // {
+      //   update_display = false;
+      //   screenWhenStopped(/*init*/ false);
+      // }
+      // else
+      if (sinceDebugValue > 1000)
       {
-        update_display = false;
-        screenWhenStopped(/*init*/ false);
+        sinceDebugValue = 0;
+        debugVal += 10.1;
+        board.packet.ampHours = debugVal;
+        screenWhenStopped(false);
       }
     },
     NULL);

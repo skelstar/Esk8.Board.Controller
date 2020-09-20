@@ -68,8 +68,7 @@ void screen_searching()
 //-----------------------------------------------------
 void screenWhenDisconnected()
 {
-  setupScreen(/*bg*/
-              TFT_DEFAULT_BG, /*fg*/ TFT_WHITE, TFT_RED);
+  setupScreen(/*bg*/ TFT_DEFAULT_BG, /*fg*/ TFT_WHITE, TFT_RED);
 
   // line 1
   char buff1[20];
@@ -118,6 +117,7 @@ void screenOneMetricWithStripe(float value, char *title, uint32_t stripeColour, 
 {
   uint8_t x_right = 200,
           y = 30;
+
   // setup
   if (init || chunkyDigit == NULL)
   {
@@ -131,15 +131,14 @@ void screenOneMetricWithStripe(float value, char *title, uint32_t stripeColour, 
     chunkyDigit = new ChunkyDigit(&tft, CHUNKY_PIXEL_MED, CHUNKY_SPACING_MED, TFT_DEFAULT_BG);
   }
 
-  _spr.fillSprite(TFT_DEFAULT_BG);
-
   char buff[20];
   sprintf(buff, value < 1000.0 ? "%.1f" : "%.0f", value);
-  _spr.setFreeFont(FONT_XL);
+
+  // blank numbers
+  tft.fillRect(0, y + 25, LCD_WIDTH, LCD_HEIGHT - (y + 25), TFT_DEFAULT_BG);
 
   int w = chunkyDigit->getWidth(buff);
   chunkyDigit->draw_float(x_right - w, /*y*/ y + 25, buff);
-  // _spr.pushSprite(0, y + 25);
 }
 //-----------------------------------------------------
 
