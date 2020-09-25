@@ -7,13 +7,13 @@ void display_task_0(void *pvParameters)
 {
   setupLCD();
 
+  display_state = new Fsm(&disp_state_searching);
+
   add_disp_state_transitions();
 
   Serial.printf("display_task_0 running on core %d\n", xPortGetCoreID());
 
-  initWidgets();
-
-  display_state.run_machine();
+  display_state->run_machine();
 
   display_task_initialised = true;
 
@@ -23,17 +23,23 @@ void display_task_0(void *pvParameters)
 
   while (true)
   {
-
     if (since_read_disp_event_queue > READ_DISP_EVENT_QUEUE_PERIOD)
     {
       since_read_disp_event_queue = 0;
-      display_state.run_machine();
+      display_state->run_machine();
 
       DispStateEvent ev = read_from_display_event_queue();
-      if (ev != DISP_EV_NO_EVENT)
+      switch (ev)
       {
+      case DISP_EV_NO_EVENT:
+        break;
+      case DISP_EV_UPDATE:
+        update_display = true;
+        break;
+      default:
         lastDispEvent = ev;
-        display_state.trigger(ev);
+        display_state->trigger(ev);
+        break;
       }
     }
     vTaskDelay(10);

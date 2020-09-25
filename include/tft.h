@@ -3,11 +3,29 @@
 #include <TFT_eSPI.h>
 #endif
 
+// #include <fonts/Custom/Orbitron_Light_24.h>
+#include <fonts/Orbitron_Med_12.h>
+#include <fonts/Orbitron_Med_16.h>
+#include <fonts/Orbitron_Bold_48.h>
+
+#define FONT_SM &Orbitron_Medium_12
+#define FONT_MED &Orbitron_Medium_16
+#define FONT_LG &Orbitron_Light_24
+#define FONT_XL &Orbitron_Light_32
+
 #define TOP_BAR 10
 #define LINE_1 1
 #define LINE_2 2
 #define LINE_3 3
 #define MARGIN 5
+
+enum FontSize
+{
+  SM,
+  MED,
+  LG,
+  XL
+};
 
 #define TFT_H
 
@@ -30,6 +48,8 @@ uint16_t status_colours[3] = {TFT_BLUE, TFT_ORANGE, TFT_RED};
 uint16_t get_x_from_datum(uint16_t x, uint16_t width, uint8_t datum);
 uint16_t get_y_from_datum(uint16_t y, uint16_t height, uint8_t datum);
 
+TFT_eSprite _spr = TFT_eSprite(&tft);
+
 // https://github.com/skelstar/esk8Project/blob/master/Controller/Display.h
 
 void setupLCD()
@@ -39,17 +59,56 @@ void setupLCD()
   tft.fillScreen(TFT_DEFAULT_BG);
   tft.setTextColor(TFT_WHITE, TFT_DEFAULT_BG);
   tft.setTextSize(3);
-  tft.drawString("ready", 20, 20);
 }
 
 //--------------------------------------------------------------------------------
-void lcd_message(const char *message, uint8_t line, Aligned aligned, MessageStatus status = OKAY)
+
+int getX(Aligned aligned)
+{
+  switch (aligned)
+  {
+  case ALIGNED_LEFT:
+    tft.setTextDatum(TL_DATUM);
+    break;
+  case ALIGNED_CENTRE:
+    tft.setTextDatum(TC_DATUM);
+    break;
+  case ALIGNED_RIGHT:
+  default:
+    tft.setTextDatum(TR_DATUM);
+    break;
+  }
+  return MARGIN;
+}
+
+int getY(uint8_t line)
 {
   uint8_t line_height = (LCD_HEIGHT - TOP_BAR) / 3;
+  return TOP_BAR + ((line - 1) * line_height);
+}
+
+void lcd_message(const char *message, uint8_t line, Aligned aligned, FontSize size = FontSize::MED, MessageStatus status = OKAY)
+{
+  uint8_t line_height = (LCD_HEIGHT - TOP_BAR) / 4;
   uint8_t x = MARGIN,
           y = TOP_BAR + ((line - 1) * line_height);
 
-  tft.setTextSize(3);
+  switch (size)
+  {
+  case FontSize::SM:
+    tft.setFreeFont(FONT_SM);
+    break;
+  case FontSize::MED:
+    tft.setFreeFont(FONT_MED);
+    break;
+  case FontSize::LG:
+    tft.setFreeFont(FONT_LG);
+    break;
+  case FontSize::XL:
+    tft.setFreeFont(FONT_XL);
+    break;
+  }
+
   if (status != OKAY)
   {
     tft.setTextColor(TFT_WHITE, status_colours[status]);
@@ -83,35 +142,66 @@ void drawGraphFullWidth(uint8_t y, uint8_t height, float pc, uint16_t colour = T
 }
 //--------------------------------------------------------------------------------
 
-void drawBattery(int percent, bool update)
+void drawBattery(BatteryLib batt, uint8_t x1, uint8_t y1, uint8_t width, uint8_t height, uint32_t colour = TFT_WHITE)
 {
-  // if (!update)
-  // {
-  //   return;
-  // }
 
-  // u8g2.clearBuffer();
-  // int outsideX = (LCD_WIDTH - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
-  // int outsideY = (LCD_HEIGHT - BATTERY_HEIGHT) / 2;
-  // u8g2.drawBox(outsideX, outsideY, BATTERY_WIDTH, BATTERY_HEIGHT);
-  // u8g2.drawBox(
-  //     outsideX + BATTERY_WIDTH,
-  //     outsideY + (BATTERY_HEIGHT - KNOB_HEIGHT) / 2,
-  //     BORDER_SIZE,
-  //     KNOB_HEIGHT); // knob
-  // u8g2.setDrawColor(0);
-  // u8g2.drawBox(
-  //     outsideX + BORDER_SIZE,
-  //     outsideY + BORDER_SIZE,
-  //     BATTERY_WIDTH - BORDER_SIZE * 2,
-  //     BATTERY_HEIGHT - BORDER_SIZE * 2);
-  // u8g2.setDrawColor(1);
-  // u8g2.drawBox(
-  //     outsideX + BORDER_SIZE * 2,
-  //     outsideY + BORDER_SIZE * 2,
-  //     (BATTERY_WIDTH - BORDER_SIZE * 4) * percent / 100,
-  //     BATTERY_HEIGHT - BORDER_SIZE * 4);
-  // u8g2.sendBuffer();
+#define BORDER_SIZE 2
+
+  _spr.createSprite(/*width*/ width, /*height*/ height);
+
+  uint8_t
+      x = 0,
+      y = 0,
+      knobWidth = 4,
+      knobHeight = 10,
+      w = width - knobWidth,
+      h = height;
+
+  // knob
+  _spr.fillRect(x, y + ((h - knobHeight) / 2), knobWidth, knobHeight, colour);
+
+  // body - outline
+  x += knobWidth;
+  _spr.fillRect(x, y, w, h, colour);
+
+  // body - empty inside
+  x += BORDER_SIZE;
+  y += BORDER_SIZE;
+  w -= BORDER_SIZE * 2;
+  h -= BORDER_SIZE * 2;
+  _spr.fillRect(x, y, w, h, TFT_BLACK);
+
+  // capacity
+  w -= BORDER_SIZE * 2;
+  h -= BORDER_SIZE * 2;
+
+  x += BORDER_SIZE;
+  y += BORDER_SIZE;
+  _spr.fillRect(x, y, w, h, colour); // solid
+
+  if (false == batt.isCharging)
+  {
+    // black rect for used part
+    w = w * (1 - (batt.chargePercent / 100.0));
+    _spr.fillRect(x, y, w, h, TFT_BLACK);
+    DEBUGVAL(batt.chargePercent);
+  }
+  else
+  {
+    // plus
+    const int plus = 4, edge = 3;
+    _spr.fillRect(x + (w / 2) - (edge + (plus / 2)),
+                  y + (h / 2) - (plus / 2),
+                  edge + plus + edge,
+                  plus,
+                  TFT_BLACK);
+    _spr.fillRect(x + (w / 2) - (plus / 2),
+                  y + (h / 2) - (edge + (plus / 2)),
+                  plus,
+                  edge + plus + edge,
+                  TFT_BLACK);
+  }
+  _spr.pushSprite(x1, y1);
 }
 //--------------------------------------------------------------------------------
 

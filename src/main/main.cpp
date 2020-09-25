@@ -3,8 +3,11 @@
 #ifdef DEBUG_SERIAL
 #define DEBUG_OUT Serial
 #endif
-#define PRINTSTREAM_FALLBACK
-#include "Debug.hpp"
+// #define PRINTSTREAM_FALLBACK
+// #include "Debug.hpp"
+
+#include <Arduino_Helpers.h>
+#include <AH/Debug/Debug.hpp>
 
 #include <Arduino.h>
 #include <VescData.h>
@@ -115,6 +118,14 @@ public:
   RESET_REASON reset_reason_core1;
   uint16_t soft_resets = 0;
   uint8_t boardResets = 0;
+  unsigned long timeMovingMS = 0;
+
+  float getAverageAmpHours(float amphours)
+  {
+    return timeMovingMS > 0
+               ? amphours / (timeMovingMS / 1000.0)
+               : 0;
+  }
 } stats;
 
 #define STORE_STATS "stats"
@@ -125,7 +136,8 @@ elapsedMillis
     sinceSentToBoard,
     sinceLastBoardPacketRx,
     sinceSentRequest,
-    since_read_trigger;
+    since_read_trigger,
+    sinceBoardConnected;
 
 uint16_t remote_battery_percent = 0;
 bool remoteBattCharging = false;
