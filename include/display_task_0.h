@@ -41,7 +41,18 @@ void display_task_0(void *pvParameters)
         display_state->trigger(ev);
         break;
       }
+
+      uint8_t buttonEvent = buttonQueueManager->read();
+      switch (buttonEvent)
+      {
+      case TRIPLE:
+        Serial.printf("Triple click event received\n");
+        break;
+      case 99:
+        break;
+      }
     }
+
     vTaskDelay(10);
   }
   vTaskDelete(NULL);

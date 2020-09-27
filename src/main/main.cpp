@@ -22,12 +22,20 @@
 #define NRF_CE 17
 #define NRF_CS 2
 
+enum ButtonClickType
+{
+  SINGLE,
+  DOUBLE,
+  TRIPLE
+};
+
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
 
 #include <TFT_eSPI.h>
 #include <Preferences.h>
 #include <BatteryLib.h>
+#include <EventQueueManager.h>
 
 enum FeatureType
 {
@@ -195,6 +203,9 @@ int oldCounter = 0;
 
 xQueueHandle xDisplayChangeEventQueue;
 xQueueHandle xCommsStateEventQueue;
+xQueueHandle xButtonPushEventQueue;
+
+EventQueueManager *buttonQueueManager;
 
 //------------------------------------------------------------------
 enum DispStateEvent
@@ -317,6 +328,9 @@ void setup()
 
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
+  xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
+
+  buttonQueueManager = new EventQueueManager(xButtonPushEventQueue, 10);
 
   while (!display_task_initialised)
   {
