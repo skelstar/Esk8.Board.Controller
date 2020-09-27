@@ -205,6 +205,7 @@ xQueueHandle xDisplayChangeEventQueue;
 xQueueHandle xCommsStateEventQueue;
 xQueueHandle xButtonPushEventQueue;
 
+EventQueueManager *displayChangeQueueManager;
 EventQueueManager *buttonQueueManager;
 
 //------------------------------------------------------------------
@@ -216,6 +217,9 @@ enum DispStateEvent
   DISP_EV_STOPPED,
   DISP_EV_MOVING,
   DISP_EV_UPDATE,
+  DISP_EV_PRIMARY_SINGLE_CLICK,
+  DISP_EV_PRIMARY_DOUBLE_CLICK,
+  DISP_EV_PRIMARY_TRIPLE_CLICK
 };
 
 // displayState - prototypes
@@ -330,6 +334,7 @@ void setup()
   xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
 
+  displayChangeQueueManager = new EventQueueManager(xDisplayChangeEventQueue, 5);
   buttonQueueManager = new EventQueueManager(xButtonPushEventQueue, 10);
 
   while (!display_task_initialised)

@@ -43,6 +43,27 @@ State disp_state_stopped_screen(
     },
     NULL);
 //---------------------------------------------------------------
+elapsedMillis sinceShowingToggleScreen;
+
+State disp_state_toggle_push_to_start(
+    [] {
+      print_disp_state("...disp_state_toggle_push_to_start", eventToString(lastDispEvent));
+      bool newVal = !featureService.get<bool>(FeatureType::PUSH_TO_START);
+      featureService.set(PUSH_TO_START, newVal);
+      // const char *val = (newVal == true) ? "ON" : "OFF";
+      screenPropValue("push to start", (newVal == true) ? "ON" : "OFF");
+      sinceShowingToggleScreen = 0;
+    },
+    [] {
+      if (sinceShowingToggleScreen > 3000)
+      {
+        sinceShowingToggleScreen = 0; // prevent excessive re-trigger
+        lastDispEvent = DISP_EV_PRIMARY_SINGLE_CLICK;
+        display_state->trigger(DISP_EV_PRIMARY_SINGLE_CLICK);
+      }
+    },
+    NULL);
+//---------------------------------------------------------------
 
 elapsedMillis sinceStoredMovingTime;
 
@@ -84,6 +105,9 @@ void add_disp_state_transitions()
   display_state->add_transition(&disp_state_stopped_screen, &disp_state_moving_screen, DISP_EV_MOVING, NULL);
   // DISP_EV_STOPPED
   display_state->add_transition(&disp_state_moving_screen, &disp_state_stopped_screen, DISP_EV_STOPPED, NULL);
+
+  display_state->add_transition(&disp_state_stopped_screen, &disp_state_toggle_push_to_start, DISP_EV_PRIMARY_TRIPLE_CLICK, NULL);
+  display_state->add_transition(&disp_state_toggle_push_to_start, &disp_state_stopped_screen, DISP_EV_PRIMARY_SINGLE_CLICK, NULL);
 }
 //---------------------------------------------------------------
 
@@ -103,6 +127,12 @@ const char *eventToString(DispStateEvent ev)
     return "DISP_EV_MOVING";
   case DISP_EV_UPDATE:
     return "DISP_EV_UPDATE";
+  case DISP_EV_PRIMARY_SINGLE_CLICK:
+    return "DISP_EV_PRIMARY_SINGLE_CLICK";
+  case DISP_EV_PRIMARY_DOUBLE_CLICK:
+    return "DISP_EV_PRIMARY_DOUBLE_CLICK";
+  case DISP_EV_PRIMARY_TRIPLE_CLICK:
+    return "DISP_EV_PRIMARY_TRIPLE_CLICK";
   default:
     char buff[30];
     sprintf(buff, "unhandled ev: %d", (uint8_t)ev);
@@ -114,7 +144,7 @@ const char *eventToString(DispStateEvent ev)
 void print_disp_state(const char *state_name, const char *event)
 {
 #ifdef PRINT_DISP_STATE
-  Serial.printf("%s --> %s\n", state_name, event);
+  Serial.printf("%s --> %s\n", state_name, sizeof(event) > 3 ? event : "EMPTY");
 #endif
 }
 //---------------------------------------------------------------
@@ -138,18 +168,18 @@ void send_to_display_event_queue(DispStateEvent ev)
 }
 //---------------------------------------------------------------
 
-DispStateEvent read_from_display_event_queue(TickType_t ticks)
-{
-  uint8_t e;
-  if (xDisplayChangeEventQueue != NULL && xQueueReceive(xDisplayChangeEventQueue, &e, ticks) == pdPASS)
-  {
-#ifdef PRINT_DISP_STATE_EVENT
-    Serial.printf("<- %s\n", eventToString((DispStateEvent)e));
-#endif
-    return (DispStateEvent)e;
-  }
-  return DISP_EV_NO_EVENT;
-}
+// DispStateEvent read_from_display_event_queue(TickType_t ticks)
+// {
+//   uint8_t e;
+//   if (xDisplayChangeEventQueue != NULL && xQueueReceive(xDisplayChangeEventQueue, &e, ticks) == pdPASS)
+//   {
+// #ifdef PRINT_DISP_STATE_EVENT
+//     Serial.printf("<- %s\n", eventToString((DispStateEvent)e));
+// #endif
+//     return (DispStateEvent)e;
+//   }
+//   return DISP_EV_NO_EVENT;
+// }
 //---------------------------------------------------------------
 void clearDisplayEventQueue()
 {

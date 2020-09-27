@@ -112,6 +112,13 @@ void screen_with_stats(bool connected = true)
   // line 3
 }
 //-----------------------------------------------------
+void screenPropValue(char *propName, const char *value)
+{
+  tft.fillScreen(TFT_DEFAULT_BG);
+  lcd_message(propName, LINE_2, Aligned::ALIGNED_CENTRE, FontSize::LG);
+  lcd_message(value, LINE_3, Aligned::ALIGNED_CENTRE, FontSize::LG);
+}
+//-----------------------------------------------------
 
 ChunkyDigit *chunkyDigit;
 
@@ -225,6 +232,9 @@ void screenWhenMoving(bool init = false)
   screenOneMetricWithStripe(board.packet.motorCurrent, "MOTOR AMPS", TFT_DARKGREEN, init);
 }
 //-----------------------------------------------------
+void screenTogglePushToStart()
+{
+}
 
 void setupScreen(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour)
 {
