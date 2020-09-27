@@ -4,7 +4,7 @@
 
 class ChunkyDigit
 {
-  const bool FONT_DIGITS_3x5[11][5][3] = {
+  const bool FONT_DIGITS_3x5[11 + 3 + 1][5][3] = {
       {
           {1, 1, 1},
           {1, 0, 1},
@@ -75,16 +75,58 @@ class ChunkyDigit
           {0, 0, 1},
           {1, 1, 1},
       },
-      // % = 10
       {
+          // % = 10
           {1, 0, 1},
           {0, 0, 1},
           {0, 1, 0},
           {1, 0, 0},
           {1, 0, 1},
-      }};
+      },
+      {
+          // O
+          {1, 1, 1},
+          {1, 0, 1},
+          {1, 0, 1},
+          {1, 0, 1},
+          {1, 1, 1},
+      },
+      {
+          // F
+          {1, 1, 1},
+          {1, 0, 0},
+          {1, 1, 0},
+          {1, 0, 0},
+          {1, 0, 0},
+      },
+      {
+          // N
+          {1, 1, 0},
+          {1, 0, 1},
+          {1, 0, 1},
+          {1, 0, 1},
+          {1, 0, 1},
+      },
+      {
+          // MISSING CHAR
+          {0, 0, 0},
+          {0, 0, 0},
+          {1, 1, 1},
+          {0, 0, 0},
+          {0, 0, 0},
+      },
+
+  };
 
 public:
+  enum SpecialChar
+  {
+    LETTER_O = 12,
+    LETTER_F,
+    LETTER_N,
+    LETTER_MISSING
+  };
+
   enum ScreenLine
   {
     LINE1_OF_3,
@@ -116,9 +158,23 @@ public:
     }
     return width;
   }
+  //--------------------------------------------------------------------------------
+  int get_str_width(const char *number)
+  {
+    uint8_t num_chars = strlen(number);
+    uint8_t char_width = 3 * _pixel_size;
+    uint8_t width = 0;
+    for (int i = 0; i < num_chars; i++)
+    {
+      uint8_t w = number[i] == '.' ? 1 * _pixel_size : char_width;
+      if (i < num_chars - 1)
+        w += _spacing;
+      width += w;
+    }
+    return width;
+  }
 
   //--------------------------------------------------------------------------------
-
   int getWidth(char *number, char *units = "")
   {
     bool unitsNotEmpty = units[0] != '\0';
@@ -127,11 +183,17 @@ public:
                          : 0;
     return get_str_width(number) + unitsWidth;
   }
-
+  //--------------------------------------------------------------------------------
+  int getWidth(const char *number)
+  {
+    return get_str_width(number);
+  }
+  //--------------------------------------------------------------------------------
   int getHeight()
   {
     return 5 * _pixel_size;
   }
+  //--------------------------------------------------------------------------------
 
   void draw_float(uint8_t x, int y, char *number, char *units = "")
   {
@@ -173,6 +235,7 @@ public:
       _tft->drawString(units, cursor_x + 10, unitsY);
     }
   }
+  //--------------------------------------------------------------------------------
 
   void draw_float(uint8_t datum, char *number, char *units = "")
   {
@@ -184,6 +247,7 @@ public:
 
     draw_float(getX(datum, width), _getY(datum), number, units);
   }
+  //--------------------------------------------------------------------------------
 
   void draw_float(uint8_t datum, ScreenLine line, char *number, char *units)
   {
@@ -195,7 +259,34 @@ public:
 
     draw_float(getX(datum, width), _getY(line), number, units);
   }
+  //--------------------------------------------------------------------------------
 
+  void drawText(const char *text, int x, int y)
+  {
+    int number_len = strlen(text);
+
+    uint8_t cursor_x = x;
+
+    for (int i = 0; i < number_len; i++)
+    {
+      char ch = text[i];
+      uint8_t spc = i == number_len - 1 ? 0 : _spacing;
+      uint8_t idx = 0;
+
+      if (ch == 'O')
+        idx = SpecialChar::LETTER_O - 1;
+      else if (ch == 'F')
+        idx = SpecialChar::LETTER_F - 1;
+      else if (ch == 'N')
+        idx = SpecialChar::LETTER_N - 1;
+      else
+        idx = SpecialChar::LETTER_MISSING - 1;
+      chunky_draw_digit(idx, cursor_x, y, _pixel_size);
+      cursor_x += 3 * _pixel_size + spc;
+    }
+  }
+
+  //--------------------------------------------------------------------------------
   int getX(uint8_t datum, int width)
   {
 
@@ -209,6 +300,7 @@ public:
     }
     return LCD_WIDTH - width;
   }
+  //--------------------------------------------------------------------------------
 
 private:
   TFT_eSPI *_tft;

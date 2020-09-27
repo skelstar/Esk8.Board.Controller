@@ -112,15 +112,20 @@ void screen_with_stats(bool connected = true)
   // line 3
 }
 //-----------------------------------------------------
+
+ChunkyDigit *chunkyDigit;
+//-----------------------------------------------------
 void screenPropValue(char *propName, const char *value)
 {
   tft.fillScreen(TFT_DEFAULT_BG);
-  lcd_message(propName, LINE_2, Aligned::ALIGNED_CENTRE, FontSize::LG);
-  lcd_message(value, LINE_3, Aligned::ALIGNED_CENTRE, FontSize::LG);
+  lcd_messageBase(propName, /*y*/ 20, Aligned::ALIGNED_CENTRE, FontSize::LG, TFT_DARKGREY);
+
+  chunkyDigit = new ChunkyDigit(&tft, CHUNKY_PIXEL_MED, CHUNKY_SPACING_MED, TFT_DEFAULT_BG);
+
+  int w = chunkyDigit->getWidth((const char *)value);
+  chunkyDigit->drawText(value, LCD_WIDTH / 2 - w / 2, LCD_HEIGHT - chunkyDigit->getHeight() - 30);
 }
 //-----------------------------------------------------
-
-ChunkyDigit *chunkyDigit;
 
 void screenOneMetricWithStripe(float value, char *title, uint32_t stripeColour, bool init)
 {

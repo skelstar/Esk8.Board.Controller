@@ -87,11 +87,9 @@ int getY(uint8_t line)
   return TOP_BAR + ((line - 1) * line_height);
 }
 
-void lcd_message(const char *message, uint8_t line, Aligned aligned, FontSize size = FontSize::MED, MessageStatus status = OKAY)
+void lcd_messageBase(const char *message, int y, Aligned aligned, FontSize size, uint32_t colour, uint32_t bgColour = TFT_DEFAULT_BG)
 {
-  uint8_t line_height = (LCD_HEIGHT - TOP_BAR) / 4;
-  uint8_t x = MARGIN,
-          y = TOP_BAR + ((line - 1) * line_height);
+  uint8_t x = MARGIN;
 
   switch (size)
   {
@@ -109,14 +107,7 @@ void lcd_message(const char *message, uint8_t line, Aligned aligned, FontSize si
     break;
   }
 
-  if (status != OKAY)
-  {
-    tft.setTextColor(TFT_WHITE, status_colours[status]);
-  }
-  else
-  {
-    tft.setTextColor(TFT_WHITE);
-  }
+  tft.setTextColor(colour, bgColour);
 
   if (aligned == ALIGNED_LEFT)
   {
@@ -131,8 +122,20 @@ void lcd_message(const char *message, uint8_t line, Aligned aligned, FontSize si
   else if (aligned == ALIGNED_CENTRE)
   {
     tft.setTextDatum(TC_DATUM);
-    tft.drawString(message, x, y);
+    tft.drawString(message, LCD_WIDTH / 2, y);
   }
+}
+//--------------------------------------------------------------------------------
+
+void lcd_message(const char *message, uint8_t line, Aligned aligned, FontSize size = FontSize::MED, MessageStatus status = OKAY)
+{
+  uint8_t line_height = (LCD_HEIGHT - TOP_BAR) / 4;
+  uint8_t x = MARGIN,
+          y = TOP_BAR + ((line - 1) * line_height);
+
+  uint32_t colour = TFT_WHITE;
+
+  lcd_messageBase(message, y, aligned, size, colour, status == OKAY ? TFT_DEFAULT_BG : status_colours[status]);
 }
 //--------------------------------------------------------------------------------
 void drawGraphFullWidth(uint8_t y, uint8_t height, float pc, uint16_t colour = TFT_WHITE)
