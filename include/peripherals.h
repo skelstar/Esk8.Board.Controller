@@ -9,10 +9,14 @@ Button2 primaryButton(BUTTON_PRIMARY);
 void primaryButtonInit()
 {
   primaryButton.setPressedHandler([](Button2 &btn) {
-    DEBUG("Primary Button pressed");
+    Serial.printf("Primary Button pressed\n");
   });
 
   primaryButton.setDoubleClickHandler([](Button2 &btn) {
-    DEBUG("Primary Button double-clicked");
+    Serial.printf("Primary Button double-clicked\n");
+  });
+
+  primaryButton.setTripleClickHandler([](Button2 &btn) {
+    Serial.printf("Primary Button triple-clicked\n");
   });
 }
