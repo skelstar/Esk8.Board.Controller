@@ -369,18 +369,20 @@ void loop()
 
 void sendToBoard()
 {
+
   bool accelEnabled =
+      throttle.get() < 127 || // braking
       board.packet.moving ||
-      !FEATURE_PUSH_TO_START ||
-      (FEATURE_PUSH_TO_START && primaryButton.isPressed());
+      !featureService.get<bool>(PUSH_TO_START) ||
+      (featureService.get<bool>(PUSH_TO_START) && primaryButton.isPressed());
 
   bool cruiseControlActive =
       board.packet.moving &&
       FEATURE_CRUISE_CONTROL &&
       primaryButton.isPressed();
 
-  controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
   sinceSentToBoard = 0;
+  controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
   controller_packet.cruise_control = cruiseControlActive;
   sendPacketToBoard();
 }
