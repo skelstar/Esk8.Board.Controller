@@ -48,10 +48,13 @@ elapsedMillis sinceShowingToggleScreen;
 State disp_state_toggle_push_to_start(
     [] {
       print_disp_state("...disp_state_toggle_push_to_start", eventToString(lastDispEvent));
-      bool newVal = !featureService.get<bool>(FeatureType::PUSH_TO_START);
-      featureService.set(PUSH_TO_START, newVal);
-      // const char *val = (newVal == true) ? "ON" : "OFF";
-      screenPropValue("push to start", (newVal == true) ? "ON" : "OFF");
+      bool currVal = featureService.get<bool>(FeatureType::PUSH_TO_START);
+      if (lastDispEvent == DISP_EV_PRIMARY_DOUBLE_CLICK)
+      {
+        currVal = !currVal;
+        featureService.set(PUSH_TO_START, currVal);
+      }
+      screenPropValue("push to start", (currVal == true) ? "ON" : "OFF");
       sinceShowingToggleScreen = 0;
     },
     [] {
@@ -107,6 +110,7 @@ void add_disp_state_transitions()
   display_state->add_transition(&disp_state_moving_screen, &disp_state_stopped_screen, DISP_EV_STOPPED, NULL);
 
   display_state->add_transition(&disp_state_stopped_screen, &disp_state_toggle_push_to_start, DISP_EV_PRIMARY_TRIPLE_CLICK, NULL);
+  display_state->add_transition(&disp_state_toggle_push_to_start, &disp_state_toggle_push_to_start, DISP_EV_PRIMARY_DOUBLE_CLICK, NULL);
   display_state->add_transition(&disp_state_toggle_push_to_start, &disp_state_stopped_screen, DISP_EV_PRIMARY_SINGLE_CLICK, NULL);
 }
 //---------------------------------------------------------------
