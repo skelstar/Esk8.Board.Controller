@@ -10,7 +10,7 @@ public:
     _oldMapped = 127;
   }
 
-  uint8_t get(bool accelEnabled)
+  uint8_t get(bool accelEnabled = true)
   {
     if (accelEnabled)
     {

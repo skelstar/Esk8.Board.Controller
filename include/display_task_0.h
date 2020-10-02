@@ -28,8 +28,8 @@ void display_task_0(void *pvParameters)
       since_read_disp_event_queue = 0;
       display_state->run_machine();
 
-      DispStateEvent ev = read_from_display_event_queue();
-      switch (ev)
+      DispStateEvent displayevent = (DispStateEvent)displayChangeQueueManager->read(); // read_from_display_event_queue();
+      switch (displayevent)
       {
       case DISP_EV_NO_EVENT:
         break;
@@ -37,11 +37,31 @@ void display_task_0(void *pvParameters)
         update_display = true;
         break;
       default:
-        lastDispEvent = ev;
-        display_state->trigger(ev);
+        lastDispEvent = displayevent;
+        display_state->trigger(displayevent);
+        break;
+      }
+
+      uint8_t buttonEvent = buttonQueueManager->read();
+      switch (buttonEvent)
+      {
+      case SINGLE:
+        lastDispEvent = DISP_EV_PRIMARY_SINGLE_CLICK;
+        display_state->trigger(DISP_EV_PRIMARY_SINGLE_CLICK);
+        break;
+      case DOUBLE:
+        lastDispEvent = DISP_EV_PRIMARY_DOUBLE_CLICK;
+        display_state->trigger(DISP_EV_PRIMARY_DOUBLE_CLICK);
+        break;
+      case TRIPLE:
+        lastDispEvent = DISP_EV_PRIMARY_TRIPLE_CLICK;
+        display_state->trigger(DISP_EV_PRIMARY_TRIPLE_CLICK);
+        break;
+      case 99:
         break;
       }
     }
+
     vTaskDelay(10);
   }
   vTaskDelete(NULL);

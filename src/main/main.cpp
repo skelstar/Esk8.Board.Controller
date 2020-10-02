@@ -22,12 +22,26 @@
 #define NRF_CE 17
 #define NRF_CS 2
 
+enum ButtonClickType
+{
+  SINGLE,
+  DOUBLE,
+  TRIPLE
+};
+
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
 
 #include <TFT_eSPI.h>
 #include <Preferences.h>
 #include <BatteryLib.h>
+#include <EventQueueManager.h>
+
+enum FeatureType
+{
+  CRUISE_CONTROL,
+  PUSH_TO_START
+};
 
 #ifndef FEATURE_CRUISE_CONTROL
 #define FEATURE_CRUISE_CONTROL false
@@ -35,6 +49,46 @@
 #ifndef FEATURE_PUSH_TO_START
 #define FEATURE_PUSH_TO_START false
 #endif
+
+class FeatureServiceClass
+{
+public:
+  FeatureServiceClass()
+  {
+    set(CRUISE_CONTROL, FEATURE_CRUISE_CONTROL);
+    set(PUSH_TO_START, FEATURE_PUSH_TO_START);
+  }
+
+  template <class T>
+  void set(FeatureType feature, T value)
+  {
+    switch (feature)
+    {
+    case CRUISE_CONTROL:
+      _featureCruiseControl = value;
+      break;
+    case PUSH_TO_START:
+      _featurePushToStart = value;
+      break;
+    }
+  }
+
+  template <class T>
+  T get(FeatureType feature)
+  {
+    switch (feature)
+    {
+    case CRUISE_CONTROL:
+      return _featureCruiseControl;
+    case PUSH_TO_START:
+      return _featurePushToStart;
+    }
+  }
+
+private:
+  bool _featureCruiseControl;
+  bool _featurePushToStart;
+} featureService;
 
 //------------------------------------------------------------------
 
@@ -149,6 +203,10 @@ int oldCounter = 0;
 
 xQueueHandle xDisplayChangeEventQueue;
 xQueueHandle xCommsStateEventQueue;
+xQueueHandle xButtonPushEventQueue;
+
+EventQueueManager *displayChangeQueueManager;
+EventQueueManager *buttonQueueManager;
 
 //------------------------------------------------------------------
 enum DispStateEvent
@@ -159,6 +217,9 @@ enum DispStateEvent
   DISP_EV_STOPPED,
   DISP_EV_MOVING,
   DISP_EV_UPDATE,
+  DISP_EV_PRIMARY_SINGLE_CLICK,
+  DISP_EV_PRIMARY_DOUBLE_CLICK,
+  DISP_EV_PRIMARY_TRIPLE_CLICK
 };
 
 // displayState - prototypes
@@ -271,6 +332,10 @@ void setup()
 
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
+  xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
+
+  displayChangeQueueManager = new EventQueueManager(xDisplayChangeEventQueue, 5);
+  buttonQueueManager = new EventQueueManager(xButtonPushEventQueue, 10);
 
   while (!display_task_initialised)
   {
@@ -304,18 +369,20 @@ void loop()
 
 void sendToBoard()
 {
+
   bool accelEnabled =
+      throttle.get() < 127 || // braking
       board.packet.moving ||
-      !FEATURE_PUSH_TO_START ||
-      (FEATURE_PUSH_TO_START && primaryButton.isPressed());
+      !featureService.get<bool>(PUSH_TO_START) ||
+      (featureService.get<bool>(PUSH_TO_START) && primaryButton.isPressed());
 
   bool cruiseControlActive =
       board.packet.moving &&
       FEATURE_CRUISE_CONTROL &&
       primaryButton.isPressed();
 
-  controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
   sinceSentToBoard = 0;
+  controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
   controller_packet.cruise_control = cruiseControlActive;
   sendPacketToBoard();
 }
