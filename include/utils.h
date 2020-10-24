@@ -34,18 +34,19 @@ const char *reason_toString(ReasonType reason)
 void print_build_status()
 {
   Serial.printf("\n");
+  Serial.printf("               Esk8.Board.Controller \n");
 #ifdef RELEASE_BUILD
   Serial.printf("-----------------------------------------------\n");
   Serial.printf("               RELEASE BUILD!! \n");
-  Serial.printf("                 %s \n", __TIME__);
-  Serial.printf("                 %s \n", __DATE__);
+  Serial.printf("               %s \n", __TIME__);
+  Serial.printf("               %s \n", __DATE__);
   Serial.printf("-----------------------------------------------\n");
 #endif
 #ifdef DEBUG_BUILD
   Serial.printf("-----------------------------------------------\n");
   Serial.printf("               DEBUG BUILD!! \n");
-  Serial.printf("                 %s \n", __TIME__);
-  Serial.printf("                 %s \n", __DATE__);
+  Serial.printf("               %s \n", __TIME__);
+  Serial.printf("               %s \n", __DATE__);
   Serial.printf("-----------------------------------------------\n");
 #endif
   Serial.printf("\n");
