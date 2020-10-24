@@ -174,10 +174,16 @@ public:
   uint8_t boardResets = 0;
   unsigned long timeMovingMS = 0;
 
-  float getAverageAmpHours(float amphours)
+  float getSecondsMoving()
   {
+    return timeMovingMS / 1000.0;
+  }
+
+  float getAverageAmpHoursPerSecond(float amphours)
+  {
+    Serial.printf("%ums %.1fs %.1fmA\n", timeMovingMS, getSecondsMoving(), amphours);
     return timeMovingMS > 0
-               ? amphours / (timeMovingMS / 1000.0)
+               ? amphours / getSecondsMoving()
                : 0;
   }
 } stats;
