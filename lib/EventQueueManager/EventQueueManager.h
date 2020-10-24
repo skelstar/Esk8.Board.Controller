@@ -31,11 +31,18 @@ public:
     return 99;
   }
 
+  template <typename T>
+  T getLastEvent()
+  {
+    return (T)_lastEvent;
+  }
+
   void clear()
   {
   }
 
 private:
+  uint8_t _lastEvent = 0;
   QueueHandle_t _queue = NULL;
   TickType_t _ticks = 10;
 };

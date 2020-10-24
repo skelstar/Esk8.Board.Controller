@@ -219,6 +219,7 @@ enum DispStateEvent
 {
   DISP_EV_NO_EVENT = 0,
   DISP_EV_CONNECTED,
+  DISP_EV_CONNECTED_AFTER_RESET,
   DISP_EV_DISCONNECTED,
   DISP_EV_STOPPED,
   DISP_EV_MOVING,
@@ -231,6 +232,7 @@ enum DispStateEvent
 // displayState - prototypes
 void send_to_display_event_queue(DispStateEvent ev);
 void sendToBoard();
+void reboot();
 
 //------------------------------------------------------------------
 
@@ -285,7 +287,8 @@ void setup()
   Serial.printf("CPU0 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core0));
   Serial.printf("CPU1 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core1));
 
-  if (stats.reset_reason_core0 == RESET_REASON::SW_CPU_RESET)
+  if (stats.reset_reason_core0 == RESET_REASON::SW_CPU_RESET ||
+      stats.reset_reason_core1 == RESET_REASON::SW_CPU_RESET)
   {
     stats.soft_resets++;
     statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
@@ -350,7 +353,9 @@ void setup()
 }
 //---------------------------------------------------------------
 
-elapsedMillis since_sent_config_to_board;
+elapsedMillis
+    since_sent_config_to_board,
+    sinceLastSwReset;
 uint8_t old_throttle;
 
 void loop()
@@ -365,12 +370,24 @@ void loop()
     sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
   }
 
+  if (sinceLastSwReset > 10000)
+  {
+    Serial.printf("Resetting...\n");
+    reboot();
+  }
+
   nrf24.update();
 
   primaryButton.loop();
 
   vTaskDelay(1);
 }
+
+void reboot()
+{
+  ESP.restart();
+}
+
 //------------------------------------------------------------------
 
 void sendToBoard()

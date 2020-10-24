@@ -43,6 +43,20 @@ State disp_state_stopped_screen(
     },
     NULL);
 //---------------------------------------------------------------
+State disp_state_core_reset_screen(
+    [] {
+      print_disp_state("...disp_state_core_reset_screen", eventToString(lastDispEvent));
+      screenWhenStopped(/*init*/ true);
+    },
+    [] {
+      if (update_display)
+      {
+        update_display = false;
+        screenWhenStopped(/*init*/ false);
+      }
+    },
+    NULL);
+//---------------------------------------------------------------
 elapsedMillis sinceShowingToggleScreen;
 
 State disp_state_toggle_push_to_start(
@@ -123,6 +137,8 @@ const char *eventToString(DispStateEvent ev)
     return "DISP_EV_NO_EVENT";
   case DISP_EV_CONNECTED:
     return "DISP_EV_CONNECTED";
+  case DISP_EV_CONNECTED_AFTER_RESET:
+    return "DISP_EV_CONNECTED_AFTER_RST";
   case DISP_EV_DISCONNECTED:
     return "DISP_EV_DISCONNECTED";
   case DISP_EV_STOPPED:
@@ -165,7 +181,7 @@ void send_to_display_event_queue(DispStateEvent ev)
 {
   TickType_t ticks = 10;
 #ifdef PRINT_DISP_STATE_EVENT
-  Serial.printf("-> SEND: %s\n", get_event_name((DispStateEvent)ev));
+  Serial.printf("-> SEND: %s\n", eventToString((DispStateEvent)ev));
 #endif
   uint8_t e = (uint8_t)ev;
   xQueueSendToBack(xDisplayChangeEventQueue, &e, ticks);
