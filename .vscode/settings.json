@@ -1,7 +1,20 @@
 {
   "workbench.colorCustomizations": {
-    "tab.activeBackground": "#ff0000",
-    "editor.lineHighlightBackground": "#474747"
+    "editor.lineHighlightBackground": "#474747",
+    "activityBar.activeBackground": "#ff6433",
+    "activityBar.activeBorder": "#00ff3d",
+    "activityBar.background": "#ff6433",
+    "activityBar.foreground": "#15202b",
+    "activityBar.inactiveForeground": "#15202b99",
+    "activityBarBadge.background": "#00ff3d",
+    "activityBarBadge.foreground": "#15202b",
+    "statusBar.background": "#ff3d00",
+    "statusBar.foreground": "#e7e7e7",
+    "statusBarItem.hoverBackground": "#ff6433",
+    "titleBar.activeBackground": "#ff3d00",
+    "titleBar.activeForeground": "#e7e7e7",
+    "titleBar.inactiveBackground": "#ff3d0099",
+    "titleBar.inactiveForeground": "#e7e7e799"
   },
   "files.associations": {
     "*.tcc": "cpp",
@@ -48,5 +61,6 @@
     "utility": "cpp",
     "typeinfo": "cpp"
   },
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "peacock.color": "#ff3d00"
 }
