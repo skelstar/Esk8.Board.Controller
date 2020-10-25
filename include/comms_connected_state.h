@@ -53,6 +53,12 @@ State stateCommsConnected([] {
 
   send_to_display_event_queue(DISP_EV_CONNECTED);
   send_to_display_event_queue(DISP_EV_UPDATE);
+
+  if (stats.needToAckResets())
+  {
+    Serial.printf("Sending: DISP_EV_SW_RESET\n");
+    send_to_display_event_queue(DISP_EV_SW_RESET);
+  }
 });
 
 State stateCommsDisconnected(

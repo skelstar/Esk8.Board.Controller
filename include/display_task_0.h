@@ -32,12 +32,14 @@ void display_task_0(void *pvParameters)
       switch (displayevent)
       {
       case DISP_EV_NO_EVENT:
+      case 99:
         break;
       case DISP_EV_UPDATE:
         update_display = true;
         break;
       default:
         lastDispEvent = displayevent;
+        Serial.printf("Read, now triggering: %d\n", eventToString(displayevent));
         display_state->trigger(displayevent);
         break;
       }

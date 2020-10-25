@@ -176,6 +176,7 @@ int getQuarterX(QuarterPosition pos)
   }
 }
 
+// return the top of the 'box'
 int getQuarterY(QuarterPosition pos)
 {
   switch (pos)
@@ -222,10 +223,6 @@ void quarterScreenFloat(QuarterPosition position, float value, char *title, uint
 void screenWhenStopped(bool init = false)
 {
   uint32_t bgColour = TFT_BLACK;
-  if (stats.needToAckResets())
-  {
-    bgColour = TFT_RED;
-  }
 
   if (init || chunkyDigit == NULL)
   {
@@ -242,19 +239,33 @@ void screenWhenStopped(bool init = false)
 
 void screenWhenMoving(bool init = false)
 {
-  uint32_t bgColour = TFT_BLACK;
-  if (stats.needToAckResets())
-  {
-    bgColour = TFT_RED;
-  }
-
   screenOneMetricWithStripe(
       board.packet.motorCurrent,
       "MOTOR AMPS",
       /*stripe*/ TFT_DARKGREEN,
       init,
-      bgColour);
+      TFT_DEFAULT_BG);
 }
+//-----------------------------------------------------
+
+void screenNeedToAckResets()
+{
+  tft.fillScreen(TFT_RED);
+  tft.setFreeFont(FONT_LG);
+  tft.setTextColor(TFT_WHITE);
+  tft.setTextDatum(TC_DATUM);
+  tft.drawString("ACK RESETS!\n", /*x*/ LCD_WIDTH / 2, /*y*/ 20);
+
+  char buff[10];
+  sprintf(buff, "%d", stats.soft_resets);
+  chunkyDigit = new ChunkyDigit(&tft, CHUNKY_PIXEL_MED, CHUNKY_SPACING_MED, TFT_RED);
+
+  int w = chunkyDigit->getWidth(buff);
+  int x = LCD_WIDTH / 2 - w / 2;
+  int y = LCD_HEIGHT - chunkyDigit->getHeight() - 20;
+  chunkyDigit->draw_float(x, y, buff);
+}
+
 //-----------------------------------------------------
 
 void setupScreenWithStripe(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour)

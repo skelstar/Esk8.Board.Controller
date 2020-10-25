@@ -16,6 +16,9 @@ void send_to_display_event_queue(DispStateEvent ev);
 DispStateEvent read_from_display_event_queue(TickType_t ticks = 5);
 void clearDisplayEventQueue();
 
+elapsedMillis sinceShowingToggleScreen;
+elapsedMillis sinceStoredMovingTime;
+
 //---------------------------------------------------------------
 State disp_state_searching([] {
   print_disp_state("...disp_state_searching");
@@ -32,9 +35,6 @@ State disp_state_disconnected(
 State disp_state_stopped_screen(
     [] {
       print_disp_state("...disp_state_stopped_screen", eventToString(lastDispEvent));
-      if (stats.needToAckResets())
-      {
-      }
       screenWhenStopped(/*init*/ true);
     },
     [] {
@@ -46,21 +46,14 @@ State disp_state_stopped_screen(
     },
     NULL);
 //---------------------------------------------------------------
-State disp_state_core_reset_screen(
+State dispState_needToAckResets(
     [] {
-      print_disp_state("...disp_state_core_reset_screen", eventToString(lastDispEvent));
-      screenWhenStopped(/*init*/ true);
+      print_disp_state("...dispState_needToAckResets", eventToString(lastDispEvent));
+      screenNeedToAckResets();
     },
-    [] {
-      if (update_display)
-      {
-        update_display = false;
-        screenWhenStopped(/*init*/ false);
-      }
-    },
+    NULL,
     NULL);
 //---------------------------------------------------------------
-elapsedMillis sinceShowingToggleScreen;
 
 State disp_state_toggle_push_to_start(
     [] {
@@ -84,8 +77,6 @@ State disp_state_toggle_push_to_start(
     },
     NULL);
 //---------------------------------------------------------------
-
-elapsedMillis sinceStoredMovingTime;
 
 State disp_state_moving_screen(
     [] {
@@ -119,6 +110,11 @@ void add_disp_state_transitions()
   // DISP_EV_DISCONNECTED
   display_state->add_transition(&disp_state_stopped_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
   display_state->add_transition(&disp_state_moving_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
+
+  // DISP_EV_SW_RESET
+  display_state->add_transition(&disp_state_stopped_screen, &dispState_needToAckResets, DISP_EV_SW_RESET, NULL);
+  display_state->add_transition(&disp_state_moving_screen, &dispState_needToAckResets, DISP_EV_SW_RESET, NULL);
+
   // DISP_EV_UPDATE
   // display_state->add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_UPDATE, NULL);
   // display_state->add_transition(&disp_state_moving_screen, &disp_state_moving_screen, DISP_EV_UPDATE, NULL);
@@ -138,11 +134,14 @@ const char *eventToString(DispStateEvent ev)
   switch (ev)
   {
   case DISP_EV_NO_EVENT:
+  case 99:
     return "DISP_EV_NO_EVENT";
   case DISP_EV_CONNECTED:
     return "DISP_EV_CONNECTED";
   case DISP_EV_DISCONNECTED:
     return "DISP_EV_DISCONNECTED";
+  case DISP_EV_SW_RESET:
+    return "DISP_EV_SW_RESET";
   case DISP_EV_STOPPED:
     return "DISP_EV_STOPPED";
   case DISP_EV_MOVING:
