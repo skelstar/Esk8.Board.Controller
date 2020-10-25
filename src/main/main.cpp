@@ -357,11 +357,11 @@ void loop()
     sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
   }
 
-  if (sinceLastSwReset > 10000)
-  {
-    Serial.printf("Resetting...\n");
-    reboot();
-  }
+  // if (sinceLastSwReset > 10000)
+  // {
+  //   Serial.printf("Resetting...\n");
+  //   reboot();
+  // }
 
   nrf24.update();
 
