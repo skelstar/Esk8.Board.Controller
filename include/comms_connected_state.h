@@ -51,12 +51,7 @@ State stateCommsConnected([] {
   comms_session_started = true;
   comms_state_connected = true;
 
-  DispStateEvent event = stats.soft_resets > 0
-                             ? DISP_EV_CONNECTED_AFTER_RESET
-                             : DISP_EV_CONNECTED;
-  Serial.printf("CONNECTED event evaluated: %d resets, %s event selected\n", stats.soft_resets, eventToString(event));
-
-  send_to_display_event_queue(event);
+  send_to_display_event_queue(DISP_EV_CONNECTED);
   send_to_display_event_queue(DISP_EV_UPDATE);
 });
 

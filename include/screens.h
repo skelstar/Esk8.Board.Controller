@@ -95,22 +95,22 @@ void screenWhenDisconnected()
 }
 //-----------------------------------------------------
 
-void screen_with_stats(bool connected = true)
-{
-  uint32_t bgColour = connected ? TFT_DEFAULT_BG : TFT_RED;
-  tft.fillScreen(bgColour);
-  // battery
-  drawSmallBattery(remote_battery_percent, LCD_WIDTH - MARGIN, 0 + MARGIN, TR_DATUM);
-  // line 1
-  char buff1[20];
-  sprintf(buff1, "bd rsts: %d", stats.boardResets);
-  lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, FontSize::LG, getStatus(stats.boardResets, 0, 1, 1));
-  // line 2
-  char buff2[20];
-  sprintf(buff2, "failed tx: %d", stats.total_failed_sending);
-  lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, FontSize::LG, getStatus(stats.total_failed_sending, 0, 1, 2));
-  // line 3
-}
+// void screen_with_stats(bool connected = true)
+// {
+//   uint32_t bgColour = connected ? TFT_DEFAULT_BG : TFT_RED;
+//   tft.fillScreen(bgColour);
+//   // battery
+//   drawSmallBattery(remote_battery_percent, LCD_WIDTH - MARGIN, 0 + MARGIN, TR_DATUM);
+//   // line 1
+//   char buff1[20];
+//   sprintf(buff1, "bd rsts: %d", stats.boardResets);
+//   lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, FontSize::LG, getStatus(stats.boardResets, 0, 1, 1));
+//   // line 2
+//   char buff2[20];
+//   sprintf(buff2, "failed tx: %d", stats.total_failed_sending);
+//   lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, FontSize::LG, getStatus(stats.total_failed_sending, 0, 1, 2));
+//   // line 3
+// }
 //-----------------------------------------------------
 
 ChunkyDigit *chunkyDigit;
@@ -188,8 +188,9 @@ int getQuarterY(QuarterPosition pos)
     return (LCD_HEIGHT - STRIPE_HEIGHT) / 2 + STRIPE_HEIGHT;
   }
 }
+//-----------------------------------------------------
 
-void quarterScreen(QuarterPosition position, char *buff, char *title)
+void quarterScreen(QuarterPosition position, char *buff, char *title, uint32_t bgColour)
 {
   int x = getQuarterX(position);
   int y = getQuarterY(position);
@@ -202,39 +203,51 @@ void quarterScreen(QuarterPosition position, char *buff, char *title)
   tft.setTextDatum(TR_DATUM);
   tft.drawString(title, x + (LCD_WIDTH / 2) - RIGHT_MARGIN, y + TOP_MARGIN);
 
-  chunkyDigit = new ChunkyDigit(&tft, /*pixel*/ 6, /*spacing*/ 5, TFT_DEFAULT_BG);
+  chunkyDigit = new ChunkyDigit(&tft, /*pixel*/ 6, /*spacing*/ 5, bgColour);
 
   int w = chunkyDigit->getWidth(buff);
   chunkyDigit->draw_float(x + (LCD_WIDTH / 2) - w - RIGHT_MARGIN, y + qrtrHeight - chunkyDigit->getHeight() - BOTTOM_MARGIN, buff);
 }
+//-----------------------------------------------------
 
-void quarterScreenFloat(QuarterPosition position, float value, char *title)
+void quarterScreenFloat(QuarterPosition position, float value, char *title, uint32_t bgColour)
 {
   char buff[20];
   sprintf(buff, value < 1000.0 ? "%.1f" : "%.0f", value);
 
-  quarterScreen(position, buff, title);
+  quarterScreen(position, buff, title, bgColour);
 }
 //-----------------------------------------------------
 
 void screenWhenStopped(bool init = false)
 {
+  uint32_t bgColour = TFT_BLACK;
+  if (stats.needToAckResets())
+  {
+    bgColour = TFT_RED;
+  }
+
   if (init || chunkyDigit == NULL)
   {
-    setupScreen(/*bg*/ TFT_DEFAULT_BG, /*fg*/ TFT_WHITE, TFT_DARKGREY);
+    setupScreen(/*bg*/ bgColour, /*fg*/ TFT_WHITE, /*stripe*/ TFT_DARKGREY);
     tft.setFreeFont(FONT_MED);
   }
-  quarterScreenFloat(TOP_LEFT_QRTR, board.packet.odometer, "trip (km)");
-  quarterScreenFloat(TOP_RIGHT_QRTR, stats.getSecondsMoving() / 60.0, "time (m)");
-  quarterScreenFloat(BOTTOM_LEFT_QRTR, board.packet.ampHours, "mAH");
-  quarterScreenFloat(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHoursPerSecond(board.packet.ampHours), "mAH/s");
+  quarterScreenFloat(TOP_LEFT_QRTR, board.packet.odometer, "trip (km)", bgColour);
+  quarterScreenFloat(TOP_RIGHT_QRTR, stats.getSecondsMoving() / 60.0, "time (m)", bgColour);
+  quarterScreenFloat(BOTTOM_LEFT_QRTR, board.packet.ampHours, "mAH", bgColour);
+  quarterScreenFloat(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHoursPerSecond(board.packet.ampHours), "mAH/s", bgColour);
   // screenOneMetricWithStripe(board.packet.ampHours, "TRIP Ah", TFT_DARKGREY, init);
 }
-//-----------------------------------------------------
+//-----------------------------------------------------W
 
 void screenWhenMoving(bool init = false)
 {
   screenOneMetricWithStripe(board.packet.motorCurrent, "MOTOR AMPS", TFT_DARKGREEN, init);
+
+  if (stats.needToAckResets())
+  {
+    tft.drawRect(0, 0, LCD_WIDTH, LCD_HEIGHT, TFT_RED);
+  }
 }
 //-----------------------------------------------------
 void screenTogglePushToStart()
@@ -245,7 +258,4 @@ void setupScreen(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour)
 {
   tft.fillScreen(bgColour);
   tft.fillRect(0, 0, LCD_WIDTH, STRIPE_HEIGHT, stripeColour);
-  _spr.setTextColor(fgColour);
-  _spr.setFreeFont(FONT_MED);
-  _spr.createSprite(LCD_WIDTH, LCD_HEIGHT - 50);
 }

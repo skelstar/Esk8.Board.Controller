@@ -174,6 +174,16 @@ public:
   uint8_t boardResets = 0;
   unsigned long timeMovingMS = 0;
 
+  bool needToAckResets()
+  {
+    return soft_resets > 0 && _resetsAcknowledged;
+  }
+
+  void ackResets()
+  {
+    _resetsAcknowledged = true;
+  }
+
   float getSecondsMoving()
   {
     return timeMovingMS / 1000.0;
@@ -186,6 +196,10 @@ public:
                ? amphours / getSecondsMoving()
                : 0;
   }
+
+private:
+  bool _resetsAcknowledged = true;
+
 } stats;
 
 #define STORE_STATS "stats"
@@ -219,7 +233,6 @@ enum DispStateEvent
 {
   DISP_EV_NO_EVENT = 0,
   DISP_EV_CONNECTED,
-  DISP_EV_CONNECTED_AFTER_RESET,
   DISP_EV_DISCONNECTED,
   DISP_EV_STOPPED,
   DISP_EV_MOVING,

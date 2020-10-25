@@ -32,6 +32,9 @@ State disp_state_disconnected(
 State disp_state_stopped_screen(
     [] {
       print_disp_state("...disp_state_stopped_screen", eventToString(lastDispEvent));
+      if (stats.needToAckResets())
+      {
+      }
       screenWhenStopped(/*init*/ true);
     },
     [] {
@@ -112,6 +115,7 @@ void add_disp_state_transitions()
   // DISP_EV_CONNECTED
   display_state->add_transition(&disp_state_searching, &disp_state_stopped_screen, DISP_EV_CONNECTED, NULL);
   display_state->add_transition(&disp_state_disconnected, &disp_state_stopped_screen, DISP_EV_CONNECTED, NULL);
+
   // DISP_EV_DISCONNECTED
   display_state->add_transition(&disp_state_stopped_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
   display_state->add_transition(&disp_state_moving_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
@@ -137,8 +141,6 @@ const char *eventToString(DispStateEvent ev)
     return "DISP_EV_NO_EVENT";
   case DISP_EV_CONNECTED:
     return "DISP_EV_CONNECTED";
-  case DISP_EV_CONNECTED_AFTER_RESET:
-    return "DISP_EV_CONNECTED_AFTER_RST";
   case DISP_EV_DISCONNECTED:
     return "DISP_EV_DISCONNECTED";
   case DISP_EV_STOPPED:
