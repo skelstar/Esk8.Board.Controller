@@ -46,13 +46,25 @@ State disp_state_stopped_screen(
     },
     NULL);
 //---------------------------------------------------------------
-State dispState_needToAckResets(
+State dispState_needToAckResetsStopped(
     [] {
-      print_disp_state("...dispState_needToAckResets", eventToString(lastDispEvent));
+      print_disp_state("...dispState_needToAckResetsStopped", eventToString(lastDispEvent));
       screenNeedToAckResets();
     },
     NULL,
-    NULL);
+    [] {
+      stats.ackResets();
+    });
+//---------------------------------------------------------------
+State dispState_needToAckResetsMoving(
+    [] {
+      print_disp_state("...dispState_needToAckResetsMoving", eventToString(lastDispEvent));
+      screenNeedToAckResets();
+    },
+    NULL,
+    [] {
+      stats.ackResets();
+    });
 //---------------------------------------------------------------
 
 State disp_state_toggle_push_to_start(
@@ -112,8 +124,11 @@ void add_disp_state_transitions()
   display_state->add_transition(&disp_state_moving_screen, &disp_state_disconnected, DISP_EV_DISCONNECTED, NULL);
 
   // DISP_EV_SW_RESET
-  display_state->add_transition(&disp_state_stopped_screen, &dispState_needToAckResets, DISP_EV_SW_RESET, NULL);
-  display_state->add_transition(&disp_state_moving_screen, &dispState_needToAckResets, DISP_EV_SW_RESET, NULL);
+  display_state->add_transition(&disp_state_stopped_screen, &dispState_needToAckResetsStopped, DISP_EV_SW_RESET, NULL);
+  display_state->add_transition(&disp_state_moving_screen, &dispState_needToAckResetsMoving, DISP_EV_SW_RESET, NULL);
+
+  display_state->add_transition(&dispState_needToAckResetsStopped, &disp_state_stopped_screen, DISP_EV_PRIMARY_DOUBLE_CLICK, NULL);
+  display_state->add_transition(&dispState_needToAckResetsMoving, &disp_state_moving_screen, DISP_EV_PRIMARY_DOUBLE_CLICK, NULL);
 
   // DISP_EV_UPDATE
   // display_state->add_transition(&disp_state_stopped_screen, &disp_state_stopped_screen, DISP_EV_UPDATE, NULL);

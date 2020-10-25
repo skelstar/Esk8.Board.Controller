@@ -163,45 +163,6 @@ BatteryLib remote_batt(BATTERY_MEASURE_PIN);
 TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 //------------------------------------------------------------------
 
-class Stats
-{
-public:
-  uint16_t total_failed_sending;
-  unsigned long consecutive_resps;
-  RESET_REASON reset_reason_core0;
-  RESET_REASON reset_reason_core1;
-  uint16_t soft_resets = 0;
-  uint8_t boardResets = 0;
-  unsigned long timeMovingMS = 0;
-
-  bool needToAckResets()
-  {
-    return soft_resets > 0 && _resetsAcknowledged;
-  }
-
-  void ackResets()
-  {
-    _resetsAcknowledged = true;
-  }
-
-  float getSecondsMoving()
-  {
-    return timeMovingMS / 1000.0;
-  }
-
-  float getAverageAmpHoursPerSecond(float amphours)
-  {
-    Serial.printf("%ums %.1fs %.1fmA\n", timeMovingMS, getSecondsMoving(), amphours);
-    return timeMovingMS > 0
-               ? amphours / getSecondsMoving()
-               : 0;
-  }
-
-private:
-  bool _resetsAcknowledged = true;
-
-} stats;
-
 #define STORE_STATS "stats"
 #define STORE_STATS_SOFT_RSTS "soft resets"
 Preferences statsStore;
@@ -248,6 +209,10 @@ void send_to_display_event_queue(DispStateEvent ev);
 void sendToBoard();
 void reboot();
 
+#include <stats.h>
+
+Stats stats;
+
 //------------------------------------------------------------------
 
 #define ENCODER_BRAKE_COUNTS 20
@@ -263,6 +228,15 @@ public:
 #define STORE_CONFIG_ACCEL_COUNTS "accel counts"
 #define STORE_CONFIG_BRAKE_COUNTS "brake counts"
 Preferences configStore;
+
+void resetsAcknowledged_callback()
+{
+  statsStore.begin(STORE_STATS, /*read-only*/ false);
+  Serial.printf("resetsAcknowledged_callback(), storing %d\n", stats.soft_resets);
+  statsStore.putUInt(STORE_STATS_SOFT_RSTS, 0);
+  // Serial.printf("store now has %d\n", statsStore.getUInt(STORE_STATS_SOFT_RSTS, 0));
+  statsStore.end();
+}
 
 #include <throttle.h>
 
@@ -289,17 +263,20 @@ ThrottleClass throttle;
 void setup()
 {
   Serial.begin(115200);
+  Serial.printf("------------------------ BOOT ------------------------\n");
 
   statsStore.begin(STORE_STATS, /*read-only*/ false);
   stats.soft_resets = statsStore.getUInt(STORE_STATS_SOFT_RSTS, 0);
+  Serial.printf("\nGot %d from the store for STORE_STATS_SOFT_RSTS\n\n", stats.soft_resets);
 
   stats.reset_reason_core0 = rtc_get_reset_reason(0);
   stats.reset_reason_core1 = rtc_get_reset_reason(1);
+  stats.setResetsAcknowledgedCallback(resetsAcknowledged_callback);
 
   configStore.begin(STORE_CONFIG, false);
 
-  Serial.printf("CPU0 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core0));
-  Serial.printf("CPU1 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core1));
+  // Serial.printf("CPU0 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core0));
+  // Serial.printf("CPU1 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core1));
 
   if (stats.reset_reason_core0 == RESET_REASON::SW_CPU_RESET ||
       stats.reset_reason_core1 == RESET_REASON::SW_CPU_RESET)
@@ -318,7 +295,7 @@ void setup()
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packetAvailable_cb);
 
-  print_build_status();
+  // print_build_status();
 
   throttle.init(/*pin*/ 27);
 

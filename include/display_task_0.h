@@ -39,7 +39,6 @@ void display_task_0(void *pvParameters)
         break;
       default:
         lastDispEvent = displayevent;
-        Serial.printf("Read, now triggering: %d\n", eventToString(displayevent));
         display_state->trigger(displayevent);
         break;
       }
