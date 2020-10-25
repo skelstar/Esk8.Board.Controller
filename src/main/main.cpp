@@ -232,9 +232,7 @@ Preferences configStore;
 void resetsAcknowledged_callback()
 {
   statsStore.begin(STORE_STATS, /*read-only*/ false);
-  Serial.printf("resetsAcknowledged_callback(), storing %d\n", stats.soft_resets);
   statsStore.putUInt(STORE_STATS_SOFT_RSTS, 0);
-  // Serial.printf("store now has %d\n", statsStore.getUInt(STORE_STATS_SOFT_RSTS, 0));
   statsStore.end();
 }
 
@@ -267,7 +265,6 @@ void setup()
 
   statsStore.begin(STORE_STATS, /*read-only*/ false);
   stats.soft_resets = statsStore.getUInt(STORE_STATS_SOFT_RSTS, 0);
-  Serial.printf("\nGot %d from the store for STORE_STATS_SOFT_RSTS\n\n", stats.soft_resets);
 
   stats.reset_reason_core0 = rtc_get_reset_reason(0);
   stats.reset_reason_core1 = rtc_get_reset_reason(1);
@@ -289,13 +286,12 @@ void setup()
   {
     stats.soft_resets = 0;
     statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
-    Serial.printf("Storage: cleared resets\n");
   }
   statsStore.end();
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packetAvailable_cb);
 
-  // print_build_status();
+  print_build_status();
 
   throttle.init(/*pin*/ 27);
 
