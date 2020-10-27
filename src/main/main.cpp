@@ -165,6 +165,8 @@ TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 
 #define STORE_STATS "stats"
 #define STORE_STATS_SOFT_RSTS "soft resets"
+#define STORE_STATS_TRIP_TIME "trip time"
+
 Preferences statsStore;
 
 elapsedMillis
@@ -172,7 +174,8 @@ elapsedMillis
     sinceLastBoardPacketRx,
     sinceSentRequest,
     since_read_trigger,
-    sinceBoardConnected;
+    sinceBoardConnected,
+    sinceStoredSnapshot;
 
 uint16_t remote_battery_percent = 0;
 bool remoteBattCharging = false;
@@ -229,11 +232,54 @@ public:
 #define STORE_CONFIG_BRAKE_COUNTS "brake counts"
 Preferences configStore;
 
-void resetsAcknowledged_callback()
+template <typename T>
+void storeInMemory(char *key, T value)
 {
   statsStore.begin(STORE_STATS, /*read-only*/ false);
-  statsStore.putUInt(STORE_STATS_SOFT_RSTS, 0);
+  if (std::is_same<T, uint16_t>::value)
+  {
+    statsStore.putUInt(key, value);
+  }
+  else if (std::is_same<T, unsigned long>::value)
+  {
+    statsStore.putULong(key, value);
+  }
+  else
+  {
+    Serial.printf("WARNING: unhandled type for storeInMemory()\n");
+  }
   statsStore.end();
+}
+
+template <typename T>
+T readFromMemory(char *key)
+{
+  T result;
+  statsStore.begin(STORE_STATS, /*read-only*/ false);
+  if (std::is_same<T, uint16_t>::value)
+  {
+    result = statsStore.getUInt(key, 0);
+  }
+  else if (std::is_same<T, unsigned long>::value)
+  {
+    result = statsStore.getULong(key, 0);
+  }
+  else
+  {
+    Serial.printf("WARNING: unhandled type for storeInMemory()\n");
+  }
+  statsStore.end();
+  return result;
+}
+
+void resetsAcknowledged_callback()
+{
+  storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
+}
+
+void storeTimeMovingInMemory()
+{
+  storeInMemory<ulong>(STORE_STATS_TRIP_TIME, stats.timeMovingMS);
 }
 
 #include <throttle.h>
@@ -275,11 +321,15 @@ void setup()
   // Serial.printf("CPU0 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core0));
   // Serial.printf("CPU1 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core1));
 
-  if (stats.reset_reason_core0 == RESET_REASON::SW_CPU_RESET ||
-      stats.reset_reason_core1 == RESET_REASON::SW_CPU_RESET)
+  bool badReset = stats.reset_reason_core0 == RESET_REASON::SW_CPU_RESET ||
+                  stats.reset_reason_core1 == RESET_REASON::SW_CPU_RESET;
+
+  if (badReset)
   {
     stats.soft_resets++;
-    statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
+    // statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
+    storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, stats.soft_resets);
+    stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS_TRIP_TIME);
     Serial.printf("RESET!!! =========> %d\n", stats.soft_resets);
   }
   else if (stats.reset_reason_core0 == RESET_REASON::POWERON_RESET)
@@ -357,11 +407,11 @@ void loop()
     sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
   }
 
-  // if (sinceLastSwReset > 10000)
-  // {
-  //   Serial.printf("Resetting...\n");
-  //   reboot();
-  // }
+  if (sinceLastSwReset > 10000)
+  {
+    Serial.printf("Resetting...\n");
+    reboot();
+  }
 
   nrf24.update();
 

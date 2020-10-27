@@ -106,6 +106,11 @@ State disp_state_moving_screen(
       {
         stats.timeMovingMS += sinceStoredMovingTime;
         sinceStoredMovingTime = 0;
+        if (sinceStoredSnapshot > STORE_SNAPSHOT_INTERVAL)
+        {
+          storeInMemory<ulong>(STORE_STATS_TRIP_TIME, stats.timeMovingMS);
+          Serial.printf("storing stats.moving %ums\n", stats.timeMovingMS);
+        }
       }
     },
     [] {
