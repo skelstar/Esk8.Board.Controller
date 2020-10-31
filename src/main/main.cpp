@@ -90,6 +90,19 @@ private:
   bool _featurePushToStart;
 } featureService;
 
+class HUDData
+{
+public:
+  uint32_t id;
+
+} hudData;
+
+#define SERVER_UUID "D8:A0:1D:5D:AE:9E"
+#define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+#include <bleClient.h>
+
 //------------------------------------------------------------------
 
 #define COMMS_BOARD 00
@@ -181,7 +194,7 @@ public:
 
   float getAverageAmpHoursPerSecond(float amphours)
   {
-    Serial.printf("%ums %.1fs %.1fmA\n", timeMovingMS, getSecondsMoving(), amphours);
+    // Serial.printf("%ums %.1fs %.1fmA\n", timeMovingMS, getSecondsMoving(), amphours);
     return timeMovingMS > 0
                ? amphours / getSecondsMoving()
                : 0;
@@ -210,9 +223,11 @@ int oldCounter = 0;
 xQueueHandle xDisplayChangeEventQueue;
 xQueueHandle xCommsStateEventQueue;
 xQueueHandle xButtonPushEventQueue;
+xQueueHandle xHUDMessageEventQueue;
 
 EventQueueManager *displayChangeQueueManager;
 EventQueueManager *buttonQueueManager;
+EventQueueManager *hudMEssageQueueManager;
 
 //------------------------------------------------------------------
 enum DispStateEvent
@@ -336,12 +351,24 @@ void setup()
       NULL,
       0);
 
+  xTaskCreatePinnedToCore(
+      hudTask_0,
+      "hudTask_0",
+      10000,
+      NULL,
+      /*priority*/
+      1,
+      NULL,
+      0);
+
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
+  xHUDMessageEventQueue = xQueueCreate(3, sizeof(uint8_t));
 
   displayChangeQueueManager = new EventQueueManager(xDisplayChangeEventQueue, 5);
   buttonQueueManager = new EventQueueManager(xButtonPushEventQueue, 10);
+  hudMEssageQueueManager = new EventQueueManager(xHUDMessageEventQueue, 10);
 
   while (!display_task_initialised)
   {
