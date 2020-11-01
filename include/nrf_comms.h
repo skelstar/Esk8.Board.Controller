@@ -34,10 +34,12 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
   else if (board.startedMoving())
   {
     send_to_display_event_queue(DISP_EV_MOVING);
+    hudMessageQueueManager->send(HUD_EV_BOARD_MOVING);
   }
   else if (board.hasStopped())
   {
     send_to_display_event_queue(DISP_EV_STOPPED);
+    hudMessageQueueManager->send(HUD_EV_BOARD_STOPPED);
   }
   else if (board.valuesChanged())
   {

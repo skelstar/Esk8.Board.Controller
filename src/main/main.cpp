@@ -35,8 +35,20 @@ enum ButtonClickType
 #include <TFT_eSPI.h>
 #include <Preferences.h>
 #include <BatteryLib.h>
+#include <HUDData.h>
 #include <EventQueueManager.h>
+//------------------------------------------------------------
 
+xQueueHandle xDisplayChangeEventQueue;
+xQueueHandle xCommsStateEventQueue;
+xQueueHandle xButtonPushEventQueue;
+xQueueHandle xHUDMessageEventQueue;
+
+EventQueueManager *displayChangeQueueManager;
+EventQueueManager *buttonQueueManager;
+EventQueueManager *hudMessageQueueManager;
+
+//------------------------------------------------------------
 enum FeatureType
 {
   CRUISE_CONTROL,
@@ -90,12 +102,7 @@ private:
   bool _featurePushToStart;
 } featureService;
 
-class HUDData
-{
-public:
-  uint32_t id;
-
-} hudData;
+HUDData hudData;
 
 #include <hudTask.h>
 
@@ -213,17 +220,6 @@ bool remoteBattCharging = false;
 bool display_task_initialised = false;
 bool display_task_showing_option_screen = false;
 int oldCounter = 0;
-
-//------------------------------------------------------------
-
-xQueueHandle xDisplayChangeEventQueue;
-xQueueHandle xCommsStateEventQueue;
-xQueueHandle xButtonPushEventQueue;
-xQueueHandle xHUDMessageEventQueue;
-
-EventQueueManager *displayChangeQueueManager;
-EventQueueManager *buttonQueueManager;
-EventQueueManager *hudMEssageQueueManager;
 
 //------------------------------------------------------------------
 enum DispStateEvent
@@ -364,7 +360,7 @@ void setup()
 
   displayChangeQueueManager = new EventQueueManager(xDisplayChangeEventQueue, 5);
   buttonQueueManager = new EventQueueManager(xButtonPushEventQueue, 10);
-  hudMEssageQueueManager = new EventQueueManager(xHUDMessageEventQueue, 10);
+  hudMessageQueueManager = new EventQueueManager(xHUDMessageEventQueue, 10);
 
   while (!display_task_initialised)
   {

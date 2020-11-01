@@ -5,7 +5,10 @@
 
 class EventQueueManager
 {
+
 public:
+  const uint8_t NO_MESSAGE_AVAILABLE = 99;
+
   EventQueueManager(QueueHandle_t queue, TickType_t ticks)
   {
     _queue = queue;
@@ -20,6 +23,12 @@ public:
       xQueueSendToBack(_queue, &e, _ticks);
   }
 
+  bool messageAvailable()
+  {
+    HUDData peeked_val;
+    return _queue != NULL && xQueuePeek(_queue, &peeked_val, _ticks) == pdTRUE;
+  }
+
   // template <typename T>
   uint8_t read()
   {
@@ -28,7 +37,7 @@ public:
     {
       return e;
     }
-    return 99;
+    return NO_MESSAGE_AVAILABLE;
   }
 
   void clear()
