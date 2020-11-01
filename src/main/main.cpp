@@ -102,10 +102,6 @@ private:
   bool _featurePushToStart;
 } featureService;
 
-HUDData hudData;
-
-#include <hudTask.h>
-
 //------------------------------------------------------------------
 
 #define COMMS_BOARD 00
@@ -150,6 +146,12 @@ private:
   bool _changed = false;
   // unsigned long _lastRxTime;
 } board;
+
+//------------------------------------------------------------------
+
+HUDData hudData;
+
+#include <hudTask.h>
 
 //------------------------------------------------------------------
 

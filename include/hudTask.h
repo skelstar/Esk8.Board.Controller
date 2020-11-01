@@ -56,6 +56,13 @@ void hudTask_0(void *pvParameters)
           SERVICE_UUID,
           CHARACTERISTIC_UUID);
       sinceLastConnectToHUD = 0;
+      // send initialising state
+      if (bleServerConnected)
+      {
+        hudMessageQueueManager->send(board.packet.moving
+                                         ? HUDEvent::HUD_EV_BOARD_MOVING
+                                         : HUDEvent::HUD_EV_BOARD_STOPPED);
+      }
     }
 
     if (bleClient.isConnected() && sinceHudReadFromQueue > 500)
@@ -75,4 +82,3 @@ void hudTask_0(void *pvParameters)
   }
   vTaskDelete(NULL);
 }
-
