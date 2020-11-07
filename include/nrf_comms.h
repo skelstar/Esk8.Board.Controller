@@ -44,6 +44,11 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
     send_to_display_event_queue(DISP_EV_UPDATE);
   }
 
+  if (board.getCommand() == CommandType::RESET)
+  {
+    ESP.restart();
+  }
+
   sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
 }
 //------------------------------------------------------------------

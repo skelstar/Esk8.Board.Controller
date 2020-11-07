@@ -230,7 +230,7 @@ void screenWhenStopped(bool init = false)
     tft.setFreeFont(FONT_MED);
   }
   quarterScreenFloat(TOP_LEFT_QRTR, board.packet.odometer, "trip (km)", bgColour);
-  quarterScreenFloat(TOP_RIGHT_QRTR, stats.getSecondsMoving() / 60.0, "time (m)", bgColour);
+  quarterScreenFloat(TOP_RIGHT_QRTR, stats.getTimeMovingInSeconds() / 60.0, "time (m)", bgColour);
   quarterScreenFloat(BOTTOM_LEFT_QRTR, board.packet.ampHours, "mAH", bgColour);
   quarterScreenFloat(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHoursPerSecond(board.packet.ampHours), "mAH/s", bgColour);
   // screenOneMetricWithStripe(board.packet.ampHours, "TRIP Ah", TFT_DARKGREY, init);

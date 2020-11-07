@@ -83,6 +83,7 @@ public:
     case PUSH_TO_START:
       return _featurePushToStart;
     }
+    return NULL;
   }
 
 private:
@@ -98,42 +99,9 @@ private:
 ControllerData controller_packet;
 ControllerConfig controller_config;
 
-class BoardClass
-{
-public:
-  /*
-  * saves VescData
-  * updates _changed
-  * records last rx time
-  */
-  void save(VescData latest)
-  {
-    _old = packet;
-    packet = latest;
-    _changed = packet.ampHours != _old.ampHours ||
-               packet.batteryVoltage != _old.batteryVoltage ||
-               packet.motorCurrent != _old.motorCurrent ||
-               packet.odometer != _old.odometer ||
-               packet.vescOnline != _old.vescOnline;
-    sinceLastPacket = 0;
-  }
-  bool valuesChanged() { return _changed; }
-  bool startedMoving() { return packet.moving && !_old.moving; }
-  bool hasStopped() { return !packet.moving && _old.moving; }
-  bool hasTimedout()
-  {
-    unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
-    return sinceLastPacket > (timeout + 100);
-  }
+#include <BoardClass.h>
 
-  VescData packet;
-  elapsedMillis sinceLastPacket;
-
-private:
-  VescData _old;
-  bool _changed = false;
-  // unsigned long _lastRxTime;
-} board;
+BoardClass board;
 
 //------------------------------------------------------------------
 
@@ -210,8 +178,10 @@ enum DispStateEvent
 // displayState - prototypes
 void send_to_display_event_queue(DispStateEvent ev);
 void sendToBoard();
-void reboot();
 
+//------------------------------------------------------------------
+
+#include <Storage.h>
 #include <stats.h>
 
 Stats stats;
@@ -231,46 +201,6 @@ public:
 #define STORE_CONFIG_ACCEL_COUNTS "accel counts"
 #define STORE_CONFIG_BRAKE_COUNTS "brake counts"
 Preferences configStore;
-
-template <typename T>
-void storeInMemory(char *key, T value)
-{
-  statsStore.begin(STORE_STATS, /*read-only*/ false);
-  if (std::is_same<T, uint16_t>::value)
-  {
-    statsStore.putUInt(key, value);
-  }
-  else if (std::is_same<T, unsigned long>::value)
-  {
-    statsStore.putULong(key, value);
-  }
-  else
-  {
-    Serial.printf("WARNING: unhandled type for storeInMemory()\n");
-  }
-  statsStore.end();
-}
-
-template <typename T>
-T readFromMemory(char *key)
-{
-  T result;
-  statsStore.begin(STORE_STATS, /*read-only*/ false);
-  if (std::is_same<T, uint16_t>::value)
-  {
-    result = statsStore.getUInt(key, 0);
-  }
-  else if (std::is_same<T, unsigned long>::value)
-  {
-    result = statsStore.getULong(key, 0);
-  }
-  else
-  {
-    Serial.printf("WARNING: unhandled type for storeInMemory()\n");
-  }
-  statsStore.end();
-  return result;
-}
 
 void resetsAcknowledged_callback()
 {
@@ -309,30 +239,31 @@ void setup()
   Serial.begin(115200);
   Serial.printf("------------------------ BOOT ------------------------\n");
 
+  //get chip id
+  String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
+  chipId.toUpperCase();
+
   statsStore.begin(STORE_STATS, /*read-only*/ false);
+
+  // get the number of resets
   stats.soft_resets = statsStore.getUInt(STORE_STATS_SOFT_RSTS, 0);
 
-  stats.reset_reason_core0 = rtc_get_reset_reason(0);
-  stats.reset_reason_core1 = rtc_get_reset_reason(1);
+  stats.setResetReasons(rtc_get_reset_reason(0), rtc_get_reset_reason(1));
   stats.setResetsAcknowledgedCallback(resetsAcknowledged_callback);
 
   configStore.begin(STORE_CONFIG, false);
 
-  // Serial.printf("CPU0 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core0));
-  // Serial.printf("CPU1 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core1));
-
-  bool badReset = stats.reset_reason_core0 == RESET_REASON::SW_CPU_RESET ||
-                  stats.reset_reason_core1 == RESET_REASON::SW_CPU_RESET;
-
-  if (badReset)
+  if (stats.watchdogReset())
   {
     stats.soft_resets++;
     // statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
     storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, stats.soft_resets);
     stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS_TRIP_TIME);
-    Serial.printf("RESET!!! =========> %d\n", stats.soft_resets);
+#ifdef PRINT_RESET_DETECTION
+    Serial.printf("RESET!!! =========> %d (%ums)\n", stats.soft_resets, stats.timeMovingMS);
+#endif
   }
-  else if (stats.reset_reason_core0 == RESET_REASON::POWERON_RESET)
+  else if (stats.powerOnReset())
   {
     stats.soft_resets = 0;
     statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
@@ -341,7 +272,7 @@ void setup()
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packetAvailable_cb);
 
-  print_build_status();
+  print_build_status(chipId);
 
   throttle.init(/*pin*/ 27);
 
@@ -407,12 +338,6 @@ void loop()
     sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
   }
 
-  if (sinceLastSwReset > 10000)
-  {
-    Serial.printf("Resetting...\n");
-    reboot();
-  }
-
   nrf24.update();
 
   primaryButton.loop();
@@ -420,10 +345,10 @@ void loop()
   vTaskDelay(1);
 }
 
-void reboot()
-{
-  ESP.restart();
-}
+// void reboot()
+// {
+//   ESP.restart();
+// }
 
 //------------------------------------------------------------------
 
