@@ -105,6 +105,12 @@ BoardClass board;
 
 //------------------------------------------------------------------
 
+#include <APM.h>
+
+// APM *core0Apm;
+
+//------------------------------------------------------------------
+
 NRF24L01Lib nrf24;
 
 RF24 radio(NRF_CE, NRF_CS);
@@ -243,6 +249,8 @@ void setup()
   String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
   chipId.toUpperCase();
 
+  // core0Apm = new APM("core0 APM");
+
   statsStore.begin(STORE_STATS, /*read-only*/ false);
 
   // get the number of resets
@@ -323,14 +331,24 @@ void setup()
 
 elapsedMillis
     since_sent_config_to_board,
+    sinceNRFUpdate,
     sinceLastSwReset;
 uint8_t old_throttle;
+ulong loopNum = 0;
 
 void loop()
 {
   if (sinceSentToBoard > SEND_TO_BOARD_INTERVAL)
   {
+    // if (core0Apm->running())
+    //   core0Apm->stop();
+
+    // core0Apm->start(loopNum == 20);
+    loopNum++;
+
+    // core0Apm->addPoint(PointState::ON, "sendBoard()");
     sendToBoard();
+    // core0Apm->addPoint(PointState::OFF, "");
   }
 
   if (board.hasTimedout())
@@ -338,17 +356,18 @@ void loop()
     sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
   }
 
-  nrf24.update();
+  if (sinceNRFUpdate > 20)
+  {
+    sinceNRFUpdate = 0;
+    // core0Apm->addPoint(PointState::ON, "nrf24.update()");
+    nrf24.update();
+    // core0Apm->addPoint(PointState::OFF, "");
+  }
 
   primaryButton.loop();
 
   vTaskDelay(1);
 }
-
-// void reboot()
-// {
-//   ESP.restart();
-// }
 
 //------------------------------------------------------------------
 
