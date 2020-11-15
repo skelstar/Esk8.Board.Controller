@@ -28,7 +28,7 @@ void display_task_0(void *pvParameters)
       sinceReadDispEventQueue = 0;
       displayState->run_machine();
 
-      DispStateEvent displayevent = (DispStateEvent)displayChangeQueueManager->read(); // read_from_display_event_queue();
+      DispStateEvent displayevent = (DispStateEvent)displayChangeQueueManager->read();
       switch (displayevent)
       {
       case DISP_EV_NO_EVENT:

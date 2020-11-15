@@ -265,6 +265,16 @@ void screenNeedToAckResets()
   int y = LCD_HEIGHT - chunkyDigit->getHeight() - 20;
   chunkyDigit->draw_float(x, y, buff);
 }
+//-----------------------------------------------------
+
+void screenNeedToAckVersion()
+{
+  tft.fillScreen(TFT_RED);
+  tft.setFreeFont(FONT_LG);
+  tft.setTextColor(TFT_WHITE);
+  tft.setTextDatum(TC_DATUM);
+  tft.drawString("ACK VERSIONS!\n", /*x*/ LCD_WIDTH / 2, /*y*/ 20);
+}
 
 //-----------------------------------------------------
 

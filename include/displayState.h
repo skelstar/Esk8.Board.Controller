@@ -97,6 +97,14 @@ State dispState_needToAckResetsMoving(
     },
     NULL);
 //---------------------------------------------------------------
+State dispState_boardVersionDoesntMatchScreen(
+    [] {
+      print_disp_state("...dispState_boardVersionDoesntMatchScreen", eventToString(lastDispEvent));
+      screenNeedToAckVersion();
+    },
+    NULL,
+    NULL);
+//---------------------------------------------------------------
 
 State dispState_togglePushToStart(
     [] {
@@ -153,6 +161,10 @@ void displayState_addTransitions()
   displayState->add_transition(&dispState_stoppedScreen, &dispState_togglePushToStart, DISP_EV_PRIMARY_TRIPLE_CLICK, NULL);
   displayState->add_transition(&dispState_togglePushToStart, &dispState_togglePushToStart, DISP_EV_PRIMARY_DOUBLE_CLICK, NULL);
   displayState->add_transition(&dispState_togglePushToStart, &dispState_stoppedScreen, DISP_EV_PRIMARY_SINGLE_CLICK, NULL);
+
+  // DISP_EV_VERSION_DOESNT_MATCH
+  displayState->add_transition(&dispState_stoppedScreen, &dispState_boardVersionDoesntMatchScreen, DISP_EV_VERSION_DOESNT_MATCH, NULL);
+  displayState->add_transition(&dispState_movingScreen, &dispState_boardVersionDoesntMatchScreen, DISP_EV_VERSION_DOESNT_MATCH, NULL);
 }
 //---------------------------------------------------------------
 
@@ -181,6 +193,8 @@ const char *eventToString(DispStateEvent ev)
     return "DISP_EV_PRIMARY_DOUBLE_CLICK";
   case DISP_EV_PRIMARY_TRIPLE_CLICK:
     return "DISP_EV_PRIMARY_TRIPLE_CLICK";
+  case DISP_EV_VERSION_DOESNT_MATCH:
+    return "DISP_EV_VERSION_DOESNT_MATCH";
   default:
     char buff1[30];
     sprintf(buff1, "unhandled ev: %d", (uint8_t)ev);
@@ -214,20 +228,6 @@ void send_to_display_event_queue(DispStateEvent ev)
   uint8_t e = (uint8_t)ev;
   xQueueSendToBack(xDisplayChangeEventQueue, &e, ticks);
 }
-//---------------------------------------------------------------
-
-// DispStateEvent read_from_display_event_queue(TickType_t ticks)
-// {
-//   uint8_t e;
-//   if (xDisplayChangeEventQueue != NULL && xQueueReceive(xDisplayChangeEventQueue, &e, ticks) == pdPASS)
-//   {
-// #ifdef PRINT_DISP_STATE_EVENT
-//     Serial.printf("<- %s\n", eventToString((DispStateEvent)e));
-// #endif
-//     return (DispStateEvent)e;
-//   }
-//   return DISP_EV_NO_EVENT;
-// }
 //---------------------------------------------------------------
 void clearDisplayEventQueue()
 {

@@ -73,7 +73,17 @@ public:
     return timeMovingMS > 0 ? amphours / getTimeMovingInSeconds() : 0;
   }
 
+  void setBoardVersionMatches(bool matches)
+  {
+    _boardVersionMatches = matches;
+    if (!matches)
+    {
+      displayChangeQueueManager->send(DISP_EV_VERSION_DOESNT_MATCH);
+    }
+  }
+
 private:
+  bool _boardVersionMatches = false;
   bool _resetsAcknowledged = false;
   ulong _lastStoreTimeMs;
   ResetsAcknowledgedCallback _resetsAcknowledgedCallback;
