@@ -100,7 +100,7 @@ State dispState_needToAckResetsMoving(
 State dispState_boardVersionDoesntMatchScreen(
     [] {
       print_disp_state("...dispState_boardVersionDoesntMatchScreen", eventToString(lastDispEvent));
-      screenNeedToAckVersion();
+      screenBoardNotCompatible(board.packet.version);
     },
     NULL,
     NULL);

@@ -62,7 +62,11 @@ State stateCommsConnected(
       }
 
       // check board version is compatible
-      stats.setBoardVersionMatches(boardVersionCompatible(board.packet.version));
+      bool boardCompatible = boardVersionCompatible(board.packet.version);
+      if (!boardCompatible)
+      {
+        displayChangeQueueManager->send(DISP_EV_VERSION_DOESNT_MATCH);
+      }
     },
     NULL,
     NULL);

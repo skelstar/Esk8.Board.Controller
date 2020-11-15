@@ -267,13 +267,19 @@ void screenNeedToAckResets()
 }
 //-----------------------------------------------------
 
-void screenNeedToAckVersion()
+void screenBoardNotCompatible(float boardVersion)
 {
   tft.fillScreen(TFT_RED);
   tft.setFreeFont(FONT_LG);
   tft.setTextColor(TFT_WHITE);
   tft.setTextDatum(TC_DATUM);
-  tft.drawString("ACK VERSIONS!\n", /*x*/ LCD_WIDTH / 2, /*y*/ 20);
+  uint8_t line1 = 20, lineheight = 32;
+  tft.drawString("Board not", /*x*/ LCD_WIDTH / 2, /*y*/ line1);
+  tft.drawString("compatible!", /*x*/ LCD_WIDTH / 2, /*y*/ line1 += lineheight);
+
+  char buff[20];
+  sprintf(buff, "v%.1f <> v%.1f", boardVersion, VERSION_BOARD_COMPAT);
+  tft.drawString(buff, /*x*/ LCD_WIDTH / 2, /*y*/ line1 += lineheight);
 }
 
 //-----------------------------------------------------
