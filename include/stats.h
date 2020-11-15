@@ -68,9 +68,16 @@ public:
     return timeMovingMS / 1000.0;
   }
 
+  float getTimeMovingInMinutes()
+  {
+    return (timeMovingMS / 1000.0) / 60.0;
+  }
+
   float getAverageAmpHoursPerSecond(float amphours)
   {
-    return timeMovingMS > 0 ? amphours / getTimeMovingInSeconds() : 0;
+    return timeMovingMS > 0
+               ? amphours / getTimeMovingInSeconds()
+               : 0;
   }
 
 private:

@@ -220,6 +220,15 @@ void quarterScreenFloat(QuarterPosition position, float value, char *title, uint
 }
 //-----------------------------------------------------
 
+void quarterScreenInteger(QuarterPosition position, uint8_t value, char *title, uint32_t bgColour)
+{
+  char buff[20];
+  sprintf(buff, value < 10000 ? "%d" : ">E", value);
+
+  quarterScreen(position, buff, title, bgColour);
+}
+//-----------------------------------------------------
+
 void screenWhenStopped(bool init = false)
 {
   uint32_t bgColour = TFT_BLACK;
@@ -230,10 +239,9 @@ void screenWhenStopped(bool init = false)
     tft.setFreeFont(FONT_MED);
   }
   quarterScreenFloat(TOP_LEFT_QRTR, board.packet.odometer, "trip (km)", bgColour);
-  quarterScreenFloat(TOP_RIGHT_QRTR, stats.getTimeMovingInSeconds() / 60.0, "time (m)", bgColour);
-  quarterScreenFloat(BOTTOM_LEFT_QRTR, board.packet.ampHours, "mAH", bgColour);
-  quarterScreenFloat(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHoursPerSecond(board.packet.ampHours), "mAH/s", bgColour);
-  // screenOneMetricWithStripe(board.packet.ampHours, "TRIP Ah", TFT_DARKGREY, init);
+  quarterScreenFloat(TOP_RIGHT_QRTR, stats.getTimeMovingInMinutes(), "time (m)", bgColour);
+  quarterScreenInteger(BOTTOM_LEFT_QRTR, board.packet.ampHours, "mAH", bgColour);
+  quarterScreenInteger(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHoursPerSecond(board.packet.ampHours), "mAH/s", bgColour);
 }
 //-----------------------------------------------------W
 

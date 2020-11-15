@@ -32,9 +32,9 @@ public:
   unsigned long id;
   float batteryVoltage;
   bool moving;
-  float ampHours;
-  float motorCurrent;
-  float odometer; // in kilometers
+  float ampHours;     // total number of ampHours used
+  float motorCurrent; // current motor current
+  float odometer;     // in kilometers
   bool vescOnline;
   ReasonType reason;
   CommandType command;
