@@ -211,20 +211,22 @@ void quarterScreen(QuarterPosition position, char *buff, char *title, uint32_t b
 }
 //-----------------------------------------------------
 
-void quarterScreenFloat(QuarterPosition position, float value, char *title, uint32_t bgColour)
+template <typename T>
+void quarterScreen(QuarterPosition position, T value, char *title, uint32_t bgColour)
 {
   char buff[20];
-  sprintf(buff, value < 1000.0 ? "%.1f" : "%.0f", value);
-
-  quarterScreen(position, buff, title, bgColour);
-}
-//-----------------------------------------------------
-
-void quarterScreenInteger(QuarterPosition position, uint8_t value, char *title, uint32_t bgColour)
-{
-  char buff[20];
-  sprintf(buff, value < 10000 ? "%d" : ">E", value);
-
+  if (std::is_same<T, float>::value)
+  {
+    sprintf(buff, value < 1000.0 ? "%.1f" : "%.0f", value);
+  }
+  else if (std::is_same<T, int>::value)
+  {
+    sprintf(buff, value < 10000 ? "%d" : ">E", value);
+  }
+  else
+  {
+    return;
+  }
   quarterScreen(position, buff, title, bgColour);
 }
 //-----------------------------------------------------
@@ -238,10 +240,11 @@ void screenWhenStopped(bool init = false)
     setupScreenWithStripe(/*bg*/ bgColour, /*fg*/ TFT_WHITE, /*stripe*/ TFT_DARKGREY);
     tft.setFreeFont(FONT_MED);
   }
-  quarterScreenFloat(TOP_LEFT_QRTR, board.packet.odometer, "trip (km)", bgColour);
-  quarterScreenFloat(TOP_RIGHT_QRTR, stats.getTimeMovingInMinutes(), "time (m)", bgColour);
-  quarterScreenInteger(BOTTOM_LEFT_QRTR, board.packet.ampHours, "mAH", bgColour);
-  quarterScreenInteger(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHoursPerSecond(board.packet.ampHours), "mAH/s", bgColour);
+
+  quarterScreen<float>(TOP_LEFT_QRTR, board.packet.odometer, "trip (km)", bgColour);
+  quarterScreen<float>(TOP_RIGHT_QRTR, stats.getTimeMovingInMinutes(), "time (m)", bgColour);
+  quarterScreen<int>(BOTTOM_LEFT_QRTR, board.packet.ampHours, "mAH", bgColour);
+  quarterScreen<int>(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHoursPerSecond(board.packet.ampHours), "mAH/s", bgColour);
 }
 //-----------------------------------------------------W
 
