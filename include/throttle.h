@@ -32,7 +32,7 @@ private:
   uint8_t _pin;
   uint16_t _raw;
   uint8_t _oldMapped;
-  uint16_t _centre = 1946, _min = 240, _max = 4095;
+  uint16_t _centre = 1280, _min = 0, _max = 2530;
   uint16_t _deadband = 50;
 
   uint16_t _getRaw()
