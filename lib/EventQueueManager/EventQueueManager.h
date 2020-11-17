@@ -1,7 +1,11 @@
 #ifndef _EVENT_QUEUE_MANAGER_H_
 #define _EVENT_QUEUE_MANAGER_H_
 
+#ifndef ARDUINO_H
 #include "Arduino.h"
+#endif
+
+#define NO_QUEUE_EVENT 99
 
 class EventQueueManager
 {
@@ -12,6 +16,7 @@ public:
     _ticks = ticks;
   }
 
+  /// send event T to the queue
   template <typename T>
   void send(T ev)
   {
@@ -28,14 +33,17 @@ public:
     {
       return e;
     }
-    return 99;
+    return NO_QUEUE_EVENT;
   }
 
-  void clear()
+  template <typename T>
+  T getLastEvent()
   {
+    return (T)_lastEvent;
   }
 
 private:
+  uint8_t _lastEvent = 0;
   QueueHandle_t _queue = NULL;
   TickType_t _ticks = 10;
 };
