@@ -244,7 +244,7 @@ void screenWhenStopped(bool init = false)
   quarterScreen<float>(TOP_LEFT_QRTR, board.packet.odometer, "trip (km)", bgColour);
   quarterScreen<float>(TOP_RIGHT_QRTR, stats.getTimeMovingInMinutes(), "time (m)", bgColour);
   quarterScreen<int>(BOTTOM_LEFT_QRTR, board.packet.ampHours, "mAH", bgColour);
-  quarterScreen<int>(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHoursPerSecond(board.packet.ampHours), "mAH/s", bgColour);
+  quarterScreen<float>(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHoursPerSecond(board.packet.ampHours), "mAH/s", bgColour);
 }
 //-----------------------------------------------------W
 
