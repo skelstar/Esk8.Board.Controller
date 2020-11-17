@@ -76,7 +76,7 @@ public:
   float getAverageAmpHoursPerSecond(float amphours)
   {
     return timeMovingMS > 0
-               ? amphours / getTimeMovingInSeconds()
+               ? amphours / getTimeMovingInMinutes()
                : 0;
   }
 
@@ -84,8 +84,8 @@ private:
   bool _resetsAcknowledged = false;
   ulong _lastStoreTimeMs;
   ResetsAcknowledgedCallback _resetsAcknowledgedCallback;
-  RESET_REASON _reset_reason_core0;
-  RESET_REASON _reset_reason_core1;
+  RESET_REASON _reset_reason_core0,
+      _reset_reason_core1;
 
   void _storeTimeMoving()
   {

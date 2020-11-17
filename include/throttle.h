@@ -10,9 +10,9 @@ public:
     _oldMapped = 127;
   }
 
-  uint8_t get(bool accelEnabled = true)
+  uint8_t get(bool enabled = true)
   {
-    if (accelEnabled)
+    if (enabled)
     {
       _raw = _getRaw();
       uint8_t mapped = getMappedFromRaw();
