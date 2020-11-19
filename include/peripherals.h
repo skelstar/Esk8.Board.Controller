@@ -24,5 +24,6 @@ void primaryButtonInit()
   primaryButton.setTripleClickHandler([](Button2 &btn) {
     // Serial.printf("Primary Button triple-clicked\n");
     buttonQueueManager->send(ButtonClickType::TRIPLE);
+    hudMessageQueueManager->send(HUD_EV_PULSE_RED);
   });
 }

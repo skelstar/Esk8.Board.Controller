@@ -59,6 +59,7 @@ State stateCommsConnected(
       if (stats.needToAckResets())
       {
         displayChangeQueueManager->send(DISP_EV_SW_RESET);
+        hudMessageQueueManager->send(HUD_EV_PULSE_RED);
       }
 
       // check board version is compatible
