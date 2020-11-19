@@ -37,9 +37,9 @@ void onNotify(BLERemoteCharacteristic *pBLERemoteCharacteristic,
   Serial.printf("Notify!\n");
 }
 
-void hudTask_0(void *pvParameters)
+void hudTask_1(void *pvParameters)
 {
-  Serial.printf("hudTask_0 running on core %d\n", xPortGetCoreID());
+  Serial.printf("hudTask_1 running on core %d\n", xPortGetCoreID());
 
   bleClient.onConnect = onConnect;
   bleClient.onDisconnect = onDisconnect;
@@ -59,12 +59,11 @@ void hudTask_0(void *pvParameters)
       // send initialising state
       if (bleServerConnected)
       {
-        hudMessageQueueManager->send(board.packet.moving
-                                         ? HUDEvent::HUD_EV_BOARD_MOVING
-                                         : HUDEvent::HUD_EV_BOARD_STOPPED);
+        hudMessageQueueManager->send(HUDEvent::HUD_EV_FLASH_GREEN);
       }
     }
 
+    // read from queue
     if (bleClient.isConnected() && sinceHudReadFromQueue > 500)
     {
       sinceHudReadFromQueue = 0;
@@ -73,7 +72,7 @@ void hudTask_0(void *pvParameters)
         HUDEvent message = (HUDEvent)hudMessageQueueManager->read();
         hudData.state = message;
         bleClient.sendToServer(hudData);
-        Serial.printf("Sent id:%d event:%s\n", hudData.id, eventToString(hudData.state));
+        Serial.printf("Sent event:%s\n", eventToString(hudData.state));
         hudData.id++;
       }
     }

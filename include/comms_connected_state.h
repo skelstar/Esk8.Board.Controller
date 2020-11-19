@@ -17,6 +17,7 @@ void sendToCommsEventStateQueue(CommsStateEvent ev, TickType_t ticks = 5);
 CommsStateEvent readFromCommsStateEventQueue(TickType_t ticks = 5);
 const char *commsEventToString(CommsStateEvent ev);
 const char *commsEventToString(int ev);
+bool boardVersionCompatible(float version);
 //------------------------------------------
 
 bool comms_session_started = false;
@@ -38,28 +39,44 @@ State stateCommsSearching([] {
 #endif
 });
 
-State stateCommsConnected([] {
-  if (commsFsm->lastEvent() == EV_COMMS_BD_FIRST_PACKET)
-  {
-    stats.boardResets++;
-    send_to_display_event_queue(DISP_EV_UPDATE);
-  }
+State stateCommsConnected(
+    [] {
+      if (commsFsm->lastEvent() == EV_COMMS_BD_FIRST_PACKET)
+      {
+        stats.boardResets++;
+        displayChangeQueueManager->send(DISP_EV_UPDATE);
+      }
 #ifdef PRINT_COMMS_STATE
-  commsFsm->print("stateCommsConnected");
+      commsFsm->print("stateCommsConnected");
 #endif
 
-  comms_session_started = true;
-  comms_state_connected = true;
-  send_to_display_event_queue(DISP_EV_CONNECTED);
-  send_to_display_event_queue(DISP_EV_UPDATE);
-});
+      comms_session_started = true;
+      comms_state_connected = true;
+
+      displayChangeQueueManager->send(DISP_EV_CONNECTED);
+      displayChangeQueueManager->send(DISP_EV_UPDATE);
+
+      if (stats.needToAckResets())
+      {
+        displayChangeQueueManager->send(DISP_EV_SW_RESET);
+      }
+
+      // check board version is compatible
+      bool boardCompatible = boardVersionCompatible(board.packet.version);
+      if (!boardCompatible)
+      {
+        displayChangeQueueManager->send(DISP_EV_VERSION_DOESNT_MATCH);
+      }
+    },
+    NULL,
+    NULL);
 
 State stateCommsDisconnected(
     [] {
       if (commsFsm->lastEvent() == EV_COMMS_BD_FIRST_PACKET)
       {
         stats.boardResets++;
-        send_to_display_event_queue(DISP_EV_UPDATE);
+        displayChangeQueueManager->send(DISP_EV_UPDATE);
       }
 
 #ifdef PRINT_COMMS_STATE
@@ -69,7 +86,7 @@ State stateCommsDisconnected(
 #endif
 
       comms_state_connected = false;
-      send_to_display_event_queue(DISP_EV_DISCONNECTED);
+      displayChangeQueueManager->send(DISP_EV_DISCONNECTED);
     },
     NULL, NULL);
 //-----------------------------------------------------
@@ -190,3 +207,8 @@ CommsStateEvent readFromCommsStateEventQueue(TickType_t ticks)
 }
 
 //-----------------------------------------------------
+// check version
+bool boardVersionCompatible(float version)
+{
+  return version == VERSION_BOARD_COMPAT;
+}

@@ -3,11 +3,11 @@
 #ifdef DEBUG_SERIAL
 #define DEBUG_OUT Serial
 #endif
-// #define PRINTSTREAM_FALLBACK
-// #include "Debug.hpp"
+#define PRINTSTREAM_FALLBACK
+#include "Debug.hpp"
 
-#include <Arduino_Helpers.h>
-#include <AH/Debug/Debug.hpp>
+// #include <Arduino_Helpers.h>
+// #include <AH/Debug/Debug.hpp>
 
 #include <Arduino.h>
 #include <VescData.h>
@@ -95,6 +95,7 @@ public:
     case PUSH_TO_START:
       return _featurePushToStart;
     }
+    return NULL;
   }
 
 private:
@@ -110,42 +111,9 @@ private:
 ControllerData controller_packet;
 ControllerConfig controller_config;
 
-class BoardClass
-{
-public:
-  /*
-  * saves VescData
-  * updates _changed
-  * records last rx time
-  */
-  void save(VescData latest)
-  {
-    _old = packet;
-    packet = latest;
-    _changed = packet.ampHours != _old.ampHours ||
-               packet.batteryVoltage != _old.batteryVoltage ||
-               packet.motorCurrent != _old.motorCurrent ||
-               packet.odometer != _old.odometer ||
-               packet.vescOnline != _old.vescOnline;
-    sinceLastPacket = 0;
-  }
-  bool valuesChanged() { return _changed; }
-  bool startedMoving() { return packet.moving && !_old.moving; }
-  bool hasStopped() { return !packet.moving && _old.moving; }
-  bool hasTimedout()
-  {
-    unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
-    return sinceLastPacket > (timeout + 100);
-  }
+#include <BoardClass.h>
 
-  VescData packet;
-  elapsedMillis sinceLastPacket;
-
-private:
-  VescData _old;
-  bool _changed = false;
-  // unsigned long _lastRxTime;
-} board;
+BoardClass board;
 
 //------------------------------------------------------------------
 
@@ -181,33 +149,10 @@ BatteryLib remote_batt(BATTERY_MEASURE_PIN);
 TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 //------------------------------------------------------------------
 
-class Stats
-{
-public:
-  uint16_t total_failed_sending;
-  unsigned long consecutive_resps;
-  RESET_REASON reset_reason_core0;
-  RESET_REASON reset_reason_core1;
-  uint16_t soft_resets = 0;
-  uint8_t boardResets = 0;
-  unsigned long timeMovingMS = 0;
-
-  float getSecondsMoving()
-  {
-    return timeMovingMS / 1000.0;
-  }
-
-  float getAverageAmpHoursPerSecond(float amphours)
-  {
-    // Serial.printf("%ums %.1fs %.1fmA\n", timeMovingMS, getSecondsMoving(), amphours);
-    return timeMovingMS > 0
-               ? amphours / getSecondsMoving()
-               : 0;
-  }
-} stats;
-
 #define STORE_STATS "stats"
 #define STORE_STATS_SOFT_RSTS "soft resets"
+#define STORE_STATS_TRIP_TIME "trip time"
+
 Preferences statsStore;
 
 elapsedMillis
@@ -215,7 +160,8 @@ elapsedMillis
     sinceLastBoardPacketRx,
     sinceSentRequest,
     since_read_trigger,
-    sinceBoardConnected;
+    sinceBoardConnected,
+    sinceStoredSnapshot;
 
 uint16_t remote_battery_percent = 0;
 bool remoteBattCharging = false;
@@ -231,15 +177,24 @@ enum DispStateEvent
   DISP_EV_DISCONNECTED,
   DISP_EV_STOPPED,
   DISP_EV_MOVING,
+  DISP_EV_SW_RESET,
   DISP_EV_UPDATE,
   DISP_EV_PRIMARY_SINGLE_CLICK,
   DISP_EV_PRIMARY_DOUBLE_CLICK,
-  DISP_EV_PRIMARY_TRIPLE_CLICK
+  DISP_EV_PRIMARY_TRIPLE_CLICK,
+  DISP_EV_VERSION_DOESNT_MATCH
 };
 
 // displayState - prototypes
 void send_to_display_event_queue(DispStateEvent ev);
 void sendToBoard();
+
+//------------------------------------------------------------------
+
+#include <Storage.h>
+#include <stats.h>
+
+Stats stats;
 
 //------------------------------------------------------------------
 
@@ -256,6 +211,16 @@ public:
 #define STORE_CONFIG_ACCEL_COUNTS "accel counts"
 #define STORE_CONFIG_BRAKE_COUNTS "brake counts"
 Preferences configStore;
+
+void resetsAcknowledged_callback()
+{
+  storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
+}
+
+void storeTimeMovingInMemory()
+{
+  storeInMemory<ulong>(STORE_STATS_TRIP_TIME, stats.timeMovingMS);
+}
 
 #include <throttle.h>
 
@@ -282,35 +247,42 @@ ThrottleClass throttle;
 void setup()
 {
   Serial.begin(115200);
+  Serial.printf("------------------------ BOOT ------------------------\n");
+
+  //get chip id
+  String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
+  chipId.toUpperCase();
 
   statsStore.begin(STORE_STATS, /*read-only*/ false);
+
+  // get the number of resets
   stats.soft_resets = statsStore.getUInt(STORE_STATS_SOFT_RSTS, 0);
 
-  stats.reset_reason_core0 = rtc_get_reset_reason(0);
-  stats.reset_reason_core1 = rtc_get_reset_reason(1);
+  stats.setResetReasons(rtc_get_reset_reason(0), rtc_get_reset_reason(1));
+  stats.setResetsAcknowledgedCallback(resetsAcknowledged_callback);
 
   configStore.begin(STORE_CONFIG, false);
 
-  Serial.printf("CPU0 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core0));
-  Serial.printf("CPU1 reset reason: %s\n", get_reset_reason_text(stats.reset_reason_core1));
-
-  if (stats.reset_reason_core0 == RESET_REASON::SW_CPU_RESET)
+  if (stats.watchdogReset())
   {
     stats.soft_resets++;
-    statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
-    Serial.printf("RESET!!! =========> %d\n", stats.soft_resets);
+    // statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
+    storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, stats.soft_resets);
+    stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS_TRIP_TIME);
+#ifdef PRINT_RESET_DETECTION
+    Serial.printf("RESET!!! =========> %d (%ums)\n", stats.soft_resets, stats.timeMovingMS);
+#endif
   }
-  else if (stats.reset_reason_core0 == RESET_REASON::POWERON_RESET)
+  else if (stats.powerOnReset())
   {
     stats.soft_resets = 0;
     statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
-    Serial.printf("Storage: cleared resets\n");
   }
   statsStore.end();
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, packetAvailable_cb);
 
-  print_build_status();
+  print_build_status(chipId);
 
   throttle.init(/*pin*/ 27);
 
@@ -346,8 +318,8 @@ void setup()
       0);
 
   xTaskCreatePinnedToCore(
-      hudTask_0,
-      "hudTask_0",
+      hudTask_1,
+      "hudTask_1",
       10000,
       NULL,
       /*priority*/
@@ -371,13 +343,19 @@ void setup()
 }
 //---------------------------------------------------------------
 
-elapsedMillis since_sent_config_to_board;
+elapsedMillis
+    since_sent_config_to_board,
+    sinceNRFUpdate,
+    sinceLastSwReset;
 uint8_t old_throttle;
+ulong loopNum = 0;
 
 void loop()
 {
   if (sinceSentToBoard > SEND_TO_BOARD_INTERVAL)
   {
+    loopNum++;
+
     sendToBoard();
   }
 
@@ -386,18 +364,23 @@ void loop()
     sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
   }
 
-  nrf24.update();
+  if (sinceNRFUpdate > 20)
+  {
+    sinceNRFUpdate = 0;
+    nrf24.update();
+  }
 
   primaryButton.loop();
 
   vTaskDelay(1);
 }
+
 //------------------------------------------------------------------
 
 void sendToBoard()
 {
 
-  bool accelEnabled =
+  bool throttleEnabled =
       throttle.get() < 127 || // braking
       board.packet.moving ||
       !featureService.get<bool>(PUSH_TO_START) ||
@@ -409,7 +392,7 @@ void sendToBoard()
       primaryButton.isPressed();
 
   sinceSentToBoard = 0;
-  controller_packet.throttle = throttle.get(/*enabled*/ accelEnabled);
+  controller_packet.throttle = throttle.get(/*enabled*/ throttleEnabled);
   controller_packet.cruise_control = cruiseControlActive;
   sendPacketToBoard();
 }

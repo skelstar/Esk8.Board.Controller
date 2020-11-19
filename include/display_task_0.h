@@ -7,38 +7,39 @@ void display_task_0(void *pvParameters)
 {
   setupLCD();
 
-  display_state = new Fsm(&disp_state_searching);
+  displayState = new Fsm(&dispState_searching);
 
-  add_disp_state_transitions();
+  displayState_addTransitions();
 
   Serial.printf("display_task_0 running on core %d\n", xPortGetCoreID());
 
-  display_state->run_machine();
+  displayState->run_machine();
 
   display_task_initialised = true;
 
 #define READ_DISP_EVENT_QUEUE_PERIOD 100
 
-  elapsedMillis since_read_disp_event_queue;
+  elapsedMillis sinceReadDispEventQueue;
 
   while (true)
   {
-    if (since_read_disp_event_queue > READ_DISP_EVENT_QUEUE_PERIOD)
+    if (sinceReadDispEventQueue > READ_DISP_EVENT_QUEUE_PERIOD)
     {
-      since_read_disp_event_queue = 0;
-      display_state->run_machine();
+      sinceReadDispEventQueue = 0;
+      displayState->run_machine();
 
-      DispStateEvent displayevent = (DispStateEvent)displayChangeQueueManager->read(); // read_from_display_event_queue();
+      DispStateEvent displayevent = (DispStateEvent)displayChangeQueueManager->read();
       switch (displayevent)
       {
       case DISP_EV_NO_EVENT:
+      case 99:
         break;
       case DISP_EV_UPDATE:
         update_display = true;
         break;
       default:
         lastDispEvent = displayevent;
-        display_state->trigger(displayevent);
+        displayState->trigger(displayevent);
         break;
       }
 
@@ -47,15 +48,15 @@ void display_task_0(void *pvParameters)
       {
       case SINGLE:
         lastDispEvent = DISP_EV_PRIMARY_SINGLE_CLICK;
-        display_state->trigger(DISP_EV_PRIMARY_SINGLE_CLICK);
+        displayState->trigger(DISP_EV_PRIMARY_SINGLE_CLICK);
         break;
       case DOUBLE:
         lastDispEvent = DISP_EV_PRIMARY_DOUBLE_CLICK;
-        display_state->trigger(DISP_EV_PRIMARY_DOUBLE_CLICK);
+        displayState->trigger(DISP_EV_PRIMARY_DOUBLE_CLICK);
         break;
       case TRIPLE:
         lastDispEvent = DISP_EV_PRIMARY_TRIPLE_CLICK;
-        display_state->trigger(DISP_EV_PRIMARY_TRIPLE_CLICK);
+        displayState->trigger(DISP_EV_PRIMARY_TRIPLE_CLICK);
         break;
       case 99:
         break;
