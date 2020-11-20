@@ -43,10 +43,12 @@ xQueueHandle xDisplayChangeEventQueue;
 xQueueHandle xCommsStateEventQueue;
 xQueueHandle xButtonPushEventQueue;
 xQueueHandle xHUDMessageEventQueue;
+xQueueHandle xHUDActionQueue;
 
 EventQueueManager *displayChangeQueueManager;
 EventQueueManager *buttonQueueManager;
 EventQueueManager *hudMessageQueueManager;
+EventQueueManager *hudActionQueueManager;
 
 //------------------------------------------------------------
 enum FeatureType
@@ -116,6 +118,17 @@ ControllerConfig controller_config;
 BoardClass board;
 
 //------------------------------------------------------------------
+
+enum HudActionEvent
+{
+  EV_HUD_NONE = 0,
+  EV_HUD_DOUBLE_CLICK,
+};
+
+const char *hudActionEventNames[] = {
+    "EV_HUD_NONE",
+    "EV_HUD_DOUBLE_CLICK",
+};
 
 HUDData hudData;
 
@@ -331,10 +344,12 @@ void setup()
   xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
   xHUDMessageEventQueue = xQueueCreate(3, sizeof(uint8_t));
+  xHUDActionQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
 
   displayChangeQueueManager = new EventQueueManager(xDisplayChangeEventQueue, 5);
   buttonQueueManager = new EventQueueManager(xButtonPushEventQueue, 10);
   hudMessageQueueManager = new EventQueueManager(xHUDMessageEventQueue, 10);
+  hudActionQueueManager = new EventQueueManager(xHUDActionQueue, 3);
 
   while (!display_task_initialised)
   {

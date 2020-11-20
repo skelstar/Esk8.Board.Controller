@@ -21,12 +21,16 @@ BLEClientLib bleClient;
 
 void onConnect()
 {
-  Serial.printf("onConnect()\n");
+  Serial.printf("---------------------------------\n");
+  Serial.printf("           onConnect()\n");
+  Serial.printf("---------------------------------\n");
 }
 
 void onDisconnect()
 {
-  Serial.printf("onDisconnect()\n");
+  Serial.printf("---------------------------------\n");
+  Serial.printf("           onDisconnect()\n");
+  Serial.printf("---------------------------------\n");
 }
 
 void onNotify(BLERemoteCharacteristic *pBLERemoteCharacteristic,
@@ -34,7 +38,10 @@ void onNotify(BLERemoteCharacteristic *pBLERemoteCharacteristic,
               size_t length,
               bool isNotify)
 {
-  Serial.printf("Notify!\n");
+  HudActionEvent ev;
+  memcpy(&ev, pData, length);
+  hudActionQueueManager->send(ev);
+  Serial.printf("Notify: %s\n", hudActionEventNames[(int)ev]);
 }
 
 void hudTask_1(void *pvParameters)
@@ -76,6 +83,12 @@ void hudTask_1(void *pvParameters)
         Serial.printf("Sent event:%s\n", eventToString(hudData.state));
         hudData.id++;
       }
+    }
+
+    if (hudActionQueueManager->messageAvailable())
+    {
+      HudActionEvent action = (HudActionEvent)hudActionQueueManager->read();
+      Serial.printf("queue rx: %s\n", hudActionEventNames[(int)action]);
     }
 
     vTaskDelay(10);
