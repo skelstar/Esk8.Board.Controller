@@ -150,6 +150,10 @@ void triggerCommsEvent(CommsStateEvent ev)
 
 //-------------------------------------------------
 
+void commsStateEventCb(int ev)
+{
+}
+
 void commsStateTask_0(void *pvParameters)
 {
 
@@ -158,6 +162,7 @@ void commsStateTask_0(void *pvParameters)
   commsStateTask_initialised = true;
 
   commsFsm = new Fsm(&stateCommsSearching);
+  commsFsm->setEventTriggeredCb(commsStateEventCb);
   commsFsm->setGetEventName(commsEventToString);
 
   addCommsStateTransitions();

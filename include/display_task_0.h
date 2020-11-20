@@ -3,11 +3,16 @@
 #include <tft.h>
 #endif
 
+void displayStateEventCb(int ev)
+{
+}
+
 void display_task_0(void *pvParameters)
 {
   setupLCD();
 
   displayState = new Fsm(&dispState_searching);
+  displayState->setEventTriggeredCb(displayStateEventCb);
 
   displayState_addTransitions();
 

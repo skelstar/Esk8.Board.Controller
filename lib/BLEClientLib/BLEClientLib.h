@@ -63,6 +63,7 @@ public:
     return pClient->isConnected();
   }
 
+  // blocking call
   bool bleConnectToServer(char *as, char *serverUUID, char *serviceUUID, char *characteristicUUID)
   {
     BLEDevice::init(as);
@@ -77,7 +78,6 @@ public:
     pRemoteCharacteristic = pRemoteService->getCharacteristic(characteristicUUID);
     if (pRemoteCharacteristic->canNotify() && onNotify != NULL)
     {
-      // Serial.printf("Registering for notify\n");
       pRemoteCharacteristic->registerForNotify(onNotify);
     }
     return true;

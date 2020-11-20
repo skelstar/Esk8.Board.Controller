@@ -47,6 +47,7 @@ void hudTask_1(void *pvParameters)
 
   while (true)
   {
+    // reconnect
     if (!bleClient.isConnected() && sinceLastConnectToHUD > 3000)
     {
       Serial.printf("Trying to connect to server...\n");
@@ -59,7 +60,7 @@ void hudTask_1(void *pvParameters)
       // send initialising state
       if (bleServerConnected)
       {
-        hudMessageQueueManager->send(HUDEvent::HUD_EV_FLASH_GREEN);
+        hudMessageQueueManager->send(HUD_EV_FLASH_GREEN);
       }
     }
 

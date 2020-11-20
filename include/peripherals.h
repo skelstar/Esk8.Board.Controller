@@ -6,8 +6,12 @@
 #define BUTTON_PRIMARY 21
 Button2 primaryButton(BUTTON_PRIMARY);
 
+bool pulseLedOn = false;
+
 void primaryButtonInit()
 {
+  pulseLedOn = false;
+
   primaryButton.setPressedHandler([](Button2 &btn) {
     // Serial.printf("Primary Button pressed\n");
   });
@@ -24,6 +28,9 @@ void primaryButtonInit()
   primaryButton.setTripleClickHandler([](Button2 &btn) {
     // Serial.printf("Primary Button triple-clicked\n");
     buttonQueueManager->send(ButtonClickType::TRIPLE);
-    hudMessageQueueManager->send(HUD_EV_PULSE_RED);
+    pulseLedOn = !pulseLedOn;
+    hudMessageQueueManager->send(pulseLedOn
+                                     ? HUD_EV_PULSE_RED
+                                     : HUD_EV_CONNECTED);
   });
 }
