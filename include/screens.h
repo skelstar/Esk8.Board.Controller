@@ -295,8 +295,14 @@ void screenBoardNotCompatible(float boardVersion)
 
 //-----------------------------------------------------
 
+void updateHudIcon(bool connected)
+{
+  tft.fillRect(LCD_WIDTH - 30, 0, 30, STRIPE_HEIGHT, connected ? TFT_BLUE : TFT_RED);
+}
+
 void setupScreenWithStripe(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour)
 {
   tft.fillScreen(bgColour);
   tft.fillRect(0, 0, LCD_WIDTH, STRIPE_HEIGHT, stripeColour);
+  updateHudIcon(stats.hudConnected);
 }

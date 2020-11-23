@@ -2,7 +2,7 @@
 void sendConfigToBoard();
 void sendPacketToBoard();
 bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType);
-bool sendPacketWithRetries(uint8_t *d, uint8_t len, uint8_t packetType, uint8_t numRetries);
+// bool sendPacketWithRetries(uint8_t *d, uint8_t len, uint8_t packetType, uint8_t numRetries);
 
 //------------------------------------------------------------------
 void packetAvailable_cb(uint16_t from_id, uint8_t type)
@@ -24,7 +24,8 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
     * send controller "CONFIG" packet to board
     */
     DEBUG("*** board's first packet!! ***");
-    sendToCommsEventStateQueue(EV_COMMS_BD_FIRST_PACKET);
+
+    nrfCommsQueueManager->send(EV_COMMS_BD_FIRST_PACKET);
 
     controller_packet.id = 0;
     sendConfigToBoard();
@@ -33,15 +34,16 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
   }
   else if (board.startedMoving())
   {
-    send_to_display_event_queue(DISP_EV_MOVING);
+    displayChangeQueueManager->send(DISP_EV_MOVING);
   }
   else if (board.hasStopped())
   {
-    send_to_display_event_queue(DISP_EV_STOPPED);
+    displayChangeQueueManager->send(DISP_EV_STOPPED);
   }
   else if (board.valuesChanged())
   {
-    send_to_display_event_queue(DISP_EV_UPDATE);
+    Serial.printf("board value changed\n");
+    displayChangeQueueManager->send(DISP_EV_UPDATE);
   }
 
   if (board.getCommand() == CommandType::RESET)
@@ -49,7 +51,7 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
     ESP.restart();
   }
 
-  sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
+  nrfCommsQueueManager->send(EV_COMMS_PKT_RXD);
 }
 //------------------------------------------------------------------
 
@@ -91,24 +93,24 @@ bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType)
 }
 //------------------------------------------------------------------
 
-bool sendPacketWithRetries(uint8_t *d, uint8_t len, uint8_t packetType, uint8_t maxTries)
-{
-  bool sent = false;
-  int tries = 0;
-  while (!sent && tries++ < maxTries)
-  {
-    sent = nrf24.send_packet(COMMS_BOARD, packetType, d, len);
-    if (!sent)
-      vTaskDelay(10);
-  }
-#ifdef PRINT_SEND_RETRIES
-  if (tries > 1)
-    // DEBUGMVAL("Retried: ", tries, sent);
-    DEBUGVAL("Retried: ", tries, sent);
-#endif
+// bool sendPacketWithRetries(uint8_t *d, uint8_t len, uint8_t packetType, uint8_t maxTries)
+// {
+//   bool sent = false;
+//   int tries = 0;
+//   while (!sent && tries++ < maxTries)
+//   {
+//     sent = nrf24.send_packet(COMMS_BOARD, packetType, d, len);
+//     if (!sent)
+//       vTaskDelay(10);
+//   }
+// #ifdef PRINT_SEND_RETRIES
+//   if (tries > 1)
+//     // DEBUGMVAL("Retried: ", tries, sent);
+//     DEBUGVAL("Retried: ", tries, sent);
+// #endif
 
-  return sent;
-}
+//   return sent;
+// }
 //------------------------------------------------------------------
 
 bool boardTimedOut()

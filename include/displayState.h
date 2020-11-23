@@ -12,7 +12,6 @@ const char *eventToString(DispStateEvent ev);
 // prototypes
 void print_disp_state(const char *state_name, const char *event);
 void print_disp_state(const char *state_name);
-void send_to_display_event_queue(DispStateEvent ev);
 DispStateEvent read_from_display_event_queue(TickType_t ticks = 5);
 void clearDisplayEventQueue();
 
@@ -41,10 +40,12 @@ State dispState_stoppedScreen(
       screenWhenStopped(/*init*/ true);
     },
     [] {
-      if (update_display)
+      if (update_display || stats.update)
       {
         update_display = false;
+        stats.update = false;
         screenWhenStopped(/*init*/ false);
+        updateHudIcon(stats.hudConnected);
       }
     },
     NULL);
@@ -59,10 +60,12 @@ State dispState_movingScreen(
       screenWhenMoving(/*init*/ true);
     },
     [] {
-      if (update_display)
+      if (update_display || stats.update)
       {
         update_display = false;
+        stats.update = false;
         screenWhenMoving(/*init*/ false);
+        updateHudIcon(stats.hudConnected);
       }
 
       stats.addMovingTime(sinceStoredMovingTime);
@@ -162,6 +165,10 @@ void displayState_addTransitions()
   displayState->add_transition(&dispState_togglePushToStart, &dispState_togglePushToStart, DISP_EV_PRIMARY_DOUBLE_CLICK, NULL);
   displayState->add_transition(&dispState_togglePushToStart, &dispState_stoppedScreen, DISP_EV_PRIMARY_SINGLE_CLICK, NULL);
 
+  // DISP_EV_UPDATE
+  displayState->add_transition(&dispState_stoppedScreen, &dispState_stoppedScreen, DISP_EV_UPDATE, NULL);
+  displayState->add_transition(&dispState_movingScreen, &dispState_movingScreen, DISP_EV_UPDATE, NULL);
+
   // DISP_EV_VERSION_DOESNT_MATCH
   displayState->add_transition(&dispState_stoppedScreen, &dispState_boardVersionDoesntMatchScreen, DISP_EV_VERSION_DOESNT_MATCH, NULL);
   displayState->add_transition(&dispState_movingScreen, &dispState_boardVersionDoesntMatchScreen, DISP_EV_VERSION_DOESNT_MATCH, NULL);
@@ -216,17 +223,6 @@ void print_disp_state(const char *state_name)
 #ifdef PRINT_DISP_STATE
   Serial.printf("%s\n", state_name);
 #endif
-}
-//---------------------------------------------------------------
-
-void send_to_display_event_queue(DispStateEvent ev)
-{
-  TickType_t ticks = 10;
-#ifdef PRINT_DISP_STATE_EVENT
-  Serial.printf("-> SEND: %s\n", eventToString((DispStateEvent)ev));
-#endif
-  uint8_t e = (uint8_t)ev;
-  xQueueSendToBack(xDisplayChangeEventQueue, &e, ticks);
 }
 //---------------------------------------------------------------
 void clearDisplayEventQueue()

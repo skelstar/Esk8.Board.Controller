@@ -16,6 +16,8 @@ public:
   uint16_t soft_resets = 0;
   uint8_t boardResets = 0;
   unsigned long timeMovingMS = 0;
+  bool hudConnected = false;
+  bool update = false;
 
   void setResetsAcknowledgedCallback(ResetsAcknowledgedCallback cb)
   {

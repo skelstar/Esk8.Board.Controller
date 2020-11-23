@@ -6,31 +6,38 @@
 #define BUTTON_PRIMARY 21
 Button2 primaryButton(BUTTON_PRIMARY);
 
-bool pulseLedOn = false;
-
 void primaryButtonInit()
 {
-  pulseLedOn = false;
+  pulseLedOn = TriState::STATE_NONE;
 
   primaryButton.setPressedHandler([](Button2 &btn) {
-    // Serial.printf("Primary Button pressed\n");
+    if (PRINT_BUTTON_EVENTS)
+      DEBUG("Primary Button pressed");
   });
   primaryButton.setClickHandler([](Button2 &btn) {
-    // Serial.printf("Primary Button click\n");
+    if (PRINT_BUTTON_EVENTS)
+      DEBUG("Primary Button click");
     buttonQueueManager->send(ButtonClickType::SINGLE);
   });
 
   primaryButton.setDoubleClickHandler([](Button2 &btn) {
-    // Serial.printf("Primary Button double-clicked\n");
+    if (PRINT_BUTTON_EVENTS)
+      DEBUG("Primary Button double-clicked");
     buttonQueueManager->send(ButtonClickType::DOUBLE);
-  });
-
-  primaryButton.setTripleClickHandler([](Button2 &btn) {
-    // Serial.printf("Primary Button triple-clicked\n");
-    buttonQueueManager->send(ButtonClickType::TRIPLE);
-    pulseLedOn = !pulseLedOn;
+    // hud
+    pulseLedOn = pulseLedOn == STATE_NONE
+                     ? STATE_OFF
+                     : pulseLedOn == STATE_OFF
+                           ? STATE_ON
+                           : STATE_OFF;
     hudMessageQueueManager->send(pulseLedOn
                                      ? HUD_EV_PULSE_RED
                                      : HUD_EV_CONNECTED);
+  });
+
+  primaryButton.setTripleClickHandler([](Button2 &btn) {
+    if (PRINT_BUTTON_EVENTS)
+      DEBUG("Primary Button triple-clicked");
+    buttonQueueManager->send(ButtonClickType::TRIPLE);
   });
 }

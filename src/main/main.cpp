@@ -22,12 +22,7 @@
 #define NRF_CE 17
 #define NRF_CS 2
 
-enum ButtonClickType
-{
-  SINGLE,
-  DOUBLE,
-  TRIPLE
-};
+#include <constants.h>
 
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
@@ -44,11 +39,16 @@ xQueueHandle xCommsStateEventQueue;
 xQueueHandle xButtonPushEventQueue;
 xQueueHandle xHUDMessageEventQueue;
 xQueueHandle xHUDActionQueue;
+xQueueHandle xTaskActionEventQueue;
 
 EventQueueManager *displayChangeQueueManager;
+EventQueueManager *nrfCommsQueueManager;
 EventQueueManager *buttonQueueManager;
 EventQueueManager *hudMessageQueueManager;
 EventQueueManager *hudActionQueueManager;
+EventQueueManager *taskQueueManager;
+
+xTaskHandle hudTaskHandle;
 
 //------------------------------------------------------------
 enum FeatureType
@@ -56,13 +56,6 @@ enum FeatureType
   CRUISE_CONTROL,
   PUSH_TO_START
 };
-
-#ifndef FEATURE_CRUISE_CONTROL
-#define FEATURE_CRUISE_CONTROL false
-#endif
-#ifndef FEATURE_PUSH_TO_START
-#define FEATURE_PUSH_TO_START false
-#endif
 
 class FeatureServiceClass
 {
@@ -119,16 +112,17 @@ BoardClass board;
 
 //------------------------------------------------------------------
 
-enum HudActionEvent
-{
-  EV_HUD_NONE = 0,
-  EV_HUD_DOUBLE_CLICK,
-};
+Preferences statsStore;
 
-const char *hudActionEventNames[] = {
-    "EV_HUD_NONE",
-    "EV_HUD_DOUBLE_CLICK",
-};
+//------------------------------------------------------------------
+
+#include <Storage.h>
+
+#include <stats.h>
+
+Stats stats;
+
+//------------------------------------------------------------------
 
 HUDData hudData;
 
@@ -154,19 +148,9 @@ BatteryLib remote_batt(BATTERY_MEASURE_PIN);
 #endif
 //------------------------------------------------------------------
 
-#define LCD_WIDTH 240
-#define LCD_HEIGHT 135
-
-#define TFT_DEFAULT_BG TFT_BLACK
-
 TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
+
 //------------------------------------------------------------------
-
-#define STORE_STATS "stats"
-#define STORE_STATS_SOFT_RSTS "soft resets"
-#define STORE_STATS_TRIP_TIME "trip time"
-
-Preferences statsStore;
 
 elapsedMillis
     sinceSentToBoard,
@@ -182,32 +166,8 @@ bool display_task_initialised = false;
 bool display_task_showing_option_screen = false;
 int oldCounter = 0;
 
-//------------------------------------------------------------------
-enum DispStateEvent
-{
-  DISP_EV_NO_EVENT = 0,
-  DISP_EV_CONNECTED,
-  DISP_EV_DISCONNECTED,
-  DISP_EV_STOPPED,
-  DISP_EV_MOVING,
-  DISP_EV_SW_RESET,
-  DISP_EV_UPDATE,
-  DISP_EV_PRIMARY_SINGLE_CLICK,
-  DISP_EV_PRIMARY_DOUBLE_CLICK,
-  DISP_EV_PRIMARY_TRIPLE_CLICK,
-  DISP_EV_VERSION_DOESNT_MATCH
-};
-
-// displayState - prototypes
-void send_to_display_event_queue(DispStateEvent ev);
+// prototypes
 void sendToBoard();
-
-//------------------------------------------------------------------
-
-#include <Storage.h>
-#include <stats.h>
-
-Stats stats;
 
 //------------------------------------------------------------------
 
@@ -303,53 +263,48 @@ void setup()
 
   vTaskDelay(100);
 
-  // core 0
+  // CORE_0
   xTaskCreatePinnedToCore(
       display_task_0,
       "display_task_0",
       10000,
       NULL,
-      /*priority*/ 3,
+      TASK_PRIORITY_3,
       NULL,
-      /*core*/ 0);
+      CORE_0);
   xTaskCreatePinnedToCore(
       commsStateTask_0,
       "commsStateTask_0",
       10000,
       NULL,
-      /*priority*/ 2,
+      TASK_PRIORITY_2,
       NULL,
-      0);
+      CORE_0);
   xTaskCreatePinnedToCore(
       batteryMeasureTask_0,
       "batteryMeasureTask_0",
       10000,
       NULL,
-      /*priority*/
-      1,
+      TASK_PRIORITY_1,
       NULL,
-      0);
+      CORE_0);
 
-  xTaskCreatePinnedToCore(
-      hudTask_1,
-      "hudTask_1",
-      10000,
-      NULL,
-      /*priority*/
-      1,
-      NULL,
-      /*core*/ 1);
+  // CORE_1
+  createHudTask();
 
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
   xHUDMessageEventQueue = xQueueCreate(3, sizeof(uint8_t));
   xHUDActionQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
+  xTaskActionEventQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
 
   displayChangeQueueManager = new EventQueueManager(xDisplayChangeEventQueue, 5);
+  nrfCommsQueueManager = new EventQueueManager(xCommsStateEventQueue, 5);
   buttonQueueManager = new EventQueueManager(xButtonPushEventQueue, 10);
   hudMessageQueueManager = new EventQueueManager(xHUDMessageEventQueue, 10);
   hudActionQueueManager = new EventQueueManager(xHUDActionQueue, 3);
+  taskQueueManager = new EventQueueManager(xTaskActionEventQueue, 5);
 
   while (!display_task_initialised)
   {
@@ -376,7 +331,7 @@ void loop()
 
   if (board.hasTimedout())
   {
-    sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
+    nrfCommsQueueManager->send(EV_COMMS_BOARD_TIMEDOUT);
   }
 
   if (sinceNRFUpdate > 20)
@@ -386,6 +341,16 @@ void loop()
   }
 
   primaryButton.loop();
+
+  if (taskQueueManager->messageAvailable())
+  {
+    if (taskQueueManager->read() == 1)
+    {
+      vTaskDelete(hudTaskHandle);
+      vTaskDelay(10);
+      createHudTask();
+    }
+  }
 
   vTaskDelay(1);
 }

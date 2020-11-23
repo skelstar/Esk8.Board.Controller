@@ -2,21 +2,9 @@
 #include <Fsm.h>
 #endif
 
-enum CommsStateEvent
-{
-  EV_COMMS_NO_EVENT,
-  EV_COMMS_PKT_RXD,
-  EV_COMMS_BOARD_TIMEDOUT,
-  EV_COMMS_BD_FIRST_PACKET,
-};
-
 //------------------------------------------
 
 /* prototypes */
-void sendToCommsEventStateQueue(CommsStateEvent ev, TickType_t ticks = 5);
-CommsStateEvent readFromCommsStateEventQueue(TickType_t ticks = 5);
-const char *commsEventToString(CommsStateEvent ev);
-const char *commsEventToString(int ev);
 bool boardVersionCompatible(float version);
 //------------------------------------------
 
@@ -34,21 +22,19 @@ Fsm *commsFsm;
 
 //------------------------------------------
 State stateCommsSearching([] {
-#ifdef PRINT_COMMS_STATE
-  commsFsm->print("stateCommsSearching", false);
-#endif
+  if (PRINT_COMMS_STATE)
+    commsFsm->print("stateCommsSearching");
 });
 
 State stateCommsConnected(
     [] {
+      if (PRINT_COMMS_STATE)
+        commsFsm->print("stateCommsConnected");
       if (commsFsm->lastEvent() == EV_COMMS_BD_FIRST_PACKET)
       {
         stats.boardResets++;
         displayChangeQueueManager->send(DISP_EV_UPDATE);
       }
-#ifdef PRINT_COMMS_STATE
-      commsFsm->print("stateCommsConnected");
-#endif
 
       comms_session_started = true;
       comms_state_connected = true;
@@ -56,9 +42,12 @@ State stateCommsConnected(
       displayChangeQueueManager->send(DISP_EV_CONNECTED);
       displayChangeQueueManager->send(DISP_EV_UPDATE);
 
+      hudMessageQueueManager->send(HUD_EV_CONNECTED);
+
       if (stats.needToAckResets())
       {
         displayChangeQueueManager->send(DISP_EV_SW_RESET);
+        pulseLedOn = TriState::STATE_ON;
         hudMessageQueueManager->send(HUD_EV_PULSE_RED);
       }
 
@@ -74,20 +63,19 @@ State stateCommsConnected(
 
 State stateCommsDisconnected(
     [] {
+      if (PRINT_COMMS_STATE)
+      {
+        commsFsm->print("stateCommsDisconnected");
+      }
       if (commsFsm->lastEvent() == EV_COMMS_BD_FIRST_PACKET)
       {
         stats.boardResets++;
         displayChangeQueueManager->send(DISP_EV_UPDATE);
       }
 
-#ifdef PRINT_COMMS_STATE
-      commsFsm->print("stateCommsDisconnected");
-      // DEBUGMVAL("timed out", board.sinceLastPacket);
-      DEBUGVAL(board.sinceLastPacket);
-#endif
-
       comms_state_connected = false;
       displayChangeQueueManager->send(DISP_EV_DISCONNECTED);
+      hudMessageQueueManager->send(HUD_EV_SPIN_GREEN);
     },
     NULL, NULL);
 //-----------------------------------------------------
@@ -105,53 +93,14 @@ void addCommsStateTransitions()
   commsFsm->add_transition(&stateCommsConnected, &stateCommsConnected, EV_COMMS_BD_FIRST_PACKET, NULL);
   commsFsm->add_transition(&stateCommsDisconnected, &stateCommsDisconnected, EV_COMMS_BD_FIRST_PACKET, NULL);
 }
+
 //-----------------------------------------------------
-
-const char *commsEventToString(CommsStateEvent ev)
-{
-  switch (ev)
-  {
-  case EV_COMMS_PKT_RXD:
-    return "EV_COMMS_PKT_RXD";
-  case EV_COMMS_BOARD_TIMEDOUT:
-    return "EV_COMMS_BOARD_TIMEDOUT";
-  case EV_COMMS_BD_FIRST_PACKET:
-    return "EV_COMMS_BD_FIRST_PACKET";
-  case EV_COMMS_NO_EVENT:
-    return "EV_COMMS_NO_EVENT";
-  default:
-    return "Handled event";
-  }
-}
-//-----------------------------------------------------
-
-const char *commsEventToString(int ev)
-{
-  return commsEventToString((CommsStateEvent)ev);
-}
-//-----------------------------------------------------
-
-void triggerCommsEvent(CommsStateEvent ev)
-{
-#ifdef PRINT_COMMS_STATE_EVENT
-  switch (ev)
-  {
-#ifdef SUPPRESS_EV_COMMS_PKT_RXD
-  case EV_COMMS_PKT_RXD:
-    break;
-#endif
-  default:
-    Serial.printf("--> CommsEvent: %s\n", commsEventToString(ev));
-  }
-#endif
-  // lastCommsEvent = ev;
-  commsFsm->trigger(ev);
-}
-
-//-------------------------------------------------
 
 void commsStateEventCb(int ev)
 {
+  // only print if PRINT and not EV_COMMS_PKT_RXD
+  if (PRINT_COMMS_STATE_EVENT && !SUPPRESS_EV_COMMS_PKT_RXD || ev != EV_COMMS_PKT_RXD)
+    Serial.printf("--> CommsEvent: %s\n", commsStateEventNames[(int)ev]);
 }
 
 void commsStateTask_0(void *pvParameters)
@@ -163,7 +112,6 @@ void commsStateTask_0(void *pvParameters)
 
   commsFsm = new Fsm(&stateCommsSearching);
   commsFsm->setEventTriggeredCb(commsStateEventCb);
-  commsFsm->setGetEventName(commsEventToString);
 
   addCommsStateTransitions();
 
@@ -174,10 +122,10 @@ void commsStateTask_0(void *pvParameters)
 
   while (true)
   {
-    CommsStateEvent ev = readFromCommsStateEventQueue();
-    if (ev != EV_COMMS_NO_EVENT)
+    CommsStateEvent ev = (CommsStateEvent)nrfCommsQueueManager->read();
+    if (ev != NO_QUEUE_EVENT)
     {
-      triggerCommsEvent(ev);
+      commsFsm->trigger(ev);
     }
     commsFsm->run_machine();
 
@@ -187,32 +135,6 @@ void commsStateTask_0(void *pvParameters)
 }
 //------------------------------------------------------------
 
-void sendToCommsEventStateQueue(CommsStateEvent ev, TickType_t ticks)
-{
-  uint8_t e = (uint8_t)ev;
-  xQueueSendToBack(xCommsStateEventQueue, &e, ticks);
-  if (ev == EV_COMMS_BD_FIRST_PACKET)
-  {
-    // DEBUG(commsEventToString(ev));
-  }
-}
-//------------------------------------------------------------
-
-CommsStateEvent readFromCommsStateEventQueue(TickType_t ticks)
-{
-  uint8_t e;
-  if (xCommsStateEventQueue != NULL && xQueueReceive(xCommsStateEventQueue, &e, ticks) == pdPASS)
-  {
-    if ((CommsStateEvent)e == EV_COMMS_BD_FIRST_PACKET)
-    {
-    }
-
-    return (CommsStateEvent)e;
-  }
-  return CommsStateEvent::EV_COMMS_NO_EVENT;
-}
-
-//-----------------------------------------------------
 // check version
 bool boardVersionCompatible(float version)
 {

@@ -19,11 +19,24 @@ elapsedMillis
 
 BLEClientLib bleClient;
 
+bool hasConnectedToHud = false;
+
+enum TaskState
+{
+  TASK_RUNNING,
+  TASK_RESETTING
+};
+TaskState taskState = TASK_RUNNING;
+
 void onConnect()
 {
   Serial.printf("---------------------------------\n");
   Serial.printf("           onConnect()\n");
   Serial.printf("---------------------------------\n");
+  stats.hudConnected = true;
+  stats.update = true;
+  hudMessageQueueManager->send(HUD_EV_FLASH_GREEN);
+  hasConnectedToHud = true;
 }
 
 void onDisconnect()
@@ -31,6 +44,9 @@ void onDisconnect()
   Serial.printf("---------------------------------\n");
   Serial.printf("           onDisconnect()\n");
   Serial.printf("---------------------------------\n");
+  stats.hudConnected = false;
+  stats.update = true;
+  taskState = TASK_RESETTING;
 }
 
 void onNotify(BLERemoteCharacteristic *pBLERemoteCharacteristic,
@@ -46,16 +62,18 @@ void onNotify(BLERemoteCharacteristic *pBLERemoteCharacteristic,
 
 void hudTask_1(void *pvParameters)
 {
-  Serial.printf("hudTask_1 running on core %d\n", xPortGetCoreID());
+  Serial.printf("hudTask_1 running on CORE_%d\n", xPortGetCoreID());
 
   bleClient.onConnect = onConnect;
   bleClient.onDisconnect = onDisconnect;
   bleClient.onNotify = onNotify;
 
-  while (true)
+  taskState = TASK_RUNNING;
+
+  while (taskState == TASK_RUNNING)
   {
-    // reconnect
-    if (!bleClient.isConnected() && sinceLastConnectToHUD > 3000)
+    // connect if not connected before
+    if (false == bleClient.isConnected())
     {
       Serial.printf("Trying to connect to server...\n");
       bleServerConnected = bleClient.bleConnectToServer(
@@ -63,12 +81,6 @@ void hudTask_1(void *pvParameters)
           SERVER_UUID,
           SERVICE_UUID,
           CHARACTERISTIC_UUID);
-      sinceLastConnectToHUD = 0;
-      // send initialising state
-      if (bleServerConnected)
-      {
-        hudMessageQueueManager->send(HUD_EV_FLASH_GREEN);
-      }
     }
 
     // read from queue
@@ -93,5 +105,24 @@ void hudTask_1(void *pvParameters)
 
     vTaskDelay(10);
   }
-  vTaskDelete(NULL);
+
+  Serial.printf("sending hudTask_1 restart message\n");
+  taskQueueManager->send(1);
+
+  vTaskDelay(100);
+  Serial.printf("should restart before this prints\n");
+
+  vTaskDelete(NULL); // deletes the current task
+}
+
+void createHudTask()
+{
+  xTaskCreatePinnedToCore(
+      hudTask_1,
+      "hudTask_1",
+      5000,
+      NULL,
+      TASK_PRIORITY_1,
+      &hudTaskHandle,
+      CORE_1);
 }

@@ -5,6 +5,9 @@
 
 void displayStateEventCb(int ev)
 {
+#ifdef PRINT_DISP_STATE_EVENT
+  Serial.printf("--> disp: %s\n", dispStateEventNames[ev]);
+#endif
 }
 
 void display_task_0(void *pvParameters)
@@ -37,7 +40,7 @@ void display_task_0(void *pvParameters)
       switch (displayevent)
       {
       case DISP_EV_NO_EVENT:
-      case 99:
+      case NO_QUEUE_EVENT:
         break;
       case DISP_EV_UPDATE:
         update_display = true;

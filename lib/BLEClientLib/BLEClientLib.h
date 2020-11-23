@@ -7,36 +7,16 @@
 static BLEAddress *pServerAddress;
 static BLERemoteCharacteristic *pRemoteCharacteristic;
 
+//--------------------------------------------------------------
+
 class BLEClientLib
 {
-  bool _connected;
-
-  class MyClientCallback : public BLEClientCallbacks
-  {
-    typedef void (*ClientCallback)();
-
-  public:
-    void onConnect(BLEClient *pclient)
-    {
-      // Serial.printf("connected! (bleClient) \n");
-    }
-
-    void onDisconnect(BLEClient *pclient)
-    {
-      // Serial.printf("disconnected! (bleClient)");
-    }
-
-    ClientCallback onConnectCallback;
-    ClientCallback onDisconnectCallback;
-  };
-
+  typedef void (*ConnectCallback)();
   typedef void (*NotifyCallback)(
       BLERemoteCharacteristic *pBLERemoteCharacteristic,
       uint8_t *pData,
       size_t length,
       bool isNotify);
-
-  typedef void (*ConnectCallback)();
 
 public:
   ConnectCallback onConnect;
@@ -44,6 +24,12 @@ public:
   NotifyCallback onNotify;
 
   BLEClient *pClient = BLEDevice::createClient();
+
+  BLEClientLib()
+  {
+    Serial.printf("Initialising BLEClientLib\n");
+    _connected = false;
+  }
 
   bool isConnected()
   {
@@ -67,6 +53,7 @@ public:
   bool bleConnectToServer(char *as, char *serverUUID, char *serviceUUID, char *characteristicUUID)
   {
     BLEDevice::init(as);
+    pClient->disconnect();
     pServerAddress = new BLEAddress(serverUUID);
     delay(200);
 
@@ -90,4 +77,21 @@ public:
     memcpy(bs, &data, sizeof(T));
     pRemoteCharacteristic->writeValue(bs, sizeof(bs));
   }
+
+private:
+  bool _connected;
+
+  class MyClientCallback : public BLEClientCallbacks
+  {
+  public:
+    void onConnect(BLEClient *pclient)
+    {
+      Serial.printf("connected! (MyClientCallback) \n");
+    }
+
+    void onDisconnect(BLEClient *pclient)
+    {
+      Serial.printf("disconnected! (MyClientCallback)");
+    }
+  };
 };

@@ -19,11 +19,13 @@ public:
 
   /// send event T to the queue
   template <typename T>
-  void send(T ev)
+  void send(T ev, char *message = NULL)
   {
     uint8_t e = (uint8_t)ev;
     if (_queue != NULL)
       xQueueSendToBack(_queue, &e, _ticks);
+    if (message != NULL)
+      Serial.printf("%s\n", message);
   }
 
   bool messageAvailable()
