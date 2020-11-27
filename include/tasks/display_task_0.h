@@ -6,7 +6,7 @@
 void displayStateEventCb(int ev)
 {
 #ifdef PRINT_DISP_STATE_EVENT
-  Serial.printf("--> disp: %s\n", dispStateEventNames[ev]);
+  Serial.printf("--> disp: %s\n", DispState::names[ev]);
 #endif
 }
 
@@ -36,13 +36,13 @@ void display_task_0(void *pvParameters)
       sinceReadDispEventQueue = 0;
       displayState->run_machine();
 
-      DispStateEvent displayevent = (DispStateEvent)displayChangeQueueManager->read();
+      DispState::Event displayevent = (DispState::Event)displayChangeQueueManager->read();
       switch (displayevent)
       {
-      case DISP_EV_NO_EVENT:
+      case DispState::NO_EVENT:
       case NO_QUEUE_EVENT:
         break;
-      case DISP_EV_UPDATE:
+      case DispState::UPDATE:
         update_display = true;
         break;
       default:
@@ -55,16 +55,16 @@ void display_task_0(void *pvParameters)
       switch (buttonEvent)
       {
       case SINGLE:
-        lastDispEvent = DISP_EV_PRIMARY_SINGLE_CLICK;
-        displayState->trigger(DISP_EV_PRIMARY_SINGLE_CLICK);
+        lastDispEvent = DispState::PRIMARY_SINGLE_CLICK;
+        displayState->trigger(DispState::PRIMARY_SINGLE_CLICK);
         break;
       case DOUBLE:
-        lastDispEvent = DISP_EV_PRIMARY_DOUBLE_CLICK;
-        displayState->trigger(DISP_EV_PRIMARY_DOUBLE_CLICK);
+        lastDispEvent = DispState::PRIMARY_DOUBLE_CLICK;
+        displayState->trigger(DispState::PRIMARY_DOUBLE_CLICK);
         break;
       case TRIPLE:
-        lastDispEvent = DISP_EV_PRIMARY_TRIPLE_CLICK;
-        displayState->trigger(DISP_EV_PRIMARY_TRIPLE_CLICK);
+        lastDispEvent = DispState::PRIMARY_TRIPLE_CLICK;
+        displayState->trigger(DispState::PRIMARY_TRIPLE_CLICK);
         break;
       case 99:
         break;

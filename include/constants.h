@@ -11,52 +11,69 @@ enum ButtonClickType
 #define STORE_STATS_SOFT_RSTS "soft resets"
 #define STORE_STATS_TRIP_TIME "trip time"
 
-enum DispStateEvent
+//------------------------------------------------------------
+namespace DispState
 {
-  DISP_EV_NO_EVENT = 0,
-  DISP_EV_CONNECTED,
-  DISP_EV_DISCONNECTED,
-  DISP_EV_STOPPED,
-  DISP_EV_MOVING,
-  DISP_EV_SW_RESET,
-  DISP_EV_UPDATE,
-  DISP_EV_PRIMARY_SINGLE_CLICK,
-  DISP_EV_PRIMARY_DOUBLE_CLICK,
-  DISP_EV_PRIMARY_TRIPLE_CLICK,
-  DISP_EV_VERSION_DOESNT_MATCH,
-  DISP_EV_Length, // leave this one (used for aserting)
-};
+  enum Event
+  {
+    NO_EVENT = 0,
+    CONNECTED,
+    DISCONNECTED,
+    STOPPED,
+    MOVING,
+    SW_RESET,
+    UPDATE,
+    PRIMARY_SINGLE_CLICK,
+    PRIMARY_DOUBLE_CLICK,
+    PRIMARY_TRIPLE_CLICK,
+    VERSION_DOESNT_MATCH,
+    Length, // leave this one (used for aserting)
+  };
 
-const char *dispStateEventNames[] = {
-    "DISP_EV_NO_EVENT",
-    "DISP_EV_CONNECTED",
-    "DISP_EV_DISCONNECTED",
-    "DISP_EV_STOPPED",
-    "DISP_EV_MOVING",
-    "DISP_EV_SW_RESET",
-    "DISP_EV_UPDATE",
-    "DISP_EV_PRIMARY_SINGLE_CLICK",
-    "DISP_EV_PRIMARY_DOUBLE_CLICK",
-    "DISP_EV_PRIMARY_TRIPLE_CLICK",
-    "DISP_EV_VERSION_DOESNT_MATCH",
-};
+  const char *names[] = {
+      "NO_EVENT",
+      "CONNECTED",
+      "DISCONNECTED",
+      "STOPPED",
+      "MOVING",
+      "SW_RESET",
+      "UPDATE",
+      "PRIMARY_SINGLE_CLICK",
+      "PRIMARY_DOUBLE_CLICK",
+      "PRIMARY_TRIPLE_CLICK",
+      "VERSION_DOESNT_MATCH",
+  };
 
-enum CommsStateEvent
+  void assertThis()
+  {
+    assertEnum("DispState", Length, ARRAY_SIZE(names));
+  }
+} // namespace DispState
+//------------------------------------------------------------
+namespace CommsState
 {
-  EV_COMMS_NO_EVENT = 0,
-  EV_COMMS_PKT_RXD,
-  EV_COMMS_BOARD_TIMEDOUT,
-  EV_COMMS_BD_FIRST_PACKET,
-  EV_COMMS_Length, // leave this one (used for aserting)
-};
+  enum Event
+  {
+    NO_EVENT = 0,
+    PKT_RXD,
+    BOARD_TIMEDOUT,
+    BD_FIRST_PACKET,
+    Length, // leave this one (used for aserting)
+  };
 
-const char *commsStateEventNames[] = {
-    "EV_COMMS_NO_EVENT",
-    "EV_COMMS_PKT_RXD",
-    "EV_COMMS_BOARD_TIMEDOUT",
-    "EV_COMMS_BD_FIRST_PACKET",
-};
+  const char *names[] = {
+      "NO_EVENT",
+      "PKT_RXD",
+      "BOARD_TIMEDOUT",
+      "BD_FIRST_PACKET",
+  };
 
+  void assertThis()
+  {
+    assertEnum("CommsState", Length, ARRAY_SIZE(names));
+  }
+} // namespace CommsState
+//------------------------------------------------------------
 #define LCD_WIDTH 240
 #define LCD_HEIGHT 135
 

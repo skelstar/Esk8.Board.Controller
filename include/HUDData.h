@@ -6,5 +6,5 @@ class HUDData
 {
 public:
   uint32_t id;
-  HUDCommand state;
+  HUDCommand::Event state;
 };

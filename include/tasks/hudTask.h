@@ -28,7 +28,7 @@ void onConnect()
   Serial.printf("---------------------------------\n");
   stats.hudConnected = true;
   stats.update = true;
-  hudMessageQueue->send(HUD_CMD_FLASH_GREEN);
+  hudMessageQueue->send(HUDCommand::FLASH_GREEN);
   hasConnectedToHud = true;
 }
 
@@ -44,10 +44,10 @@ void onDisconnect()
 
 void onNotify()
 {
-  // HudActionEvent ev;
+  // HUDAction::Event ev;
   // memcpy(&ev, pData, length);
   // hudActionQueueManager->send(ev);
-  // Serial.printf("Notify: %s\n", hudActionEventNames[(int)ev]);
+  // Serial.printf("Notify: %s\n", HUDAction::names[(int)ev]);
 }
 
 void hudTask_1(void *pvParameters)
@@ -65,15 +65,15 @@ void hudTask_1(void *pvParameters)
       sinceHudReadFromQueue = 0;
       if (hudMessageQueue->messageAvailable())
       {
-        HUDCommand message = (HUDCommand)hudMessageQueue->read();
+        HUDCommand::Event message = (HUDCommand::Event)hudMessageQueue->read();
         sendPacketToHud(message, true);
       }
     }
 
     if (hudActionQueueManager->messageAvailable())
     {
-      HudActionEvent action = (HudActionEvent)hudActionQueueManager->read();
-      Serial.printf("queue rx: %s\n", hudActionEventNames[(int)action]);
+      HUDAction::Event action = (HUDAction::Event)hudActionQueueManager->read();
+      Serial.printf("queue rx: %s\n", HUDAction::names[(int)action]);
     }
 
     vTaskDelay(10);

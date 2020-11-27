@@ -13,7 +13,7 @@ bool commsStateTask_initialised = false;
 
 bool skipOnEnter = false;
 
-CommsStateEvent lastCommsEvent = EV_COMMS_NO_EVENT;
+CommsState::Event lastCommsEvent = CommsState::NO_EVENT;
 
 Fsm *commsFsm;
 
@@ -29,32 +29,32 @@ State stateCommsConnected(
     [] {
       if (PRINT_COMMS_STATE)
         commsFsm->print("stateCommsConnected");
-      if (commsFsm->lastEvent() == EV_COMMS_BD_FIRST_PACKET)
+      if (commsFsm->lastEvent() == CommsState::BD_FIRST_PACKET)
       {
         stats.boardResets++;
-        displayChangeQueueManager->send(DISP_EV_UPDATE);
+        displayChangeQueueManager->send(DispState::UPDATE);
       }
 
       comms_session_started = true;
       stats.boardConnected = true;
 
-      displayChangeQueueManager->send(DISP_EV_CONNECTED);
-      displayChangeQueueManager->send(DISP_EV_UPDATE);
+      displayChangeQueueManager->send(DispState::CONNECTED);
+      displayChangeQueueManager->send(DispState::UPDATE);
 
-      hudMessageQueue->send(HUD_CMD_HEARTBEAT);
+      hudMessageQueue->send(HUDCommand::HEARTBEAT);
 
       if (stats.needToAckResets())
       {
-        displayChangeQueueManager->send(DISP_EV_SW_RESET);
+        displayChangeQueueManager->send(DispState::SW_RESET);
         pulseLedOn = TriState::STATE_ON;
-        hudMessageQueue->send(HUD_CMD_PULSE_RED);
+        hudMessageQueue->send(HUDCommand::PULSE_RED);
       }
 
       // check board version is compatible
       bool boardCompatible = boardVersionCompatible(board.packet.version);
       if (!boardCompatible)
       {
-        displayChangeQueueManager->send(DISP_EV_VERSION_DOESNT_MATCH);
+        displayChangeQueueManager->send(DispState::VERSION_DOESNT_MATCH);
       }
     },
     NULL,
@@ -66,40 +66,40 @@ State stateCommsDisconnected(
       {
         commsFsm->print("stateCommsDisconnected");
       }
-      if (commsFsm->lastEvent() == EV_COMMS_BD_FIRST_PACKET)
+      if (commsFsm->lastEvent() == CommsState::BD_FIRST_PACKET)
       {
         stats.boardResets++;
-        displayChangeQueueManager->send(DISP_EV_UPDATE);
+        displayChangeQueueManager->send(DispState::UPDATE);
       }
 
       stats.boardConnected = false;
-      displayChangeQueueManager->send(DISP_EV_DISCONNECTED);
-      hudMessageQueue->send(HUD_CMD_SPIN_GREEN);
+      displayChangeQueueManager->send(DispState::DISCONNECTED);
+      hudMessageQueue->send(HUDCommand::SPIN_GREEN);
     },
     NULL, NULL);
 //-----------------------------------------------------
 
 void addCommsStateTransitions()
 {
-  // EV_COMMS_PKT_RXD
-  commsFsm->add_transition(&stateCommsSearching, &stateCommsConnected, EV_COMMS_PKT_RXD, NULL);
-  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsConnected, EV_COMMS_PKT_RXD, NULL);
+  // CommsState::PKT_RXD
+  commsFsm->add_transition(&stateCommsSearching, &stateCommsConnected, CommsState::PKT_RXD, NULL);
+  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsConnected, CommsState::PKT_RXD, NULL);
 
-  // EV_COMMS_BOARD_TIMEDOUT
-  commsFsm->add_transition(&stateCommsConnected, &stateCommsDisconnected, EV_COMMS_BOARD_TIMEDOUT, NULL);
+  // CommsState::BOARD_TIMEDOUT
+  commsFsm->add_transition(&stateCommsConnected, &stateCommsDisconnected, CommsState::BOARD_TIMEDOUT, NULL);
 
-  // EV_COMMS_BD_RESET
-  commsFsm->add_transition(&stateCommsConnected, &stateCommsConnected, EV_COMMS_BD_FIRST_PACKET, NULL);
-  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsDisconnected, EV_COMMS_BD_FIRST_PACKET, NULL);
+  // CommsState::BD_RESET
+  commsFsm->add_transition(&stateCommsConnected, &stateCommsConnected, CommsState::BD_FIRST_PACKET, NULL);
+  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsDisconnected, CommsState::BD_FIRST_PACKET, NULL);
 }
 
 //-----------------------------------------------------
 
 void commsStateEventCb(int ev)
 {
-  // only print if PRINT and not EV_COMMS_PKT_RXD
-  if (PRINT_COMMS_STATE_EVENT && !SUPPRESS_EV_COMMS_PKT_RXD || ev != EV_COMMS_PKT_RXD)
-    Serial.printf("--> CommsEvent: %s\n", commsStateEventNames[(int)ev]);
+  // only print if PRINT and not CommsState::PKT_RXD
+  if (PRINT_COMMS_STATE_EVENT && !SUPPRESS_EV_COMMS_PKT_RXD || ev != CommsState::PKT_RXD)
+    Serial.printf("--> CommsEvent: %s\n", CommsState::names[(int)ev]);
 }
 
 void commsStateTask_0(void *pvParameters)
@@ -121,7 +121,7 @@ void commsStateTask_0(void *pvParameters)
 
   while (true)
   {
-    CommsStateEvent ev = (CommsStateEvent)nrfCommsQueueManager->read();
+    CommsState::Event ev = (CommsState::Event)nrfCommsQueueManager->read();
     if (ev != NO_QUEUE_EVENT)
     {
       commsFsm->trigger(ev);

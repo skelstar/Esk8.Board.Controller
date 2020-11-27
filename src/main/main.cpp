@@ -216,10 +216,10 @@ HUDData hudData;
 void asserts()
 {
   // make sure that there are as many "names" as there are enum values
-  assertEnum("DispStateEvent", DispStateEvent::DISP_EV_Length, ARRAY_SIZE(dispStateEventNames));
-  assertEnum("HudActionEvent", HudActionEvent::HUD_ACTION_Length, ARRAY_SIZE(hudActionEventNames));
-  assertEnum("CommsStateEvent", CommsStateEvent::EV_COMMS_Length, ARRAY_SIZE(commsStateEventNames));
-  assertEnum("PacketType", PacketType::PacketType_Length, ARRAY_SIZE(packetTypeNames));
+  DispState::assertThis();
+  CommsState::assertThis();
+  HUDAction::assertThis();
+  Packet::assertThis();
 }
 //------------------------------------------------------------------
 
@@ -295,7 +295,7 @@ void setup()
   taskQueueManager = new EventQueueManager(xTaskActionEventQueue, 5);
 
   hudMessageQueue->setSentEventCallback([](uint8_t ev) {
-    Serial.printf("-->hudMessageQueue->send: (%s)\n", hudCommandNames[ev]);
+    Serial.printf("-->hudMessageQueue->send: (%s)\n", HUDCommand::names[ev]);
   });
 
   while (!display_task_initialised)
@@ -313,12 +313,12 @@ elapsedMillis
     sinceLastSwReset;
 uint8_t old_throttle;
 
-HUDCommand hudCommands[] = {
-    HUDCommand::HUD_CMD_IDLE,
-    HUDCommand::HUD_CMD_FLASH_GREEN,
-    HUDCommand::HUD_CMD_PULSE_RED,
-    HUDCommand::HUD_CMD_IDLE,
-    HUDCommand::HUD_CMD_SPIN_GREEN,
+HUDCommand::Event hudCommands[] = {
+    HUDCommand::IDLE,
+    HUDCommand::FLASH_GREEN,
+    HUDCommand::PULSE_RED,
+    HUDCommand::IDLE,
+    HUDCommand::SPIN_GREEN,
 };
 
 ulong hudCommandPauses[] = {
@@ -340,33 +340,17 @@ void loop()
 
   if (board.hasTimedout())
   {
-    nrfCommsQueueManager->send(EV_COMMS_BOARD_TIMEDOUT);
+    nrfCommsQueueManager->send(CommsState::BOARD_TIMEDOUT);
   }
 
-  if (sinceSentToHud > 1000)
+  sinceSentToHud = 0;
+  if (sinceSendTestCommand > hudCommandPauses[hudCommandIdx])
   {
-    sinceSentToHud = 0;
-    if (sinceSendTestCommand > hudCommandPauses[hudCommandIdx])
-    // if (stats.hudConnected && sinceSendTestCommand > 3000)
-    {
-      sinceSendTestCommand = 0;
-      bool ok = sendPacketToHud(hudCommands[hudCommandIdx++], true);
-      stats.updateHud(ok);
-      if (hudCommandIdx == ARRAY_SIZE(hudCommands))
-        hudCommandIdx = 0;
-      DEBUGVAL(hudCommandIdx);
-    }
-    // bool ok = sendPacketToHud(HUD_CMD_HEARTBEAT, stats.hudConnected == false); // print of not connected
-
-    // if (ok && stats.hudConnected == false)
-    // {
-    //   stats.hudConnected = true;
-    //   sendPacketToHud(HUD_CMD_FLASH_GREEN, true);
-    // }
-    // else if (!ok && stats.hudConnected)
-    // {
-    //   stats.hudConnected = false;
-    // }
+    sinceSendTestCommand = 0;
+    bool ok = sendPacketToHud(hudCommands[hudCommandIdx++], true);
+    stats.updateHud(ok);
+    if (hudCommandIdx == ARRAY_SIZE(hudCommands))
+      hudCommandIdx = 0;
   }
 
   if (sinceNRFUpdate > 20)

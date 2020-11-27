@@ -8,7 +8,7 @@ bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType);
 //------------------------------------------------------------------
 void packetAvailable_cb(uint16_t from_id, uint8_t type)
 {
-  if (type == (uint8_t)PacketType::HUD)
+  if (type == (uint8_t)Packet::HUD)
   {
     processHUDPacket();
   }
@@ -16,25 +16,25 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
   {
     processBoardPacket();
   }
-  nrfCommsQueueManager->send(EV_COMMS_PKT_RXD);
+  nrfCommsQueueManager->send(CommsState::PKT_RXD);
 }
 //------------------------------------------------------------------
 void processHUDPacket()
 {
   sinceLastHudPacket = 0;
 
-  HudActionEvent ev;
-  uint8_t buff[sizeof(HudActionEvent)];
-  nrf24.read_into(buff, sizeof(HudActionEvent));
-  memcpy(&ev, &buff, sizeof(HudActionEvent));
+  HUDAction::Event ev;
+  uint8_t buff[sizeof(HUDAction::Event)];
+  nrf24.read_into(buff, sizeof(HUDAction::Event));
+  memcpy(&ev, &buff, sizeof(HUDAction::Event));
 
   switch (ev)
   {
-  case HUD_ACTION_NONE:
-  case HUD_ACTION_HEARTBEAT:
-  case HUD_ACTION_DOUBLE_CLICK:
-  case HUD_ACTION_TRIPLE_CLICK:
-    Serial.printf("<-- HUD: %s\n", hudActionEventNames[(int)ev]);
+  case HUDAction::NONE:
+  case HUDAction::HEARTBEAT:
+  case HUDAction::DBLE_CLICK:
+  case HUDAction::TRPLE_CLICK:
+    Serial.printf("<-- HUD: %s\n", HUDAction::names[(int)ev]);
     break;
   }
 }
@@ -59,7 +59,7 @@ void processBoardPacket()
     */
     DEBUG("*** board's first packet!! ***");
 
-    nrfCommsQueueManager->send(EV_COMMS_BD_FIRST_PACKET);
+    nrfCommsQueueManager->send(CommsState::BD_FIRST_PACKET);
 
     controller_packet.id = 0;
     sendConfigToBoard();
@@ -68,17 +68,17 @@ void processBoardPacket()
   }
   else if (board.startedMoving())
   {
-    displayChangeQueueManager->send(DISP_EV_MOVING);
-    hudMessageQueue->send(HUD_CMD_HEARTBEAT);
+    displayChangeQueueManager->send(DispState::MOVING);
+    hudMessageQueue->send(HUDAction::HEARTBEAT);
   }
   else if (board.hasStopped())
   {
-    displayChangeQueueManager->send(DISP_EV_STOPPED);
+    displayChangeQueueManager->send(DispState::STOPPED);
   }
   else if (board.valuesChanged())
   {
     Serial.printf("board value changed\n");
-    displayChangeQueueManager->send(DISP_EV_UPDATE);
+    displayChangeQueueManager->send(DispState::UPDATE);
   }
 
   if (board.getCommand() == CommandType::RESET)
@@ -96,7 +96,7 @@ void sendConfigToBoard()
   memcpy(bs, &controller_config, sizeof(ControllerConfig));
   uint8_t len = sizeof(ControllerConfig);
 
-  sendPacket(bs, len, PacketType::CONFIG);
+  sendPacket(bs, len, Packet::CONFIG);
 }
 //------------------------------------------------------------------
 
@@ -114,14 +114,14 @@ void sendPacketToBoard()
   memcpy(bs, &controller_packet, sizeof(ControllerData));
 
   vTaskSuspendAll();
-  sendPacket(bs, sizeof(ControllerData), PacketType::CONTROL);
+  sendPacket(bs, sizeof(ControllerData), Packet::CONTROL);
   xTaskResumeAll();
 
   controller_packet.id++;
 }
 //------------------------------------------------------------------
 
-bool sendPacketToHud(HUDCommand command, bool print = false)
+bool sendPacketToHud(HUDCommand::Event command, bool print = false)
 {
   HUDData packet;
   packet.id = hudData.id++;
@@ -132,10 +132,10 @@ bool sendPacketToHud(HUDCommand command, bool print = false)
   memcpy(bs, &packet, sizeof(HUDData));
   // takes 3ms if OK, 30ms if not OK
   vTaskSuspendAll();
-  bool success = nrf24.send(COMMS_HUD, PacketType::HUD, bs, sizeof(HUDData));
+  bool success = nrf24.send(COMMS_HUD, Packet::HUD, bs, sizeof(HUDData));
   xTaskResumeAll();
   if (print)
-    Serial.printf("--> HUD:%s (%d) - %s (took %lums)\n", hudCommandNames[command], packet.id, success ? "SUCCESS" : "FAILED!!!", (unsigned long)sinceSendingToHud);
+    Serial.printf("--> HUD:%s (%d) - %s (took %lums)\n", HUDCommand::names[command], packet.id, success ? "SUCCESS" : "FAILED!!!", (unsigned long)sinceSendingToHud);
   return success;
 }
 //------------------------------------------------------------------

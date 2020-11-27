@@ -31,8 +31,8 @@ void primaryButtonInit()
                            ? STATE_ON
                            : STATE_OFF;
     hudMessageQueue->send(pulseLedOn
-                              ? HUD_CMD_PULSE_RED
-                              : HUD_CMD_IDLE);
+                              ? HUDCommand::PULSE_RED
+                              : HUDCommand::IDLE);
   });
 
   primaryButton.setTripleClickHandler([](Button2 &btn) {

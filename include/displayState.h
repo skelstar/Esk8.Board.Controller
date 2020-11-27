@@ -5,12 +5,12 @@
 Fsm *displayState;
 
 bool update_display = false;
-DispStateEvent lastDispEvent;
+DispState::Event lastDispEvent;
 
 // prototypes
 void print_disp_state(const char *state_name, const char *event);
 void print_disp_state(const char *state_name);
-DispStateEvent read_from_display_event_queue(TickType_t ticks = 5);
+DispState::Event read_from_display_event_queue(TickType_t ticks = 5);
 void clearDisplayEventQueue();
 
 elapsedMillis sinceShowingToggleScreen;
@@ -31,7 +31,7 @@ State dispState_disconnected(
 //---------------------------------------------------------------
 State dispState_stoppedScreen(
     [] {
-      print_disp_state("...dispState_stoppedScreen", dispStateEventNames[(int)lastDispEvent]);
+      print_disp_state("...dispState_stoppedScreen", DispState::names[(int)lastDispEvent]);
 #ifdef PRINT_RESET_DETECTION
       Serial.printf("STOPPED at %lums\n", stats.timeMovingMS);
 #endif
@@ -50,7 +50,7 @@ State dispState_stoppedScreen(
 //---------------------------------------------------------------
 State dispState_movingScreen(
     [] {
-      print_disp_state("...dispState_movingScreen", dispStateEventNames[(int)lastDispEvent]);
+      print_disp_state("...dispState_movingScreen", DispState::names[(int)lastDispEvent]);
 #ifdef PRINT_RESET_DETECTION
       Serial.printf("MOVING at %lums\n", stats.timeMovingMS);
 #endif
@@ -75,7 +75,7 @@ State dispState_movingScreen(
 //---------------------------------------------------------------
 State dispState_needToAckResetsStopped(
     [] {
-      print_disp_state("...dispState_needToAckResetsStopped", dispStateEventNames[(int)lastDispEvent]);
+      print_disp_state("...dispState_needToAckResetsStopped", DispState::names[(int)lastDispEvent]);
 #ifdef PRINT_RESET_DETECTION
       Serial.printf("ACK STOPPED at %lums\n", stats.timeMovingMS);
 #endif
@@ -85,7 +85,7 @@ State dispState_needToAckResetsStopped(
 //---------------------------------------------------------------
 State dispState_needToAckResetsMoving(
     [] {
-      print_disp_state("...dispState_needToAckResetsMoving", dispStateEventNames[(int)lastDispEvent]);
+      print_disp_state("...dispState_needToAckResetsMoving", DispState::names[(int)lastDispEvent]);
 #ifdef PRINT_RESET_DETECTION
       Serial.printf("ACK MOVING at %lums\n", stats.timeMovingMS);
 #endif
@@ -100,7 +100,7 @@ State dispState_needToAckResetsMoving(
 //---------------------------------------------------------------
 State dispState_boardVersionDoesntMatchScreen(
     [] {
-      print_disp_state("...dispState_boardVersionDoesntMatchScreen", dispStateEventNames[(int)lastDispEvent]);
+      print_disp_state("...dispState_boardVersionDoesntMatchScreen", DispState::names[(int)lastDispEvent]);
       screenBoardNotCompatible(board.packet.version);
     },
     NULL,
@@ -109,9 +109,9 @@ State dispState_boardVersionDoesntMatchScreen(
 
 State dispState_togglePushToStart(
     [] {
-      print_disp_state("...dispState_togglePushToStart", dispStateEventNames[(int)lastDispEvent]);
+      print_disp_state("...dispState_togglePushToStart", DispState::names[(int)lastDispEvent]);
       bool currVal = featureService.get<bool>(FeatureType::PUSH_TO_START);
-      if (lastDispEvent == DISP_EV_PRIMARY_DOUBLE_CLICK)
+      if (lastDispEvent == DispState::PRIMARY_DOUBLE_CLICK)
       {
         currVal = !currVal;
         featureService.set(PUSH_TO_START, currVal);
@@ -123,8 +123,8 @@ State dispState_togglePushToStart(
       if (sinceShowingToggleScreen > 3000)
       {
         sinceShowingToggleScreen = 0; // prevent excessive re-trigger
-        lastDispEvent = DISP_EV_PRIMARY_SINGLE_CLICK;
-        displayState->trigger(DISP_EV_PRIMARY_SINGLE_CLICK);
+        lastDispEvent = DispState::PRIMARY_SINGLE_CLICK;
+        displayState->trigger(DispState::PRIMARY_SINGLE_CLICK);
       }
     },
     NULL);
@@ -137,39 +137,39 @@ void acknowledgeResets()
 
 void displayState_addTransitions()
 {
-  // DISP_EV_CONNECTED
-  displayState->add_transition(&dispState_searching, &dispState_stoppedScreen, DISP_EV_CONNECTED, NULL);
-  displayState->add_transition(&dispState_disconnected, &dispState_stoppedScreen, DISP_EV_CONNECTED, NULL);
+  // DispState::CONNECTED
+  displayState->add_transition(&dispState_searching, &dispState_stoppedScreen, DispState::CONNECTED, NULL);
+  displayState->add_transition(&dispState_disconnected, &dispState_stoppedScreen, DispState::CONNECTED, NULL);
 
-  // DISP_EV_DISCONNECTED
-  displayState->add_transition(&dispState_stoppedScreen, &dispState_disconnected, DISP_EV_DISCONNECTED, NULL);
-  displayState->add_transition(&dispState_movingScreen, &dispState_disconnected, DISP_EV_DISCONNECTED, NULL);
+  // DispState::DISCONNECTED
+  displayState->add_transition(&dispState_stoppedScreen, &dispState_disconnected, DispState::DISCONNECTED, NULL);
+  displayState->add_transition(&dispState_movingScreen, &dispState_disconnected, DispState::DISCONNECTED, NULL);
 
-  // DISP_EV_SW_RESET
-  displayState->add_transition(&dispState_stoppedScreen, &dispState_needToAckResetsStopped, DISP_EV_SW_RESET, NULL);
-  displayState->add_transition(&dispState_movingScreen, &dispState_needToAckResetsMoving, DISP_EV_SW_RESET, NULL);
+  // DispState::SW_RESET
+  displayState->add_transition(&dispState_stoppedScreen, &dispState_needToAckResetsStopped, DispState::SW_RESET, NULL);
+  displayState->add_transition(&dispState_movingScreen, &dispState_needToAckResetsMoving, DispState::SW_RESET, NULL);
 
-  displayState->add_transition(&dispState_needToAckResetsStopped, &dispState_stoppedScreen, DISP_EV_PRIMARY_DOUBLE_CLICK, acknowledgeResets);
-  displayState->add_transition(&dispState_needToAckResetsStopped, &dispState_needToAckResetsMoving, DISP_EV_MOVING, NULL);
-  displayState->add_transition(&dispState_needToAckResetsMoving, &dispState_needToAckResetsStopped, DISP_EV_STOPPED, NULL);
-  displayState->add_transition(&dispState_needToAckResetsMoving, &dispState_movingScreen, DISP_EV_PRIMARY_DOUBLE_CLICK, acknowledgeResets);
+  displayState->add_transition(&dispState_needToAckResetsStopped, &dispState_stoppedScreen, DispState::PRIMARY_DOUBLE_CLICK, acknowledgeResets);
+  displayState->add_transition(&dispState_needToAckResetsStopped, &dispState_needToAckResetsMoving, DispState::MOVING, NULL);
+  displayState->add_transition(&dispState_needToAckResetsMoving, &dispState_needToAckResetsStopped, DispState::STOPPED, NULL);
+  displayState->add_transition(&dispState_needToAckResetsMoving, &dispState_movingScreen, DispState::PRIMARY_DOUBLE_CLICK, acknowledgeResets);
 
-  // DISP_EV_MOVING
-  displayState->add_transition(&dispState_stoppedScreen, &dispState_movingScreen, DISP_EV_MOVING, NULL);
-  // DISP_EV_STOPPED
-  displayState->add_transition(&dispState_movingScreen, &dispState_stoppedScreen, DISP_EV_STOPPED, NULL);
+  // DispState::MOVING
+  displayState->add_transition(&dispState_stoppedScreen, &dispState_movingScreen, DispState::MOVING, NULL);
+  // DispState::STOPPED
+  displayState->add_transition(&dispState_movingScreen, &dispState_stoppedScreen, DispState::STOPPED, NULL);
 
-  displayState->add_transition(&dispState_stoppedScreen, &dispState_togglePushToStart, DISP_EV_PRIMARY_TRIPLE_CLICK, NULL);
-  displayState->add_transition(&dispState_togglePushToStart, &dispState_togglePushToStart, DISP_EV_PRIMARY_DOUBLE_CLICK, NULL);
-  displayState->add_transition(&dispState_togglePushToStart, &dispState_stoppedScreen, DISP_EV_PRIMARY_SINGLE_CLICK, NULL);
+  displayState->add_transition(&dispState_stoppedScreen, &dispState_togglePushToStart, DispState::PRIMARY_TRIPLE_CLICK, NULL);
+  displayState->add_transition(&dispState_togglePushToStart, &dispState_togglePushToStart, DispState::PRIMARY_DOUBLE_CLICK, NULL);
+  displayState->add_transition(&dispState_togglePushToStart, &dispState_stoppedScreen, DispState::PRIMARY_SINGLE_CLICK, NULL);
 
-  // DISP_EV_UPDATE
-  displayState->add_transition(&dispState_stoppedScreen, &dispState_stoppedScreen, DISP_EV_UPDATE, NULL);
-  displayState->add_transition(&dispState_movingScreen, &dispState_movingScreen, DISP_EV_UPDATE, NULL);
+  // DispState::UPDATE
+  displayState->add_transition(&dispState_stoppedScreen, &dispState_stoppedScreen, DispState::UPDATE, NULL);
+  displayState->add_transition(&dispState_movingScreen, &dispState_movingScreen, DispState::UPDATE, NULL);
 
-  // DISP_EV_VERSION_DOESNT_MATCH
-  displayState->add_transition(&dispState_stoppedScreen, &dispState_boardVersionDoesntMatchScreen, DISP_EV_VERSION_DOESNT_MATCH, NULL);
-  displayState->add_transition(&dispState_movingScreen, &dispState_boardVersionDoesntMatchScreen, DISP_EV_VERSION_DOESNT_MATCH, NULL);
+  // DispState::VERSION_DOESNT_MATCH
+  displayState->add_transition(&dispState_stoppedScreen, &dispState_boardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
+  displayState->add_transition(&dispState_movingScreen, &dispState_boardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
 }
 //---------------------------------------------------------------
 
@@ -190,7 +190,7 @@ void print_disp_state(const char *state_name)
 //---------------------------------------------------------------
 void clearDisplayEventQueue()
 {
-  while (read_from_display_event_queue() != DISP_EV_NO_EVENT)
+  while (read_from_display_event_queue() != DispState::NO_EVENT)
   {
   }
 }

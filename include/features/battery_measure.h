@@ -41,6 +41,6 @@ void createBatteryMeasureTask(uint8_t core, uint8_t priority)
 //--------------------------------------------------------
 void battVoltsChanged_cb()
 {
-  displayChangeQueueManager->send(DISP_EV_UPDATE);
+  displayChangeQueueManager->send(DispState::UPDATE);
 }
 //--------------------------------------------------------
