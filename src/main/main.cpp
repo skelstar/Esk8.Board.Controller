@@ -213,25 +213,14 @@ HUDData hudData;
 #include <assert.h>
 #define __ASSERT_USE_STDERR
 //------------------------------------------------------------------
-
 void asserts()
 {
-  if (DispStateEvent::DISP_EV_Length != ARRAY_SIZE(dispStateEventNames))
-  {
-    Serial.printf("DispStateEvent has more elements than names (%d %d)\n", DispStateEvent::DISP_EV_Length, ARRAY_SIZE(dispStateEventNames));
-    assert(false);
-  }
-  if (HudActionEvent::HUD_ACTION_Length != ARRAY_SIZE(hudActionEventNames))
-  {
-    Serial.printf("HudActionEvent has more elements than names (%d %d)\n", HudActionEvent::HUD_ACTION_Length, ARRAY_SIZE(hudActionEventNames));
-    assert(false);
-  }
-  if (CommsStateEvent::EV_COMMS_Length != ARRAY_SIZE(commsStateEventNames))
-  {
-    Serial.printf("CommsStateEvent has more elements than names (%d %d)\n", CommsStateEvent::EV_COMMS_Length, ARRAY_SIZE(commsStateEventNames));
-    assert(false);
-  }
+  // make sure that there are as many "names" as there are enum values
+  assertEnum("DispStateEvent", DispStateEvent::DISP_EV_Length, ARRAY_SIZE(dispStateEventNames));
+  assertEnum("HudActionEvent", HudActionEvent::HUD_ACTION_Length, ARRAY_SIZE(hudActionEventNames));
+  assertEnum("CommsStateEvent", CommsStateEvent::EV_COMMS_Length, ARRAY_SIZE(commsStateEventNames));
 }
+//------------------------------------------------------------------
 
 void setup()
 {
