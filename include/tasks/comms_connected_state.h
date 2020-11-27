@@ -41,13 +41,13 @@ State stateCommsConnected(
       displayChangeQueueManager->send(DISP_EV_CONNECTED);
       displayChangeQueueManager->send(DISP_EV_UPDATE);
 
-      hudMessageQueueManager->send(HUD_CMD_HEARTBEAT);
+      hudMessageQueue->send(HUD_CMD_HEARTBEAT);
 
       if (stats.needToAckResets())
       {
         displayChangeQueueManager->send(DISP_EV_SW_RESET);
         pulseLedOn = TriState::STATE_ON;
-        hudMessageQueueManager->send(HUD_CMD_PULSE_RED);
+        hudMessageQueue->send(HUD_CMD_PULSE_RED);
       }
 
       // check board version is compatible
@@ -74,7 +74,7 @@ State stateCommsDisconnected(
 
       stats.boardConnected = false;
       displayChangeQueueManager->send(DISP_EV_DISCONNECTED);
-      hudMessageQueueManager->send(HUD_CMD_SPIN_GREEN);
+      hudMessageQueue->send(HUD_CMD_SPIN_GREEN);
     },
     NULL, NULL);
 //-----------------------------------------------------

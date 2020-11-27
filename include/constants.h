@@ -41,11 +41,6 @@ const char *dispStateEventNames[] = {
     "DISP_EV_VERSION_DOESNT_MATCH",
 };
 
-uint8_t getCharArraySize(const char *array)
-{
-  return (sizeof(array) / sizeof(char *));
-}
-
 enum CommsStateEvent
 {
   EV_COMMS_NO_EVENT = 0,

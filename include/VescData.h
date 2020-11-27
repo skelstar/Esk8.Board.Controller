@@ -14,13 +14,6 @@ enum ReasonType
   RESPONSE,
 };
 
-enum PacketType
-{
-  CONTROL = 0,
-  CONFIG,
-  HUD,
-};
-
 enum CommandType
 {
   NONE,

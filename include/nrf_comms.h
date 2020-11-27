@@ -69,6 +69,7 @@ void processBoardPacket()
   else if (board.startedMoving())
   {
     displayChangeQueueManager->send(DISP_EV_MOVING);
+    hudMessageQueue->send(HUD_CMD_HEARTBEAT);
   }
   else if (board.hasStopped())
   {
@@ -112,7 +113,9 @@ void sendPacketToBoard()
   uint8_t bs[sizeof(ControllerData)];
   memcpy(bs, &controller_packet, sizeof(ControllerData));
 
+  vTaskSuspendAll();
   sendPacket(bs, sizeof(ControllerData), PacketType::CONTROL);
+  xTaskResumeAll();
 
   controller_packet.id++;
 }
@@ -128,7 +131,9 @@ bool sendPacketToHud(HUDCommand command, bool print = false)
   uint8_t bs[sizeof(HUDData)];
   memcpy(bs, &packet, sizeof(HUDData));
   // takes 3ms if OK, 30ms if not OK
+  vTaskSuspendAll();
   bool success = nrf24.send(COMMS_HUD, PacketType::HUD, bs, sizeof(HUDData));
+  xTaskResumeAll();
   if (print)
     Serial.printf("--> HUD:%s (%d) - %s (took %lums)\n", hudCommandNames[command], packet.id, success ? "SUCCESS" : "FAILED!!!", (unsigned long)sinceSendingToHud);
   return success;

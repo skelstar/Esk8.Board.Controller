@@ -46,7 +46,7 @@ xQueueHandle xTaskActionEventQueue;
 EventQueueManager *displayChangeQueueManager;
 EventQueueManager *nrfCommsQueueManager;
 EventQueueManager *buttonQueue;
-EventQueueManager *hudMessageQueueManager;
+EventQueueManager *hudMessageQueue;
 EventQueueManager *hudActionQueueManager;
 EventQueueManager *taskQueueManager;
 
@@ -219,6 +219,7 @@ void asserts()
   assertEnum("DispStateEvent", DispStateEvent::DISP_EV_Length, ARRAY_SIZE(dispStateEventNames));
   assertEnum("HudActionEvent", HudActionEvent::HUD_ACTION_Length, ARRAY_SIZE(hudActionEventNames));
   assertEnum("CommsStateEvent", CommsStateEvent::EV_COMMS_Length, ARRAY_SIZE(commsStateEventNames));
+  assertEnum("PacketType", PacketType::PacketType_Length, ARRAY_SIZE(packetTypeNames));
 }
 //------------------------------------------------------------------
 
@@ -289,9 +290,13 @@ void setup()
   displayChangeQueueManager = new EventQueueManager(xDisplayChangeEventQueue, 5);
   nrfCommsQueueManager = new EventQueueManager(xCommsStateEventQueue, 5);
   buttonQueue = new EventQueueManager(xButtonPushEventQueue, 10);
-  hudMessageQueueManager = new EventQueueManager(xHUDMessageEventQueue, 10);
+  hudMessageQueue = new EventQueueManager(xHUDMessageEventQueue, 10);
   hudActionQueueManager = new EventQueueManager(xHUDActionQueue, 3);
   taskQueueManager = new EventQueueManager(xTaskActionEventQueue, 5);
+
+  hudMessageQueue->setSentEventCallback([](uint8_t ev) {
+    Serial.printf("-->hudMessageQueue->send: (%s)\n", hudCommandNames[ev]);
+  });
 
   while (!display_task_initialised)
   {
@@ -314,7 +319,14 @@ HUDCommand hudCommands[] = {
     HUDCommand::HUD_CMD_PULSE_RED,
     HUDCommand::HUD_CMD_IDLE,
     HUDCommand::HUD_CMD_SPIN_GREEN,
-    HUDCommand::HUD_CMD_IDLE,
+};
+
+ulong hudCommandPauses[] = {
+    5000,
+    1000,
+    3000,
+    10000,
+    1000,
 };
 
 uint8_t hudCommandIdx = 0;
@@ -334,15 +346,15 @@ void loop()
   if (sinceSentToHud > 1000)
   {
     sinceSentToHud = 0;
-    bool ok = sendPacketToHud(HUD_CMD_HEARTBEAT, stats.hudConnected == false); // print of not connected
-    stats.updateHud(ok);
-
-    if (stats.hudConnected && sinceSendTestCommand > 3000)
+    if (sinceSendTestCommand > hudCommandPauses[hudCommandIdx])
+    // if (stats.hudConnected && sinceSendTestCommand > 3000)
     {
       sinceSendTestCommand = 0;
-      ok = sendPacketToHud(hudCommands[hudCommandIdx++], true);
-      if (hudCommandIdx == 6)
+      bool ok = sendPacketToHud(hudCommands[hudCommandIdx++], true);
+      stats.updateHud(ok);
+      if (hudCommandIdx == ARRAY_SIZE(hudCommands))
         hudCommandIdx = 0;
+      DEBUGVAL(hudCommandIdx);
     }
     // bool ok = sendPacketToHud(HUD_CMD_HEARTBEAT, stats.hudConnected == false); // print of not connected
 

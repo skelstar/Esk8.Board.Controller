@@ -28,7 +28,7 @@ void onConnect()
   Serial.printf("---------------------------------\n");
   stats.hudConnected = true;
   stats.update = true;
-  hudMessageQueueManager->send(HUD_CMD_FLASH_GREEN);
+  hudMessageQueue->send(HUD_CMD_FLASH_GREEN);
   hasConnectedToHud = true;
 }
 
@@ -63,9 +63,9 @@ void hudTask_1(void *pvParameters)
     if (stats.hudConnected && sinceHudReadFromQueue > 500)
     {
       sinceHudReadFromQueue = 0;
-      if (hudMessageQueueManager->messageAvailable())
+      if (hudMessageQueue->messageAvailable())
       {
-        HUDCommand message = (HUDCommand)hudMessageQueueManager->read();
+        HUDCommand message = (HUDCommand)hudMessageQueue->read();
         sendPacketToHud(message, true);
       }
     }
