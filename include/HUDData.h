@@ -6,10 +6,5 @@ class HUDData
 {
 public:
   uint32_t id;
-  HUDEvent state;
+  HUDCommand state;
 };
-
-const char *eventToString(HUDEvent ev)
-{
-  return eventNames[(int)ev];
-}

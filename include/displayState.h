@@ -7,8 +7,6 @@ Fsm *displayState;
 bool update_display = false;
 DispStateEvent lastDispEvent;
 
-const char *eventToString(DispStateEvent ev);
-
 // prototypes
 void print_disp_state(const char *state_name, const char *event);
 void print_disp_state(const char *state_name);
@@ -33,7 +31,7 @@ State dispState_disconnected(
 //---------------------------------------------------------------
 State dispState_stoppedScreen(
     [] {
-      print_disp_state("...dispState_stoppedScreen", eventToString(lastDispEvent));
+      print_disp_state("...dispState_stoppedScreen", dispStateEventNames[(int)lastDispEvent]);
 #ifdef PRINT_RESET_DETECTION
       Serial.printf("STOPPED at %lums\n", stats.timeMovingMS);
 #endif
@@ -52,7 +50,7 @@ State dispState_stoppedScreen(
 //---------------------------------------------------------------
 State dispState_movingScreen(
     [] {
-      print_disp_state("...dispState_movingScreen", eventToString(lastDispEvent));
+      print_disp_state("...dispState_movingScreen", dispStateEventNames[(int)lastDispEvent]);
 #ifdef PRINT_RESET_DETECTION
       Serial.printf("MOVING at %lums\n", stats.timeMovingMS);
 #endif
@@ -77,7 +75,7 @@ State dispState_movingScreen(
 //---------------------------------------------------------------
 State dispState_needToAckResetsStopped(
     [] {
-      print_disp_state("...dispState_needToAckResetsStopped", eventToString(lastDispEvent));
+      print_disp_state("...dispState_needToAckResetsStopped", dispStateEventNames[(int)lastDispEvent]);
 #ifdef PRINT_RESET_DETECTION
       Serial.printf("ACK STOPPED at %lums\n", stats.timeMovingMS);
 #endif
@@ -87,7 +85,7 @@ State dispState_needToAckResetsStopped(
 //---------------------------------------------------------------
 State dispState_needToAckResetsMoving(
     [] {
-      print_disp_state("...dispState_needToAckResetsMoving", eventToString(lastDispEvent));
+      print_disp_state("...dispState_needToAckResetsMoving", dispStateEventNames[(int)lastDispEvent]);
 #ifdef PRINT_RESET_DETECTION
       Serial.printf("ACK MOVING at %lums\n", stats.timeMovingMS);
 #endif
@@ -102,7 +100,7 @@ State dispState_needToAckResetsMoving(
 //---------------------------------------------------------------
 State dispState_boardVersionDoesntMatchScreen(
     [] {
-      print_disp_state("...dispState_boardVersionDoesntMatchScreen", eventToString(lastDispEvent));
+      print_disp_state("...dispState_boardVersionDoesntMatchScreen", dispStateEventNames[(int)lastDispEvent]);
       screenBoardNotCompatible(board.packet.version);
     },
     NULL,
@@ -111,7 +109,7 @@ State dispState_boardVersionDoesntMatchScreen(
 
 State dispState_togglePushToStart(
     [] {
-      print_disp_state("...dispState_togglePushToStart", eventToString(lastDispEvent));
+      print_disp_state("...dispState_togglePushToStart", dispStateEventNames[(int)lastDispEvent]);
       bool currVal = featureService.get<bool>(FeatureType::PUSH_TO_START);
       if (lastDispEvent == DISP_EV_PRIMARY_DOUBLE_CLICK)
       {
@@ -172,41 +170,6 @@ void displayState_addTransitions()
   // DISP_EV_VERSION_DOESNT_MATCH
   displayState->add_transition(&dispState_stoppedScreen, &dispState_boardVersionDoesntMatchScreen, DISP_EV_VERSION_DOESNT_MATCH, NULL);
   displayState->add_transition(&dispState_movingScreen, &dispState_boardVersionDoesntMatchScreen, DISP_EV_VERSION_DOESNT_MATCH, NULL);
-}
-//---------------------------------------------------------------
-
-const char *eventToString(DispStateEvent ev)
-{
-  switch (ev)
-  {
-  case DISP_EV_NO_EVENT:
-  case 99:
-    return "DISP_EV_NO_EVENT";
-  case DISP_EV_CONNECTED:
-    return "DISP_EV_CONNECTED";
-  case DISP_EV_DISCONNECTED:
-    return "DISP_EV_DISCONNECTED";
-  case DISP_EV_SW_RESET:
-    return "DISP_EV_SW_RESET";
-  case DISP_EV_STOPPED:
-    return "DISP_EV_STOPPED";
-  case DISP_EV_MOVING:
-    return "DISP_EV_MOVING";
-  case DISP_EV_UPDATE:
-    return "DISP_EV_UPDATE";
-  case DISP_EV_PRIMARY_SINGLE_CLICK:
-    return "DISP_EV_PRIMARY_SINGLE_CLICK";
-  case DISP_EV_PRIMARY_DOUBLE_CLICK:
-    return "DISP_EV_PRIMARY_DOUBLE_CLICK";
-  case DISP_EV_PRIMARY_TRIPLE_CLICK:
-    return "DISP_EV_PRIMARY_TRIPLE_CLICK";
-  case DISP_EV_VERSION_DOESNT_MATCH:
-    return "DISP_EV_VERSION_DOESNT_MATCH";
-  default:
-    char buff1[30];
-    sprintf(buff1, "unhandled ev: %d", (uint8_t)ev);
-    return buff1;
-  }
 }
 //---------------------------------------------------------------
 

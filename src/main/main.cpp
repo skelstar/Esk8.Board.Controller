@@ -13,6 +13,7 @@
 #include <VescData.h>
 #include <elapsedMillis.h>
 #include <rom/rtc.h> // for reset reason
+#include <shared-utils.h>
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
 #define SOFT_SPI_MOSI_PIN 13 // Blue
@@ -22,6 +23,7 @@
 #define NRF_CE 17
 #define NRF_CS 2
 
+#include "$PROJECT_HASH/../types.h"
 #include <constants.h>
 
 #include <RF24Network.h>
@@ -43,7 +45,7 @@ xQueueHandle xTaskActionEventQueue;
 
 EventQueueManager *displayChangeQueueManager;
 EventQueueManager *nrfCommsQueueManager;
-EventQueueManager *buttonQueueManager;
+EventQueueManager *buttonQueue;
 EventQueueManager *hudMessageQueueManager;
 EventQueueManager *hudActionQueueManager;
 EventQueueManager *taskQueueManager;
@@ -100,9 +102,6 @@ private:
 
 //------------------------------------------------------------------
 
-#define COMMS_BOARD 00
-#define COMMS_CONTROLLER 01
-
 ControllerData controller_packet;
 ControllerConfig controller_config;
 
@@ -121,12 +120,6 @@ Preferences statsStore;
 #include <stats.h>
 
 Stats stats;
-
-//------------------------------------------------------------------
-
-HUDData hudData;
-
-#include <hudTask.h>
 
 //------------------------------------------------------------------
 
@@ -155,6 +148,7 @@ TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 elapsedMillis
     sinceSentToBoard,
     sinceLastBoardPacketRx,
+    sinceLastHudPacket,
     sinceSentRequest,
     since_read_trigger,
     sinceBoardConnected,
@@ -199,6 +193,8 @@ void storeTimeMovingInMemory()
 
 ThrottleClass throttle;
 
+HUDData hudData;
+
 //---------------------------------------------------------------
 
 #include <Button2.h>
@@ -207,20 +203,43 @@ ThrottleClass throttle;
 #include <screens.h>
 #include <displayState.h>
 
-#include <display_task_0.h>
-#include <comms_connected_state.h>
+#include <nrf_comms.h>
+#include <tasks/display_task_0.h>
+#include <tasks/comms_connected_state.h>
+#include <tasks/hudTask.h>
 #include <features/battery_measure.h>
 
-#include <nrf_comms.h>
-
 #include <peripherals.h>
+#include <assert.h>
+#define __ASSERT_USE_STDERR
+//------------------------------------------------------------------
 
-//---------------------------------------------------------------
+void asserts()
+{
+  if (DispStateEvent::DISP_EV_Length != ARRAY_SIZE(dispStateEventNames))
+  {
+    Serial.printf("DispStateEvent has more elements than names (%d %d)\n", DispStateEvent::DISP_EV_Length, ARRAY_SIZE(dispStateEventNames));
+    assert(false);
+  }
+  if (HudActionEvent::HUD_ACTION_Length != ARRAY_SIZE(hudActionEventNames))
+  {
+    Serial.printf("HudActionEvent has more elements than names (%d %d)\n", HudActionEvent::HUD_ACTION_Length, ARRAY_SIZE(hudActionEventNames));
+    assert(false);
+  }
+  if (CommsStateEvent::EV_COMMS_Length != ARRAY_SIZE(commsStateEventNames))
+  {
+    Serial.printf("CommsStateEvent has more elements than names (%d %d)\n", CommsStateEvent::EV_COMMS_Length, ARRAY_SIZE(commsStateEventNames));
+    assert(false);
+  }
+}
 
 void setup()
 {
+
   Serial.begin(115200);
   Serial.printf("------------------------ BOOT ------------------------\n");
+
+  asserts();
 
   //get chip id
   String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
@@ -264,33 +283,12 @@ void setup()
   vTaskDelay(100);
 
   // CORE_0
-  xTaskCreatePinnedToCore(
-      display_task_0,
-      "display_task_0",
-      10000,
-      NULL,
-      TASK_PRIORITY_3,
-      NULL,
-      CORE_0);
-  xTaskCreatePinnedToCore(
-      commsStateTask_0,
-      "commsStateTask_0",
-      10000,
-      NULL,
-      TASK_PRIORITY_2,
-      NULL,
-      CORE_0);
-  xTaskCreatePinnedToCore(
-      batteryMeasureTask_0,
-      "batteryMeasureTask_0",
-      10000,
-      NULL,
-      TASK_PRIORITY_1,
-      NULL,
-      CORE_0);
+  createDisplayTask0(CORE_0, TASK_PRIORITY_3);
+  createCommsStateTask_0(CORE_0, TASK_PRIORITY_1);
+  createBatteryMeasureTask(CORE_0, TASK_PRIORITY_1);
 
   // CORE_1
-  createHudTask();
+  createHudTask(CORE_1, TASK_PRIORITY_1);
 
   xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
@@ -301,7 +299,7 @@ void setup()
 
   displayChangeQueueManager = new EventQueueManager(xDisplayChangeEventQueue, 5);
   nrfCommsQueueManager = new EventQueueManager(xCommsStateEventQueue, 5);
-  buttonQueueManager = new EventQueueManager(xButtonPushEventQueue, 10);
+  buttonQueue = new EventQueueManager(xButtonPushEventQueue, 10);
   hudMessageQueueManager = new EventQueueManager(xHUDMessageEventQueue, 10);
   hudActionQueueManager = new EventQueueManager(xHUDActionQueue, 3);
   taskQueueManager = new EventQueueManager(xTaskActionEventQueue, 5);
@@ -316,22 +314,58 @@ void setup()
 elapsedMillis
     since_sent_config_to_board,
     sinceNRFUpdate,
+    sinceSentToHud,
+    sinceSendTestCommand,
     sinceLastSwReset;
 uint8_t old_throttle;
-ulong loopNum = 0;
+
+HUDCommand hudCommands[] = {
+    HUDCommand::HUD_CMD_IDLE,
+    HUDCommand::HUD_CMD_FLASH_GREEN,
+    HUDCommand::HUD_CMD_PULSE_RED,
+    HUDCommand::HUD_CMD_IDLE,
+    HUDCommand::HUD_CMD_SPIN_GREEN,
+    HUDCommand::HUD_CMD_IDLE,
+};
+
+uint8_t hudCommandIdx = 0;
 
 void loop()
 {
   if (sinceSentToBoard > SEND_TO_BOARD_INTERVAL)
   {
-    loopNum++;
-
     sendToBoard();
   }
 
   if (board.hasTimedout())
   {
     nrfCommsQueueManager->send(EV_COMMS_BOARD_TIMEDOUT);
+  }
+
+  if (sinceSentToHud > 1000)
+  {
+    sinceSentToHud = 0;
+    bool ok = sendPacketToHud(HUD_CMD_HEARTBEAT, stats.hudConnected == false); // print of not connected
+    stats.updateHud(ok);
+
+    if (stats.hudConnected && sinceSendTestCommand > 3000)
+    {
+      sinceSendTestCommand = 0;
+      ok = sendPacketToHud(hudCommands[hudCommandIdx++], true);
+      if (hudCommandIdx == 6)
+        hudCommandIdx = 0;
+    }
+    // bool ok = sendPacketToHud(HUD_CMD_HEARTBEAT, stats.hudConnected == false); // print of not connected
+
+    // if (ok && stats.hudConnected == false)
+    // {
+    //   stats.hudConnected = true;
+    //   sendPacketToHud(HUD_CMD_FLASH_GREEN, true);
+    // }
+    // else if (!ok && stats.hudConnected)
+    // {
+    //   stats.hudConnected = false;
+    // }
   }
 
   if (sinceNRFUpdate > 20)
@@ -341,16 +375,6 @@ void loop()
   }
 
   primaryButton.loop();
-
-  if (taskQueueManager->messageAvailable())
-  {
-    if (taskQueueManager->read() == 1)
-    {
-      vTaskDelete(hudTaskHandle);
-      vTaskDelay(10);
-      createHudTask();
-    }
-  }
 
   vTaskDelay(1);
 }

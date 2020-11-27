@@ -7,15 +7,6 @@ enum ButtonClickType
   TRIPLE
 };
 
-#define CORE_0 0
-#define CORE_1 1
-
-#define TASK_PRIORITY_1 1
-#define TASK_PRIORITY_2 2
-#define TASK_PRIORITY_3 3
-#define TASK_PRIORITY_4 4
-#define TASK_PRIORITY_5 5
-
 #define STORE_STATS "stats"
 #define STORE_STATS_SOFT_RSTS "soft resets"
 #define STORE_STATS_TRIP_TIME "trip time"
@@ -32,7 +23,8 @@ enum DispStateEvent
   DISP_EV_PRIMARY_SINGLE_CLICK,
   DISP_EV_PRIMARY_DOUBLE_CLICK,
   DISP_EV_PRIMARY_TRIPLE_CLICK,
-  DISP_EV_VERSION_DOESNT_MATCH
+  DISP_EV_VERSION_DOESNT_MATCH,
+  DISP_EV_Length, // leave this one (used for aserting)
 };
 
 const char *dispStateEventNames[] = {
@@ -49,31 +41,10 @@ const char *dispStateEventNames[] = {
     "DISP_EV_VERSION_DOESNT_MATCH",
 };
 
-enum HudActionEvent
+uint8_t getCharArraySize(const char *array)
 {
-  EV_HUD_NONE = 0,
-  EV_HUD_DOUBLE_CLICK,
-};
-
-const char *hudActionEventNames[] = {
-    "EV_HUD_NONE",
-    "EV_HUD_DOUBLE_CLICK",
-};
-
-enum HUDEvent
-{
-  HUD_EV_CONNECTED = 0,
-  HUD_EV_PULSE_RED,
-  HUD_EV_FLASH_GREEN,
-  HUD_EV_SPIN_GREEN,
-};
-
-const char *eventNames[] = {
-    "HUD_EV_CONNECTED",
-    "HUD_EV_PULSE_RED",
-    "HUD_EV_FLASH_GREEN",
-    "HUD_EV_SPIN_GREEN",
-};
+  return (sizeof(array) / sizeof(char *));
+}
 
 enum CommsStateEvent
 {
@@ -81,6 +52,7 @@ enum CommsStateEvent
   EV_COMMS_PKT_RXD,
   EV_COMMS_BOARD_TIMEDOUT,
   EV_COMMS_BD_FIRST_PACKET,
+  EV_COMMS_Length, // leave this one (used for aserting)
 };
 
 const char *commsStateEventNames[] = {

@@ -24,6 +24,20 @@ void batteryMeasureTask_0(void *pvParameters)
   }
   vTaskDelete(NULL);
 }
+
+//--------------------------------------------------------
+void createBatteryMeasureTask(uint8_t core, uint8_t priority)
+{
+  xTaskCreatePinnedToCore(
+      batteryMeasureTask_0,
+      "batteryMeasureTask_0",
+      10000,
+      NULL,
+      priority,
+      NULL,
+      core);
+}
+
 //--------------------------------------------------------
 void battVoltsChanged_cb()
 {

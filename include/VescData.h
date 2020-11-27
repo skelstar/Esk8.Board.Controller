@@ -16,8 +16,9 @@ enum ReasonType
 
 enum PacketType
 {
-  CONTROL,
+  CONTROL = 0,
   CONFIG,
+  HUD,
 };
 
 enum CommandType

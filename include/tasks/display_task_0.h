@@ -51,7 +51,7 @@ void display_task_0(void *pvParameters)
         break;
       }
 
-      uint8_t buttonEvent = buttonQueueManager->read();
+      uint8_t buttonEvent = buttonQueue->read();
       switch (buttonEvent)
       {
       case SINGLE:
@@ -75,4 +75,16 @@ void display_task_0(void *pvParameters)
   }
   vTaskDelete(NULL);
 }
-//------------------------------------------------------------
+//-----------------------------------------------------
+
+void createDisplayTask0(uint8_t core, uint8_t priority)
+{
+  xTaskCreatePinnedToCore(
+      display_task_0,
+      "display_task_0",
+      10000,
+      NULL,
+      priority,
+      NULL,
+      core);
+}

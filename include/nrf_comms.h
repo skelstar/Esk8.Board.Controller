@@ -1,11 +1,45 @@
 
+void processHUDPacket();
+void processBoardPacket();
 void sendConfigToBoard();
 void sendPacketToBoard();
 bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType);
-// bool sendPacketWithRetries(uint8_t *d, uint8_t len, uint8_t packetType, uint8_t numRetries);
 
 //------------------------------------------------------------------
 void packetAvailable_cb(uint16_t from_id, uint8_t type)
+{
+  if (type == (uint8_t)PacketType::HUD)
+  {
+    processHUDPacket();
+  }
+  else
+  {
+    processBoardPacket();
+  }
+  nrfCommsQueueManager->send(EV_COMMS_PKT_RXD);
+}
+//------------------------------------------------------------------
+void processHUDPacket()
+{
+  sinceLastHudPacket = 0;
+
+  HudActionEvent ev;
+  uint8_t buff[sizeof(HudActionEvent)];
+  nrf24.read_into(buff, sizeof(HudActionEvent));
+  memcpy(&ev, &buff, sizeof(HudActionEvent));
+
+  switch (ev)
+  {
+  case HUD_ACTION_NONE:
+  case HUD_ACTION_HEARTBEAT:
+  case HUD_ACTION_DOUBLE_CLICK:
+  case HUD_ACTION_TRIPLE_CLICK:
+    Serial.printf("<-- HUD: %s\n", hudActionEventNames[(int)ev]);
+    break;
+  }
+}
+//------------------------------------------------------------------
+void processBoardPacket()
 {
   sinceLastBoardPacketRx = 0;
 
@@ -50,9 +84,8 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
   {
     ESP.restart();
   }
-
-  nrfCommsQueueManager->send(EV_COMMS_PKT_RXD);
 }
+
 //------------------------------------------------------------------
 
 void sendConfigToBoard()
@@ -70,7 +103,7 @@ void sendPacketToBoard()
 {
   bool rxLastResponse = board.packet.id == controller_packet.id - 1 &&
                         board.packet.id > 0;
-  if (!rxLastResponse && comms_state_connected)
+  if (!rxLastResponse && stats.boardConnected)
   {
     stats.total_failed_sending += 1;
     DEBUGVAL(board.packet.id, controller_packet.id);
@@ -85,32 +118,29 @@ void sendPacketToBoard()
 }
 //------------------------------------------------------------------
 
-bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType)
+bool sendPacketToHud(HUDCommand command, bool print = false)
 {
-  bool sent = nrf24.send_packet(COMMS_BOARD, packetType, d, len);
+  HUDData packet;
+  packet.id = hudData.id++;
+  packet.state = command;
+  elapsedMillis sinceSendingToHud = 0;
 
-  return sent;
+  uint8_t bs[sizeof(HUDData)];
+  memcpy(bs, &packet, sizeof(HUDData));
+  // takes 3ms if OK, 30ms if not OK
+  bool success = nrf24.send(COMMS_HUD, PacketType::HUD, bs, sizeof(HUDData));
+  if (print)
+    Serial.printf("--> HUD:%s (%d) - %s (took %lums)\n", hudCommandNames[command], packet.id, success ? "SUCCESS" : "FAILED!!!", (unsigned long)sinceSendingToHud);
+  return success;
 }
 //------------------------------------------------------------------
 
-// bool sendPacketWithRetries(uint8_t *d, uint8_t len, uint8_t packetType, uint8_t maxTries)
-// {
-//   bool sent = false;
-//   int tries = 0;
-//   while (!sent && tries++ < maxTries)
-//   {
-//     sent = nrf24.send_packet(COMMS_BOARD, packetType, d, len);
-//     if (!sent)
-//       vTaskDelay(10);
-//   }
-// #ifdef PRINT_SEND_RETRIES
-//   if (tries > 1)
-//     // DEBUGMVAL("Retried: ", tries, sent);
-//     DEBUGVAL("Retried: ", tries, sent);
-// #endif
+bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType)
+{
+  bool sent = nrf24.send(COMMS_BOARD, packetType, d, len);
 
-//   return sent;
-// }
+  return sent;
+}
 //------------------------------------------------------------------
 
 bool boardTimedOut()

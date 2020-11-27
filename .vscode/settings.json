@@ -59,7 +59,8 @@
     "streambuf": "cpp",
     "cinttypes": "cpp",
     "utility": "cpp",
-    "typeinfo": "cpp"
+    "typeinfo": "cpp",
+    "*.ipp": "cpp"
   },
   "editor.formatOnSave": true,
   "peacock.color": "#ff3d00"

@@ -17,13 +17,13 @@ void primaryButtonInit()
   primaryButton.setClickHandler([](Button2 &btn) {
     if (PRINT_BUTTON_EVENTS)
       DEBUG("Primary Button click");
-    buttonQueueManager->send(ButtonClickType::SINGLE);
+    buttonQueue->send(ButtonClickType::SINGLE);
   });
 
   primaryButton.setDoubleClickHandler([](Button2 &btn) {
     if (PRINT_BUTTON_EVENTS)
       DEBUG("Primary Button double-clicked");
-    buttonQueueManager->send(ButtonClickType::DOUBLE);
+    buttonQueue->send(ButtonClickType::DOUBLE);
     // hud
     pulseLedOn = pulseLedOn == STATE_NONE
                      ? STATE_OFF
@@ -31,13 +31,13 @@ void primaryButtonInit()
                            ? STATE_ON
                            : STATE_OFF;
     hudMessageQueueManager->send(pulseLedOn
-                                     ? HUD_EV_PULSE_RED
-                                     : HUD_EV_CONNECTED);
+                                     ? HUD_CMD_PULSE_RED
+                                     : HUD_CMD_HEARTBEAT);
   });
 
   primaryButton.setTripleClickHandler([](Button2 &btn) {
     if (PRINT_BUTTON_EVENTS)
       DEBUG("Primary Button triple-clicked");
-    buttonQueueManager->send(ButtonClickType::TRIPLE);
+    buttonQueue->send(ButtonClickType::TRIPLE);
   });
 }
