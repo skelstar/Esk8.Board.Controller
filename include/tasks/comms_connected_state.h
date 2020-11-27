@@ -149,5 +149,5 @@ void createCommsStateTask_0(uint8_t core, uint8_t priority)
 // check version
 bool boardVersionCompatible(float version)
 {
-  return version == VERSION_BOARD_COMPAT;
+  return version == (float)VERSION_BOARD_COMPAT;
 }
