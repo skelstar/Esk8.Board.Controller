@@ -23,6 +23,7 @@ void primaryButtonInit()
   primaryButton.setDoubleClickHandler([](Button2 &btn) {
     if (PRINT_BUTTON_EVENTS)
       DEBUG("Primary Button double-clicked");
+    buttonQueue->send(ButtonClickType::DOUBLE);
   });
 
   primaryButton.setTripleClickHandler([](Button2 &btn) {
