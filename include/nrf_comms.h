@@ -142,12 +142,6 @@ bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDComma
   {
     HUDData packet(mode, colour, speed, number);
     packet.id = hudData.id++;
-
-    if (print && PRINT_HUD_COMMS)
-      Serial.printf(
-          "--> HUD: mode=%s colour=%s\n",
-          HUDCommand::modeNames[(int)packet.mode],
-          HUDCommand::colourName[(int)packet.colour]);
     return sendTo<HUDData>(COMMS_HUD, Packet::HUD, packet);
   }
   else
@@ -162,6 +156,9 @@ bool sendMessageToHud(HUDTask::Message message, bool print)
 {
   if (hud.connected)
   {
+    if (print && PRINT_HUD_COMMS)
+      Serial.printf("-->HUD: %s\n", HUDTask::messageName[(int)message]);
+
     switch (message)
     {
     case HUDTask::BOARD_DISCONNECTED:
