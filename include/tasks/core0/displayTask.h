@@ -10,7 +10,7 @@ void displayStateEventCb(int ev)
 #endif
 }
 
-void display_task_0(void *pvParameters)
+void displayTask(void *pvParameters)
 {
   setupLCD();
 
@@ -19,7 +19,7 @@ void display_task_0(void *pvParameters)
 
   displayState_addTransitions();
 
-  Serial.printf("display_task_0 running on core %d\n", xPortGetCoreID());
+  Serial.printf("displayTask running on core %d\n", xPortGetCoreID());
 
   displayState->run_machine();
 
@@ -36,11 +36,10 @@ void display_task_0(void *pvParameters)
       sinceReadDispEventQueue = 0;
       displayState->run_machine();
 
-      DispState::Event displayevent = (DispState::Event)displayChangeQueueManager->read();
+      DispState::Event displayevent = displayQueue->read<DispState::Event>();
       switch (displayevent)
       {
       case DispState::NO_EVENT:
-      case NO_QUEUE_EVENT:
         break;
       case DispState::UPDATE:
         update_display = true;
@@ -51,9 +50,11 @@ void display_task_0(void *pvParameters)
         break;
       }
 
-      uint8_t buttonEvent = buttonQueue->read();
+      ButtonClickType buttonEvent = buttonQueue->read<ButtonClickType>();
       switch (buttonEvent)
       {
+      case NO_CLICK:
+        break;
       case SINGLE:
         lastDispEvent = DispState::PRIMARY_SINGLE_CLICK;
         displayState->trigger(DispState::PRIMARY_SINGLE_CLICK);
@@ -65,8 +66,6 @@ void display_task_0(void *pvParameters)
       case TRIPLE:
         lastDispEvent = DispState::PRIMARY_TRIPLE_CLICK;
         displayState->trigger(DispState::PRIMARY_TRIPLE_CLICK);
-        break;
-      case 99:
         break;
       }
     }
@@ -80,8 +79,8 @@ void display_task_0(void *pvParameters)
 void createDisplayTask0(uint8_t core, uint8_t priority)
 {
   xTaskCreatePinnedToCore(
-      display_task_0,
-      "display_task_0",
+      displayTask,
+      "displayTask",
       10000,
       NULL,
       priority,

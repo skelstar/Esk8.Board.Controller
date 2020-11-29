@@ -23,16 +23,6 @@ void primaryButtonInit()
   primaryButton.setDoubleClickHandler([](Button2 &btn) {
     if (PRINT_BUTTON_EVENTS)
       DEBUG("Primary Button double-clicked");
-    buttonQueue->send(ButtonClickType::DOUBLE);
-    // hud
-    pulseLedOn = pulseLedOn == STATE_NONE
-                     ? STATE_OFF
-                     : pulseLedOn == STATE_OFF
-                           ? STATE_ON
-                           : STATE_OFF;
-    hudMessageQueue->send(pulseLedOn
-                              ? HUDCommand::PULSE_RED
-                              : HUDCommand::IDLE);
   });
 
   primaryButton.setTripleClickHandler([](Button2 &btn) {

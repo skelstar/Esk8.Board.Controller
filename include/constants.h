@@ -2,6 +2,7 @@
 
 enum ButtonClickType
 {
+  NO_CLICK,
   SINGLE,
   DOUBLE,
   TRIPLE
@@ -49,7 +50,9 @@ namespace DispState
     assertEnum("DispState", Length, ARRAY_SIZE(names));
   }
 } // namespace DispState
+
 //------------------------------------------------------------
+
 namespace CommsState
 {
   enum Event
@@ -57,7 +60,7 @@ namespace CommsState
     NO_EVENT = 0,
     PKT_RXD,
     BOARD_TIMEDOUT,
-    BD_FIRST_PACKET,
+    BOARD_FIRST_PACKET,
     Length, // leave this one (used for aserting)
   };
 
@@ -65,7 +68,7 @@ namespace CommsState
       "NO_EVENT",
       "PKT_RXD",
       "BOARD_TIMEDOUT",
-      "BD_FIRST_PACKET",
+      "BOARD_FIRST_PACKET",
   };
 
   void assertThis()
@@ -73,6 +76,33 @@ namespace CommsState
     assertEnum("CommsState", Length, ARRAY_SIZE(names));
   }
 } // namespace CommsState
+
+//------------------------------------------------------------
+
+namespace HUDTask
+{
+  enum Message
+  {
+    NONE,
+    BOARD_DISCONNECTED,
+    WARNING_ACK,
+    CONTROLLER_RESET,
+    MessageLength,
+  };
+
+  const char *messageName[] = {
+      "NONE",
+      "BOARD_DISCONNECTED",
+      "CONTROLLER_RESET",
+      "WARNING_ACK",
+  };
+
+  void assertThis()
+  {
+    assertEnum("HUDTaskMessage", MessageLength, ARRAY_SIZE(messageName));
+  }
+} // namespace HUDTask
+
 //------------------------------------------------------------
 #define LCD_WIDTH 240
 #define LCD_HEIGHT 135
@@ -88,18 +118,34 @@ namespace CommsState
 #ifndef PRINT_COMMS_STATE_EVENT
 #define PRINT_COMMS_STATE_EVENT 0
 #endif
+#ifndef PRINT_THROTTLE
+#define PRINT_THROTTLE 0
+#endif
+#ifndef PRINT_RESET_DETECTION
+#define PRINT_RESET_DETECTION 0
+#endif
+#ifndef PRINT_DISP_STATE
+#define PRINT_DISP_STATE 0
+#endif
+#ifndef PRINT_DISP_STATE_EVENT
+#define PRINT_DISP_STATE_EVENT 0
+#endif
 #ifndef SUPPRESS_EV_COMMS_PKT_RXD
 #define SUPPRESS_EV_COMMS_PKT_RXD 0
-#endif
-#ifndef FEATURE_CRUISE_CONTROL
-#define FEATURE_CRUISE_CONTROL false
-#endif
-#ifndef FEATURE_PUSH_TO_START
-#define FEATURE_PUSH_TO_START false
 #endif
 #ifndef PRINT_BUTTON_EVENTS
 #define PRINT_BUTTON_EVENTS 0
 #endif
+#ifndef PRINT_HUD_COMMS
+#define PRINT_HUD_COMMS 0
+#endif
+#ifndef STORE_SNAPSHOT_INTERVAL
+#define STORE_SNAPSHOT_INTERVAL 5000
+#endif
+#ifndef SUPPRESS_EV_COMMS_PKT_RXD
+#define SUPPRESS_EV_COMMS_PKT_RXD 1
+#endif
+
 //-----------------------------------------------------
 
 enum TriState

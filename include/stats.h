@@ -109,9 +109,8 @@ private:
       // time to store in memory
       storeInMemory<ulong>(STORE_STATS_TRIP_TIME, timeMovingMS);
       _lastStoreTimeMs = timeMovingMS;
-#ifdef PRINT_RESET_DETECTION
-      Serial.printf("Storing time in memory now : %ums\n", timeMovingMS);
-#endif
+      if (PRINT_RESET_DETECTION)
+        Serial.printf("Storing time in memory now : %ums\n", timeMovingMS);
     }
   }
 };

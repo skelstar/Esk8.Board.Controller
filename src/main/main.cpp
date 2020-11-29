@@ -14,6 +14,7 @@
 #include <elapsedMillis.h>
 #include <rom/rtc.h> // for reset reason
 #include <shared-utils.h>
+#include <types.h>
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
 #define SOFT_SPI_MOSI_PIN 13 // Blue
@@ -23,8 +24,9 @@
 #define NRF_CE 17
 #define NRF_CS 2
 
-#include "$PROJECT_HASH/../types.h"
 #include <constants.h>
+
+CommsState::Event ev = CommsState::Event::BOARD_FIRST_PACKET;
 
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
@@ -33,24 +35,23 @@
 #include <Preferences.h>
 #include <BatteryLib.h>
 #include <HUDData.h>
-#include <EventQueueManager.h>
+#include <QueueManager.h>
+
+HUDData hudData(HUDCommand::MODE_NONE, HUDCommand::BLACK);
+
 //------------------------------------------------------------
 
-xQueueHandle xDisplayChangeEventQueue;
+xQueueHandle xDisplayEventQueue;
 xQueueHandle xCommsStateEventQueue;
 xQueueHandle xButtonPushEventQueue;
-xQueueHandle xHUDMessageEventQueue;
+xQueueHandle xHUDCommandEventQueue;
 xQueueHandle xHUDActionQueue;
-xQueueHandle xTaskActionEventQueue;
 
-EventQueueManager *displayChangeQueueManager;
-EventQueueManager *nrfCommsQueueManager;
-EventQueueManager *buttonQueue;
-EventQueueManager *hudMessageQueue;
-EventQueueManager *hudActionQueueManager;
-EventQueueManager *taskQueueManager;
-
-xTaskHandle hudTaskHandle;
+QueueManager *displayQueue;
+QueueManager *nrfCommsQueue;
+QueueManager *buttonQueue;
+QueueManager *hudCommandQueue;
+QueueManager *hudActionQueue;
 
 //------------------------------------------------------------
 enum FeatureType
@@ -109,6 +110,13 @@ ControllerConfig controller_config;
 
 BoardClass board;
 
+class HUD
+{
+public:
+  bool connected = false;
+};
+HUD hud;
+
 //------------------------------------------------------------------
 
 Preferences statsStore;
@@ -165,14 +173,13 @@ void sendToBoard();
 
 //------------------------------------------------------------------
 
-#define ENCODER_BRAKE_COUNTS 20
-#define ENCODER_ACCEL_COUNTS 20
-
 class Config
 {
 public:
   uint8_t headlightMode;
-} config;
+};
+
+Config config;
 
 #define STORE_CONFIG "config"
 #define STORE_CONFIG_ACCEL_COUNTS "accel counts"
@@ -193,8 +200,6 @@ void storeTimeMovingInMemory()
 
 ThrottleClass throttle;
 
-HUDData hudData;
-
 //---------------------------------------------------------------
 
 #include <Button2.h>
@@ -204,9 +209,11 @@ HUDData hudData;
 #include <displayState.h>
 
 #include <nrf_comms.h>
-#include <tasks/display_task_0.h>
-#include <tasks/comms_connected_state.h>
-#include <tasks/hudTask.h>
+
+#include <tasks/core0/displayTask.h>
+#include <tasks/core0/commsStateTask.h>
+#include <tasks/core1/hudTask.h>
+
 #include <features/battery_measure.h>
 
 #include <peripherals.h>
@@ -219,7 +226,9 @@ void asserts()
   DispState::assertThis();
   CommsState::assertThis();
   HUDAction::assertThis();
+  HUDCommand::assertThis();
   Packet::assertThis();
+  HUDTask::assertThis();
 }
 //------------------------------------------------------------------
 
@@ -251,9 +260,8 @@ void setup()
     // statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
     storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, stats.soft_resets);
     stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS_TRIP_TIME);
-#ifdef PRINT_RESET_DETECTION
-    Serial.printf("RESET!!! =========> %d (%ums)\n", stats.soft_resets, stats.timeMovingMS);
-#endif
+    if (PRINT_RESET_DETECTION)
+      Serial.printf("RESET!!! =========> %d (%ums)\n", stats.soft_resets, stats.timeMovingMS);
   }
   else if (stats.powerOnReset())
   {
@@ -280,22 +288,20 @@ void setup()
   // CORE_1
   createHudTask(CORE_1, TASK_PRIORITY_1);
 
-  xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
+  xDisplayEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
-  xHUDMessageEventQueue = xQueueCreate(3, sizeof(uint8_t));
+  xHUDCommandEventQueue = xQueueCreate(3, sizeof(uint8_t));
   xHUDActionQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
-  xTaskActionEventQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
 
-  displayChangeQueueManager = new EventQueueManager(xDisplayChangeEventQueue, 5);
-  nrfCommsQueueManager = new EventQueueManager(xCommsStateEventQueue, 5);
-  buttonQueue = new EventQueueManager(xButtonPushEventQueue, 10);
-  hudMessageQueue = new EventQueueManager(xHUDMessageEventQueue, 10);
-  hudActionQueueManager = new EventQueueManager(xHUDActionQueue, 3);
-  taskQueueManager = new EventQueueManager(xTaskActionEventQueue, 5);
+  displayQueue = new QueueManager(xDisplayEventQueue, 5);
+  nrfCommsQueue = new QueueManager(xCommsStateEventQueue, 5);
+  buttonQueue = new QueueManager(xButtonPushEventQueue, 10);
+  hudCommandQueue = new QueueManager(xHUDCommandEventQueue, 10);
+  hudActionQueue = new QueueManager(xHUDActionQueue, 3);
 
-  hudMessageQueue->setSentEventCallback([](uint8_t ev) {
-    Serial.printf("-->hudMessageQueue->send: (%s)\n", HUDCommand::names[ev]);
+  hudCommandQueue->setSentEventCallback([](uint8_t ev) {
+    // Serial.printf("-->hudCommandQueue->send: (%s)\n", HUDTask::messageName[ev]);
   });
 
   while (!display_task_initialised)
@@ -305,31 +311,7 @@ void setup()
 }
 //---------------------------------------------------------------
 
-elapsedMillis
-    since_sent_config_to_board,
-    sinceNRFUpdate,
-    sinceSentToHud,
-    sinceSendTestCommand,
-    sinceLastSwReset;
-uint8_t old_throttle;
-
-HUDCommand::Event hudCommands[] = {
-    HUDCommand::IDLE,
-    HUDCommand::FLASH_GREEN,
-    HUDCommand::PULSE_RED,
-    HUDCommand::IDLE,
-    HUDCommand::SPIN_GREEN,
-};
-
-ulong hudCommandPauses[] = {
-    5000,
-    1000,
-    3000,
-    10000,
-    1000,
-};
-
-uint8_t hudCommandIdx = 0;
+elapsedMillis sinceNRFUpdate;
 
 void loop()
 {
@@ -340,17 +322,7 @@ void loop()
 
   if (board.hasTimedout())
   {
-    nrfCommsQueueManager->send(CommsState::BOARD_TIMEDOUT);
-  }
-
-  sinceSentToHud = 0;
-  if (sinceSendTestCommand > hudCommandPauses[hudCommandIdx])
-  {
-    sinceSendTestCommand = 0;
-    bool ok = sendPacketToHud(hudCommands[hudCommandIdx++], true);
-    stats.updateHud(ok);
-    if (hudCommandIdx == ARRAY_SIZE(hudCommands))
-      hudCommandIdx = 0;
+    nrfCommsQueue->send(CommsState::BOARD_TIMEDOUT);
   }
 
   if (sinceNRFUpdate > 20)

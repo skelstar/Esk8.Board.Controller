@@ -1,54 +1,53 @@
+#ifndef ESK8_SHARED_TYPES_H
+#include <types.h>
+#endif
 
 void processHUDPacket();
 void processBoardPacket();
 void sendConfigToBoard();
 void sendPacketToBoard();
 bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType);
+bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, bool print = false);
+
+template <typename T>
+T readFromNrf();
+template <typename T>
+bool sendTo(uint8_t who, Packet::Type t, T data);
 
 //------------------------------------------------------------------
-void packetAvailable_cb(uint16_t from_id, uint8_t type)
+void packetAvailable_cb(uint16_t from_id, uint8_t t)
 {
-  if (type == (uint8_t)Packet::HUD)
+  if (t == (uint8_t)Packet::HUD)
   {
+    sinceLastHudPacket = 0;
+    hud.connected = true;
     processHUDPacket();
   }
   else
   {
+    sinceLastBoardPacketRx = 0;
     processBoardPacket();
+    nrfCommsQueue->send(CommsState::PKT_RXD);
   }
-  nrfCommsQueueManager->send(CommsState::PKT_RXD);
 }
 //------------------------------------------------------------------
+
 void processHUDPacket()
 {
-  sinceLastHudPacket = 0;
-
-  HUDAction::Event ev;
-  uint8_t buff[sizeof(HUDAction::Event)];
-  nrf24.read_into(buff, sizeof(HUDAction::Event));
-  memcpy(&ev, &buff, sizeof(HUDAction::Event));
-
-  switch (ev)
+  HUDAction::Event ev = readFromNrf<HUDAction::Event>();
+  if (ev == HUDAction::HEARTBEAT)
   {
-  case HUDAction::NONE:
-  case HUDAction::HEARTBEAT:
-  case HUDAction::DBLE_CLICK:
-  case HUDAction::TRPLE_CLICK:
-    Serial.printf("<-- HUD: %s\n", HUDAction::names[(int)ev]);
-    break;
+    hud.connected = sendCommandToHud(HUDCommand::MODE_NONE, HUDCommand::BLACK);
   }
+  if (PRINT_HUD_COMMS)
+    Serial.printf("<-- HUD: %s\n", HUDAction::names[(int)ev]);
 }
 //------------------------------------------------------------------
 void processBoardPacket()
 {
-  sinceLastBoardPacketRx = 0;
+  VescData packet = readFromNrf<VescData>();
 
-  VescData board_packet;
-  uint8_t buff[sizeof(VescData)];
-  nrf24.read_into(buff, sizeof(VescData));
-  memcpy(&board_packet, &buff, sizeof(VescData));
-
-  board.save(board_packet);
+  board.save(packet);
 
   if (board.packet.reason == FIRST_PACKET)
   {
@@ -59,7 +58,7 @@ void processBoardPacket()
     */
     DEBUG("*** board's first packet!! ***");
 
-    nrfCommsQueueManager->send(CommsState::BD_FIRST_PACKET);
+    nrfCommsQueue->send(CommsState::BOARD_FIRST_PACKET);
 
     controller_packet.id = 0;
     sendConfigToBoard();
@@ -68,17 +67,17 @@ void processBoardPacket()
   }
   else if (board.startedMoving())
   {
-    displayChangeQueueManager->send(DispState::MOVING);
-    hudMessageQueue->send(HUDAction::HEARTBEAT);
+    displayQueue->send(DispState::MOVING);
+    sendCommandToHud(HUDCommand::FLASH, HUDCommand::BLUE);
   }
   else if (board.hasStopped())
   {
-    displayChangeQueueManager->send(DispState::STOPPED);
+    displayQueue->send(DispState::STOPPED);
+    sendCommandToHud(HUDCommand::MODE_NONE, HUDCommand::BLACK);
   }
   else if (board.valuesChanged())
   {
-    Serial.printf("board value changed\n");
-    displayChangeQueueManager->send(DispState::UPDATE);
+    displayQueue->send(DispState::UPDATE);
   }
 
   if (board.getCommand() == CommandType::RESET)
@@ -110,32 +109,26 @@ void sendPacketToBoard()
     DEBUGVAL(board.packet.id, controller_packet.id);
   }
 
-  uint8_t bs[sizeof(ControllerData)];
-  memcpy(bs, &controller_packet, sizeof(ControllerData));
-
   vTaskSuspendAll();
-  sendPacket(bs, sizeof(ControllerData), Packet::CONTROL);
+  sendTo<ControllerData>(COMMS_BOARD, Packet::CONTROL, controller_packet);
   xTaskResumeAll();
 
   controller_packet.id++;
 }
 //------------------------------------------------------------------
 
-bool sendPacketToHud(HUDCommand::Event command, bool print = false)
+bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, bool print)
 {
-  HUDData packet;
+  HUDData packet(mode, colour);
   packet.id = hudData.id++;
-  packet.state = command;
   elapsedMillis sinceSendingToHud = 0;
 
-  uint8_t bs[sizeof(HUDData)];
-  memcpy(bs, &packet, sizeof(HUDData));
-  // takes 3ms if OK, 30ms if not OK
-  vTaskSuspendAll();
-  bool success = nrf24.send(COMMS_HUD, Packet::HUD, bs, sizeof(HUDData));
-  xTaskResumeAll();
+  bool success = sendTo<HUDData>(COMMS_HUD, Packet::HUD, packet);
   if (print)
-    Serial.printf("--> HUD:%s (%d) - %s (took %lums)\n", HUDCommand::names[command], packet.id, success ? "SUCCESS" : "FAILED!!!", (unsigned long)sinceSendingToHud);
+    Serial.printf(
+        "--> HUD: mode=%s colour=%s\n",
+        HUDCommand::modeNames[(int)packet.mode],
+        HUDCommand::colourName[(int)packet.colour]);
   return success;
 }
 //------------------------------------------------------------------
@@ -154,4 +147,25 @@ bool boardTimedOut()
   return board.sinceLastPacket > (timeout + 100);
 }
 
+//------------------------------------------------------------------
+
+template <typename T>
+T readFromNrf()
+{
+  T ev;
+  uint8_t buff[sizeof(T)];
+  nrf24.read_into(buff, sizeof(T));
+  memcpy(&ev, &buff, sizeof(T));
+  return ev;
+}
+//------------------------------------------------------------------
+template <typename T>
+bool sendTo(uint8_t who, Packet::Type t, T data)
+{
+  uint8_t len = sizeof(T);
+  uint8_t bs[len];
+  memcpy(bs, &data, len);
+  // takes 3ms if OK, 30ms if not OK
+  return nrf24.send(who, t, bs, len);
+}
 //------------------------------------------------------------------

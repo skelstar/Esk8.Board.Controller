@@ -32,9 +32,6 @@ State dispState_disconnected(
 State dispState_stoppedScreen(
     [] {
       print_disp_state("...dispState_stoppedScreen", DispState::names[(int)lastDispEvent]);
-#ifdef PRINT_RESET_DETECTION
-      Serial.printf("STOPPED at %lums\n", stats.timeMovingMS);
-#endif
       screenWhenStopped(/*init*/ true);
     },
     [] {
@@ -43,7 +40,7 @@ State dispState_stoppedScreen(
         update_display = false;
         stats.update = false;
         screenWhenStopped(/*init*/ false);
-        updateHudIcon(stats.hudConnected);
+        updateHudIcon(hud.connected);
       }
     },
     NULL);
@@ -51,9 +48,6 @@ State dispState_stoppedScreen(
 State dispState_movingScreen(
     [] {
       print_disp_state("...dispState_movingScreen", DispState::names[(int)lastDispEvent]);
-#ifdef PRINT_RESET_DETECTION
-      Serial.printf("MOVING at %lums\n", stats.timeMovingMS);
-#endif
       sinceStoredMovingTime = 0;
       screenWhenMoving(/*init*/ true);
     },
@@ -63,7 +57,7 @@ State dispState_movingScreen(
         update_display = false;
         stats.update = false;
         screenWhenMoving(/*init*/ false);
-        updateHudIcon(stats.hudConnected);
+        updateHudIcon(hud.connected);
       }
 
       stats.addMovingTime(sinceStoredMovingTime);
@@ -76,9 +70,6 @@ State dispState_movingScreen(
 State dispState_needToAckResetsStopped(
     [] {
       print_disp_state("...dispState_needToAckResetsStopped", DispState::names[(int)lastDispEvent]);
-#ifdef PRINT_RESET_DETECTION
-      Serial.printf("ACK STOPPED at %lums\n", stats.timeMovingMS);
-#endif
       screenNeedToAckResets();
     },
     NULL, NULL);
@@ -86,9 +77,6 @@ State dispState_needToAckResetsStopped(
 State dispState_needToAckResetsMoving(
     [] {
       print_disp_state("...dispState_needToAckResetsMoving", DispState::names[(int)lastDispEvent]);
-#ifdef PRINT_RESET_DETECTION
-      Serial.printf("ACK MOVING at %lums\n", stats.timeMovingMS);
-#endif
       sinceStoredMovingTime = 0;
       screenNeedToAckResets();
     },

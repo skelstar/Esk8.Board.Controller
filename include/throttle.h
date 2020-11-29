@@ -16,9 +16,8 @@ public:
     {
       _raw = _getRaw();
       uint8_t mapped = getMappedFromRaw();
-#ifdef PRINT_THROTTLE
-      DEBUGVAL(_raw, mapped);
-#endif
+      if (PRINT_THROTTLE)
+        DEBUGVAL(_raw, mapped);
       _oldMapped = mapped;
       return mapped;
     }

@@ -6,5 +6,12 @@ class HUDData
 {
 public:
   uint32_t id;
-  HUDCommand::Event state;
+  HUDCommand::Mode mode;
+  HUDCommand::Colour colour;
+
+  HUDData(HUDCommand::Mode m, HUDCommand::Colour c)
+  {
+    mode = m;
+    colour = c;
+  }
 };
