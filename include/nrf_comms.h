@@ -184,6 +184,8 @@ bool sendMessageToHud(HUDTask::Message message, bool print)
       return sendCommandToHud(HUDCommand::CYCLE_BRIGHTNESS, HUDCommand::BLACK, HUDCommand::NO_SPEED, print);
     case HUDTask::THREE_FLASHES:
       return sendCommandToHud(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::FAST, 3, print);
+    case HUDTask::GO_TO_IDLE:
+      return sendCommandToHud(HUDCommand::MODE_NONE, HUDCommand::BLACK, HUDCommand::NO_SPEED, print);
     default:
       return true;
     }

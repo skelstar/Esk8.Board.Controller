@@ -94,6 +94,7 @@ namespace HUDTask
     ACKNOWLEDGE,
     CYCLE_BRIGHTNESS,
     THREE_FLASHES,
+    GO_TO_IDLE,
     MessageLength,
   };
 
@@ -109,6 +110,7 @@ namespace HUDTask
       "ACKNOWLEDGE",
       "CYCLE_BRIGHTNESS",
       "THREE_FLASHES",
+      "GO_TO_IDLE",
   };
 
   void assertThis()

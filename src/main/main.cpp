@@ -186,11 +186,6 @@ Config config;
 #define STORE_CONFIG_BRAKE_COUNTS "brake counts"
 Preferences configStore;
 
-void resetsAcknowledged_callback()
-{
-  storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
-}
-
 void storeTimeMovingInMemory()
 {
   storeInMemory<ulong>(STORE_STATS_TRIP_TIME, stats.timeMovingMS);
@@ -219,6 +214,7 @@ ThrottleClass throttle;
 #include <peripherals.h>
 #include <assert.h>
 #define __ASSERT_USE_STDERR
+
 //------------------------------------------------------------------
 void asserts()
 {
@@ -229,6 +225,13 @@ void asserts()
   HUDCommand::assertThis();
   Packet::assertThis();
   HUDTask::assertThis();
+}
+//------------------------------------------------------------------
+
+void resetsAcknowledged_callback()
+{
+  storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
+  hud.connected = sendMessageToHud(HUDTask::GO_TO_IDLE);
 }
 //------------------------------------------------------------------
 

@@ -40,14 +40,14 @@ State stateCommsConnected(
       displayQueue->send(DispState::CONNECTED);
       displayQueue->send(DispState::UPDATE);
 
+      hudMessageQueue->send(HUDTask::BOARD_CONNECTED);
+
       if (stats.needToAckResets())
       {
         displayQueue->send(DispState::SW_RESET);
         pulseLedOn = TriState::STATE_ON;
         hudMessageQueue->send(HUDTask::CONTROLLER_RESET);
       }
-
-      hudMessageQueue->send(HUDTask::BOARD_CONNECTED);
 
       // check board version is compatible
       bool boardCompatible = boardVersionCompatible(board.packet.version);
