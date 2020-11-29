@@ -91,6 +91,7 @@ namespace HUDTask
     BOARD_MOVING,
     BOARD_STOPPED,
     HEARTBEAT,
+    ACKNOWLEDGE,
     MessageLength,
   };
 
@@ -103,6 +104,7 @@ namespace HUDTask
       "BOARD_MOVING",
       "BOARD_STOPPED",
       "HEARTBEAT",
+      "ACKNOWLEDGE",
   };
 
   void assertThis()
@@ -149,6 +151,9 @@ namespace HUDTask
 #endif
 #ifndef PRINT_HUD_COMMS
 #define PRINT_HUD_COMMS 0
+#endif
+#ifndef PRINT_HUD_MESSAGE_QUEUE_COMMS
+#define PRINT_HUD_MESSAGE_QUEUE_COMMS 0
 #endif
 #ifndef STORE_SNAPSHOT_INTERVAL
 #define STORE_SNAPSHOT_INTERVAL 5000

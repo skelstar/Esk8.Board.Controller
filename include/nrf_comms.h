@@ -41,16 +41,16 @@ void processHUDPacket()
   switch (ev)
   {
   case HUDAction::HEARTBEAT:
-    hud.connected = sendMessageToHud(HUDTask::HEARTBEAT);
+    hud.connected = sendMessageToHud(HUDTask::ACKNOWLEDGE);
     break;
   case HUDAction::DBLE_CLICK:
-    hud.connected = sendMessageToHud(HUDTask::HEARTBEAT);
+    hud.connected = sendMessageToHud(HUDTask::ACKNOWLEDGE);
     break;
   case HUDAction::TRPLE_CLICK:
-    hud.connected = sendMessageToHud(HUDTask::HEARTBEAT);
+    hud.connected = sendMessageToHud(HUDTask::ACKNOWLEDGE);
     break;
   default:
-    hud.connected = sendMessageToHud(HUDTask::HEARTBEAT);
+    hud.connected = sendMessageToHud(HUDTask::ACKNOWLEDGE);
     break;
   }
   if (PRINT_HUD_COMMS)
@@ -175,6 +175,8 @@ bool sendMessageToHud(HUDTask::Message message, bool print)
       return sendCommandToHud(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::MED, print);
     case HUDTask::HEARTBEAT:
       return sendCommandToHud(HUDCommand::DOUBLE_FLASH, HUDCommand::BLUE, HUDCommand::FAST, print);
+    case HUDTask::ACKNOWLEDGE:
+      return sendCommandToHud(HUDCommand::DOUBLE_FLASH, HUDCommand::GREEN, HUDCommand::FAST, print);
     default:
       return true;
     }

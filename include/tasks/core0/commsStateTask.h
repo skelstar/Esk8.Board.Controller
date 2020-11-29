@@ -44,7 +44,7 @@ State stateCommsConnected(
       {
         displayQueue->send(DispState::SW_RESET);
         pulseLedOn = TriState::STATE_ON;
-        hudCommandQueue->send(HUDTask::CONTROLLER_RESET);
+        hudMessageQueue->send(HUDTask::CONTROLLER_RESET);
       }
 
       // check board version is compatible
@@ -68,7 +68,7 @@ State stateCommsDisconnected(
 
       stats.boardConnected = false;
       displayQueue->send(DispState::DISCONNECTED);
-      hudCommandQueue->send(HUDTask::BOARD_DISCONNECTED);
+      hudMessageQueue->send(HUDTask::BOARD_DISCONNECTED);
     },
     NULL, NULL);
 

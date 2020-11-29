@@ -50,7 +50,7 @@ xQueueHandle xHUDActionQueue;
 QueueManager *displayQueue;
 QueueManager *nrfCommsQueue;
 QueueManager *buttonQueue;
-QueueManager *hudCommandQueue;
+QueueManager *hudMessageQueue;
 QueueManager *hudActionQueue;
 
 //------------------------------------------------------------
@@ -297,12 +297,21 @@ void setup()
   displayQueue = new QueueManager(xDisplayEventQueue, 5);
   nrfCommsQueue = new QueueManager(xCommsStateEventQueue, 5);
   buttonQueue = new QueueManager(xButtonPushEventQueue, 10);
-  hudCommandQueue = new QueueManager(xHUDCommandEventQueue, 10);
+  hudMessageQueue = new QueueManager(xHUDCommandEventQueue, 10);
   hudActionQueue = new QueueManager(xHUDActionQueue, 3);
 
-  hudCommandQueue->setSentEventCallback([](uint8_t ev) {
-    // Serial.printf("-->hudCommandQueue->send: (%s)\n", HUDTask::messageName[ev]);
+  hudMessageQueue->setSentEventCallback([](uint8_t ev) {
+    if (PRINT_HUD_MESSAGE_QUEUE_COMMS)
+      Serial.printf("-->hudMessageQueue->send: (%s)\n", HUDTask::messageName[ev]);
   });
+  hudMessageQueue->setReadEventCallback([](uint8_t ev) {
+    if (PRINT_HUD_MESSAGE_QUEUE_COMMS)
+      Serial.printf("---hudMessageQueue<-read: (%s)\n", HUDTask::messageName[ev]);
+  });
+
+  // force value to get first packet out
+  hud.connected = true;
+  hud.connected = sendMessageToHud(HUDTask::HEARTBEAT);
 
   while (!display_task_initialised)
   {

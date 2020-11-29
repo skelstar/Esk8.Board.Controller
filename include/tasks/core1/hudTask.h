@@ -32,9 +32,9 @@ void hudTask_1(void *pvParameters)
     if (sinceHudReadFromQueue > 500)
     {
       sinceHudReadFromQueue = 0;
-      if (hudCommandQueue->messageAvailable())
+      if (hudMessageQueue->messageAvailable())
       {
-        HUDTask::Message message = hudCommandQueue->read<HUDTask::Message>();
+        HUDTask::Message message = hudMessageQueue->read<HUDTask::Message>();
 
         if (hud.connected)
         {
