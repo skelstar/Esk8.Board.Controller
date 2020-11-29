@@ -7,8 +7,8 @@ void processBoardPacket();
 void sendConfigToBoard();
 void sendPacketToBoard();
 bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType);
-bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, bool print = false);
-bool sendMessageToHud(HUDTask::Message message, bool print = false);
+bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, bool print = true);
+bool sendMessageToHud(HUDTask::Message message, bool print = true);
 
 template <typename T>
 T readFromNrf();
@@ -35,10 +35,23 @@ void packetAvailable_cb(uint16_t from_id, uint8_t t)
 
 void processHUDPacket()
 {
+  hud.connected = true;
   HUDAction::Event ev = readFromNrf<HUDAction::Event>();
-  if (ev == HUDAction::HEARTBEAT)
+
+  switch (ev)
   {
-    hud.connected = sendCommandToHud(HUDCommand::MODE_NONE, HUDCommand::BLACK, HUDCommand::NO_SPEED);
+  case HUDAction::HEARTBEAT:
+    hud.connected = sendMessageToHud(HUDTask::HEARTBEAT);
+    break;
+  case HUDAction::DBLE_CLICK:
+    hud.connected = sendMessageToHud(HUDTask::HEARTBEAT);
+    break;
+  case HUDAction::TRPLE_CLICK:
+    hud.connected = sendMessageToHud(HUDTask::HEARTBEAT);
+    break;
+  default:
+    hud.connected = sendMessageToHud(HUDTask::HEARTBEAT);
+    break;
   }
   if (PRINT_HUD_COMMS)
     Serial.printf("<-- HUD: %s\n", HUDAction::names[(int)ev]);
@@ -70,12 +83,12 @@ void processBoardPacket()
   else if (board.startedMoving())
   {
     displayQueue->send(DispState::MOVING);
-    hud.connected = sendMessageToHud(HUDTask::BOARD_MOVING, PRINT_HUD_COMMS);
+    hud.connected = sendMessageToHud(HUDTask::BOARD_MOVING);
   }
   else if (board.hasStopped())
   {
     displayQueue->send(DispState::STOPPED);
-    hud.connected = sendMessageToHud(HUDTask::BOARD_STOPPED, PRINT_HUD_COMMS);
+    hud.connected = sendMessageToHud(HUDTask::BOARD_STOPPED);
   }
   else if (board.valuesChanged())
   {
@@ -127,7 +140,7 @@ bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDComma
     HUDData packet(mode, colour, speed);
     packet.id = hudData.id++;
 
-    if (print)
+    if (print && PRINT_HUD_COMMS)
       Serial.printf(
           "--> HUD: mode=%s colour=%s\n",
           HUDCommand::modeNames[(int)packet.mode],
@@ -157,9 +170,11 @@ bool sendMessageToHud(HUDTask::Message message, bool print)
     case HUDTask::CONTROLLER_RESET:
       return sendCommandToHud(HUDCommand::Mode::SPIN, HUDCommand::Colour::RED, HUDCommand::MED, print);
     case HUDTask::BOARD_MOVING:
-      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::GREEN, HUDCommand::FAST);
+      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::GREEN, HUDCommand::FAST, print);
     case HUDTask::BOARD_STOPPED:
-      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::MED);
+      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::MED, print);
+    case HUDTask::HEARTBEAT:
+      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::BLUE, HUDCommand::MED, print);
     default:
       return true;
     }

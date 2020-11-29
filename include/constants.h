@@ -90,6 +90,7 @@ namespace HUDTask
     CONTROLLER_RESET,
     BOARD_MOVING,
     BOARD_STOPPED,
+    HEARTBEAT,
     MessageLength,
   };
 
@@ -97,10 +98,11 @@ namespace HUDTask
       "NONE",
       "BOARD_DISCONNECTED",
       "BOARD_CONNECTED",
+      "WARNING_ACK",
       "CONTROLLER_RESET",
       "BOARD_MOVING",
       "BOARD_STOPPED",
-      "WARNING_ACK",
+      "HEARTBEAT",
   };
 
   void assertThis()
