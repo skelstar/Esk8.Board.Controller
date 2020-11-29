@@ -35,41 +35,15 @@ void hudTask_1(void *pvParameters)
       if (hudCommandQueue->messageAvailable())
       {
         HUDTask::Message message = hudCommandQueue->read<HUDTask::Message>();
-        HUDCommand::Mode mode = HUDCommand::MODE_NONE;
-        HUDCommand::Colour colour = HUDCommand::BLACK;
-        switch (message)
-        {
-        case HUDTask::NONE:
-          mode = HUDCommand::Mode::MODE_NONE;
-          colour = HUDCommand::Colour::BLACK;
-          break;
-        case HUDTask::BOARD_DISCONNECTED:
-          mode = HUDCommand::Mode::PULSE;
-          colour = HUDCommand::Colour::GREEN;
-          break;
-        case HUDTask::WARNING_ACK:
-          mode = HUDCommand::Mode::MODE_NONE;
-          colour = HUDCommand::Colour::BLACK;
-          break;
-        case HUDTask::CONTROLLER_RESET:
-          mode = HUDCommand::Mode::SPIN;
-          colour = HUDCommand::Colour::RED;
-          break;
-        default:
-          break;
-        }
 
         if (hud.connected)
         {
-          bool ok = sendCommandToHud(mode, colour, true);
+          bool ok = sendMessageToHud(message);
           if (!ok)
-          {
             hud.connected = false;
-          }
         }
       }
     }
-
     vTaskDelay(10);
   }
   vTaskDelete(NULL); // deletes the current task

@@ -85,15 +85,21 @@ namespace HUDTask
   {
     NONE,
     BOARD_DISCONNECTED,
+    BOARD_CONNECTED,
     WARNING_ACK,
     CONTROLLER_RESET,
+    BOARD_MOVING,
+    BOARD_STOPPED,
     MessageLength,
   };
 
   const char *messageName[] = {
       "NONE",
       "BOARD_DISCONNECTED",
+      "BOARD_CONNECTED",
       "CONTROLLER_RESET",
+      "BOARD_MOVING",
+      "BOARD_STOPPED",
       "WARNING_ACK",
   };
 
@@ -129,6 +135,9 @@ namespace HUDTask
 #endif
 #ifndef PRINT_DISP_STATE_EVENT
 #define PRINT_DISP_STATE_EVENT 0
+#endif
+#ifndef PRINT_IF_TOTAL_FAILED_SENDING
+#define PRINT_IF_TOTAL_FAILED_SENDING 0
 #endif
 #ifndef SUPPRESS_EV_COMMS_PKT_RXD
 #define SUPPRESS_EV_COMMS_PKT_RXD 0

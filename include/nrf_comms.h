@@ -7,7 +7,8 @@ void processBoardPacket();
 void sendConfigToBoard();
 void sendPacketToBoard();
 bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType);
-bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, bool print = false);
+bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, bool print = false);
+bool sendMessageToHud(HUDTask::Message message, bool print = false);
 
 template <typename T>
 T readFromNrf();
@@ -37,7 +38,7 @@ void processHUDPacket()
   HUDAction::Event ev = readFromNrf<HUDAction::Event>();
   if (ev == HUDAction::HEARTBEAT)
   {
-    hud.connected = sendCommandToHud(HUDCommand::MODE_NONE, HUDCommand::BLACK);
+    hud.connected = sendCommandToHud(HUDCommand::MODE_NONE, HUDCommand::BLACK, HUDCommand::NO_SPEED);
   }
   if (PRINT_HUD_COMMS)
     Serial.printf("<-- HUD: %s\n", HUDAction::names[(int)ev]);
@@ -59,6 +60,7 @@ void processBoardPacket()
     DEBUG("*** board's first packet!! ***");
 
     nrfCommsQueue->send(CommsState::BOARD_FIRST_PACKET);
+    hud.connected = sendMessageToHud(HUDTask::Message::BOARD_CONNECTED);
 
     controller_packet.id = 0;
     sendConfigToBoard();
@@ -68,12 +70,12 @@ void processBoardPacket()
   else if (board.startedMoving())
   {
     displayQueue->send(DispState::MOVING);
-    sendCommandToHud(HUDCommand::FLASH, HUDCommand::BLUE);
+    hud.connected = sendMessageToHud(HUDTask::BOARD_MOVING, PRINT_HUD_COMMS);
   }
   else if (board.hasStopped())
   {
     displayQueue->send(DispState::STOPPED);
-    sendCommandToHud(HUDCommand::MODE_NONE, HUDCommand::BLACK);
+    hud.connected = sendMessageToHud(HUDTask::BOARD_STOPPED, PRINT_HUD_COMMS);
   }
   else if (board.valuesChanged())
   {
@@ -106,7 +108,8 @@ void sendPacketToBoard()
   if (!rxLastResponse && stats.boardConnected)
   {
     stats.total_failed_sending += 1;
-    DEBUGVAL(board.packet.id, controller_packet.id);
+    if (PRINT_IF_TOTAL_FAILED_SENDING)
+      DEBUGVAL(board.packet.id, controller_packet.id);
   }
 
   vTaskSuspendAll();
@@ -117,20 +120,57 @@ void sendPacketToBoard()
 }
 //------------------------------------------------------------------
 
-bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, bool print)
+bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, bool print)
 {
-  HUDData packet(mode, colour);
-  packet.id = hudData.id++;
-  elapsedMillis sinceSendingToHud = 0;
+  if (hud.connected)
+  {
+    HUDData packet(mode, colour, speed);
+    packet.id = hudData.id++;
 
-  bool success = sendTo<HUDData>(COMMS_HUD, Packet::HUD, packet);
-  if (print)
-    Serial.printf(
-        "--> HUD: mode=%s colour=%s\n",
-        HUDCommand::modeNames[(int)packet.mode],
-        HUDCommand::colourName[(int)packet.colour]);
-  return success;
+    if (print)
+      Serial.printf(
+          "--> HUD: mode=%s colour=%s\n",
+          HUDCommand::modeNames[(int)packet.mode],
+          HUDCommand::colourName[(int)packet.colour]);
+    return sendTo<HUDData>(COMMS_HUD, Packet::HUD, packet);
+  }
+  else
+  {
+    Serial.printf("WARNING: command not sent because hud offline\n");
+  }
+  return false;
 }
+//------------------------------------------------------------------
+
+bool sendMessageToHud(HUDTask::Message message, bool print)
+{
+  if (hud.connected)
+  {
+    switch (message)
+    {
+    case HUDTask::BOARD_DISCONNECTED:
+      return sendCommandToHud(HUDCommand::Mode::PULSE, HUDCommand::Colour::GREEN, HUDCommand::FAST, print);
+    case HUDTask::BOARD_CONNECTED:
+      return sendCommandToHud(HUDCommand::Mode::MODE_NONE, HUDCommand::Colour::BLACK, HUDCommand::NO_SPEED, print);
+    case HUDTask::WARNING_ACK:
+      return sendCommandToHud(HUDCommand::Mode::PULSE, HUDCommand::Colour::RED, HUDCommand::SLOW, print);
+    case HUDTask::CONTROLLER_RESET:
+      return sendCommandToHud(HUDCommand::Mode::SPIN, HUDCommand::Colour::RED, HUDCommand::MED, print);
+    case HUDTask::BOARD_MOVING:
+      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::GREEN, HUDCommand::FAST);
+    case HUDTask::BOARD_STOPPED:
+      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::MED);
+    default:
+      return true;
+    }
+  }
+  else
+  {
+    Serial.printf("WARNING: message not sent because hud offline\n");
+  }
+  return hud.connected;
+}
+
 //------------------------------------------------------------------
 
 bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType)

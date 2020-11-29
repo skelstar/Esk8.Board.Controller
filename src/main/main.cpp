@@ -37,7 +37,7 @@ CommsState::Event ev = CommsState::Event::BOARD_FIRST_PACKET;
 #include <HUDData.h>
 #include <QueueManager.h>
 
-HUDData hudData(HUDCommand::MODE_NONE, HUDCommand::BLACK);
+HUDData hudData(HUDCommand::MODE_NONE, HUDCommand::BLACK, HUDCommand::NO_SPEED);
 
 //------------------------------------------------------------
 
