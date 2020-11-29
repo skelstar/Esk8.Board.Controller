@@ -9,11 +9,13 @@ public:
   HUDCommand::Mode mode;
   HUDCommand::Colour colour;
   HUDCommand::Speed speed;
+  uint8_t number;
 
-  HUDData(HUDCommand::Mode m, HUDCommand::Colour c, HUDCommand::Speed spd)
+  HUDData(HUDCommand::Mode m, HUDCommand::Colour c, HUDCommand::Speed spd, uint8_t num = 0)
   {
     mode = m;
     colour = c;
     speed = spd;
+    number = num;
   }
 };

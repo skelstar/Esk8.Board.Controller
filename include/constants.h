@@ -92,6 +92,8 @@ namespace HUDTask
     BOARD_STOPPED,
     HEARTBEAT,
     ACKNOWLEDGE,
+    CYCLE_BRIGHTNESS,
+    THREE_FLASHES,
     MessageLength,
   };
 
@@ -105,6 +107,8 @@ namespace HUDTask
       "BOARD_STOPPED",
       "HEARTBEAT",
       "ACKNOWLEDGE",
+      "CYCLE_BRIGHTNESS",
+      "THREE_FLASHES",
   };
 
   void assertThis()

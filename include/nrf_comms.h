@@ -7,7 +7,7 @@ void processBoardPacket();
 void sendConfigToBoard();
 void sendPacketToBoard();
 bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType);
-bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, bool print = true);
+bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, uint8_t number = 1, bool print = true);
 bool sendMessageToHud(HUDTask::Message message, bool print = true);
 
 template <typename T>
@@ -41,13 +41,16 @@ void processHUDPacket()
   switch (ev)
   {
   case HUDAction::HEARTBEAT:
+    hud.connected = sendMessageToHud(HUDTask::HEARTBEAT);
+    break;
+  case HUDAction::ONE_CLICK:
     hud.connected = sendMessageToHud(HUDTask::ACKNOWLEDGE);
     break;
-  case HUDAction::DBLE_CLICK:
-    hud.connected = sendMessageToHud(HUDTask::ACKNOWLEDGE);
+  case HUDAction::TWO_CLICK:
+    hud.connected = sendMessageToHud(HUDTask::CYCLE_BRIGHTNESS);
     break;
-  case HUDAction::TRPLE_CLICK:
-    hud.connected = sendMessageToHud(HUDTask::ACKNOWLEDGE);
+  case HUDAction::THREE_CLICK:
+    hud.connected = sendMessageToHud(HUDTask::THREE_FLASHES);
     break;
   default:
     hud.connected = sendMessageToHud(HUDTask::ACKNOWLEDGE);
@@ -133,11 +136,11 @@ void sendPacketToBoard()
 }
 //------------------------------------------------------------------
 
-bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, bool print)
+bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, uint8_t number, bool print)
 {
   if (hud.connected)
   {
-    HUDData packet(mode, colour, speed);
+    HUDData packet(mode, colour, speed, number);
     packet.id = hudData.id++;
 
     if (print && PRINT_HUD_COMMS)
@@ -170,13 +173,17 @@ bool sendMessageToHud(HUDTask::Message message, bool print)
     case HUDTask::CONTROLLER_RESET:
       return sendCommandToHud(HUDCommand::Mode::SPIN, HUDCommand::Colour::RED, HUDCommand::MED, print);
     case HUDTask::BOARD_MOVING:
-      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::GREEN, HUDCommand::FAST, print);
+      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::GREEN, HUDCommand::FAST, 1, print);
     case HUDTask::BOARD_STOPPED:
-      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::MED, print);
+      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::MED, 1, print);
     case HUDTask::HEARTBEAT:
-      return sendCommandToHud(HUDCommand::DOUBLE_FLASH, HUDCommand::BLUE, HUDCommand::FAST, print);
+      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::BLUE, HUDCommand::MED, 1, print);
     case HUDTask::ACKNOWLEDGE:
-      return sendCommandToHud(HUDCommand::DOUBLE_FLASH, HUDCommand::GREEN, HUDCommand::FAST, print);
+      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::GREEN, HUDCommand::FAST, 2, print);
+    case HUDTask::CYCLE_BRIGHTNESS:
+      return sendCommandToHud(HUDCommand::CYCLE_BRIGHTNESS, HUDCommand::BLACK, HUDCommand::NO_SPEED, print);
+    case HUDTask::THREE_FLASHES:
+      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::FAST, 3, print);
     default:
       return true;
     }
