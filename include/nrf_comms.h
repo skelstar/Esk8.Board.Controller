@@ -174,7 +174,7 @@ bool sendMessageToHud(HUDTask::Message message, bool print)
     case HUDTask::BOARD_STOPPED:
       return sendCommandToHud(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::MED, print);
     case HUDTask::HEARTBEAT:
-      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::BLUE, HUDCommand::MED, print);
+      return sendCommandToHud(HUDCommand::DOUBLE_FLASH, HUDCommand::BLUE, HUDCommand::FAST, print);
     default:
       return true;
     }
