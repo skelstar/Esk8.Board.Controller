@@ -47,6 +47,8 @@ State stateCommsConnected(
         hudMessageQueue->send(HUDTask::CONTROLLER_RESET);
       }
 
+      hudMessageQueue->send(HUDTask::BOARD_CONNECTED);
+
       // check board version is compatible
       bool boardCompatible = boardVersionCompatible(board.packet.version);
       if (!boardCompatible)
