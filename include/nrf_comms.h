@@ -10,11 +10,6 @@ bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType);
 bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, uint8_t number = 1, bool print = true);
 bool sendMessageToHud(HUDTask::Message message, bool print = true);
 
-template <typename T>
-T readFromNrf();
-template <typename T>
-bool sendTo(uint8_t who, Packet::Type t, T data);
-
 //------------------------------------------------------------------
 void packetAvailable_cb(uint16_t from_id, uint8_t t)
 {
@@ -36,7 +31,7 @@ void packetAvailable_cb(uint16_t from_id, uint8_t t)
 void processHUDPacket()
 {
   hud.connected = true;
-  HUDAction::Event ev = readFromNrf<HUDAction::Event>();
+  HUDAction::Event ev = hudClient.read();
 
   switch (ev)
   {
@@ -62,7 +57,7 @@ void processHUDPacket()
 //------------------------------------------------------------------
 void processBoardPacket()
 {
-  VescData packet = readFromNrf<VescData>();
+  VescData packet = boardClient.read();
 
   board.save(packet);
 
@@ -113,6 +108,7 @@ void sendConfigToBoard()
   memcpy(bs, &controller_config, sizeof(ControllerConfig));
   uint8_t len = sizeof(ControllerConfig);
 
+  // TODO need to either create another client or make client more generic
   sendPacket(bs, len, Packet::CONFIG);
 }
 //------------------------------------------------------------------
@@ -129,7 +125,7 @@ void sendPacketToBoard()
   }
 
   vTaskSuspendAll();
-  sendTo<ControllerData>(COMMS_BOARD, Packet::CONTROL, controller_packet);
+  boardClient.sendTo(Packet::CONTROL, controller_packet);
   xTaskResumeAll();
 
   controller_packet.id++;
@@ -142,7 +138,7 @@ bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDComma
   {
     HUDData packet(mode, colour, speed, number);
     packet.id = hudData.id++;
-    return sendTo<HUDData>(COMMS_HUD, Packet::HUD, packet);
+    return hudClient.sendTo(Packet::HUD, packet);
   }
   else
   {
@@ -209,26 +205,3 @@ bool boardTimedOut()
   unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
   return board.sinceLastPacket > (timeout + 100);
 }
-
-//------------------------------------------------------------------
-
-template <typename T>
-T readFromNrf()
-{
-  T ev;
-  uint8_t buff[sizeof(T)];
-  nrf24.read_into(buff, sizeof(T));
-  memcpy(&ev, &buff, sizeof(T));
-  return ev;
-}
-//------------------------------------------------------------------
-template <typename T>
-bool sendTo(uint8_t who, Packet::Type t, T data)
-{
-  uint8_t len = sizeof(T);
-  uint8_t bs[len];
-  memcpy(bs, &data, len);
-  // takes 3ms if OK, 30ms if not OK
-  return nrf24.send(who, t, bs, len);
-}
-//------------------------------------------------------------------
