@@ -1,4 +1,4 @@
-
+#define CONSTANTS_H
 
 enum ButtonClickType
 {
@@ -166,6 +166,9 @@ namespace HUDTask
 #endif
 #ifndef SUPPRESS_EV_COMMS_PKT_RXD
 #define SUPPRESS_EV_COMMS_PKT_RXD 1
+#endif
+#ifndef IGNORE_IF_HUD_OFFLINE
+#define IGNORE_IF_HUD_OFFLINE 0
 #endif
 
 //-----------------------------------------------------

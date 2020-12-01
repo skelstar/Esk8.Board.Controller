@@ -5,9 +5,8 @@
 
 void displayStateEventCb(int ev)
 {
-#ifdef PRINT_DISP_STATE_EVENT
-  Serial.printf("--> disp: %s\n", DispState::names[ev]);
-#endif
+  if (PRINT_DISP_STATE_EVENT)
+    Serial.printf("--> disp: %s\n", DispState::names[ev]);
 }
 
 void displayTask(void *pvParameters)
