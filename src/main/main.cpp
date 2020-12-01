@@ -30,6 +30,7 @@ CommsState::Event ev = CommsState::Event::BOARD_FIRST_PACKET;
 
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
+#include <clients/hudClient.h>
 
 #include <TFT_eSPI.h>
 #include <Preferences.h>
@@ -132,7 +133,7 @@ Stats stats;
 //------------------------------------------------------------------
 
 NRF24L01Lib nrf24;
-
+HUDClient hudClient(&nrf24);
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
@@ -323,7 +324,7 @@ void setup()
 }
 //---------------------------------------------------------------
 
-elapsedMillis sinceNRFUpdate;
+elapsedMillis sinceNRFUpdate, sinceSentToHudTest;
 
 void loop()
 {
@@ -341,6 +342,14 @@ void loop()
   {
     sinceNRFUpdate = 0;
     nrf24.update();
+  }
+
+  if (sinceSentToHudTest > 2000)
+  {
+    sinceSentToHudTest = 0;
+    HUDData data(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::FAST);
+    bool ok = hudClient.sendTo(COMMS_HUD, Packet::HUD, data);
+    Serial.printf("sent to HUD test: %s\n", ok ? "OK" : "FAIL");
   }
 
   primaryButton.loop();
