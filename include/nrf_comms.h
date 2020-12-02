@@ -7,56 +7,14 @@ void processBoardPacket();
 void sendConfigToBoard();
 void sendPacketToBoard();
 bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType);
-bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, uint8_t number = 1, bool print = true);
-bool sendMessageToHud(HUDTask::Message message, bool print = true);
+void sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, uint8_t number = 1, bool print = true);
+void sendMessageToHud(HUDTask::Message message, bool print = true);
 
 //------------------------------------------------------------------
-void packetAvailable_cb(uint16_t from_id, uint8_t t)
+void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 {
-  if (t == (uint8_t)Packet::HUD)
-  {
-    sinceLastHudPacket = 0;
-    hud.connected = true;
-    processHUDPacket();
-  }
-  else
-  {
-    sinceLastBoardPacketRx = 0;
-    processBoardPacket();
-    nrfCommsQueue->send(CommsState::PKT_RXD);
-  }
-}
-//------------------------------------------------------------------
+  sinceLastBoardPacketRx = 0;
 
-void processHUDPacket()
-{
-  hud.connected = true;
-  HUDAction::Event ev = hudClient.read();
-
-  switch (ev)
-  {
-  case HUDAction::HEARTBEAT:
-    hud.connected = sendMessageToHud(HUDTask::HEARTBEAT);
-    break;
-  case HUDAction::ONE_CLICK:
-    hud.connected = sendMessageToHud(HUDTask::ACKNOWLEDGE);
-    break;
-  case HUDAction::TWO_CLICK:
-    hud.connected = sendMessageToHud(HUDTask::CYCLE_BRIGHTNESS);
-    break;
-  case HUDAction::THREE_CLICK:
-    hud.connected = sendMessageToHud(HUDTask::THREE_FLASHES);
-    break;
-  default:
-    hud.connected = sendMessageToHud(HUDTask::ACKNOWLEDGE);
-    break;
-  }
-  if (PRINT_HUD_COMMS)
-    Serial.printf("<-- HUD: %s\n", HUDAction::names[(int)ev]);
-}
-//------------------------------------------------------------------
-void processBoardPacket()
-{
   VescData packet = boardClient.read();
 
   board.save(packet);
@@ -71,7 +29,7 @@ void processBoardPacket()
     DEBUG("*** board's first packet!! ***");
 
     nrfCommsQueue->send(CommsState::BOARD_FIRST_PACKET);
-    hud.connected = sendMessageToHud(HUDTask::Message::BOARD_CONNECTED);
+    sendMessageToHud(HUDTask::Message::BOARD_CONNECTED);
 
     controller_packet.id = 0;
     sendConfigToBoard();
@@ -81,12 +39,12 @@ void processBoardPacket()
   else if (board.startedMoving())
   {
     displayQueue->send(DispState::MOVING);
-    hud.connected = sendMessageToHud(HUDTask::BOARD_MOVING);
+    sendMessageToHud(HUDTask::BOARD_MOVING);
   }
   else if (board.hasStopped())
   {
     displayQueue->send(DispState::STOPPED);
-    hud.connected = sendMessageToHud(HUDTask::BOARD_STOPPED);
+    sendMessageToHud(HUDTask::BOARD_STOPPED);
   }
   else if (board.valuesChanged())
   {
@@ -97,8 +55,44 @@ void processBoardPacket()
   {
     ESP.restart();
   }
-}
 
+  nrfCommsQueue->send(CommsState::PKT_RXD);
+}
+//------------------------------------------------------------------
+
+void hudPacketAvailable_cb(uint16_t from_id, uint8_t t)
+{
+  hudClient.connected();
+  HUDAction::Event ev = hudClient.read();
+  if ((uint8_t)ev > HUDAction::Length)
+  {
+    Serial.printf("WARNING: Action from HUD out of range (%d)\n", (uint8_t)ev);
+    return;
+  }
+
+  Serial.printf("hudPacketAvailable_cb: %d\n", (uint8_t)ev);
+
+  switch (ev)
+  {
+  case HUDAction::HEARTBEAT:
+    sendMessageToHud(HUDTask::HEARTBEAT);
+    break;
+  case HUDAction::ONE_CLICK:
+    sendMessageToHud(HUDTask::ACKNOWLEDGE);
+    break;
+  case HUDAction::TWO_CLICK:
+    sendMessageToHud(HUDTask::CYCLE_BRIGHTNESS);
+    break;
+  case HUDAction::THREE_CLICK:
+    sendMessageToHud(HUDTask::THREE_FLASHES);
+    break;
+  default:
+    sendMessageToHud(HUDTask::ACKNOWLEDGE);
+    break;
+  }
+  if (PRINT_HUD_COMMS)
+    Serial.printf("<-- HUD: %s\n", HUDAction::names[(uint8_t)ev]);
+}
 //------------------------------------------------------------------
 
 void sendConfigToBoard()
@@ -124,33 +118,30 @@ void sendPacketToBoard()
       DEBUGVAL(board.packet.id, controller_packet.id);
   }
 
-  vTaskSuspendAll();
-  boardClient.sendTo(Packet::CONTROL, controller_packet);
-  xTaskResumeAll();
+  bool ok = boardClient.sendTo(Packet::CONTROL, controller_packet);
 
   controller_packet.id++;
 }
 //------------------------------------------------------------------
 
-bool sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, uint8_t number, bool print)
+void sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, uint8_t number, bool print)
 {
-  if (hud.connected)
+  if (hudClient.connected())
   {
     HUDData packet(mode, colour, speed, number);
     packet.id = hudData.id++;
-    return hudClient.sendTo(Packet::HUD, packet);
+    hudClient.sendTo(Packet::HUD, packet);
   }
   else
   {
     Serial.printf("WARNING: command not sent because hud offline\n");
   }
-  return false;
 }
 //------------------------------------------------------------------
 
-bool sendMessageToHud(HUDTask::Message message, bool print)
+void sendMessageToHud(HUDTask::Message message, bool print)
 {
-  if (hud.connected)
+  if (hudClient.connected())
   {
     if (print && PRINT_HUD_COMMS)
       Serial.printf("-->HUD: %s\n", HUDTask::messageName[(int)message]);
@@ -158,45 +149,55 @@ bool sendMessageToHud(HUDTask::Message message, bool print)
     switch (message)
     {
     case HUDTask::BOARD_DISCONNECTED:
-      return sendCommandToHud(HUDCommand::Mode::PULSE, HUDCommand::Colour::GREEN, HUDCommand::FAST, print);
+      sendCommandToHud(HUDCommand::Mode::PULSE, HUDCommand::Colour::GREEN, HUDCommand::FAST, print);
+      break;
     case HUDTask::BOARD_CONNECTED:
-      return sendCommandToHud(HUDCommand::Mode::MODE_NONE, HUDCommand::Colour::BLACK, HUDCommand::NO_SPEED, print);
+      sendCommandToHud(HUDCommand::Mode::MODE_NONE, HUDCommand::Colour::BLACK, HUDCommand::NO_SPEED, print);
+      break;
     case HUDTask::WARNING_ACK:
-      return sendCommandToHud(HUDCommand::Mode::PULSE, HUDCommand::Colour::RED, HUDCommand::SLOW, print);
+      sendCommandToHud(HUDCommand::Mode::PULSE, HUDCommand::Colour::RED, HUDCommand::SLOW, print);
+      break;
     case HUDTask::CONTROLLER_RESET:
-      return sendCommandToHud(HUDCommand::Mode::SPIN, HUDCommand::Colour::RED, HUDCommand::MED, print);
+      sendCommandToHud(HUDCommand::Mode::SPIN, HUDCommand::Colour::RED, HUDCommand::MED, print);
+      break;
     case HUDTask::BOARD_MOVING:
-      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::GREEN, HUDCommand::FAST, 1, print);
+      sendCommandToHud(HUDCommand::FLASH, HUDCommand::GREEN, HUDCommand::FAST, 1, print);
+      break;
     case HUDTask::BOARD_STOPPED:
-      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::MED, 1, print);
+      sendCommandToHud(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::MED, 1, print);
+      break;
     case HUDTask::HEARTBEAT:
-      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::BLUE, HUDCommand::MED, 1, print);
+      sendCommandToHud(HUDCommand::FLASH, HUDCommand::BLUE, HUDCommand::MED, 1, print);
+      break;
     case HUDTask::ACKNOWLEDGE:
-      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::GREEN, HUDCommand::FAST, 2, print);
+      sendCommandToHud(HUDCommand::FLASH, HUDCommand::GREEN, HUDCommand::FAST, 2, print);
+      break;
     case HUDTask::CYCLE_BRIGHTNESS:
-      return sendCommandToHud(HUDCommand::CYCLE_BRIGHTNESS, HUDCommand::BLACK, HUDCommand::NO_SPEED, print);
+      sendCommandToHud(HUDCommand::CYCLE_BRIGHTNESS, HUDCommand::BLACK, HUDCommand::NO_SPEED, print);
+      break;
     case HUDTask::THREE_FLASHES:
-      return sendCommandToHud(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::FAST, 3, print);
+      sendCommandToHud(HUDCommand::FLASH, HUDCommand::RED, HUDCommand::FAST, 3, print);
+      break;
     case HUDTask::GO_TO_IDLE:
-      return sendCommandToHud(HUDCommand::MODE_NONE, HUDCommand::BLACK, HUDCommand::NO_SPEED, print);
+      sendCommandToHud(HUDCommand::MODE_NONE, HUDCommand::BLACK, HUDCommand::NO_SPEED, print);
+      break;
     default:
-      return true;
+      return;
     }
   }
   else
   {
     Serial.printf("WARNING: message not sent because hud offline\n");
   }
-  return hud.connected;
 }
 
 //------------------------------------------------------------------
 
 bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType)
 {
-  bool sent = nrf24.send(COMMS_BOARD, packetType, d, len);
+  // bool sent = nrf24.send(COMMS_BOARD, packetType, d, len);
 
-  return sent;
+  return true; // sent;
 }
 //------------------------------------------------------------------
 

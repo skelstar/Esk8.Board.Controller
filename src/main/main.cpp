@@ -112,13 +112,6 @@ ControllerConfig controller_config;
 
 BoardClass board;
 
-class HUD
-{
-public:
-  bool connected = false;
-};
-HUD hud;
-
 //------------------------------------------------------------------
 
 Preferences statsStore;
@@ -134,10 +127,10 @@ Stats stats;
 //------------------------------------------------------------------
 
 NRF24L01Lib nrf24;
-GenericClient<HUDAction::Event, HUDData> hudClient(&nrf24, COMMS_HUD);
-GenericClient<VescData, ControllerData> boardClient(&nrf24, COMMS_BOARD);
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
+GenericClient<HUDAction::Event, HUDData> hudClient(COMMS_HUD);
+GenericClient<VescData, ControllerData> boardClient(COMMS_BOARD);
 
 //------------------------------------------------------------------
 
@@ -234,7 +227,7 @@ void asserts()
 void resetsAcknowledged_callback()
 {
   storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
-  hud.connected = sendMessageToHud(HUDTask::GO_TO_IDLE);
+  sendMessageToHud(HUDTask::GO_TO_IDLE);
 }
 //------------------------------------------------------------------
 
@@ -276,7 +269,9 @@ void setup()
   }
   statsStore.end();
 
-  nrf24.begin(&radio, &network, COMMS_CONTROLLER, packetAvailable_cb);
+  nrf24.begin(&radio, &network, COMMS_CONTROLLER, boardPacketAvailable_cb);
+  hudClient.begin(&network, hudPacketAvailable_cb, Packet::HUD);
+  boardClient.begin(&network, boardPacketAvailable_cb, Packet::CONTROL);
 
   print_build_status(chipId);
 
@@ -316,8 +311,7 @@ void setup()
   });
 
   // force value to get first packet out
-  hud.connected = true;
-  hud.connected = sendMessageToHud(HUDTask::HEARTBEAT);
+  sendMessageToHud(HUDTask::HEARTBEAT);
 
   while (!display_task_initialised)
   {
@@ -343,7 +337,8 @@ void loop()
   if (sinceNRFUpdate > 20)
   {
     sinceNRFUpdate = 0;
-    nrf24.update();
+    hudClient.update();
+    boardClient.update();
   }
 
   primaryButton.loop();

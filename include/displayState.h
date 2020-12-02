@@ -40,7 +40,7 @@ State dispState_stoppedScreen(
         update_display = false;
         stats.update = false;
         screenWhenStopped(/*init*/ false);
-        updateHudIcon(hud.connected);
+        updateHudIcon(hudClient.connected());
       }
     },
     NULL);
@@ -57,7 +57,7 @@ State dispState_movingScreen(
         update_display = false;
         stats.update = false;
         screenWhenMoving(/*init*/ false);
-        updateHudIcon(hud.connected);
+        updateHudIcon(hudClient.connected());
       }
 
       stats.addMovingTime(sinceStoredMovingTime);

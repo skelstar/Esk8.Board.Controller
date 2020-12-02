@@ -36,11 +36,9 @@ void hudTask_1(void *pvParameters)
       {
         HUDTask::Message message = hudMessageQueue->read<HUDTask::Message>();
 
-        if (hud.connected)
+        if (hudClient.connected())
         {
-          bool ok = sendMessageToHud(message);
-          if (!ok)
-            hud.connected = false;
+          sendMessageToHud(message);
         }
       }
     }
