@@ -15,7 +15,7 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 {
   sinceLastBoardPacketRx = 0;
 
-  VescData packet = boardClient.read();
+  VescData packet = boardClient.read<VescData>();
 
   board.save(packet);
 
@@ -60,50 +60,59 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 }
 //------------------------------------------------------------------
 
-void hudPacketAvailable_cb(uint16_t from_id, uint8_t t)
+void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
 {
-  hudClient.connected();
-  HUDAction::Event ev = hudClient.read();
-  if ((uint8_t)ev > HUDAction::Length)
+  if (type == Packet::HUD)
   {
-    Serial.printf("WARNING: Action from HUD out of range (%d)\n", (uint8_t)ev);
-    return;
+    HUDAction::Event ev = hudClient.read<HUDAction::Event>();
+    if ((uint8_t)ev > HUDAction::Length)
+    {
+      Serial.printf("WARNING: Action from HUD out of range (%d)\n", (uint8_t)ev);
+      return;
+    }
+
+    Serial.printf("hudPacketAvailable_cb: %d\n", (uint8_t)ev);
+
+    switch (ev)
+    {
+    case HUDAction::HEARTBEAT:
+      sendMessageToHud(HUDTask::HEARTBEAT);
+      break;
+    case HUDAction::ONE_CLICK:
+      sendMessageToHud(HUDTask::ACKNOWLEDGE);
+      break;
+    case HUDAction::TWO_CLICK:
+      sendMessageToHud(HUDTask::CYCLE_BRIGHTNESS);
+      break;
+    case HUDAction::THREE_CLICK:
+      sendMessageToHud(HUDTask::THREE_FLASHES);
+      break;
+    default:
+      sendMessageToHud(HUDTask::ACKNOWLEDGE);
+      break;
+    }
+    if (PRINT_HUD_COMMS)
+      Serial.printf("<-- HUD: %s\n", HUDAction::names[(uint8_t)ev]);
   }
-
-  Serial.printf("hudPacketAvailable_cb: %d\n", (uint8_t)ev);
-
-  switch (ev)
+  else
   {
-  case HUDAction::HEARTBEAT:
-    sendMessageToHud(HUDTask::HEARTBEAT);
-    break;
-  case HUDAction::ONE_CLICK:
-    sendMessageToHud(HUDTask::ACKNOWLEDGE);
-    break;
-  case HUDAction::TWO_CLICK:
-    sendMessageToHud(HUDTask::CYCLE_BRIGHTNESS);
-    break;
-  case HUDAction::THREE_CLICK:
-    sendMessageToHud(HUDTask::THREE_FLASHES);
-    break;
-  default:
-    sendMessageToHud(HUDTask::ACKNOWLEDGE);
-    break;
+    Serial.printf("WARNING: Rx type: %d not supported!\n", type);
   }
-  if (PRINT_HUD_COMMS)
-    Serial.printf("<-- HUD: %s\n", HUDAction::names[(uint8_t)ev]);
 }
 //------------------------------------------------------------------
 
 void sendConfigToBoard()
 {
   controller_config.id = controller_packet.id;
-  uint8_t bs[sizeof(ControllerConfig)];
-  memcpy(bs, &controller_config, sizeof(ControllerConfig));
-  uint8_t len = sizeof(ControllerConfig);
+  boardClient.sendTo<ControllerConfig>(Packet::CONFIG, controller_config);
+  // uint8_t bs[sizeof(ControllerConfig)];
+  // memcpy(bs, &controller_config, sizeof(ControllerConfig));
+  // uint8_t len = sizeof(ControllerConfig);
+
+  // boardConfigClient.sendTo(Packet::CONFIG, controller_config);
 
   // TODO need to either create another client or make client more generic
-  sendPacket(bs, len, Packet::CONFIG);
+  // sendPacket(bs, len, Packet::CONFIG);
 }
 //------------------------------------------------------------------
 
@@ -118,7 +127,7 @@ void sendPacketToBoard()
       DEBUGVAL(board.packet.id, controller_packet.id);
   }
 
-  bool ok = boardClient.sendTo(Packet::CONTROL, controller_packet);
+  boardClient.sendTo(Packet::CONTROL, controller_packet);
 
   controller_packet.id++;
 }

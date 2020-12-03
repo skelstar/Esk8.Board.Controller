@@ -4,7 +4,7 @@ typedef void (*PacketAvailableCallback)(uint16_t from, uint8_t type);
 
 bool radioInitialised = false;
 
-template <typename IN, typename OUT>
+// template <typename IN, typename OUT>
 class GenericClient
 {
 public:
@@ -15,14 +15,13 @@ public:
 
   void begin(
       RF24Network *network,
-      PacketAvailableCallback packetAvailableCallback,
-      Packet::Type packetType)
+      PacketAvailableCallback packetAvailableCallback)
   {
     _network = network;
     _packetAvailableCallback = packetAvailableCallback;
-    _packetType = packetType;
   }
 
+  template <typename IN>
   IN read()
   {
     RF24NetworkHeader header;
@@ -34,6 +33,7 @@ public:
     return ev;
   }
 
+  template <typename OUT>
   bool sendTo(uint8_t type, OUT data)
   {
     uint8_t len = sizeof(OUT);
@@ -53,7 +53,7 @@ public:
       _connected = true;
       RF24NetworkHeader header;
       _network->peek(header);
-      if (header.type == _packetType)
+      if (header.from_node == _to)
         _packetAvailableCallback(header.from_node, header.type);
     }
   }
@@ -68,6 +68,5 @@ private:
   RF24Network *_network;
   uint8_t _to;
   PacketAvailableCallback _packetAvailableCallback;
-  Packet::Type _packetType;
   bool _connected = true;
 };

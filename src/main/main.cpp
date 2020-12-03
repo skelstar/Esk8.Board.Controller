@@ -129,8 +129,8 @@ Stats stats;
 NRF24L01Lib nrf24;
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
-GenericClient<HUDAction::Event, HUDData> hudClient(COMMS_HUD);
-GenericClient<VescData, ControllerData> boardClient(COMMS_BOARD);
+GenericClient hudClient(COMMS_HUD);
+GenericClient boardClient(COMMS_BOARD);
 
 //------------------------------------------------------------------
 
@@ -270,8 +270,8 @@ void setup()
   statsStore.end();
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, boardPacketAvailable_cb);
-  hudClient.begin(&network, hudPacketAvailable_cb, Packet::HUD);
-  boardClient.begin(&network, boardPacketAvailable_cb, Packet::CONTROL);
+  hudClient.begin(&network, hudPacketAvailable_cb);
+  boardClient.begin(&network, boardPacketAvailable_cb);
 
   print_build_status(chipId);
 
