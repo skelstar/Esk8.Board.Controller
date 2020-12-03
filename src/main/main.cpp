@@ -30,8 +30,7 @@ CommsState::Event ev = CommsState::Event::BOARD_FIRST_PACKET;
 
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
-#include <clients/hudClient.h>
-#include <clients/GenericClient.h>
+#include <GenericClient.h>
 
 #include <TFT_eSPI.h>
 #include <Preferences.h>
@@ -127,6 +126,7 @@ Stats stats;
 //------------------------------------------------------------------
 
 NRF24L01Lib nrf24;
+
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 GenericClient hudClient(COMMS_HUD);
@@ -270,8 +270,16 @@ void setup()
   statsStore.end();
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER, boardPacketAvailable_cb);
+
   hudClient.begin(&network, hudPacketAvailable_cb);
+  hudClient.setConnectedStateChangeCallback([] {
+    Serial.printf("HUD: %s\n", hudClient.connected() ? "CONNECTED" : "DISCONNECTED");
+  });
+
   boardClient.begin(&network, boardPacketAvailable_cb);
+  boardClient.setConnectedStateChangeCallback([] {
+    Serial.printf("HUD: %s\n", boardClient.connected() ? "CONNECTED" : "DISCONNECTED");
+  });
 
   print_build_status(chipId);
 
