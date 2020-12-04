@@ -9,6 +9,12 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
 {
   sinceLastBoardPacketRx = 0;
 
+  if (from_id == COMMS_HUD)
+  {
+    Serial.printf("WARNINGL rx from COMMS_HUD. Ignored.\n");
+    return;
+  }
+
   VescData board_packet;
   uint8_t buff[sizeof(VescData)];
   nrf24.read_into(buff, sizeof(VescData));
@@ -24,7 +30,7 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
     * send controller "CONFIG" packet to board
     */
     DEBUG("*** board's first packet!! ***");
-    sendToCommsEventStateQueue(EV_COMMS_BD_FIRST_PACKET);
+    commsEventQueue->send(CommsState::EV_COMMS_BD_FIRST_PACKET);
 
     controller_packet.id = 0;
     sendConfigToBoard();
@@ -33,15 +39,15 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
   }
   else if (board.startedMoving())
   {
-    send_to_display_event_queue(DISP_EV_MOVING);
+    displayChangeQueueManager->send(DISP_EV_MOVING);
   }
   else if (board.hasStopped())
   {
-    send_to_display_event_queue(DISP_EV_STOPPED);
+    displayChangeQueueManager->send(DISP_EV_STOPPED);
   }
   else if (board.valuesChanged())
   {
-    send_to_display_event_queue(DISP_EV_UPDATE);
+    displayChangeQueueManager->send(DISP_EV_UPDATE);
   }
 
   if (board.getCommand() == CommandType::RESET)
@@ -49,7 +55,7 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
     ESP.restart();
   }
 
-  sendToCommsEventStateQueue(EV_COMMS_PKT_RXD);
+  commsEventQueue->send(CommsState::EV_COMMS_PKT_RXD);
 }
 //------------------------------------------------------------------
 
@@ -85,7 +91,7 @@ void sendPacketToBoard()
 
 bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType)
 {
-  bool sent = nrf24.send_packet(COMMS_BOARD, packetType, d, len);
+  bool sent = nrf24.send(COMMS_BOARD, packetType, d, len);
 
   return sent;
 }
@@ -97,7 +103,7 @@ bool sendPacketWithRetries(uint8_t *d, uint8_t len, uint8_t packetType, uint8_t 
   int tries = 0;
   while (!sent && tries++ < maxTries)
   {
-    sent = nrf24.send_packet(COMMS_BOARD, packetType, d, len);
+    sent = nrf24.send(COMMS_BOARD, packetType, d, len);
     if (!sent)
       vTaskDelay(10);
   }

@@ -95,6 +95,7 @@ private:
 
 #define COMMS_BOARD 00
 #define COMMS_CONTROLLER 01
+#define COMMS_HUD 02
 
 ControllerData controller_packet;
 ControllerConfig controller_config;
@@ -159,6 +160,7 @@ xQueueHandle xButtonPushEventQueue;
 
 EventQueueManager *displayChangeQueueManager;
 EventQueueManager *buttonQueueManager;
+EventQueueManager *commsEventQueue;
 
 //------------------------------------------------------------------
 enum DispStateEvent
@@ -173,11 +175,25 @@ enum DispStateEvent
   DISP_EV_PRIMARY_SINGLE_CLICK,
   DISP_EV_PRIMARY_DOUBLE_CLICK,
   DISP_EV_PRIMARY_TRIPLE_CLICK,
-  DISP_EV_VERSION_DOESNT_MATCH
+  DISP_EV_VERSION_DOESNT_MATCH,
+  DISP_EV_Length,
+};
+
+const char *eventNames[] = {
+    "DISP_EV_NO_EVENT",
+    "DISP_EV_CONNECTED",
+    "DISP_EV_DISCONNECTED",
+    "DISP_EV_STOPPED",
+    "DISP_EV_MOVING",
+    "DISP_EV_SW_RESET",
+    "DISP_EV_UPDATE",
+    "DISP_EV_PRIMARY_SINGLE_CLICK",
+    "DISP_EV_PRIMARY_DOUBLE_CLICK",
+    "DISP_EV_PRIMARY_TRIPLE_CLICK",
+    "DISP_EV_VERSION_DOESNT_MATCH",
 };
 
 // displayState - prototypes
-void send_to_display_event_queue(DispStateEvent ev);
 void sendToBoard();
 
 //------------------------------------------------------------------
@@ -314,6 +330,7 @@ void setup()
 
   displayChangeQueueManager = new EventQueueManager(xDisplayChangeEventQueue, 5);
   buttonQueueManager = new EventQueueManager(xButtonPushEventQueue, 10);
+  commsEventQueue = new EventQueueManager(xCommsStateEventQueue, 10);
 
   while (!display_task_initialised)
   {
@@ -340,7 +357,7 @@ void loop()
 
   if (board.hasTimedout())
   {
-    sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
+    commsEventQueue->send(CommsState::EV_COMMS_BOARD_TIMEDOUT);
   }
 
   if (sinceNRFUpdate > 20)

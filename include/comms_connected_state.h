@@ -2,21 +2,49 @@
 #include <Fsm.h>
 #endif
 
-enum CommsStateEvent
+namespace CommsState
 {
-  EV_COMMS_NO_EVENT,
-  EV_COMMS_PKT_RXD,
-  EV_COMMS_BOARD_TIMEDOUT,
-  EV_COMMS_BD_FIRST_PACKET,
-};
+  enum Event
+  {
+    EV_COMMS_NO_EVENT,
+    EV_COMMS_PKT_RXD,
+    EV_COMMS_BOARD_TIMEDOUT,
+    EV_COMMS_BD_FIRST_PACKET,
+    EV_COMMS_Length,
+  };
 
+  const char *names[] = {
+      "EV_COMMS_NO_EVENT",
+      "EV_COMMS_PKT_RXD",
+      "EV_COMMS_BOARD_TIMEDOUT",
+      "EV_COMMS_BD_FIRST_PACKET",
+      "EV_COMMS_Length",
+  };
+
+  bool outOfRange(uint8_t ev)
+  {
+    return ev >= Event::EV_COMMS_Length;
+  }
+
+  const char *getName(uint8_t ev)
+  {
+    if (!outOfRange(ev))
+      return names[ev];
+    return "WARNING: OUT OF RANGE";
+  }
+
+  void printEvent(uint8_t ev)
+  {
+    Serial.printf("--> CommsEvent: %s\n", outOfRange(ev)
+                                              ? "OUT OF RANGE"
+                                              : names[ev]);
+  }
+} // namespace CommsState
 //------------------------------------------
 
 /* prototypes */
-void sendToCommsEventStateQueue(CommsStateEvent ev, TickType_t ticks = 5);
-CommsStateEvent readFromCommsStateEventQueue(TickType_t ticks = 5);
-const char *commsEventToString(CommsStateEvent ev);
-const char *commsEventToString(int ev);
+// void sendToCommsEventStateQueue(CommsState::Event ev, TickType_t ticks = 5);
+CommsState::Event readFromCommsStateEventQueue(TickType_t ticks = 5);
 bool boardVersionCompatible(float version);
 //------------------------------------------
 
@@ -26,7 +54,7 @@ bool commsStateTask_initialised = false;
 
 bool skipOnEnter = false;
 
-CommsStateEvent lastCommsEvent = EV_COMMS_NO_EVENT;
+CommsState::Event lastCommsEvent = CommsState::EV_COMMS_NO_EVENT;
 
 Fsm *commsFsm;
 
@@ -39,41 +67,50 @@ State stateCommsSearching([] {
 #endif
 });
 
+elapsedMillis sinceReported;
+
 State stateCommsConnected(
     [] {
-      if (commsFsm->lastEvent() == EV_COMMS_BD_FIRST_PACKET)
+      Serial.printf("stateCommsConnected\n");
+      //       if (commsFsm->lastEvent() == CommsState::EV_COMMS_BD_FIRST_PACKET)
+      //       {
+      //         stats.boardResets++;
+      //         displayChangeQueueManager->send(DISP_EV_UPDATE);
+      //       }
+      // #ifdef PRINT_COMMS_STATE
+      //       commsFsm->print("stateCommsConnected");
+      // #endif
+
+      //       comms_session_started = true;
+      //       comms_state_connected = true;
+
+      //       displayChangeQueueManager->send(DISP_EV_CONNECTED);
+      //       displayChangeQueueManager->send(DISP_EV_UPDATE);
+
+      //       if (stats.needToAckResets())
+      //       {
+      //         displayChangeQueueManager->send(DISP_EV_SW_RESET);
+      //       }
+
+      //       // check board version is compatible
+      //       bool boardCompatible = boardVersionCompatible(board.packet.version);
+      //       if (!boardCompatible)
+      //       {
+      //         displayChangeQueueManager->send(DISP_EV_VERSION_DOESNT_MATCH);
+      //       }
+    },
+    [] {
+      if (sinceReported > 100)
       {
-        stats.boardResets++;
-        displayChangeQueueManager->send(DISP_EV_UPDATE);
-      }
-#ifdef PRINT_COMMS_STATE
-      commsFsm->print("stateCommsConnected");
-#endif
-
-      comms_session_started = true;
-      comms_state_connected = true;
-
-      displayChangeQueueManager->send(DISP_EV_CONNECTED);
-      displayChangeQueueManager->send(DISP_EV_UPDATE);
-
-      if (stats.needToAckResets())
-      {
-        displayChangeQueueManager->send(DISP_EV_SW_RESET);
-      }
-
-      // check board version is compatible
-      bool boardCompatible = boardVersionCompatible(board.packet.version);
-      if (!boardCompatible)
-      {
-        displayChangeQueueManager->send(DISP_EV_VERSION_DOESNT_MATCH);
+        sinceReported = 0;
+        Serial.printf("reporting\n");
       }
     },
-    NULL,
     NULL);
 
 State stateCommsDisconnected(
     [] {
-      if (commsFsm->lastEvent() == EV_COMMS_BD_FIRST_PACKET)
+      if (commsFsm->lastEvent() == CommsState::EV_COMMS_BD_FIRST_PACKET)
       {
         stats.boardResets++;
         displayChangeQueueManager->send(DISP_EV_UPDATE);
@@ -93,54 +130,30 @@ State stateCommsDisconnected(
 
 void addCommsStateTransitions()
 {
-  // EV_COMMS_PKT_RXD
-  commsFsm->add_transition(&stateCommsSearching, &stateCommsConnected, EV_COMMS_PKT_RXD, NULL);
-  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsConnected, EV_COMMS_PKT_RXD, NULL);
+  // CommsState::EV_COMMS_PKT_RXD
+  commsFsm->add_transition(&stateCommsSearching, &stateCommsConnected, CommsState::EV_COMMS_PKT_RXD, NULL);
+  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsConnected, CommsState::EV_COMMS_PKT_RXD, NULL);
 
-  // EV_COMMS_BOARD_TIMEDOUT
-  commsFsm->add_transition(&stateCommsConnected, &stateCommsDisconnected, EV_COMMS_BOARD_TIMEDOUT, NULL);
+  // CommsState::EV_COMMS_BOARD_TIMEDOUT
+  commsFsm->add_transition(&stateCommsConnected, &stateCommsDisconnected, CommsState::EV_COMMS_BOARD_TIMEDOUT, NULL);
 
-  // EV_COMMS_BD_RESET
-  commsFsm->add_transition(&stateCommsConnected, &stateCommsConnected, EV_COMMS_BD_FIRST_PACKET, NULL);
-  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsDisconnected, EV_COMMS_BD_FIRST_PACKET, NULL);
+  // CommsState::EV_COMMS_BD_RESET
+  commsFsm->add_transition(&stateCommsConnected, &stateCommsConnected, CommsState::EV_COMMS_BD_FIRST_PACKET, NULL);
+  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsDisconnected, CommsState::EV_COMMS_BD_FIRST_PACKET, NULL);
 }
 //-----------------------------------------------------
 
-const char *commsEventToString(CommsStateEvent ev)
-{
-  switch (ev)
-  {
-  case EV_COMMS_PKT_RXD:
-    return "EV_COMMS_PKT_RXD";
-  case EV_COMMS_BOARD_TIMEDOUT:
-    return "EV_COMMS_BOARD_TIMEDOUT";
-  case EV_COMMS_BD_FIRST_PACKET:
-    return "EV_COMMS_BD_FIRST_PACKET";
-  case EV_COMMS_NO_EVENT:
-    return "EV_COMMS_NO_EVENT";
-  default:
-    return "Handled event";
-  }
-}
-//-----------------------------------------------------
-
-const char *commsEventToString(int ev)
-{
-  return commsEventToString((CommsStateEvent)ev);
-}
-//-----------------------------------------------------
-
-void triggerCommsEvent(CommsStateEvent ev)
+void triggerCommsEvent(CommsState::Event ev)
 {
 #ifdef PRINT_COMMS_STATE_EVENT
   switch (ev)
   {
 #ifdef SUPPRESS_EV_COMMS_PKT_RXD
-  case EV_COMMS_PKT_RXD:
+  case CommsState::EV_COMMS_PKT_RXD:
     break;
 #endif
   default:
-    Serial.printf("--> CommsEvent: %s\n", commsEventToString(ev));
+    CommsState::printEvent(ev);
   }
 #endif
   // lastCommsEvent = ev;
@@ -157,7 +170,6 @@ void commsStateTask_0(void *pvParameters)
   commsStateTask_initialised = true;
 
   commsFsm = new Fsm(&stateCommsSearching);
-  commsFsm->setGetEventName(commsEventToString);
 
   addCommsStateTransitions();
 
@@ -168,42 +180,39 @@ void commsStateTask_0(void *pvParameters)
 
   while (true)
   {
-    CommsStateEvent ev = readFromCommsStateEventQueue();
-    if (ev != EV_COMMS_NO_EVENT)
+    uint8_t ev = commsEventQueue->read();
+    if (ev != NO_QUEUE_EVENT)
     {
-      triggerCommsEvent(ev);
+      if (ev != CommsState::EV_COMMS_NO_EVENT && ev < CommsState::EV_COMMS_Length)
+      {
+        Serial.printf("comms event: %s\n", CommsState::names[ev]);
+        triggerCommsEvent((CommsState::Event)ev);
+      }
+      else
+      {
+        Serial.printf("comms event (alt): %d\n", ev);
+      }
     }
     commsFsm->run_machine();
 
-    vTaskDelay(10);
+    vTaskDelay(500);
   }
   vTaskDelete(NULL);
 }
 //------------------------------------------------------------
 
-void sendToCommsEventStateQueue(CommsStateEvent ev, TickType_t ticks)
-{
-  uint8_t e = (uint8_t)ev;
-  xQueueSendToBack(xCommsStateEventQueue, &e, ticks);
-  if (ev == EV_COMMS_BD_FIRST_PACKET)
-  {
-    // DEBUG(commsEventToString(ev));
-  }
-}
-//------------------------------------------------------------
-
-CommsStateEvent readFromCommsStateEventQueue(TickType_t ticks)
+CommsState::Event readFromCommsStateEventQueue(TickType_t ticks)
 {
   uint8_t e;
   if (xCommsStateEventQueue != NULL && xQueueReceive(xCommsStateEventQueue, &e, ticks) == pdPASS)
   {
-    if ((CommsStateEvent)e == EV_COMMS_BD_FIRST_PACKET)
+    if ((CommsState::Event)e == CommsState::EV_COMMS_BD_FIRST_PACKET)
     {
     }
 
-    return (CommsStateEvent)e;
+    return (CommsState::Event)e;
   }
-  return CommsStateEvent::EV_COMMS_NO_EVENT;
+  return CommsState::EV_COMMS_NO_EVENT;
 }
 
 //-----------------------------------------------------

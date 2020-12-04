@@ -28,8 +28,12 @@ void display_task_0(void *pvParameters)
       sinceReadDispEventQueue = 0;
       displayState->run_machine();
 
-      DispStateEvent displayevent = (DispStateEvent)displayChangeQueueManager->read();
-      switch (displayevent)
+      uint8_t ev = displayChangeQueueManager->read();
+      if (ev >= DispStateEvent::DISP_EV_Length && ev != NO_QUEUE_EVENT)
+      {
+        Serial.printf("WARNING: received a display event that is out of range\n");
+      }
+      switch (ev)
       {
       case DISP_EV_NO_EVENT:
       case 99:
@@ -38,8 +42,8 @@ void display_task_0(void *pvParameters)
         update_display = true;
         break;
       default:
-        lastDispEvent = displayevent;
-        displayState->trigger(displayevent);
+        lastDispEvent = (DispStateEvent)ev;
+        displayState->trigger(ev);
         break;
       }
 

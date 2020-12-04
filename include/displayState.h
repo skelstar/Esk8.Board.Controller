@@ -12,7 +12,6 @@ const char *eventToString(DispStateEvent ev);
 // prototypes
 void print_disp_state(const char *state_name, const char *event);
 void print_disp_state(const char *state_name);
-void send_to_display_event_queue(DispStateEvent ev);
 DispStateEvent read_from_display_event_queue(TickType_t ticks = 5);
 void clearDisplayEventQueue();
 
@@ -216,17 +215,6 @@ void print_disp_state(const char *state_name)
 #ifdef PRINT_DISP_STATE
   Serial.printf("%s\n", state_name);
 #endif
-}
-//---------------------------------------------------------------
-
-void send_to_display_event_queue(DispStateEvent ev)
-{
-  TickType_t ticks = 10;
-#ifdef PRINT_DISP_STATE_EVENT
-  Serial.printf("-> SEND: %s\n", eventToString((DispStateEvent)ev));
-#endif
-  uint8_t e = (uint8_t)ev;
-  xQueueSendToBack(xDisplayChangeEventQueue, &e, ticks);
 }
 //---------------------------------------------------------------
 void clearDisplayEventQueue()
