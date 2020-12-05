@@ -357,7 +357,7 @@ void loop()
 
   if (board.hasTimedout())
   {
-    commsEventQueue->send(CommsState::EV_COMMS_BOARD_TIMEDOUT);
+    commsEventQueue->send(CommsEvent::BOARD_TIMEDOUT);
   }
 
   if (sinceNRFUpdate > 20)
