@@ -82,25 +82,25 @@ namespace Comms
         if (commsFsmManager.lastEvent() == Comms::BD_FIRST_PACKET)
         {
           stats.boardResets++;
-          displayChangeQueueManager->send(Disp::DISP_EV_UPDATE);
+          displayChangeQueueManager->send(Disp::UPDATE);
         }
 
         comms_session_started = true;
         comms_state_connected = true;
 
-        displayChangeQueueManager->send(Disp::DISP_EV_CONNECTED);
-        displayChangeQueueManager->send(Disp::DISP_EV_UPDATE);
+        displayChangeQueueManager->send(Disp::CONNECTED);
+        displayChangeQueueManager->send(Disp::UPDATE);
 
         if (stats.needToAckResets())
         {
-          displayChangeQueueManager->send(Disp::DISP_EV_SW_RESET);
+          displayChangeQueueManager->send(Disp::SW_RESET);
         }
 
         // check board version is compatible
         bool boardCompatible = boardVersionCompatible(board.packet.version);
         if (!boardCompatible)
         {
-          displayChangeQueueManager->send(Disp::DISP_EV_VERSION_DOESNT_MATCH);
+          displayChangeQueueManager->send(Disp::VERSION_DOESNT_MATCH);
         }
       },
       NULL,
@@ -116,11 +116,11 @@ namespace Comms
         if (commsFsmManager.lastEvent() == Comms::BD_FIRST_PACKET)
         {
           stats.boardResets++;
-          displayChangeQueueManager->send(Disp::DISP_EV_UPDATE);
+          displayChangeQueueManager->send(Disp::UPDATE);
         }
 
         comms_state_connected = false;
-        displayChangeQueueManager->send(Disp::DISP_EV_DISCONNECTED);
+        displayChangeQueueManager->send(Disp::DISCONNECTED);
       },
       NULL, NULL);
   //-----------------------------------------------------

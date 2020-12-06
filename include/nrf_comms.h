@@ -39,15 +39,15 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
   }
   else if (board.startedMoving())
   {
-    displayChangeQueueManager->send(Disp::DISP_EV_MOVING);
+    displayChangeQueueManager->send(Disp::MOVING);
   }
   else if (board.hasStopped())
   {
-    displayChangeQueueManager->send(Disp::DISP_EV_STOPPED);
+    displayChangeQueueManager->send(Disp::STOPPED);
   }
   else if (board.valuesChanged())
   {
-    displayChangeQueueManager->send(Disp::DISP_EV_UPDATE);
+    displayChangeQueueManager->send(Disp::UPDATE);
   }
 
   if (board.getCommand() == CommandType::RESET)
