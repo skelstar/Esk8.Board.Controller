@@ -8,10 +8,6 @@ bool update_display = false;
 DispStateEvent lastDispEvent;
 
 // prototypes
-void print_disp_state(const char *state_name, const char *event);
-void print_disp_state(const char *state_name);
-DispStateEvent read_from_display_event_queue(TickType_t ticks = 5);
-void clearDisplayEventQueue();
 
 elapsedMillis sinceShowingToggleScreen;
 elapsedMillis sinceStoredMovingTime;

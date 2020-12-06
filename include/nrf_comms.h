@@ -30,7 +30,7 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
     * send controller "CONFIG" packet to board
     */
     DEBUG("*** board's first packet!! ***");
-    commsEventQueue->send(CommsEvent::BD_FIRST_PACKET);
+    commsEventQueue->send(Comms::BD_FIRST_PACKET);
 
     controller_packet.id = 0;
     sendConfigToBoard();
@@ -55,7 +55,7 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
     ESP.restart();
   }
 
-  commsEventQueue->send(CommsEvent::PKT_RXD);
+  commsEventQueue->send(Comms::PKT_RXD);
 }
 //------------------------------------------------------------------
 

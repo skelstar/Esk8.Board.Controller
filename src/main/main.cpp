@@ -6,13 +6,11 @@
 #define PRINTSTREAM_FALLBACK
 #include "Debug.hpp"
 
-// #include <Arduino_Helpers.h>
-// #include <AH/Debug/Debug.hpp>
-
 #include <Arduino.h>
 #include <VescData.h>
 #include <elapsedMillis.h>
 #include <rom/rtc.h> // for reset reason
+#include <shared-utils.h>
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
 #define SOFT_SPI_MOSI_PIN 13 // Blue
@@ -36,6 +34,7 @@ enum ButtonClickType
 #include <Preferences.h>
 #include <BatteryLib.h>
 #include <EventQueueManager.h>
+#include <fsmManager.h>
 
 enum FeatureType
 {
@@ -163,6 +162,7 @@ EventQueueManager *buttonQueueManager;
 EventQueueManager *commsEventQueue;
 
 //------------------------------------------------------------------
+
 enum DispStateEvent
 {
   DISP_EV_NO_EVENT = 0,
@@ -357,7 +357,7 @@ void loop()
 
   if (board.hasTimedout())
   {
-    commsEventQueue->send(CommsEvent::BOARD_TIMEDOUT);
+    commsEventQueue->send(Comms::BOARD_TIMEDOUT);
   }
 
   if (sinceNRFUpdate > 20)

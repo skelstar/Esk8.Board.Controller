@@ -11,7 +11,7 @@ void display_task_0(void *pvParameters)
 
   displayState_addTransitions();
 
-  Serial.printf("display_task_0 running on core %d\n", xPortGetCoreID());
+  RTOSUtils::printTaskDetails();
 
   displayState->run_machine();
 
