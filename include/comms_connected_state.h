@@ -5,7 +5,7 @@
 #include <EnumManager.h>
 #endif
 #ifndef FSMMANAGER_H
-#include <fsmManager.h>
+#include <FsmManager.h>
 #endif
 
 FsmManager commsFsmManager;

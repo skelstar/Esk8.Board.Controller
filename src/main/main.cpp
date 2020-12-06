@@ -34,7 +34,7 @@ enum ButtonClickType
 #include <Preferences.h>
 #include <BatteryLib.h>
 #include <EventQueueManager.h>
-#include <fsmManager.h>
+#include <FsmManager.h>
 
 enum FeatureType
 {
@@ -192,6 +192,11 @@ const char *eventNames[] = {
     "DISP_EV_PRIMARY_TRIPLE_CLICK",
     "DISP_EV_VERSION_DOESNT_MATCH",
 };
+
+const char *getEventName(int ev)
+{
+  return ev >= 0 && ev < DISP_EV_Length ? eventNames[ev] : "WARNING: OUT OF RANGE";
+}
 
 // displayState - prototypes
 void sendToBoard();

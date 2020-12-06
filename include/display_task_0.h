@@ -5,13 +5,14 @@
 
 void display_task_0(void *pvParameters)
 {
+  RTOSUtils::printTaskDetails();
+
   setupLCD();
 
   displayState = new Fsm(&dispState_searching);
+  displayState->setGetEventName(getEventName);
 
   displayState_addTransitions();
-
-  RTOSUtils::printTaskDetails();
 
   displayState->run_machine();
 
