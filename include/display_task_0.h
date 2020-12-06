@@ -9,12 +9,17 @@ void display_task_0(void *pvParameters)
 
   setupLCD();
 
-  displayState = new Fsm(&dispState_searching);
-  displayState->setGetEventName(Disp::getName);
+  dispFsm.begin(&Disp::fsm, ">State: %s | %s\n");
+  dispFsm.setGetStateNameCallback([](uint8_t id) {
+    return Disp::stateIDsMgr.getName(id);
+  });
+  dispFsm.setGetEventNameCallback([](uint8_t ev) {
+    return Disp::eventsMgr.getName(ev);
+  });
 
-  displayState_addTransitions();
+  Disp::addTransitions();
 
-  displayState->run_machine();
+  Disp::fsm.run_machine();
 
   display_task_initialised = true;
 
@@ -27,10 +32,10 @@ void display_task_0(void *pvParameters)
     if (sinceReadDispEventQueue > READ_DISP_EVENT_QUEUE_PERIOD)
     {
       sinceReadDispEventQueue = 0;
-      displayState->run_machine();
+      Disp::fsm.run_machine();
 
       uint8_t ev = displayChangeQueueManager->read();
-      if (ev >= Disp::Length && ev != NO_QUEUE_EVENT)
+      if (ev >= Disp::EventLength && ev != NO_QUEUE_EVENT)
       {
         Serial.printf("WARNING: received a display event that is out of range\n");
       }
@@ -42,8 +47,7 @@ void display_task_0(void *pvParameters)
         update_display = true;
         break;
       default:
-        lastDispEvent = (Disp::Event)ev;
-        displayState->trigger(ev);
+        dispFsm.trigger(ev);
         break;
       }
 
@@ -51,18 +55,15 @@ void display_task_0(void *pvParameters)
       switch (buttonEvent)
       {
       case SINGLE:
-        lastDispEvent = Disp::PRIMARY_SINGLE_CLICK;
-        displayState->trigger(Disp::PRIMARY_SINGLE_CLICK);
+        dispFsm.trigger(Disp::PRIMARY_SINGLE_CLICK);
         break;
       case DOUBLE:
-        lastDispEvent = Disp::PRIMARY_DOUBLE_CLICK;
-        displayState->trigger(Disp::PRIMARY_DOUBLE_CLICK);
+        dispFsm.trigger(Disp::PRIMARY_DOUBLE_CLICK);
         break;
       case TRIPLE:
-        lastDispEvent = Disp::PRIMARY_TRIPLE_CLICK;
-        displayState->trigger(Disp::PRIMARY_TRIPLE_CLICK);
+        dispFsm.trigger(Disp::PRIMARY_TRIPLE_CLICK);
         break;
-      case 99:
+      case NO_EVENT:
         break;
       }
     }

@@ -1,7 +1,7 @@
 #ifndef Fsm
 #include <Fsm.h>
 #endif
-#ifndef EnumManager
+#ifndef ENUMMANAGER_H
 #include <EnumManager.h>
 #endif
 #ifndef FSMMANAGER_H
@@ -125,11 +125,9 @@ namespace Comms
       NULL, NULL);
   //-----------------------------------------------------
   /* prototypes */
-  Comms::Event readFromCommsStateEventQueue(TickType_t ticks = 5);
 
   Fsm fsm(&stateCommsSearching);
 
-  //-----------------------------------------------------
   void addTransitions()
   {
     // Comms::PKT_RXD
@@ -143,8 +141,8 @@ namespace Comms
     fsm.add_transition(&stateCommsConnected, &stateCommsConnected, Comms::BD_FIRST_PACKET, NULL);
     fsm.add_transition(&stateCommsDisconnected, &stateCommsDisconnected, Comms::BD_FIRST_PACKET, NULL);
   }
-  //-----------------------------------------------------
 } // namespace Comms
+
 //------------------------------------------
 
 bool skipOnEnter = false;

@@ -22,6 +22,7 @@
 
 enum ButtonClickType
 {
+  NO_EVENT = 0,
   SINGLE,
   DOUBLE,
   TRIPLE
@@ -163,45 +164,11 @@ EventQueueManager *commsEventQueue;
 
 //------------------------------------------------------------------
 
-namespace Disp
-{
-  enum Event
-  {
-    NO_EVENT = 0,
-    CONNECTED,
-    DISCONNECTED,
-    STOPPED,
-    MOVING,
-    SW_RESET,
-    UPDATE,
-    PRIMARY_SINGLE_CLICK,
-    PRIMARY_DOUBLE_CLICK,
-    PRIMARY_TRIPLE_CLICK,
-    VERSION_DOESNT_MATCH,
-    Length,
-  };
+// namespace Disp
+// {
+// } // namespace Disp
 
-  const char *eventNames[] = {
-      "NO_EVENT",
-      "CONNECTED",
-      "DISCONNECTED",
-      "STOPPED",
-      "MOVING",
-      "SW_RESET",
-      "UPDATE",
-      "PRIMARY_SINGLE_CLICK",
-      "PRIMARY_DOUBLE_CLICK",
-      "PRIMARY_TRIPLE_CLICK",
-      "VERSION_DOESNT_MATCH",
-  };
-
-  const char *getName(int ev)
-  {
-    return ev >= 0 && ev < Length ? eventNames[ev] : "WARNING: OUT OF RANGE";
-  }
-} // namespace Disp
-
-// displayState - prototypes
+// fsm - prototypes
 void sendToBoard();
 
 //------------------------------------------------------------------
