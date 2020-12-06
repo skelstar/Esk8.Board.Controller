@@ -163,40 +163,43 @@ EventQueueManager *commsEventQueue;
 
 //------------------------------------------------------------------
 
-enum DispStateEvent
+namespace Disp
 {
-  DISP_EV_NO_EVENT = 0,
-  DISP_EV_CONNECTED,
-  DISP_EV_DISCONNECTED,
-  DISP_EV_STOPPED,
-  DISP_EV_MOVING,
-  DISP_EV_SW_RESET,
-  DISP_EV_UPDATE,
-  DISP_EV_PRIMARY_SINGLE_CLICK,
-  DISP_EV_PRIMARY_DOUBLE_CLICK,
-  DISP_EV_PRIMARY_TRIPLE_CLICK,
-  DISP_EV_VERSION_DOESNT_MATCH,
-  DISP_EV_Length,
-};
+  enum Event
+  {
+    DISP_EV_NO_EVENT = 0,
+    DISP_EV_CONNECTED,
+    DISP_EV_DISCONNECTED,
+    DISP_EV_STOPPED,
+    DISP_EV_MOVING,
+    DISP_EV_SW_RESET,
+    DISP_EV_UPDATE,
+    DISP_EV_PRIMARY_SINGLE_CLICK,
+    DISP_EV_PRIMARY_DOUBLE_CLICK,
+    DISP_EV_PRIMARY_TRIPLE_CLICK,
+    DISP_EV_VERSION_DOESNT_MATCH,
+    DISP_EV_Length,
+  };
 
-const char *eventNames[] = {
-    "DISP_EV_NO_EVENT",
-    "DISP_EV_CONNECTED",
-    "DISP_EV_DISCONNECTED",
-    "DISP_EV_STOPPED",
-    "DISP_EV_MOVING",
-    "DISP_EV_SW_RESET",
-    "DISP_EV_UPDATE",
-    "DISP_EV_PRIMARY_SINGLE_CLICK",
-    "DISP_EV_PRIMARY_DOUBLE_CLICK",
-    "DISP_EV_PRIMARY_TRIPLE_CLICK",
-    "DISP_EV_VERSION_DOESNT_MATCH",
-};
+  const char *eventNames[] = {
+      "DISP_EV_NO_EVENT",
+      "DISP_EV_CONNECTED",
+      "DISP_EV_DISCONNECTED",
+      "DISP_EV_STOPPED",
+      "DISP_EV_MOVING",
+      "DISP_EV_SW_RESET",
+      "DISP_EV_UPDATE",
+      "DISP_EV_PRIMARY_SINGLE_CLICK",
+      "DISP_EV_PRIMARY_DOUBLE_CLICK",
+      "DISP_EV_PRIMARY_TRIPLE_CLICK",
+      "DISP_EV_VERSION_DOESNT_MATCH",
+  };
 
-const char *getEventName(int ev)
-{
-  return ev >= 0 && ev < DISP_EV_Length ? eventNames[ev] : "WARNING: OUT OF RANGE";
-}
+  const char *getName(int ev)
+  {
+    return ev >= 0 && ev < DISP_EV_Length ? eventNames[ev] : "WARNING: OUT OF RANGE";
+  }
+} // namespace Disp
 
 // displayState - prototypes
 void sendToBoard();

@@ -10,7 +10,7 @@ void display_task_0(void *pvParameters)
   setupLCD();
 
   displayState = new Fsm(&dispState_searching);
-  displayState->setGetEventName(getEventName);
+  displayState->setGetEventName(Disp::getName);
 
   displayState_addTransitions();
 
@@ -30,20 +30,20 @@ void display_task_0(void *pvParameters)
       displayState->run_machine();
 
       uint8_t ev = displayChangeQueueManager->read();
-      if (ev >= DispStateEvent::DISP_EV_Length && ev != NO_QUEUE_EVENT)
+      if (ev >= Disp::DISP_EV_Length && ev != NO_QUEUE_EVENT)
       {
         Serial.printf("WARNING: received a display event that is out of range\n");
       }
       switch (ev)
       {
-      case DISP_EV_NO_EVENT:
+      case Disp::DISP_EV_NO_EVENT:
       case 99:
         break;
-      case DISP_EV_UPDATE:
+      case Disp::DISP_EV_UPDATE:
         update_display = true;
         break;
       default:
-        lastDispEvent = (DispStateEvent)ev;
+        lastDispEvent = (Disp::Event)ev;
         displayState->trigger(ev);
         break;
       }
@@ -52,16 +52,16 @@ void display_task_0(void *pvParameters)
       switch (buttonEvent)
       {
       case SINGLE:
-        lastDispEvent = DISP_EV_PRIMARY_SINGLE_CLICK;
-        displayState->trigger(DISP_EV_PRIMARY_SINGLE_CLICK);
+        lastDispEvent = Disp::DISP_EV_PRIMARY_SINGLE_CLICK;
+        displayState->trigger(Disp::DISP_EV_PRIMARY_SINGLE_CLICK);
         break;
       case DOUBLE:
-        lastDispEvent = DISP_EV_PRIMARY_DOUBLE_CLICK;
-        displayState->trigger(DISP_EV_PRIMARY_DOUBLE_CLICK);
+        lastDispEvent = Disp::DISP_EV_PRIMARY_DOUBLE_CLICK;
+        displayState->trigger(Disp::DISP_EV_PRIMARY_DOUBLE_CLICK);
         break;
       case TRIPLE:
-        lastDispEvent = DISP_EV_PRIMARY_TRIPLE_CLICK;
-        displayState->trigger(DISP_EV_PRIMARY_TRIPLE_CLICK);
+        lastDispEvent = Disp::DISP_EV_PRIMARY_TRIPLE_CLICK;
+        displayState->trigger(Disp::DISP_EV_PRIMARY_TRIPLE_CLICK);
         break;
       case 99:
         break;

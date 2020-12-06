@@ -27,6 +27,6 @@ void batteryMeasureTask_0(void *pvParameters)
 //--------------------------------------------------------
 void battVoltsChanged_cb()
 {
-  displayChangeQueueManager->send(DISP_EV_UPDATE);
+  displayChangeQueueManager->send(Disp::DISP_EV_UPDATE);
 }
 //--------------------------------------------------------
