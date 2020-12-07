@@ -9,9 +9,9 @@ void battVoltsChanged_cb();
 //--------------------------------------------------------
 void batteryMeasureTask_0(void *pvParameters)
 {
-  remote_batt.setup(battVoltsChanged_cb);
+  RTOSUtils::printTaskDetails();
 
-  Serial.printf("batteryMeasureTask_0 running on core %d\n", xPortGetCoreID());
+  remote_batt.setup(battVoltsChanged_cb);
 
   while (true)
   {
@@ -27,6 +27,6 @@ void batteryMeasureTask_0(void *pvParameters)
 //--------------------------------------------------------
 void battVoltsChanged_cb()
 {
-  send_to_display_event_queue(DISP_EV_UPDATE);
+  displayChangeQueueManager->send(Disp::UPDATE);
 }
 //--------------------------------------------------------

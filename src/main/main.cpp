@@ -6,13 +6,11 @@
 #define PRINTSTREAM_FALLBACK
 #include "Debug.hpp"
 
-// #include <Arduino_Helpers.h>
-// #include <AH/Debug/Debug.hpp>
-
 #include <Arduino.h>
 #include <VescData.h>
 #include <elapsedMillis.h>
 #include <rom/rtc.h> // for reset reason
+#include <shared-utils.h>
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
 #define SOFT_SPI_MOSI_PIN 13 // Blue
@@ -24,6 +22,7 @@
 
 enum ButtonClickType
 {
+  NO_EVENT = 0,
   SINGLE,
   DOUBLE,
   TRIPLE
@@ -36,6 +35,7 @@ enum ButtonClickType
 #include <Preferences.h>
 #include <BatteryLib.h>
 #include <EventQueueManager.h>
+#include <FsmManager.h>
 
 enum FeatureType
 {
@@ -95,6 +95,7 @@ private:
 
 #define COMMS_BOARD 00
 #define COMMS_CONTROLLER 01
+#define COMMS_HUD 02
 
 ControllerData controller_packet;
 ControllerConfig controller_config;
@@ -159,25 +160,15 @@ xQueueHandle xButtonPushEventQueue;
 
 EventQueueManager *displayChangeQueueManager;
 EventQueueManager *buttonQueueManager;
+EventQueueManager *commsEventQueue;
 
 //------------------------------------------------------------------
-enum DispStateEvent
-{
-  DISP_EV_NO_EVENT = 0,
-  DISP_EV_CONNECTED,
-  DISP_EV_DISCONNECTED,
-  DISP_EV_STOPPED,
-  DISP_EV_MOVING,
-  DISP_EV_SW_RESET,
-  DISP_EV_UPDATE,
-  DISP_EV_PRIMARY_SINGLE_CLICK,
-  DISP_EV_PRIMARY_DOUBLE_CLICK,
-  DISP_EV_PRIMARY_TRIPLE_CLICK,
-  DISP_EV_VERSION_DOESNT_MATCH
-};
 
-// displayState - prototypes
-void send_to_display_event_queue(DispStateEvent ev);
+// namespace Disp
+// {
+// } // namespace Disp
+
+// fsm - prototypes
 void sendToBoard();
 
 //------------------------------------------------------------------
@@ -314,6 +305,7 @@ void setup()
 
   displayChangeQueueManager = new EventQueueManager(xDisplayChangeEventQueue, 5);
   buttonQueueManager = new EventQueueManager(xButtonPushEventQueue, 10);
+  commsEventQueue = new EventQueueManager(xCommsStateEventQueue, 10);
 
   while (!display_task_initialised)
   {
@@ -340,7 +332,7 @@ void loop()
 
   if (board.hasTimedout())
   {
-    sendToCommsEventStateQueue(EV_COMMS_BOARD_TIMEDOUT);
+    commsEventQueue->send(Comms::BOARD_TIMEDOUT);
   }
 
   if (sinceNRFUpdate > 20)

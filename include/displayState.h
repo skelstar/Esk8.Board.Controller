@@ -1,238 +1,240 @@
 #ifndef Fsm
 #include <Fsm.h>
 #endif
-
-Fsm *displayState;
+#ifndef ENUMMANAGER_H
+#include <EnumManager.h>
+#endif
 
 bool update_display = false;
-DispStateEvent lastDispEvent;
-
-const char *eventToString(DispStateEvent ev);
 
 // prototypes
-void print_disp_state(const char *state_name, const char *event);
-void print_disp_state(const char *state_name);
-void send_to_display_event_queue(DispStateEvent ev);
-DispStateEvent read_from_display_event_queue(TickType_t ticks = 5);
-void clearDisplayEventQueue();
 
 elapsedMillis sinceShowingToggleScreen;
 elapsedMillis sinceStoredMovingTime;
 
-//---------------------------------------------------------------
-State dispState_searching([] {
-  print_disp_state("...dispState_searching");
-  screen_searching();
-});
-//---------------------------------------------------------------
-State dispState_disconnected(
-    [] {
-      print_disp_state("...dispState_disconnected");
-      screenWhenDisconnected();
-    },
-    NULL, NULL);
-//---------------------------------------------------------------
-State dispState_stoppedScreen(
-    [] {
-      print_disp_state("...dispState_stoppedScreen", eventToString(lastDispEvent));
-#ifdef PRINT_RESET_DETECTION
-      Serial.printf("STOPPED at %lums\n", stats.timeMovingMS);
-#endif
-      screenWhenStopped(/*init*/ true);
-    },
-    [] {
-      if (update_display)
-      {
-        update_display = false;
-        screenWhenStopped(/*init*/ false);
-      }
-    },
-    NULL);
-//---------------------------------------------------------------
-State dispState_movingScreen(
-    [] {
-      print_disp_state("...dispState_movingScreen", eventToString(lastDispEvent));
-#ifdef PRINT_RESET_DETECTION
-      Serial.printf("MOVING at %lums\n", stats.timeMovingMS);
-#endif
-      sinceStoredMovingTime = 0;
-      screenWhenMoving(/*init*/ true);
-    },
-    [] {
-      if (update_display)
-      {
-        update_display = false;
-        screenWhenMoving(/*init*/ false);
-      }
+FsmManager dispFsm;
 
-      stats.addMovingTime(sinceStoredMovingTime);
-      sinceStoredMovingTime = 0;
-    },
-    [] {
-    });
-
-//---------------------------------------------------------------
-State dispState_needToAckResetsStopped(
-    [] {
-      print_disp_state("...dispState_needToAckResetsStopped", eventToString(lastDispEvent));
-#ifdef PRINT_RESET_DETECTION
-      Serial.printf("ACK STOPPED at %lums\n", stats.timeMovingMS);
-#endif
-      screenNeedToAckResets();
-    },
-    NULL, NULL);
-//---------------------------------------------------------------
-State dispState_needToAckResetsMoving(
-    [] {
-      print_disp_state("...dispState_needToAckResetsMoving", eventToString(lastDispEvent));
-#ifdef PRINT_RESET_DETECTION
-      Serial.printf("ACK MOVING at %lums\n", stats.timeMovingMS);
-#endif
-      sinceStoredMovingTime = 0;
-      screenNeedToAckResets();
-    },
-    [] {
-      stats.addMovingTime(sinceStoredMovingTime);
-      sinceStoredMovingTime = 0;
-    },
-    NULL);
-//---------------------------------------------------------------
-State dispState_boardVersionDoesntMatchScreen(
-    [] {
-      print_disp_state("...dispState_boardVersionDoesntMatchScreen", eventToString(lastDispEvent));
-      screenBoardNotCompatible(board.packet.version);
-    },
-    NULL,
-    NULL);
-//---------------------------------------------------------------
-
-State dispState_togglePushToStart(
-    [] {
-      print_disp_state("...dispState_togglePushToStart", eventToString(lastDispEvent));
-      bool currVal = featureService.get<bool>(FeatureType::PUSH_TO_START);
-      if (lastDispEvent == DISP_EV_PRIMARY_DOUBLE_CLICK)
-      {
-        currVal = !currVal;
-        featureService.set(PUSH_TO_START, currVal);
-      }
-      screenPropValue("push to start", (currVal == true) ? "ON" : "OFF");
-      sinceShowingToggleScreen = 0;
-    },
-    [] {
-      if (sinceShowingToggleScreen > 3000)
-      {
-        sinceShowingToggleScreen = 0; // prevent excessive re-trigger
-        lastDispEvent = DISP_EV_PRIMARY_SINGLE_CLICK;
-        displayState->trigger(DISP_EV_PRIMARY_SINGLE_CLICK);
-      }
-    },
-    NULL);
-//---------------------------------------------------------------
-void acknowledgeResets()
+namespace Disp
 {
-  stats.ackResets();
-}
-//---------------------------------------------------------------
-
-void displayState_addTransitions()
-{
-  // DISP_EV_CONNECTED
-  displayState->add_transition(&dispState_searching, &dispState_stoppedScreen, DISP_EV_CONNECTED, NULL);
-  displayState->add_transition(&dispState_disconnected, &dispState_stoppedScreen, DISP_EV_CONNECTED, NULL);
-
-  // DISP_EV_DISCONNECTED
-  displayState->add_transition(&dispState_stoppedScreen, &dispState_disconnected, DISP_EV_DISCONNECTED, NULL);
-  displayState->add_transition(&dispState_movingScreen, &dispState_disconnected, DISP_EV_DISCONNECTED, NULL);
-
-  // DISP_EV_SW_RESET
-  displayState->add_transition(&dispState_stoppedScreen, &dispState_needToAckResetsStopped, DISP_EV_SW_RESET, NULL);
-  displayState->add_transition(&dispState_movingScreen, &dispState_needToAckResetsMoving, DISP_EV_SW_RESET, NULL);
-
-  displayState->add_transition(&dispState_needToAckResetsStopped, &dispState_stoppedScreen, DISP_EV_PRIMARY_DOUBLE_CLICK, acknowledgeResets);
-  displayState->add_transition(&dispState_needToAckResetsStopped, &dispState_needToAckResetsMoving, DISP_EV_MOVING, NULL);
-  displayState->add_transition(&dispState_needToAckResetsMoving, &dispState_needToAckResetsStopped, DISP_EV_STOPPED, NULL);
-  displayState->add_transition(&dispState_needToAckResetsMoving, &dispState_movingScreen, DISP_EV_PRIMARY_DOUBLE_CLICK, acknowledgeResets);
-
-  // DISP_EV_MOVING
-  displayState->add_transition(&dispState_stoppedScreen, &dispState_movingScreen, DISP_EV_MOVING, NULL);
-  // DISP_EV_STOPPED
-  displayState->add_transition(&dispState_movingScreen, &dispState_stoppedScreen, DISP_EV_STOPPED, NULL);
-
-  displayState->add_transition(&dispState_stoppedScreen, &dispState_togglePushToStart, DISP_EV_PRIMARY_TRIPLE_CLICK, NULL);
-  displayState->add_transition(&dispState_togglePushToStart, &dispState_togglePushToStart, DISP_EV_PRIMARY_DOUBLE_CLICK, NULL);
-  displayState->add_transition(&dispState_togglePushToStart, &dispState_stoppedScreen, DISP_EV_PRIMARY_SINGLE_CLICK, NULL);
-
-  // DISP_EV_VERSION_DOESNT_MATCH
-  displayState->add_transition(&dispState_stoppedScreen, &dispState_boardVersionDoesntMatchScreen, DISP_EV_VERSION_DOESNT_MATCH, NULL);
-  displayState->add_transition(&dispState_movingScreen, &dispState_boardVersionDoesntMatchScreen, DISP_EV_VERSION_DOESNT_MATCH, NULL);
-}
-//---------------------------------------------------------------
-
-const char *eventToString(DispStateEvent ev)
-{
-  switch (ev)
+  enum Event
   {
-  case DISP_EV_NO_EVENT:
-  case 99:
-    return "DISP_EV_NO_EVENT";
-  case DISP_EV_CONNECTED:
-    return "DISP_EV_CONNECTED";
-  case DISP_EV_DISCONNECTED:
-    return "DISP_EV_DISCONNECTED";
-  case DISP_EV_SW_RESET:
-    return "DISP_EV_SW_RESET";
-  case DISP_EV_STOPPED:
-    return "DISP_EV_STOPPED";
-  case DISP_EV_MOVING:
-    return "DISP_EV_MOVING";
-  case DISP_EV_UPDATE:
-    return "DISP_EV_UPDATE";
-  case DISP_EV_PRIMARY_SINGLE_CLICK:
-    return "DISP_EV_PRIMARY_SINGLE_CLICK";
-  case DISP_EV_PRIMARY_DOUBLE_CLICK:
-    return "DISP_EV_PRIMARY_DOUBLE_CLICK";
-  case DISP_EV_PRIMARY_TRIPLE_CLICK:
-    return "DISP_EV_PRIMARY_TRIPLE_CLICK";
-  case DISP_EV_VERSION_DOESNT_MATCH:
-    return "DISP_EV_VERSION_DOESNT_MATCH";
-  default:
-    char buff1[30];
-    sprintf(buff1, "unhandled ev: %d", (uint8_t)ev);
-    return buff1;
-  }
-}
-//---------------------------------------------------------------
+    NO_EVENT = 0,
+    CONNECTED,
+    DISCONNECTED,
+    STOPPED,
+    MOVING,
+    SW_RESET,
+    UPDATE,
+    PRIMARY_SINGLE_CLICK,
+    PRIMARY_DOUBLE_CLICK,
+    PRIMARY_TRIPLE_CLICK,
+    VERSION_DOESNT_MATCH,
+    EventLength,
+  };
 
-void print_disp_state(const char *state_name, const char *event)
-{
-#ifdef PRINT_DISP_STATE
-  Serial.printf("%s --> %s\n", state_name, sizeof(event) > 3 ? event : "EMPTY");
-#endif
-}
-//---------------------------------------------------------------
+  std::string eventNames[] = {
+      "NO_EVENT",
+      "CONNECTED",
+      "DISCONNECTED",
+      "STOPPED",
+      "MOVING",
+      "SW_RESET",
+      "UPDATE",
+      "PRIMARY_SINGLE_CLICK",
+      "PRIMARY_DOUBLE_CLICK",
+      "PRIMARY_TRIPLE_CLICK",
+      "VERSION_DOESNT_MATCH",
+  };
 
-void print_disp_state(const char *state_name)
-{
-#ifdef PRINT_DISP_STATE
-  Serial.printf("%s\n", state_name);
-#endif
-}
-//---------------------------------------------------------------
-
-void send_to_display_event_queue(DispStateEvent ev)
-{
-  TickType_t ticks = 10;
-#ifdef PRINT_DISP_STATE_EVENT
-  Serial.printf("-> SEND: %s\n", eventToString((DispStateEvent)ev));
-#endif
-  uint8_t e = (uint8_t)ev;
-  xQueueSendToBack(xDisplayChangeEventQueue, &e, ticks);
-}
-//---------------------------------------------------------------
-void clearDisplayEventQueue()
-{
-  while (read_from_display_event_queue() != DISP_EV_NO_EVENT)
+  const char *getName(int ev)
   {
+    return ev >= 0 && ev < EventLength ? eventNames[ev].c_str() : "WARNING: OUT OF RANGE";
   }
-}
-//---------------------------------------------------------------
+
+  enum StateIDs
+  {
+    STATE_SEARCHING,
+    STATE_DISCONNECTED,
+    STATE_STOPPED,
+    STATE_MOVING,
+    STATE_NEEDTOACKRESETSSTOPPED,
+    STATE_NEEDTOACKRESETSMOVING,
+    STATE_BOARDVERSIONDOESNTMATCHSCREEN,
+    STATE_TOGGLEPUSHTOSTART,
+    STATE_Length,
+  };
+
+  std::string stateNames[] = {
+      "STATE_SEARCHING",
+      "STATE_DISCONNECTED",
+      "STATE_STOPPED",
+      "STATE_MOVING",
+      "STATE_NEEDTOACKRESETSSTOPPED",
+      "STATE_NEEDTOACKRESETSMOVING",
+      "STATE_BOARDVERSIONDOESNTMATCHSCREEN",
+      "STATE_TOGGLEPUSHTOSTART",
+  };
+
+  EnumManager<Event> eventsMgr(eventNames);
+  EnumManager<StateIDs> stateIDsMgr(stateNames);
+
+  State stateSearching(
+      STATE_SEARCHING,
+      [] {
+        dispFsm.printState(STATE_SEARCHING);
+        screen_searching();
+      },
+      NULL, NULL);
+
+  State stateDisconnected(
+      STATE_DISCONNECTED,
+      [] {
+        dispFsm.printState(STATE_DISCONNECTED);
+        screenWhenDisconnected();
+      },
+      NULL, NULL);
+
+  State stateStopped(
+      STATE_STOPPED,
+      [] {
+        dispFsm.printState(STATE_STOPPED);
+#ifdef PRINT_RESET_DETECTION
+        Serial.printf("STOPPED at %lums\n", stats.timeMovingMS);
+#endif
+        screenWhenStopped(/*init*/ true);
+      },
+      [] {
+        if (update_display)
+        {
+          update_display = false;
+          screenWhenStopped(/*init*/ false);
+        }
+      },
+      NULL);
+
+  State stateMoving(
+      STATE_MOVING,
+      [] {
+        dispFsm.printState(STATE_MOVING);
+#ifdef PRINT_RESET_DETECTION
+        Serial.printf("MOVING at %lums\n", stats.timeMovingMS);
+#endif
+        sinceStoredMovingTime = 0;
+        screenWhenMoving(/*init*/ true);
+      },
+      [] {
+        if (update_display)
+        {
+          update_display = false;
+          screenWhenMoving(/*init*/ false);
+        }
+
+        stats.addMovingTime(sinceStoredMovingTime);
+        sinceStoredMovingTime = 0;
+      },
+      [] {
+      });
+
+  //---------------------------------------------------------------
+  State stateNeedToAckResetsStopped(
+      STATE_NEEDTOACKRESETSSTOPPED,
+      [] {
+        dispFsm.printState(STATE_NEEDTOACKRESETSSTOPPED);
+
+#ifdef PRINT_RESET_DETECTION
+        Serial.printf("ACK STOPPED at %lums\n", stats.timeMovingMS);
+#endif
+        screenNeedToAckResets();
+      },
+      NULL, NULL);
+  //---------------------------------------------------------------
+  State stateNeedToAckResetsMoving(
+      STATE_NEEDTOACKRESETSMOVING,
+      [] {
+        dispFsm.printState(STATE_NEEDTOACKRESETSMOVING);
+#ifdef PRINT_RESET_DETECTION
+        Serial.printf("ACK MOVING at %lums\n", stats.timeMovingMS);
+#endif
+        sinceStoredMovingTime = 0;
+        screenNeedToAckResets();
+      },
+      [] {
+        stats.addMovingTime(sinceStoredMovingTime);
+        sinceStoredMovingTime = 0;
+      },
+      NULL);
+  //---------------------------------------------------------------
+  State stateBoardVersionDoesntMatchScreen(
+      STATE_BOARDVERSIONDOESNTMATCHSCREEN,
+      [] {
+        dispFsm.printState(STATE_BOARDVERSIONDOESNTMATCHSCREEN);
+        screenBoardNotCompatible(board.packet.version);
+      },
+      NULL,
+      NULL);
+  //---------------------------------------------------------------
+
+  State stateTogglePushToStart(
+      STATE_TOGGLEPUSHTOSTART,
+      [] {
+        dispFsm.printState(STATE_TOGGLEPUSHTOSTART);
+        bool currVal = featureService.get<bool>(FeatureType::PUSH_TO_START);
+        if (dispFsm.lastEvent() == Disp::PRIMARY_DOUBLE_CLICK)
+        {
+          currVal = !currVal;
+          featureService.set(PUSH_TO_START, currVal);
+        }
+        screenPropValue("push to start", (currVal == true) ? "ON" : "OFF");
+        sinceShowingToggleScreen = 0;
+      },
+      [] {
+        if (sinceShowingToggleScreen > 3000)
+        {
+          sinceShowingToggleScreen = 0; // prevent excessive re-trigger
+          dispFsm.trigger(Disp::PRIMARY_SINGLE_CLICK);
+        }
+      },
+      NULL);
+  //---------------------------------------------------------------
+  void acknowledgeResets()
+  {
+    stats.ackResets();
+  }
+  //---------------------------------------------------------------
+
+  Fsm fsm(&stateSearching);
+
+  void addTransitions()
+  {
+    // Disp::CONNECTED
+    fsm.add_transition(&stateSearching, &stateStopped, Disp::CONNECTED, NULL);
+    fsm.add_transition(&stateDisconnected, &stateStopped, Disp::CONNECTED, NULL);
+
+    // Disp::DISCONNECTED
+    fsm.add_transition(&stateStopped, &stateDisconnected, Disp::DISCONNECTED, NULL);
+    fsm.add_transition(&stateMoving, &stateDisconnected, Disp::DISCONNECTED, NULL);
+
+    // Disp::SW_RESET
+    fsm.add_transition(&stateStopped, &stateNeedToAckResetsStopped, Disp::SW_RESET, NULL);
+    fsm.add_transition(&stateMoving, &stateNeedToAckResetsMoving, Disp::SW_RESET, NULL);
+
+    fsm.add_transition(&stateNeedToAckResetsStopped, &stateStopped, Disp::PRIMARY_DOUBLE_CLICK, acknowledgeResets);
+    fsm.add_transition(&stateNeedToAckResetsStopped, &stateNeedToAckResetsMoving, Disp::MOVING, NULL);
+    fsm.add_transition(&stateNeedToAckResetsMoving, &stateNeedToAckResetsStopped, Disp::STOPPED, NULL);
+    fsm.add_transition(&stateNeedToAckResetsMoving, &stateMoving, Disp::PRIMARY_DOUBLE_CLICK, acknowledgeResets);
+
+    // Disp::MOVING
+    fsm.add_transition(&stateStopped, &stateMoving, Disp::MOVING, NULL);
+    // Disp::STOPPED
+    fsm.add_transition(&stateMoving, &stateStopped, Disp::STOPPED, NULL);
+
+    fsm.add_transition(&stateStopped, &stateTogglePushToStart, Disp::PRIMARY_TRIPLE_CLICK, NULL);
+    fsm.add_transition(&stateTogglePushToStart, &stateTogglePushToStart, Disp::PRIMARY_DOUBLE_CLICK, NULL);
+    fsm.add_transition(&stateTogglePushToStart, &stateStopped, Disp::PRIMARY_SINGLE_CLICK, NULL);
+
+    // Disp::VERSION_DOESNT_MATCH
+    fsm.add_transition(&stateStopped, &stateBoardVersionDoesntMatchScreen, Disp::VERSION_DOESNT_MATCH, NULL);
+    fsm.add_transition(&stateMoving, &stateBoardVersionDoesntMatchScreen, Disp::VERSION_DOESNT_MATCH, NULL);
+  }
+} // namespace Disp
+  //---------------------------------------------------------------

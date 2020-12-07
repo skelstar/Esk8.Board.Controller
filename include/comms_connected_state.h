@@ -1,165 +1,187 @@
 #ifndef Fsm
 #include <Fsm.h>
 #endif
+#ifndef ENUMMANAGER_H
+#include <EnumManager.h>
+#endif
+#ifndef FSMMANAGER_H
+#include <FsmManager.h>
+#endif
 
-enum CommsStateEvent
-{
-  EV_COMMS_NO_EVENT,
-  EV_COMMS_PKT_RXD,
-  EV_COMMS_BOARD_TIMEDOUT,
-  EV_COMMS_BD_FIRST_PACKET,
-};
-
-//------------------------------------------
-
-/* prototypes */
-void sendToCommsEventStateQueue(CommsStateEvent ev, TickType_t ticks = 5);
-CommsStateEvent readFromCommsStateEventQueue(TickType_t ticks = 5);
-const char *commsEventToString(CommsStateEvent ev);
-const char *commsEventToString(int ev);
-bool boardVersionCompatible(float version);
-//------------------------------------------
+FsmManager commsFsmManager;
 
 bool comms_session_started = false;
 bool comms_state_connected = false;
 bool commsStateTask_initialised = false;
 
-bool skipOnEnter = false;
-
-CommsStateEvent lastCommsEvent = EV_COMMS_NO_EVENT;
-
-Fsm *commsFsm;
+//------------------------------------------
 
 /* prototypes */
+bool boardVersionCompatible(float version);
 
 //------------------------------------------
-State stateCommsSearching([] {
-#ifdef PRINT_COMMS_STATE
-  commsFsm->print("stateCommsSearching", false);
-#endif
-});
 
-State stateCommsConnected(
-    [] {
-      if (commsFsm->lastEvent() == EV_COMMS_BD_FIRST_PACKET)
-      {
-        stats.boardResets++;
-        displayChangeQueueManager->send(DISP_EV_UPDATE);
-      }
-#ifdef PRINT_COMMS_STATE
-      commsFsm->print("stateCommsConnected");
-#endif
+elapsedMillis sinceReported;
 
-      comms_session_started = true;
-      comms_state_connected = true;
-
-      displayChangeQueueManager->send(DISP_EV_CONNECTED);
-      displayChangeQueueManager->send(DISP_EV_UPDATE);
-
-      if (stats.needToAckResets())
-      {
-        displayChangeQueueManager->send(DISP_EV_SW_RESET);
-      }
-
-      // check board version is compatible
-      bool boardCompatible = boardVersionCompatible(board.packet.version);
-      if (!boardCompatible)
-      {
-        displayChangeQueueManager->send(DISP_EV_VERSION_DOESNT_MATCH);
-      }
-    },
-    NULL,
-    NULL);
-
-State stateCommsDisconnected(
-    [] {
-      if (commsFsm->lastEvent() == EV_COMMS_BD_FIRST_PACKET)
-      {
-        stats.boardResets++;
-        displayChangeQueueManager->send(DISP_EV_UPDATE);
-      }
-
-#ifdef PRINT_COMMS_STATE
-      commsFsm->print("stateCommsDisconnected");
-      // DEBUGMVAL("timed out", board.sinceLastPacket);
-      DEBUGVAL(board.sinceLastPacket);
-#endif
-
-      comms_state_connected = false;
-      displayChangeQueueManager->send(DISP_EV_DISCONNECTED);
-    },
-    NULL, NULL);
-//-----------------------------------------------------
-
-void addCommsStateTransitions()
+namespace Comms
 {
-  // EV_COMMS_PKT_RXD
-  commsFsm->add_transition(&stateCommsSearching, &stateCommsConnected, EV_COMMS_PKT_RXD, NULL);
-  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsConnected, EV_COMMS_PKT_RXD, NULL);
-
-  // EV_COMMS_BOARD_TIMEDOUT
-  commsFsm->add_transition(&stateCommsConnected, &stateCommsDisconnected, EV_COMMS_BOARD_TIMEDOUT, NULL);
-
-  // EV_COMMS_BD_RESET
-  commsFsm->add_transition(&stateCommsConnected, &stateCommsConnected, EV_COMMS_BD_FIRST_PACKET, NULL);
-  commsFsm->add_transition(&stateCommsDisconnected, &stateCommsDisconnected, EV_COMMS_BD_FIRST_PACKET, NULL);
-}
-//-----------------------------------------------------
-
-const char *commsEventToString(CommsStateEvent ev)
-{
-  switch (ev)
+  enum StateID
   {
-  case EV_COMMS_PKT_RXD:
-    return "EV_COMMS_PKT_RXD";
-  case EV_COMMS_BOARD_TIMEDOUT:
-    return "EV_COMMS_BOARD_TIMEDOUT";
-  case EV_COMMS_BD_FIRST_PACKET:
-    return "EV_COMMS_BD_FIRST_PACKET";
-  case EV_COMMS_NO_EVENT:
-    return "EV_COMMS_NO_EVENT";
-  default:
-    return "Handled event";
+    SEARCHING = 0,
+    CONNECTED,
+    DISCONNECTED,
+    StateIDLength,
+  };
+
+  std::string stateIDName[] = {
+      "SEARCHING",
+      "CONNECTED",
+      "DISCONNECTED",
+  };
+
+  enum Event
+  {
+    NO_EVENT,
+    PKT_RXD,
+    BOARD_TIMEDOUT,
+    BD_FIRST_PACKET,
+    EventLength,
+  };
+
+  std::string eventNames[] = {
+      "NO_EVENT",
+      "PKT_RXD",
+      "BOARD_TIMEDOUT",
+      "BD_FIRST_PACKET",
+  };
+
+  EnumManager<Event> eventMgr(eventNames);
+  EnumManager<StateID> stateIdMgr(stateIDName);
+
+  void print(uint8_t ev)
+  {
+    Serial.printf("--> CommsEvent: %s\n", eventMgr.getName(ev));
   }
-}
-//-----------------------------------------------------
 
-const char *commsEventToString(int ev)
-{
-  return commsEventToString((CommsStateEvent)ev);
-}
-//-----------------------------------------------------
+  State stateCommsSearching(
+      SEARCHING,
+      [] {
+#ifdef PRINT_COMMS_STATE
+        commsFsmManager.printState(SEARCHING);
+#endif
+      },
+      [] {},
+      [] {});
 
-void triggerCommsEvent(CommsStateEvent ev)
+  State stateCommsConnected(
+      CONNECTED,
+      [] {
+#ifdef PRINT_COMMS_STATE
+        commsFsmManager.printState(CONNECTED);
+#endif
+        if (commsFsmManager.lastEvent() == Comms::BD_FIRST_PACKET)
+        {
+          stats.boardResets++;
+          displayChangeQueueManager->send(Disp::UPDATE);
+        }
+
+        comms_session_started = true;
+        comms_state_connected = true;
+
+        displayChangeQueueManager->send(Disp::CONNECTED);
+        displayChangeQueueManager->send(Disp::UPDATE);
+
+        if (stats.needToAckResets())
+        {
+          displayChangeQueueManager->send(Disp::SW_RESET);
+        }
+
+        // check board version is compatible
+        bool boardCompatible = boardVersionCompatible(board.packet.version);
+        if (!boardCompatible)
+        {
+          displayChangeQueueManager->send(Disp::VERSION_DOESNT_MATCH);
+        }
+      },
+      NULL,
+      NULL);
+
+  State stateCommsDisconnected(
+      DISCONNECTED,
+      [] {
+#ifdef PRINT_COMMS_STATE
+        commsFsmManager.printState(DISCONNECTED);
+#endif
+
+        if (commsFsmManager.lastEvent() == Comms::BD_FIRST_PACKET)
+        {
+          stats.boardResets++;
+          displayChangeQueueManager->send(Disp::UPDATE);
+        }
+
+        comms_state_connected = false;
+        displayChangeQueueManager->send(Disp::DISCONNECTED);
+      },
+      NULL, NULL);
+  //-----------------------------------------------------
+  /* prototypes */
+
+  Fsm fsm(&stateCommsSearching);
+
+  void addTransitions()
+  {
+    // Comms::PKT_RXD
+    fsm.add_transition(&stateCommsSearching, &stateCommsConnected, Comms::PKT_RXD, NULL);
+    fsm.add_transition(&stateCommsDisconnected, &stateCommsConnected, Comms::PKT_RXD, NULL);
+
+    // Comms::BOARD_TIMEDOUT
+    fsm.add_transition(&stateCommsConnected, &stateCommsDisconnected, Comms::BOARD_TIMEDOUT, NULL);
+
+    // Comms::BD_RESET
+    fsm.add_transition(&stateCommsConnected, &stateCommsConnected, Comms::BD_FIRST_PACKET, NULL);
+    fsm.add_transition(&stateCommsDisconnected, &stateCommsDisconnected, Comms::BD_FIRST_PACKET, NULL);
+  }
+} // namespace Comms
+
+//------------------------------------------
+
+bool skipOnEnter = false;
+
+Comms::Event lastCommsEvent = Comms::NO_EVENT;
+
+void triggerCommsEvent(Comms::Event ev)
 {
 #ifdef PRINT_COMMS_STATE_EVENT
-  switch (ev)
+  if (ev == Comms::PKT_RXD)
   {
-#ifdef SUPPRESS_EV_COMMS_PKT_RXD
-  case EV_COMMS_PKT_RXD:
-    break;
-#endif
-  default:
-    Serial.printf("--> CommsEvent: %s\n", commsEventToString(ev));
+    // Comms::print(ev);
+  }
+  else
+  {
+    Comms::print(ev);
   }
 #endif
-  // lastCommsEvent = ev;
-  commsFsm->trigger(ev);
+  lastCommsEvent = ev;
+  commsFsmManager.trigger(ev);
 }
 
 //-------------------------------------------------
 
 void commsStateTask_0(void *pvParameters)
 {
-
-  Serial.printf("commsStateTask_0 running on core %d\n", xPortGetCoreID());
+  RTOSUtils::printTaskDetails();
 
   commsStateTask_initialised = true;
 
-  commsFsm = new Fsm(&stateCommsSearching);
-  commsFsm->setGetEventName(commsEventToString);
+  commsFsmManager.begin(&Comms::fsm, ">State: %s | %s\n");
+  commsFsmManager.setGetEventNameCallback([](uint8_t ev) {
+    return Comms::eventMgr.getName(ev); // "WARNING: OUT OF RANGE";
+  });
+  commsFsmManager.setGetStateNameCallback([](uint8_t id) {
+    return Comms::stateIdMgr.getName(id);
+  });
 
-  addCommsStateTransitions();
+  Comms::addTransitions();
 
   while (false == display_task_initialised)
   {
@@ -168,45 +190,19 @@ void commsStateTask_0(void *pvParameters)
 
   while (true)
   {
-    CommsStateEvent ev = readFromCommsStateEventQueue();
-    if (ev != EV_COMMS_NO_EVENT)
+    uint8_t ev = commsEventQueue->read();
+    if (Comms::eventMgr.isValid(ev))
     {
-      triggerCommsEvent(ev);
+      commsFsmManager.trigger(ev);
     }
-    commsFsm->run_machine();
+
+    Comms::fsm.run_machine();
 
     vTaskDelay(10);
   }
   vTaskDelete(NULL);
 }
 //------------------------------------------------------------
-
-void sendToCommsEventStateQueue(CommsStateEvent ev, TickType_t ticks)
-{
-  uint8_t e = (uint8_t)ev;
-  xQueueSendToBack(xCommsStateEventQueue, &e, ticks);
-  if (ev == EV_COMMS_BD_FIRST_PACKET)
-  {
-    // DEBUG(commsEventToString(ev));
-  }
-}
-//------------------------------------------------------------
-
-CommsStateEvent readFromCommsStateEventQueue(TickType_t ticks)
-{
-  uint8_t e;
-  if (xCommsStateEventQueue != NULL && xQueueReceive(xCommsStateEventQueue, &e, ticks) == pdPASS)
-  {
-    if ((CommsStateEvent)e == EV_COMMS_BD_FIRST_PACKET)
-    {
-    }
-
-    return (CommsStateEvent)e;
-  }
-  return CommsStateEvent::EV_COMMS_NO_EVENT;
-}
-
-//-----------------------------------------------------
 // check version
 bool boardVersionCompatible(float version)
 {
