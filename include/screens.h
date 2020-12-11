@@ -189,23 +189,17 @@ void quarterScreen(QuarterPosition position, char *buff, char *title, uint32_t b
   chunkyDigit->draw_float(x + (LCD_WIDTH / 2) - w - RIGHT_MARGIN, y + qrtrHeight - chunkyDigit->getHeight() - BOTTOM_MARGIN, buff);
 }
 //-----------------------------------------------------
-
-template <typename T>
-void quarterScreen(QuarterPosition position, T value, char *title, uint32_t bgColour)
+void quarterScreen(QuarterPosition position, int value, char *title, uint32_t bgColour)
 {
   char buff[20];
-  if (std::is_same<T, float>::value)
-  {
-    sprintf(buff, value < 1000.0 ? "%.1f" : "%.0f", value);
-  }
-  else if (std::is_same<T, int>::value)
-  {
-    sprintf(buff, value < 10000 ? "%d" : ">E", value);
-  }
-  else
-  {
-    return;
-  }
+  sprintf(buff, value < 10000 ? "%d" : ">E", value);
+  quarterScreen(position, buff, title, bgColour);
+}
+//-----------------------------------------------------
+void quarterScreen(QuarterPosition position, float value, char *title, uint32_t bgColour)
+{
+  char buff[20];
+  sprintf(buff, value < 1000.0 ? "%.1f" : "%.0f", value);
   quarterScreen(position, buff, title, bgColour);
 }
 //-----------------------------------------------------
@@ -220,10 +214,10 @@ void screenWhenStopped(bool init = false)
     tft.setFreeFont(FONT_MED);
   }
 
-  quarterScreen<float>(TOP_LEFT_QRTR, board.packet.odometer, "trip (km)", bgColour);
-  quarterScreen<float>(TOP_RIGHT_QRTR, stats.getTimeMovingInMinutes(), "time (m)", bgColour);
-  quarterScreen<int>(BOTTOM_LEFT_QRTR, board.packet.ampHours, "mAH", bgColour);
-  quarterScreen<float>(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHoursPerSecond(board.packet.ampHours), "mAH/s", bgColour);
+  quarterScreen(TOP_LEFT_QRTR, board.packet.odometer, "trip (km)", bgColour);
+  quarterScreen(TOP_RIGHT_QRTR, stats.getTimeMovingInMinutes(), "time (m)", bgColour);
+  quarterScreen(BOTTOM_LEFT_QRTR, board.packet.ampHours, "mAH", bgColour);
+  quarterScreen(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHoursPerSecond(board.packet.ampHours), "mAH/s", bgColour);
 }
 //-----------------------------------------------------W
 
