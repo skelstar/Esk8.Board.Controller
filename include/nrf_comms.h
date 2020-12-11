@@ -9,6 +9,7 @@ void sendPacketToBoard();
 bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType);
 void sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDCommand::Speed speed, uint8_t number = 1, bool print = true);
 void sendMessageToHud(HUDTask::Message message, bool print = true);
+HUDTask::Message mapToHUDTask(HUDAction::Event action);
 
 //------------------------------------------------------------------
 void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
@@ -73,46 +74,43 @@ void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
 
     Serial.printf("hudPacketAvailable_cb: %d\n", (uint8_t)ev);
 
-    switch (ev)
-    {
-    case HUDAction::HEARTBEAT:
-      sendMessageToHud(HUDTask::HEARTBEAT);
-      break;
-    case HUDAction::ONE_CLICK:
-      sendMessageToHud(HUDTask::ACKNOWLEDGE);
-      break;
-    case HUDAction::TWO_CLICK:
-      sendMessageToHud(HUDTask::CYCLE_BRIGHTNESS);
-      break;
-    case HUDAction::THREE_CLICK:
-      sendMessageToHud(HUDTask::THREE_FLASHES);
-      break;
-    default:
-      sendMessageToHud(HUDTask::ACKNOWLEDGE);
-      break;
-    }
+    HUDTask::Message message = mapToHUDTask(ev);
+    sendMessageToHud(message);
+
     if (PRINT_HUD_COMMS)
-      Serial.printf("<-- HUD: %s\n", HUDAction::names[(uint8_t)ev]);
+      Serial.printf("<-- HUD req: %s | resp: %s -->\n", HUDAction::names[(uint8_t)ev], HUDTask::messageName[message]);
   }
   else
   {
     Serial.printf("WARNING: Rx type: %d not supported!\n", type);
   }
 }
+
+//------------------------------------------------------------------
+
+HUDTask::Message mapToHUDTask(HUDAction::Event action)
+{
+  switch (ev)
+  {
+  case HUDAction::HEARTBEAT:
+    return HUDTask::HEARTBEAT;
+  case HUDAction::ONE_CLICK:
+    return HUDTask::ACKNOWLEDGE;
+  case HUDAction::TWO_CLICK:
+    return HUDTask::CYCLE_BRIGHTNESS;
+  case HUDAction::THREE_CLICK:
+    return HUDTask::THREE_FLASHES;
+  default:
+    return HUDTask::ACKNOWLEDGE;
+  }
+}
+
 //------------------------------------------------------------------
 
 void sendConfigToBoard()
 {
   controller_config.id = controller_packet.id;
   boardClient.sendTo<ControllerConfig>(Packet::CONFIG, controller_config);
-  // uint8_t bs[sizeof(ControllerConfig)];
-  // memcpy(bs, &controller_config, sizeof(ControllerConfig));
-  // uint8_t len = sizeof(ControllerConfig);
-
-  // boardConfigClient.sendTo(Packet::CONFIG, controller_config);
-
-  // TODO need to either create another client or make client more generic
-  // sendPacket(bs, len, Packet::CONFIG);
 }
 //------------------------------------------------------------------
 
