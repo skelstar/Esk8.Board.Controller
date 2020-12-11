@@ -13,14 +13,15 @@ void displayTask(void *pvParameters)
 {
   setupLCD();
 
-  displayState = new Fsm(&dispState_searching);
-  displayState->setEventTriggeredCb(displayStateEventCb);
-
-  displayState_addTransitions();
+  DisplayState::dispFsm.begin(&DisplayState::fsm);
+  DisplayState::dispFsm.setGetStateNameCallback([](uint8_t id) {
+    return DisplayState::getStateName(id);
+  });
+  DisplayState::addTransitions();
 
   Serial.printf("displayTask running on core %d\n", xPortGetCoreID());
 
-  displayState->run_machine();
+  DisplayState::fsm.run_machine();
 
   display_task_initialised = true;
 
@@ -33,7 +34,7 @@ void displayTask(void *pvParameters)
     if (sinceReadDispEventQueue > READ_DISP_EVENT_QUEUE_PERIOD)
     {
       sinceReadDispEventQueue = 0;
-      displayState->run_machine();
+      DisplayState::fsm.run_machine();
 
       DispState::Event displayevent = displayQueue->read<DispState::Event>();
       switch (displayevent)
@@ -41,11 +42,11 @@ void displayTask(void *pvParameters)
       case DispState::NO_EVENT:
         break;
       case DispState::UPDATE:
-        update_display = true;
+        DisplayState::update_display = true;
         break;
       default:
-        lastDispEvent = displayevent;
-        displayState->trigger(displayevent);
+        DisplayState::lastDispEvent = displayevent;
+        DisplayState::dispFsm.trigger(displayevent);
         break;
       }
 
@@ -55,16 +56,16 @@ void displayTask(void *pvParameters)
       case NO_CLICK:
         break;
       case SINGLE:
-        lastDispEvent = DispState::PRIMARY_SINGLE_CLICK;
-        displayState->trigger(DispState::PRIMARY_SINGLE_CLICK);
+        DisplayState::lastDispEvent = DispState::PRIMARY_SINGLE_CLICK;
+        DisplayState::dispFsm.trigger(DispState::PRIMARY_SINGLE_CLICK);
         break;
       case DOUBLE:
-        lastDispEvent = DispState::PRIMARY_DOUBLE_CLICK;
-        displayState->trigger(DispState::PRIMARY_DOUBLE_CLICK);
+        DisplayState::lastDispEvent = DispState::PRIMARY_DOUBLE_CLICK;
+        DisplayState::dispFsm.trigger(DispState::PRIMARY_DOUBLE_CLICK);
         break;
       case TRIPLE:
-        lastDispEvent = DispState::PRIMARY_TRIPLE_CLICK;
-        displayState->trigger(DispState::PRIMARY_TRIPLE_CLICK);
+        DisplayState::lastDispEvent = DispState::PRIMARY_TRIPLE_CLICK;
+        DisplayState::dispFsm.trigger(DispState::PRIMARY_TRIPLE_CLICK);
         break;
       }
     }
