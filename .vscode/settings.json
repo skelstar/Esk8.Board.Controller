@@ -63,7 +63,8 @@
     "typeinfo": "cpp",
     "*.ipp": "cpp",
     "chrono": "cpp",
-    "ratio": "cpp"
+    "ratio": "cpp",
+    "forward_list": "cpp"
   },
   "editor.formatOnSave": true,
   "peacock.color": "#ff3d00"

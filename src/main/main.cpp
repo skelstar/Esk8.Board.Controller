@@ -46,11 +46,11 @@ xQueueHandle xButtonPushEventQueue;
 xQueueHandle xHUDCommandEventQueue;
 xQueueHandle xHUDActionQueue;
 
-QueueManager *displayQueue;
-QueueManager *nrfCommsQueue;
-QueueManager *buttonQueue;
-QueueManager *hudMessageQueue;
-QueueManager *hudActionQueue;
+Queue::Manager *displayQueue;
+Queue::Manager *nrfCommsQueue;
+Queue::Manager *buttonQueue;
+Queue::Manager *hudMessageQueue;
+Queue::Manager *hudActionQueue;
 
 //------------------------------------------------------------
 enum FeatureType
@@ -195,6 +195,7 @@ ThrottleClass throttle;
 
 #include <utils.h>
 #include <screens.h>
+
 #include <displayState.h>
 
 #include <nrf_comms.h>
@@ -296,11 +297,11 @@ void setup()
   xHUDCommandEventQueue = xQueueCreate(3, sizeof(uint8_t));
   xHUDActionQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
 
-  displayQueue = new QueueManager(xDisplayEventQueue, 5);
-  nrfCommsQueue = new QueueManager(xCommsStateEventQueue, 5);
-  buttonQueue = new QueueManager(xButtonPushEventQueue, 10);
-  hudMessageQueue = new QueueManager(xHUDCommandEventQueue, 10);
-  hudActionQueue = new QueueManager(xHUDActionQueue, 3);
+  displayQueue = new Queue::Manager(xDisplayEventQueue, 5);
+  nrfCommsQueue = new Queue::Manager(xCommsStateEventQueue, 5);
+  buttonQueue = new Queue::Manager(xButtonPushEventQueue, 10);
+  hudMessageQueue = new Queue::Manager(xHUDCommandEventQueue, 10);
+  hudActionQueue = new Queue::Manager(xHUDActionQueue, 3);
 
   hudMessageQueue->setSentEventCallback([](uint8_t ev) {
     if (PRINT_HUD_MESSAGE_QUEUE_COMMS)
