@@ -6,14 +6,12 @@
 #define PRINTSTREAM_FALLBACK
 #include "Debug.hpp"
 
-// #include <Arduino_Helpers.h>
-// #include <AH/Debug/Debug.hpp>
-
 #include <Arduino.h>
 #include <VescData.h>
 #include <elapsedMillis.h>
 #include <rom/rtc.h> // for reset reason
 #include <shared-utils.h>
+#include <EnumManager.h>
 #include <types.h>
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
@@ -212,18 +210,6 @@ ThrottleClass throttle;
 #define __ASSERT_USE_STDERR
 
 //------------------------------------------------------------------
-void asserts()
-{
-  // make sure that there are as many "names" as there are enum values
-  DispState::assertThis();
-  CommsState::assertThis();
-  HUDAction::assertThis();
-  HUDCommand::assertThis();
-  Packet::assertThis();
-  HUDTask::assertThis();
-}
-//------------------------------------------------------------------
-
 void resetsAcknowledged_callback()
 {
   storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
@@ -237,7 +223,14 @@ void setup()
   Serial.begin(115200);
   Serial.printf("------------------------ BOOT ------------------------\n");
 
-  asserts();
+  CommsState::commsState.begin("CommsState");
+  DispState::dispState.begin("DispState::Event");
+  HUDAction::event.begin("HUDAction::Event");
+  HUDCommand::modes.begin("HUDCommand::modes");
+  HUDCommand::colours.begin("HUDCommand::colours");
+  HUDCommand::speed.begin("HUDCommand::speed");
+  HUDTask::message.begin("HUDTask");
+  Packet::type.begin("Packet");
 
   //get chip id
   String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);

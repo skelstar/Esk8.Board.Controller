@@ -31,7 +31,7 @@ namespace DispState
     Length, // leave this one (used for aserting)
   };
 
-  const char *names[] = {
+  std::string names[] = {
       "NO_EVENT",
       "CONNECTED",
       "DISCONNECTED",
@@ -45,10 +45,11 @@ namespace DispState
       "VERSION_DOESNT_MATCH",
   };
 
-  void assertThis()
-  {
-    assertEnum("DispState", Length, ARRAY_SIZE(names));
-  }
+#ifndef ESK8_ENUM_MANAGER
+#include <EnumManager.h>
+#endif
+
+  EnumManager<Event> dispState(names, Length, ARRAY_SIZE(names));
 } // namespace DispState
 
 //------------------------------------------------------------
@@ -64,17 +65,14 @@ namespace CommsState
     Length, // leave this one (used for aserting)
   };
 
-  const char *names[] = {
+  std::string names[] = {
       "NO_EVENT",
       "PKT_RXD",
       "BOARD_TIMEDOUT",
       "BOARD_FIRST_PACKET",
   };
 
-  void assertThis()
-  {
-    assertEnum("CommsState", Length, ARRAY_SIZE(names));
-  }
+  EnumManager<Event> commsState(names, Length, ARRAY_SIZE(names));
 } // namespace CommsState
 
 //------------------------------------------------------------
@@ -98,7 +96,7 @@ namespace HUDTask
     MessageLength,
   };
 
-  const char *messageName[] = {
+  std::string messageName[] = {
       "NONE",
       "BOARD_DISCONNECTED",
       "BOARD_CONNECTED",
@@ -113,10 +111,7 @@ namespace HUDTask
       "GO_TO_IDLE",
   };
 
-  void assertThis()
-  {
-    assertEnum("HUDTaskMessage", MessageLength, ARRAY_SIZE(messageName));
-  }
+  EnumManager<Message> message(messageName, MessageLength, ARRAY_SIZE(messageName));
 } // namespace HUDTask
 
 //------------------------------------------------------------
