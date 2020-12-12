@@ -64,7 +64,12 @@
     "*.ipp": "cpp",
     "chrono": "cpp",
     "ratio": "cpp",
-    "forward_list": "cpp"
+    "forward_list": "cpp",
+    "cassert": "cpp",
+    "cerrno": "cpp",
+    "cfloat": "cpp",
+    "ciso646": "cpp",
+    "climits": "cpp"
   },
   "editor.formatOnSave": true,
   "peacock.color": "#ff3d00"

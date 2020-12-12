@@ -12,6 +12,8 @@ enum ButtonClickType
 #define STORE_STATS_SOFT_RSTS "soft resets"
 #define STORE_STATS_TRIP_TIME "trip time"
 
+#define OUT_OF_RANGE "OUT OF RANGE"
+
 //------------------------------------------------------------
 namespace DispState
 {
@@ -31,30 +33,40 @@ namespace DispState
     Length, // leave this one (used for aserting)
   };
 
-  std::string names[] = {
-      "NO_EVENT",
-      "CONNECTED",
-      "DISCONNECTED",
-      "STOPPED",
-      "MOVING",
-      "SW_RESET",
-      "UPDATE",
-      "PRIMARY_SINGLE_CLICK",
-      "PRIMARY_DOUBLE_CLICK",
-      "PRIMARY_TRIPLE_CLICK",
-      "VERSION_DOESNT_MATCH",
-  };
-
-#ifndef ESK8_ENUM_MANAGER
-#include <EnumManager.h>
-#endif
-
-  EnumManager<Event> dispState(names, Length, ARRAY_SIZE(names));
+  const char *getEvent(int ev)
+  {
+    switch (ev)
+    {
+    case NO_EVENT:
+      return "NO_EVENT";
+    case CONNECTED:
+      return "CONNECTED";
+    case DISCONNECTED:
+      return "DISCONNECTED";
+    case STOPPED:
+      return "STOPPED";
+    case MOVING:
+      return "MOVING";
+    case SW_RESET:
+      return "SW_RESET";
+    case UPDATE:
+      return "UPDATE";
+    case PRIMARY_SINGLE_CLICK:
+      return "PRIMARY_SINGLE_CLICK";
+    case PRIMARY_DOUBLE_CLICK:
+      return "PRIMARY_DOUBLE_CLICK";
+    case PRIMARY_TRIPLE_CLICK:
+      return "PRIMARY_TRIPLE_CLICK";
+    case VERSION_DOESNT_MATCH:
+      return "VERSION_DOESNT_MATCH";
+    }
+    return OUT_OF_RANGE;
+  }
 } // namespace DispState
 
 //------------------------------------------------------------
 
-namespace CommsState
+namespace Comms
 {
   enum Event
   {
@@ -65,15 +77,22 @@ namespace CommsState
     Length, // leave this one (used for aserting)
   };
 
-  std::string names[] = {
-      "NO_EVENT",
-      "PKT_RXD",
-      "BOARD_TIMEDOUT",
-      "BOARD_FIRST_PACKET",
-  };
-
-  EnumManager<Event> commsState(names, Length, ARRAY_SIZE(names));
-} // namespace CommsState
+  const char *getEventName(uint8_t ev)
+  {
+    switch (ev)
+    {
+    case NO_EVENT:
+      return "NO_EVENT";
+    case PKT_RXD:
+      return "PKT_RXD";
+    case BOARD_TIMEDOUT:
+      return "BOARD_TIMEDOUT";
+    case BOARD_FIRST_PACKET:
+      return "BOARD_FIRST_PACKET";
+    }
+    return OUT_OF_RANGE;
+  }
+} // namespace Comms
 
 //------------------------------------------------------------
 
@@ -96,23 +115,38 @@ namespace HUDTask
     MessageLength,
   };
 
-  std::string messageName[] = {
-      "NONE",
-      "BOARD_DISCONNECTED",
-      "BOARD_CONNECTED",
-      "WARNING_ACK",
-      "CONTROLLER_RESET",
-      "BOARD_MOVING",
-      "BOARD_STOPPED",
-      "HEARTBEAT",
-      "ACKNOWLEDGE",
-      "CYCLE_BRIGHTNESS",
-      "THREE_FLASHES",
-      "GO_TO_IDLE",
-  };
-
-  EnumManager<Message> message(messageName, MessageLength, ARRAY_SIZE(messageName));
-} // namespace HUDTask
+  const char *getName(uint8_t message)
+  {
+    switch (message)
+    {
+    case NONE:
+      return "NONE";
+    case BOARD_DISCONNECTED:
+      return "BOARD_DISCONNECTED";
+    case BOARD_CONNECTED:
+      return "BOARD_CONNECTED";
+    case WARNING_ACK:
+      return "WARNING_ACK";
+    case CONTROLLER_RESET:
+      return "CONTROLLER_RESET";
+    case BOARD_MOVING:
+      return "BOARD_MOVING";
+    case BOARD_STOPPED:
+      return "BOARD_STOPPED";
+    case HEARTBEAT:
+      return "HEARTBEAT";
+    case ACKNOWLEDGE:
+      return "ACKNOWLEDGE";
+    case CYCLE_BRIGHTNESS:
+      return "CYCLE_BRIGHTNESS";
+    case THREE_FLASHES:
+      return "THREE_FLASHES";
+    case GO_TO_IDLE:
+      return "GO_TO_IDLE";
+    }
+    return OUT_OF_RANGE;
+  }
+}; // namespace HUDTask
 
 //------------------------------------------------------------
 #define LCD_WIDTH 240
@@ -120,8 +154,8 @@ namespace HUDTask
 
 #define TFT_DEFAULT_BG TFT_BLACK
 
-//-----------------------------------------------------
-// build flag defaults
+  //-----------------------------------------------------
+  // build flag defaults
 
 #ifndef PRINT_COMMS_STATE
 #define PRINT_COMMS_STATE 0
@@ -164,6 +198,9 @@ namespace HUDTask
 #endif
 #ifndef IGNORE_IF_HUD_OFFLINE
 #define IGNORE_IF_HUD_OFFLINE 0
+#endif
+#ifndef STATE_STRING_FORMAT
+#define STATE_STRING_FORMAT "[%s | %s]\n"
 #endif
 
 //-----------------------------------------------------

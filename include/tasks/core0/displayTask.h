@@ -6,14 +6,14 @@
 void displayStateEventCb(int ev)
 {
   if (PRINT_DISP_STATE_EVENT)
-    Serial.printf("--> disp: %s\n", DispState::names[ev]);
+    Serial.printf("--> disp: %s\n", DispState::getEvent(ev));
 }
 
 void displayTask(void *pvParameters)
 {
   setupLCD();
 
-  DisplayState::dispFsm.begin(&DisplayState::fsm);
+  DisplayState::dispFsm.begin(&DisplayState::fsm, STATE_STRING_FORMAT);
   DisplayState::dispFsm.setGetStateNameCallback([](uint8_t id) {
     return DisplayState::getStateName(id);
   });

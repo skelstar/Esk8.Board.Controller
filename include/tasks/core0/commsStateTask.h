@@ -12,136 +12,164 @@ bool commsStateTask_initialised = false;
 
 bool skipOnEnter = false;
 
-CommsState::Event lastCommsEvent = CommsState::NO_EVENT;
-
 /* prototypes */
 
 void print(const char *stateName);
 
-int triggerEvent = CommsState::NO_EVENT;
+int triggerEvent = Comms::Event::NO_EVENT;
+Comms::Event lastCommsEvent = Comms::Event::NO_EVENT;
 
-//------------------------------------------
-State stateCommsSearching([] {
-  print("stateCommsSearching");
-});
-
-State stateCommsConnected(
-    [] {
-      print("stateCommsConnected");
-      if (triggerEvent == CommsState::BOARD_FIRST_PACKET)
-      {
-        stats.boardResets++;
-        displayQueue->send(DispState::UPDATE);
-      }
-
-      comms_session_started = true;
-      stats.boardConnected = true;
-
-      displayQueue->send(DispState::CONNECTED);
-      displayQueue->send(DispState::UPDATE);
-
-      hudMessageQueue->send(HUDTask::BOARD_CONNECTED);
-
-      if (stats.needToAckResets())
-      {
-        displayQueue->send(DispState::SW_RESET);
-        pulseLedOn = TriState::STATE_ON;
-        hudMessageQueue->send(HUDTask::CONTROLLER_RESET);
-      }
-
-      // check board version is compatible
-      bool boardCompatible = boardVersionCompatible(board.packet.version);
-      if (!boardCompatible)
-      {
-        displayQueue->send(DispState::VERSION_DOESNT_MATCH);
-      }
-    },
-    NULL,
-    NULL);
-
-State stateCommsDisconnected(
-    [] {
-      print("stateCommsDisconnected");
-      if (triggerEvent == CommsState::BOARD_FIRST_PACKET)
-      {
-        stats.boardResets++;
-        displayQueue->send(DispState::UPDATE);
-      }
-
-      stats.boardConnected = false;
-      displayQueue->send(DispState::DISCONNECTED);
-      hudMessageQueue->send(HUDTask::BOARD_DISCONNECTED);
-    },
-    NULL, NULL);
-
-Fsm commsFsm(&stateCommsSearching);
-
-//-----------------------------------------------------
-
-void addCommsStateTransitions()
+namespace Comms
 {
-  // CommsState::PKT_RXD
-  commsFsm.add_transition(&stateCommsSearching, &stateCommsConnected, CommsState::PKT_RXD, NULL);
-  commsFsm.add_transition(&stateCommsDisconnected, &stateCommsConnected, CommsState::PKT_RXD, NULL);
-
-  // CommsState::BOARD_TIMEDOUT
-  commsFsm.add_transition(&stateCommsConnected, &stateCommsDisconnected, CommsState::BOARD_TIMEDOUT, NULL);
-
-  // CommsState::BD_RESET
-  commsFsm.add_transition(&stateCommsConnected, &stateCommsConnected, CommsState::BOARD_FIRST_PACKET, NULL);
-  commsFsm.add_transition(&stateCommsDisconnected, &stateCommsDisconnected, CommsState::BOARD_FIRST_PACKET, NULL);
-}
-
-//-----------------------------------------------------
-
-void commsStateEventCb(int ev)
-{
-  triggerEvent = ev;
-  // only print if PRINT and not CommsState::PKT_RXD
-  if (PRINT_COMMS_STATE_EVENT && !SUPPRESS_EV_COMMS_PKT_RXD || ev != CommsState::PKT_RXD)
-    Serial.printf("--> CommsEvent: %s\n", CommsState::names[(int)ev]);
-}
-
-void commsStateTask(void *pvParameters)
-{
-
-  Serial.printf("commsStateTask running on core %d\n", xPortGetCoreID());
-
-  commsStateTask_initialised = true;
-
-  commsFsm.setEventTriggeredCb(commsStateEventCb);
-
-  addCommsStateTransitions();
-
-  while (false == display_task_initialised)
+  enum StateId
   {
-    vTaskDelay(1);
+    SEARCHING,
+    CONNECTED,
+    DISCONNECTED,
+    StateIdLength,
+  };
+
+  const char *getStateName(uint8_t id)
+  {
+    switch (id)
+    {
+    case SEARCHING:
+      return "SEARCHING";
+    case CONNECTED:
+      return "CONNECTED";
+    case DISCONNECTED:
+      return "DISCONNECTED";
+    }
+    return OUT_OF_RANGE;
   }
 
-  while (true)
+  FsmManager<Event> commsFsm;
+
+  //------------------------------------------
+  State stateCommsSearching([] {
+    commsFsm.printState(StateId::SEARCHING);
+  });
+
+  State stateCommsConnected(
+      [] {
+        commsFsm.printState(StateId::CONNECTED);
+        if (triggerEvent == Comms::Event::BOARD_FIRST_PACKET)
+        {
+          stats.boardResets++;
+          displayQueue->send(DispState::UPDATE);
+        }
+
+        comms_session_started = true;
+        stats.boardConnected = true;
+
+        displayQueue->send(DispState::CONNECTED);
+        displayQueue->send(DispState::UPDATE);
+
+        hudMessageQueue->send(HUDTask::BOARD_CONNECTED);
+
+        if (stats.needToAckResets())
+        {
+          displayQueue->send(DispState::SW_RESET);
+          pulseLedOn = TriState::STATE_ON;
+          hudMessageQueue->send(HUDTask::CONTROLLER_RESET);
+        }
+
+        // check board version is compatible
+        bool boardCompatible = boardVersionCompatible(board.packet.version);
+        if (!boardCompatible)
+        {
+          displayQueue->send(DispState::VERSION_DOESNT_MATCH);
+        }
+      },
+      NULL,
+      NULL);
+
+  State stateCommsDisconnected(
+      [] {
+        commsFsm.printState(StateId::DISCONNECTED);
+        if (triggerEvent == Comms::Event::BOARD_FIRST_PACKET)
+        {
+          stats.boardResets++;
+          displayQueue->send(DispState::UPDATE);
+        }
+
+        stats.boardConnected = false;
+        displayQueue->send(DispState::DISCONNECTED);
+        hudMessageQueue->send(HUDTask::BOARD_DISCONNECTED);
+      },
+      NULL, NULL);
+
+  namespace
   {
-    CommsState::Event ev = nrfCommsQueue->read<CommsState::Event>();
-    if (ev != CommsState::NO_EVENT)
-      commsFsm.trigger(ev);
-    commsFsm.run_machine();
-
-    vTaskDelay(10);
+    Fsm fsm(&stateCommsSearching);
   }
-  vTaskDelete(NULL);
-}
-//------------------------------------------------------------
+  //-----------------------------------------------------
 
-void createCommsStateTask_0(uint8_t core, uint8_t priority)
-{
-  xTaskCreatePinnedToCore(
-      commsStateTask,
-      "commsStateTask",
-      10000,
-      NULL,
-      priority,
-      NULL,
-      core);
-}
+  void addTransitions()
+  {
+    // Comms::PKT_RXD
+    fsm.add_transition(&stateCommsSearching, &stateCommsConnected, Comms::Event::PKT_RXD, NULL);
+    fsm.add_transition(&stateCommsDisconnected, &stateCommsConnected, Comms::Event::PKT_RXD, NULL);
+
+    // Comms::BOARD_TIMEDOUT
+    fsm.add_transition(&stateCommsConnected, &stateCommsDisconnected, Comms::Event::BOARD_TIMEDOUT, NULL);
+
+    // Comms::BD_RESET
+    fsm.add_transition(&stateCommsConnected, &stateCommsConnected, Comms::Event::BOARD_FIRST_PACKET, NULL);
+    fsm.add_transition(&stateCommsDisconnected, &stateCommsDisconnected, Comms::Event::BOARD_FIRST_PACKET, NULL);
+  }
+
+  void task(void *pvParameters)
+  {
+
+    Serial.printf("commsStateTask running on core %d\n", xPortGetCoreID());
+
+    commsStateTask_initialised = true;
+
+    Comms::commsFsm.begin(&Comms::fsm, STATE_STRING_FORMAT);
+    Comms::commsFsm.setGetStateNameCallback([](uint8_t ev) {
+      return Comms::getStateName(ev); // Comms::getStateNameSafely(ev);
+    });
+    Comms::commsFsm.setGetEventNameCallback([](uint8_t ev) {
+      return Comms::getEventName(ev);
+    });
+
+    Comms::addTransitions();
+
+    while (false == display_task_initialised)
+    {
+      vTaskDelay(1);
+    }
+
+    while (true)
+    {
+      Comms::Event ev = nrfCommsQueue->read<Comms::Event>();
+      if (ev != Comms::NO_EVENT)
+      {
+        bool print = PRINT_COMMS_STATE_EVENT && Comms::commsFsm.lastEvent() != ev; // (ev == Comms::PKT_RXD && !SUPPRESS_EV_COMMS_PKT_RXD);
+        Comms::commsFsm.trigger(ev, print);
+      }
+      Comms::fsm.run_machine();
+
+      vTaskDelay(10);
+    }
+    vTaskDelete(NULL);
+  }
+  //------------------------------------------------------------
+
+  void createTask(uint8_t core, uint8_t priority)
+  {
+    xTaskCreatePinnedToCore(
+        task,
+        "commsStateTask",
+        10000,
+        NULL,
+        priority,
+        NULL,
+        core);
+  }
+} // namespace Comms
+
 //------------------------------------------------------------
 
 // check version

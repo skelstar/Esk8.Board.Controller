@@ -45,10 +45,10 @@ namespace DisplayState
   {
     return id < Length && ARRAY_SIZE(stateNames) == Length
                ? stateNames[id].c_str()
-               : "OUT OF RANGE";
+               : OUT_OF_RANGE;
   }
 
-  FsmManager dispFsm;
+  FsmManager<DispState::Event> dispFsm;
 
   //---------------------------------------------------------------
   State stateSearching([] {

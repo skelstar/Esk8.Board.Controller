@@ -26,7 +26,7 @@ void hudTask_1(void *pvParameters)
     if (hudActionQueue->messageAvailable())
     {
       HUDAction::Event action = hudActionQueue->read<HUDAction::Event>();
-      Serial.printf("queue rx: %s\n", HUDAction::names[(int)action]);
+      Serial.printf("queue rx: %s\n", HUDAction::getName(action));
     }
     // read from queue
     if (sinceHudReadFromQueue > 500)

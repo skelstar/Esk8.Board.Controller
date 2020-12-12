@@ -29,7 +29,7 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
     */
     DEBUG("*** board's first packet!! ***");
 
-    nrfCommsQueue->send(CommsState::BOARD_FIRST_PACKET);
+    nrfCommsQueue->send(Comms::Event::BOARD_FIRST_PACKET);
     sendMessageToHud(HUDTask::Message::BOARD_CONNECTED);
 
     controller_packet.id = 0;
@@ -57,7 +57,7 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
     ESP.restart();
   }
 
-  nrfCommsQueue->send(CommsState::PKT_RXD);
+  nrfCommsQueue->send(Comms::Event::PKT_RXD);
 }
 //------------------------------------------------------------------
 
@@ -72,13 +72,14 @@ void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
       return;
     }
 
-    Serial.printf("hudPacketAvailable_cb: %d\n", (uint8_t)ev);
-
     HUDTask::Message message = mapToHUDTask(ev);
     sendMessageToHud(message);
 
     if (PRINT_HUD_COMMS)
-      Serial.printf("<-- HUD req: %s | resp: %s -->\n", HUDAction::names[(uint8_t)ev], HUDTask::messageName[message]);
+      Serial.printf(
+          "<-- HUD req: %s | resp: %s -->\n",
+          HUDAction::getName(ev),
+          HUDTask::getName(message));
   }
   else
   {
@@ -88,7 +89,7 @@ void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
 
 //------------------------------------------------------------------
 
-HUDTask::Message mapToHUDTask(HUDAction::Event action)
+HUDTask::Message mapToHUDTask(HUDAction::Event ev)
 {
   switch (ev)
   {
@@ -151,7 +152,7 @@ void sendMessageToHud(HUDTask::Message message, bool print)
   if (hudClient.connected())
   {
     if (print && PRINT_HUD_COMMS)
-      Serial.printf("-->HUD: %s\n", HUDTask::messageName[(int)message]);
+      Serial.printf("--> HUD: %s\n", HUDTask::getName(message));
 
     switch (message)
     {

@@ -24,7 +24,7 @@
 
 #include <constants.h>
 
-CommsState::Event ev = CommsState::Event::BOARD_FIRST_PACKET;
+Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
@@ -41,7 +41,7 @@ HUDData hudData(HUDCommand::MODE_NONE, HUDCommand::BLACK, HUDCommand::NO_SPEED);
 //------------------------------------------------------------
 
 xQueueHandle xDisplayEventQueue;
-xQueueHandle xCommsStateEventQueue;
+xQueueHandle xCommsEventQueue;
 xQueueHandle xButtonPushEventQueue;
 xQueueHandle xHUDCommandEventQueue;
 xQueueHandle xHUDActionQueue;
@@ -224,15 +224,6 @@ void setup()
   Serial.begin(115200);
   Serial.printf("------------------------ BOOT ------------------------\n");
 
-  CommsState::commsState.begin("CommsState");
-  DispState::dispState.begin("DispState::Event");
-  HUDAction::event.begin("HUDAction::Event");
-  HUDCommand::modes.begin("HUDCommand::modes");
-  HUDCommand::colours.begin("HUDCommand::colours");
-  HUDCommand::speed.begin("HUDCommand::speed");
-  HUDTask::message.begin("HUDTask");
-  Packet::type.begin("Packet");
-
   //get chip id
   String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
   chipId.toUpperCase();
@@ -250,7 +241,6 @@ void setup()
   if (stats.watchdogReset())
   {
     stats.soft_resets++;
-    // statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
     storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, stats.soft_resets);
     stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS_TRIP_TIME);
     if (PRINT_RESET_DETECTION)
@@ -285,31 +275,31 @@ void setup()
 
   // CORE_0
   createDisplayTask0(CORE_0, TASK_PRIORITY_3);
-  createCommsStateTask_0(CORE_0, TASK_PRIORITY_1);
+  Comms::createTask(CORE_0, TASK_PRIORITY_1);
   createBatteryMeasureTask(CORE_0, TASK_PRIORITY_1);
 
   // CORE_1
   createHudTask(CORE_1, TASK_PRIORITY_1);
 
   xDisplayEventQueue = xQueueCreate(5, sizeof(uint8_t));
-  xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
+  xCommsEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
   xHUDCommandEventQueue = xQueueCreate(3, sizeof(uint8_t));
   xHUDActionQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
 
   displayQueue = new Queue::Manager(xDisplayEventQueue, 5);
-  nrfCommsQueue = new Queue::Manager(xCommsStateEventQueue, 5);
+  nrfCommsQueue = new Queue::Manager(xCommsEventQueue, 5);
   buttonQueue = new Queue::Manager(xButtonPushEventQueue, 10);
   hudMessageQueue = new Queue::Manager(xHUDCommandEventQueue, 10);
   hudActionQueue = new Queue::Manager(xHUDActionQueue, 3);
 
   hudMessageQueue->setSentEventCallback([](uint8_t ev) {
     if (PRINT_HUD_MESSAGE_QUEUE_COMMS)
-      Serial.printf("-->hudMessageQueue->send: (%s)\n", HUDTask::messageName[ev]);
+      Serial.printf("-->hudMessageQueue->send: (%s)\n", HUDTask::getName(ev));
   });
   hudMessageQueue->setReadEventCallback([](uint8_t ev) {
     if (PRINT_HUD_MESSAGE_QUEUE_COMMS)
-      Serial.printf("---hudMessageQueue<-read: (%s)\n", HUDTask::messageName[ev]);
+      Serial.printf("---hudMessageQueue<-read: (%s)\n", HUDTask::getName(ev));
   });
 
   // force value to get first packet out
@@ -333,7 +323,7 @@ void loop()
 
   if (board.hasTimedout())
   {
-    nrfCommsQueue->send(CommsState::BOARD_TIMEDOUT);
+    nrfCommsQueue->send(Comms::Event::BOARD_TIMEDOUT);
   }
 
   if (sinceNRFUpdate > 20)
