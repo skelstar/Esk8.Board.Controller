@@ -10,10 +10,6 @@ namespace DisplayState
   bool update_display = false;
   DispState::Event lastDispEvent;
 
-  // prototypes
-  DispState::Event read_from_display_event_queue(TickType_t ticks = 5);
-  void clearDisplayEventQueue();
-
   elapsedMillis sinceShowingToggleScreen;
   elapsedMillis sinceStoredMovingTime;
 
