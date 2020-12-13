@@ -35,7 +35,7 @@ Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 #include <HUDData.h>
 #include <QueueManager.h>
 
-HUDData hudData(HUDCommand::MODE_NONE, HUDCommand::BLACK, HUDCommand::NO_SPEED);
+// HUDData hudData(HUDCommand1::MODE_NONE, HUDCommand::BLACK, HUDCommand::NO_SPEED);
 
 //------------------------------------------------------------
 
@@ -126,7 +126,7 @@ NRF24L01Lib nrf24;
 
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
-GenericClient<HUDData, HUDAction::Event> hudClient(COMMS_HUD);
+GenericClient<uint16_t, HUDAction::Event> hudClient(COMMS_HUD);
 GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
 
 //------------------------------------------------------------------
@@ -212,8 +212,9 @@ ThrottleClass throttle;
 //------------------------------------------------------------------
 void resetsAcknowledged_callback()
 {
+  using namespace HUDCommand1;
   storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
-  sendMessageToHud(HUDTask::GO_TO_IDLE);
+  sendCommandToHud(1 << FLASH | 1 << FAST | 1 << GREEN);
 }
 //------------------------------------------------------------------
 
@@ -258,11 +259,14 @@ void setup()
   hudClient.setConnectedStateChangeCallback([] {
     Serial.printf(HUD_CONNECTED_FORMAT, hudClient.connected() ? "CONNECTED" : "DISCONNECTED");
   });
-  hudClient.setSentPacketCallback([](HUDData data) {
-    Serial.printf(HUD_SENT_PACKET_FORMAT,
-                  HUDCommand::getMode(data.mode),
-                  HUDCommand::getColour(data.colour),
-                  HUDCommand::getSpeed(data.speed));
+  hudClient.setSentPacketCallback([](uint16_t data) {
+    Serial.printf("Sent: %s|%s|%s\n",
+                  HUDCommand1::getMode(data),
+                  HUDCommand1::getColour(data),
+                  HUDCommand1::getSpeed(data)); //HUD_SENT_PACKET_FORMAT,
+    //               HUDCommand::getMode(data.mode),
+    //               HUDCommand::getColour(data.colour),
+    //               HUDCommand::getSpeed(data.speed));
   });
   hudClient.setReadPacketCallback([](HUDAction::Event ev) {
     Serial.printf(HUD_READ_PACKET_FORMAT, HUDAction::getName(ev));
@@ -298,7 +302,7 @@ void setup()
   xDisplayEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xCommsEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
-  xHUDCommandEventQueue = xQueueCreate(3, sizeof(uint8_t));
+  xHUDCommandEventQueue = xQueueCreate(3, sizeof(HUDTask::Message));
   xHUDActionQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
 
   displayQueue = new Queue::Manager(xDisplayEventQueue, 5);
@@ -317,7 +321,8 @@ void setup()
   });
 
   // force value to get first packet out
-  sendMessageToHud(HUDTask::HEARTBEAT);
+  uint16_t command = 1 << HUDCommand1::HEARTBEAT;
+  sendCommandToHud(command);
 
   while (!display_task_initialised)
   {

@@ -48,11 +48,53 @@ namespace HUD
         sinceHudReadFromQueue = 0;
         if (hudQueue->messageAvailable())
         {
-          HUDTask::Message message = hudQueue->read<HUDTask::Message>();
+          using namespace HUDCommand1;
+
+          uint8_t task = hudQueue->read<HUDTask::Message>();
 
           if (hudClient.connected())
           {
-            sendMessageToHud(message);
+            uint16_t command = 0;
+            switch (task)
+            {
+            case HUDTask::NONE:
+              command = 1 << HEARTBEAT;
+              break;
+            case HUDTask::BOARD_DISCONNECTED:
+              command = 1 << PULSE | 1 << RED;
+              break;
+            case HUDTask::BOARD_CONNECTED:
+              command = 1 << HEARTBEAT;
+              break;
+            case HUDTask::WARNING_ACK:
+              command = 1 << GREEN | 1 << FLASH;
+              break;
+            case HUDTask::CONTROLLER_RESET:
+              command = 1 << RED | 1 << FLASH | 1 << SLOW;
+              break;
+            case HUDTask::BOARD_MOVING:
+              command = 1 << GREEN | 1 << FLASH;
+              break;
+            case HUDTask::BOARD_STOPPED:
+              command = 1 << RED | 1 << FLASH | 1 << SLOW;
+              break;
+            case HUDTask::HEARTBEAT:
+              command = 1 << BLUE | 1 << TWO_FLASHES;
+              break;
+            case HUDTask::ACKNOWLEDGE:
+              command = 1 << GREEN | 1 << TWO_FLASHES;
+              break;
+            case HUDTask::CYCLE_BRIGHTNESS:
+              command = 1 << CYCLE_BRIGHTNESS;
+              break;
+            case HUDTask::GO_TO_IDLE:
+              command = 1 << HEARTBEAT;
+              break;
+            default:
+              break;
+            }
+
+            sendCommandToHud(command);
           }
         }
       }
