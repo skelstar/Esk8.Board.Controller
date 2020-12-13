@@ -184,11 +184,17 @@ namespace HUDTask
 #ifndef PRINT_BUTTON_EVENTS
 #define PRINT_BUTTON_EVENTS 0
 #endif
-#ifndef PRINT_HUD_COMMS
-#define PRINT_HUD_COMMS 0
+#ifndef PRINT_HUD_QUEUE_SEND
+#define PRINT_HUD_QUEUE_SEND 0
 #endif
-#ifndef PRINT_HUD_MESSAGE_QUEUE_COMMS
-#define PRINT_HUD_MESSAGE_QUEUE_COMMS 0
+#ifndef PRINT_HUD_QUEUE_READ
+#define PRINT_HUD_QUEUE_READ 0
+#endif
+#ifndef PRINT_HUD_ACTION_QUEUE_SEND
+#define PRINT_HUD_ACTION_QUEUE_SEND 0
+#endif
+#ifndef PRINT_HUD_ACTION_QUEUE_READ
+#define PRINT_HUD_ACTION_QUEUE_READ 0
 #endif
 #ifndef STORE_SNAPSHOT_INTERVAL
 #define STORE_SNAPSHOT_INTERVAL 5000
@@ -199,10 +205,35 @@ namespace HUDTask
 #ifndef IGNORE_IF_HUD_OFFLINE
 #define IGNORE_IF_HUD_OFFLINE 0
 #endif
-#ifndef STATE_STRING_FORMAT
-#define STATE_STRING_FORMAT "[%s | %s]\n"
+#ifndef PRINT_TX_TO_HUD
+#define PRINT_TX_TO_HUD 0
+#endif
+#ifndef PRINT_RX_FROM_HUD
+#define PRINT_RX_FROM_HUD 0
+#endif
+#ifndef PRINT_TX_TO_BOARD
+#define PRINT_TX_TO_BOARD 0
+#endif
+#ifndef PRINT_RX_FROM_BOARD
+#define PRINT_RX_FROM_BOARD 0
 #endif
 
+#define HUD_SENT_PACKET_FORMAT "[TX -> HUD]: %s|%s|%s\n"
+#define HUD_READ_PACKET_FORMAT "[RX <- HUD]: %s\n"
+#define HUD_CONNECTED_FORMAT "HUD: %s\n"
+#define HUD_QUEUE_TX_FORMAT "(%s)->send->hudQueue\n"
+#define HUD_QUEUE_RX_FORMAT "hudQueue<-read<-(%s)\n"
+#define HUD_ACTION_QUEUE_READ_FORMAT "queue rx: %s\n"
+#define HUD_ACTION_QUEUE_SENT_FORMAT "queue tx: %s\n"
+
+#define BOARD_COMMS_STATE_FORMAT_LONG "[BOARD: %s | %s ]\n"
+#define BOARD_COMMS_STATE_FORMAT_SHORT "[BOARD: %s | _ ]\n"
+#define BOARD_CLIENT_CONNECTED_FORMAT "BOARD CLIENT: %s\n"
+#define TX_TO_BOARD_FORMAT "[TX -> BOARD]: id=%d\n"
+#define RX_FROM_BOARD_FORMAT "[RX <- BOARD]: id=%d\n"
+
+#define DISP_STATE_FORMAT "[DISP: %s | %s ]\n"
+#define DISP_STATE_STRING_FORMAT "[DISP: %s | _ ]\n"
 //-----------------------------------------------------
 
 enum TriState

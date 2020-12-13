@@ -3,87 +3,87 @@
 #include <tft.h>
 #endif
 
-void displayStateEventCb(int ev)
+namespace Display
 {
-  if (PRINT_DISP_STATE_EVENT)
-    Serial.printf("--> disp: %s\n", DispState::getEvent(ev));
-}
+  void task(void *pvParameters)
+  {
+    setupLCD();
 
-void displayTask(void *pvParameters)
-{
-  setupLCD();
+    dispFsm.begin(&fsm, DISP_STATE_FORMAT, DISP_STATE_STRING_FORMAT);
+    dispFsm.setGetStateNameCallback([](uint8_t id) {
+      return getStateName(id);
+    });
+    // dispFsm.setGetEventNameCallback([](uint8_t ev) {
+    //   return DispState::getEvent(ev);)
+    // });
+    addTransitions();
 
-  DisplayState::dispFsm.begin(&DisplayState::fsm, STATE_STRING_FORMAT);
-  DisplayState::dispFsm.setGetStateNameCallback([](uint8_t id) {
-    return DisplayState::getStateName(id);
-  });
-  DisplayState::addTransitions();
+    Serial.printf("displayTask running on core %d\n", xPortGetCoreID());
 
-  Serial.printf("displayTask running on core %d\n", xPortGetCoreID());
+    fsm.run_machine();
 
-  DisplayState::fsm.run_machine();
-
-  display_task_initialised = true;
+    display_task_initialised = true;
 
 #define READ_DISP_EVENT_QUEUE_PERIOD 100
 
-  elapsedMillis sinceReadDispEventQueue;
+    elapsedMillis sinceReadDispEventQueue;
 
-  while (true)
-  {
-    if (sinceReadDispEventQueue > READ_DISP_EVENT_QUEUE_PERIOD)
+    while (true)
     {
-      sinceReadDispEventQueue = 0;
-      DisplayState::fsm.run_machine();
-
-      DispState::Event displayevent = displayQueue->read<DispState::Event>();
-      switch (displayevent)
+      if (sinceReadDispEventQueue > READ_DISP_EVENT_QUEUE_PERIOD)
       {
-      case DispState::NO_EVENT:
-        break;
-      case DispState::UPDATE:
-        DisplayState::update_display = true;
-        break;
-      default:
-        DisplayState::lastDispEvent = displayevent;
-        DisplayState::dispFsm.trigger(displayevent);
-        break;
+        sinceReadDispEventQueue = 0;
+        fsm.run_machine();
+
+        DispState::Event displayevent = displayQueue->read<DispState::Event>();
+        switch (displayevent)
+        {
+        case DispState::NO_EVENT:
+          break;
+        case DispState::UPDATE:
+          update_display = true;
+          break;
+        default:
+          lastDispEvent = displayevent;
+          dispFsm.trigger(displayevent);
+          break;
+        }
+
+        ButtonClickType buttonEvent = buttonQueue->read<ButtonClickType>();
+        switch (buttonEvent)
+        {
+        case NO_CLICK:
+          break;
+        case SINGLE:
+          lastDispEvent = DispState::PRIMARY_SINGLE_CLICK;
+          dispFsm.trigger(DispState::PRIMARY_SINGLE_CLICK);
+          break;
+        case DOUBLE:
+          lastDispEvent = DispState::PRIMARY_DOUBLE_CLICK;
+          dispFsm.trigger(DispState::PRIMARY_DOUBLE_CLICK);
+          break;
+        case TRIPLE:
+          lastDispEvent = DispState::PRIMARY_TRIPLE_CLICK;
+          dispFsm.trigger(DispState::PRIMARY_TRIPLE_CLICK);
+          break;
+        }
       }
 
-      ButtonClickType buttonEvent = buttonQueue->read<ButtonClickType>();
-      switch (buttonEvent)
-      {
-      case NO_CLICK:
-        break;
-      case SINGLE:
-        DisplayState::lastDispEvent = DispState::PRIMARY_SINGLE_CLICK;
-        DisplayState::dispFsm.trigger(DispState::PRIMARY_SINGLE_CLICK);
-        break;
-      case DOUBLE:
-        DisplayState::lastDispEvent = DispState::PRIMARY_DOUBLE_CLICK;
-        DisplayState::dispFsm.trigger(DispState::PRIMARY_DOUBLE_CLICK);
-        break;
-      case TRIPLE:
-        DisplayState::lastDispEvent = DispState::PRIMARY_TRIPLE_CLICK;
-        DisplayState::dispFsm.trigger(DispState::PRIMARY_TRIPLE_CLICK);
-        break;
-      }
+      vTaskDelay(10);
     }
-
-    vTaskDelay(10);
+    vTaskDelete(NULL);
   }
-  vTaskDelete(NULL);
-}
-//-----------------------------------------------------
+  //-----------------------------------------------------
 
-void createDisplayTask0(uint8_t core, uint8_t priority)
-{
-  xTaskCreatePinnedToCore(
-      displayTask,
-      "displayTask",
-      10000,
-      NULL,
-      priority,
-      NULL,
-      core);
+  void createTask(uint8_t core, uint8_t priority)
+  {
+    xTaskCreatePinnedToCore(
+        task,
+        "displayTask",
+        10000,
+        NULL,
+        priority,
+        NULL,
+        core);
+  }
 }

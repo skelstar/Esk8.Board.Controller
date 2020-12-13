@@ -5,7 +5,7 @@
 #include <FsmManager.h>
 #endif
 
-namespace DisplayState
+namespace Display
 {
   bool update_display = false;
   DispState::Event lastDispEvent;
@@ -189,4 +189,4 @@ namespace DisplayState
     fsm.add_transition(&stateStoppedScreen, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
     fsm.add_transition(&stateMovingScreen, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
   }
-} // namespace DisplayState
+} // namespace Display

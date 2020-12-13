@@ -16,7 +16,7 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 {
   sinceLastBoardPacketRx = 0;
 
-  VescData packet = boardClient.read<VescData>();
+  VescData packet = boardClient.read(PRINT_RX_FROM_BOARD);
 
   board.save(packet);
 
@@ -63,28 +63,21 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 
 void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
 {
-  if (type == Packet::HUD)
-  {
-    HUDAction::Event ev = hudClient.read<HUDAction::Event>();
-    if ((uint8_t)ev > HUDAction::Length)
-    {
-      Serial.printf("WARNING: Action from HUD out of range (%d)\n", (uint8_t)ev);
-      return;
-    }
-
-    HUDTask::Message message = mapToHUDTask(ev);
-    sendMessageToHud(message);
-
-    if (PRINT_HUD_COMMS)
-      Serial.printf(
-          "<-- HUD req: %s | resp: %s -->\n",
-          HUDAction::getName(ev),
-          HUDTask::getName(message));
-  }
-  else
+  if (type != Packet::HUD)
   {
     Serial.printf("WARNING: Rx type: %d not supported!\n", type);
+    return;
   }
+
+  HUDAction::Event ev = hudClient.read(PRINT_RX_FROM_HUD);
+  if ((uint8_t)ev > HUDAction::Length)
+  {
+    Serial.printf("WARNING: Action from HUD out of range (%d)\n", (uint8_t)ev);
+    return;
+  }
+
+  HUDTask::Message message = mapToHUDTask(ev);
+  sendMessageToHud(message);
 }
 
 //------------------------------------------------------------------
@@ -111,7 +104,7 @@ HUDTask::Message mapToHUDTask(HUDAction::Event ev)
 void sendConfigToBoard()
 {
   controller_config.id = controller_packet.id;
-  boardClient.sendTo<ControllerConfig>(Packet::CONFIG, controller_config);
+  boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);
 }
 //------------------------------------------------------------------
 
@@ -126,7 +119,7 @@ void sendPacketToBoard()
       DEBUGVAL(board.packet.id, controller_packet.id);
   }
 
-  boardClient.sendTo(Packet::CONTROL, controller_packet);
+  boardClient.sendTo(Packet::CONTROL, controller_packet, PRINT_TX_TO_BOARD);
 
   controller_packet.id++;
 }
@@ -138,7 +131,7 @@ void sendCommandToHud(HUDCommand::Mode mode, HUDCommand::Colour colour, HUDComma
   {
     HUDData packet(mode, colour, speed, number);
     packet.id = hudData.id++;
-    hudClient.sendTo(Packet::HUD, packet);
+    hudClient.sendTo(Packet::HUD, packet, PRINT_TX_TO_HUD);
   }
   else
   {
@@ -151,9 +144,6 @@ void sendMessageToHud(HUDTask::Message message, bool print)
 {
   if (hudClient.connected())
   {
-    if (print && PRINT_HUD_COMMS)
-      Serial.printf("--> HUD: %s\n", HUDTask::getName(message));
-
     switch (message)
     {
     case HUDTask::BOARD_DISCONNECTED:

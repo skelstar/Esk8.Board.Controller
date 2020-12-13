@@ -65,13 +65,13 @@ namespace Comms
         displayQueue->send(DispState::CONNECTED);
         displayQueue->send(DispState::UPDATE);
 
-        hudMessageQueue->send(HUDTask::BOARD_CONNECTED);
+        hudQueue->send(HUDTask::BOARD_CONNECTED);
 
         if (stats.needToAckResets())
         {
           displayQueue->send(DispState::SW_RESET);
           pulseLedOn = TriState::STATE_ON;
-          hudMessageQueue->send(HUDTask::CONTROLLER_RESET);
+          hudQueue->send(HUDTask::CONTROLLER_RESET);
         }
 
         // check board version is compatible
@@ -95,7 +95,7 @@ namespace Comms
 
         stats.boardConnected = false;
         displayQueue->send(DispState::DISCONNECTED);
-        hudMessageQueue->send(HUDTask::BOARD_DISCONNECTED);
+        hudQueue->send(HUDTask::BOARD_DISCONNECTED);
       },
       NULL, NULL);
 
@@ -126,7 +126,7 @@ namespace Comms
 
     commsStateTask_initialised = true;
 
-    Comms::commsFsm.begin(&Comms::fsm, STATE_STRING_FORMAT);
+    Comms::commsFsm.begin(&Comms::fsm, BOARD_COMMS_STATE_FORMAT_LONG, BOARD_COMMS_STATE_FORMAT_SHORT);
     Comms::commsFsm.setGetStateNameCallback([](uint8_t ev) {
       return Comms::getStateName(ev); // Comms::getStateNameSafely(ev);
     });

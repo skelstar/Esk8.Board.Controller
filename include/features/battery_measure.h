@@ -4,43 +4,52 @@
 elapsedMillis since_measure_battery;
 
 // prototypes
-void battVoltsChanged_cb();
 
-//--------------------------------------------------------
-void batteryMeasureTask_0(void *pvParameters)
+namespace Battery
 {
-  remote_batt.setup(battVoltsChanged_cb);
+  void battVoltsChanged_cb();
 
-  Serial.printf("batteryMeasureTask_0 running on core %d\n", xPortGetCoreID());
-
-  while (true)
+  namespace
   {
-    if (since_measure_battery > BATTERY_MEASURE_INTERVAL)
-    {
-      since_measure_battery = 0;
-      remote_batt.update();
-    }
-    vTaskDelay(10);
+    const char *taskName = "";
   }
-  vTaskDelete(NULL);
-}
+  //--------------------------------------------------------
+  void task(void *pvParameters)
+  {
+    remote_batt.setup(battVoltsChanged_cb);
 
-//--------------------------------------------------------
-void createBatteryMeasureTask(uint8_t core, uint8_t priority)
-{
-  xTaskCreatePinnedToCore(
-      batteryMeasureTask_0,
-      "batteryMeasureTask_0",
-      10000,
-      NULL,
-      priority,
-      NULL,
-      core);
-}
+    Serial.printf("TASK: %s on Core %d\n", taskName, xPortGetCoreID());
 
-//--------------------------------------------------------
-void battVoltsChanged_cb()
-{
-  displayQueue->send(DispState::UPDATE);
-}
-//--------------------------------------------------------
+    while (true)
+    {
+      if (since_measure_battery > BATTERY_MEASURE_INTERVAL)
+      {
+        since_measure_battery = 0;
+        remote_batt.update();
+      }
+      vTaskDelay(10);
+    }
+    vTaskDelete(NULL);
+  }
+
+  //--------------------------------------------------------
+  void createTask(const char *name, uint8_t core, uint8_t priority)
+  {
+    taskName = name;
+    xTaskCreatePinnedToCore(
+        task,
+        name,
+        10000,
+        NULL,
+        priority,
+        NULL,
+        core);
+  }
+
+  //--------------------------------------------------------
+  void battVoltsChanged_cb()
+  {
+    displayQueue->send(DispState::UPDATE);
+  }
+  //--------------------------------------------------------
+} // namespace Battery

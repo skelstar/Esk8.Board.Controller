@@ -9,6 +9,7 @@
 elapsedMillis
     sinceHudReadFromQueue,
     sinceLastConnectToHUD,
+    sinceCheckedActionQueue,
     sinceSentToServer;
 /* ---------------------------------------------- */
 
@@ -16,45 +17,59 @@ bool hasConnectedToHud = false;
 
 /* ---------------------------------------------- */
 
-void hudTask_1(void *pvParameters)
+namespace HUD
 {
-  Serial.printf("hudTask_1 running on CORE_%d\n", xPortGetCoreID());
-
-  while (true)
-
+  void task(void *pvParameters)
   {
-    if (hudActionQueue->messageAvailable())
-    {
-      HUDAction::Event action = hudActionQueue->read<HUDAction::Event>();
-      Serial.printf("queue rx: %s\n", HUDAction::getName(action));
-    }
-    // read from queue
-    if (sinceHudReadFromQueue > 500)
-    {
-      sinceHudReadFromQueue = 0;
-      if (hudMessageQueue->messageAvailable())
-      {
-        HUDTask::Message message = hudMessageQueue->read<HUDTask::Message>();
+    Serial.printf("hudTask_1 running on CORE_%d\n", xPortGetCoreID());
 
-        if (hudClient.connected())
+    hudActionQueue->setSentEventCallback([](uint8_t ev) {
+      if (PRINT_HUD_ACTION_QUEUE_SEND)
+        Serial.printf(HUD_ACTION_QUEUE_SENT_FORMAT, HUDAction::getName(ev));
+    });
+    hudActionQueue->setReadEventCallback([](uint8_t ev) {
+      if (PRINT_HUD_ACTION_QUEUE_READ)
+        Serial.printf(HUD_ACTION_QUEUE_READ_FORMAT, HUDAction::getName(ev));
+    });
+
+    while (true)
+    {
+      if (sinceCheckedActionQueue > 100)
+      {
+        sinceCheckedActionQueue = 0;
+        HUDAction::Event action = hudActionQueue->read<HUDAction::Event>();
+        if (action != HUDAction::NONE)
         {
-          sendMessageToHud(message);
         }
       }
-    }
-    vTaskDelay(10);
-  }
-  vTaskDelete(NULL); // deletes the current task
-}
+      // read from queue
+      if (sinceHudReadFromQueue > 500)
+      {
+        sinceHudReadFromQueue = 0;
+        if (hudQueue->messageAvailable())
+        {
+          HUDTask::Message message = hudQueue->read<HUDTask::Message>();
 
-void createHudTask(uint8_t core, uint8_t priority)
-{
-  xTaskCreatePinnedToCore(
-      hudTask_1,
-      "hudTask_1",
-      5000,
-      NULL,
-      priority,
-      NULL,
-      core);
-}
+          if (hudClient.connected())
+          {
+            sendMessageToHud(message);
+          }
+        }
+      }
+      vTaskDelay(10);
+    }
+    vTaskDelete(NULL); // deletes the current task
+  }                    // namespace HUD
+
+  void createTask(uint8_t core, uint8_t priority)
+  {
+    xTaskCreatePinnedToCore(
+        task,
+        "hudTask_1",
+        5000,
+        NULL,
+        priority,
+        NULL,
+        core);
+  }
+} // namespace HUD
