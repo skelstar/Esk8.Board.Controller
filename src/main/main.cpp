@@ -36,6 +36,7 @@ enum ButtonClickType
 #include <BatteryLib.h>
 #include <EventQueueManager.h>
 #include <FsmManager.h>
+#include <EnumManager.h>
 
 enum FeatureType
 {

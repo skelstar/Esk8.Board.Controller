@@ -1,9 +1,9 @@
 #ifndef Fsm
 #include <Fsm.h>
 #endif
-#ifndef ENUMMANAGER_H
-#include <EnumManager.h>
-#endif
+// #ifndef ENUMMANAGER_H
+// #include <EnumManager.h>
+// #endif
 #ifndef FSMMANAGER_H
 #include <FsmManager.h>
 #endif
