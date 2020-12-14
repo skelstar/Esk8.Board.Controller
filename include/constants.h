@@ -221,8 +221,8 @@ namespace HUDTask
 #define HUD_SENT_PACKET_FORMAT "[TX -> HUD]: %s|%s|%s\n"
 #define HUD_READ_PACKET_FORMAT "[RX <- HUD]: %s\n"
 #define HUD_CONNECTED_FORMAT "HUD: %s\n"
-#define HUD_QUEUE_TX_FORMAT "(%s)->send->hudQueue\n"
-#define HUD_QUEUE_RX_FORMAT "hudQueue<-read<-(%s)\n"
+#define HUD_QUEUE_TX_FORMAT "(%s)->send->[Q:HUD]\n"
+#define HUD_QUEUE_RX_FORMAT "[Q:HUD]<-read<-(%s)\n"
 #define HUD_ACTION_QUEUE_READ_FORMAT "queue rx: %s\n"
 #define HUD_ACTION_QUEUE_SENT_FORMAT "queue tx: %s\n"
 
