@@ -70,9 +70,9 @@ void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
   }
 
   HUDAction::Event ev = hudClient.read(PRINT_RX_FROM_HUD);
-  if ((uint8_t)ev > HUDAction::Length)
+  if ((uint16_t)ev > HUDAction::Length)
   {
-    Serial.printf("WARNING: Action from HUD out of range (%d)\n", (uint8_t)ev);
+    Serial.printf("WARNING: Action from HUD out of range (%d)\n", (uint16_t)ev);
     return;
   }
 

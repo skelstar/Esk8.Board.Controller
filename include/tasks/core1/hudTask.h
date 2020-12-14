@@ -23,11 +23,11 @@ namespace HUD
   {
     Serial.printf("hudTask_1 running on CORE_%d\n", xPortGetCoreID());
 
-    hudActionQueue->setSentEventCallback([](uint8_t ev) {
+    hudActionQueue->setSentEventCallback([](uint16_t ev) {
       if (PRINT_HUD_ACTION_QUEUE_SEND)
         Serial.printf(HUD_ACTION_QUEUE_SENT_FORMAT, HUDAction::getName(ev));
     });
-    hudActionQueue->setReadEventCallback([](uint8_t ev) {
+    hudActionQueue->setReadEventCallback([](uint16_t ev) {
       if (PRINT_HUD_ACTION_QUEUE_READ)
         Serial.printf(HUD_ACTION_QUEUE_READ_FORMAT, HUDAction::getName(ev));
     });

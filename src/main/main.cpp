@@ -144,6 +144,10 @@ Stats stats;
 
 //------------------------------------------------------------------
 
+// prototypes
+void hudPacketAvailable_cb(uint16_t from_id, uint8_t type);
+void boardPacketAvailable_cb(uint16_t from_id, uint8_t t);
+
 NRF24L01Lib nrf24;
 
 RF24 radio(NRF_CE, NRF_CS);
