@@ -343,8 +343,12 @@ void setup()
   hudQueueInit();
 
   // force value to get first packet out
-  uint16_t command = 1 << HUDCommand1::HEARTBEAT;
-  sendCommandToHud(command);
+
+  using namespace HUDCommand1;
+
+  sendCommandToHud(1 << HEARTBEAT);
+  vTaskDelay(100);
+  sendCommandToHud(1 << TWO_FLASHES | 1 << BLUE | 1 << FAST);
 
   while (!display_task_initialised)
   {
