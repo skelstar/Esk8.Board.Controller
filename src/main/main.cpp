@@ -35,7 +35,7 @@ Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 #include <HUDData.h>
 #include <QueueManager.h>
 
-// HUDData hudData(HUDCommand1::MODE_NONE, HUDCommand::BLACK, HUDCommand::NO_SPEED);
+// HUDData hudData(HUD::MODE_NONE, HUDCommand::BLACK, HUDCommand::NO_SPEED);
 
 //------------------------------------------------------------
 
@@ -153,18 +153,18 @@ NRF24L01Lib nrf24;
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
-GenericClient<uint16_t, HUDAction::Event> hudClient(COMMS_HUD);
+GenericClient<HUD::Command, HUDAction::Event> hudClient(COMMS_HUD);
 void hudClientInit()
 {
   hudClient.begin(&network, hudPacketAvailable_cb);
   hudClient.setConnectedStateChangeCallback([] {
     Serial.printf(HUD_CONNECTED_FORMAT, hudClient.connected() ? "CONNECTED" : "DISCONNECTED");
   });
-  hudClient.setSentPacketCallback([](uint16_t data) {
+  hudClient.setSentPacketCallback([](HUD::Command command) {
     Serial.printf(HUD_SENT_PACKET_FORMAT,
-                  HUDCommand1::getMode(data),
-                  HUDCommand1::getColour(data),
-                  HUDCommand1::getSpeed(data));
+                  command.getMode(),
+                  command.getColour(),
+                  command.getSpeed());
   });
   hudClient.setReadPacketCallback([](HUDAction::Event ev) {
     Serial.printf(HUD_READ_PACKET_FORMAT, HUDAction::getName(ev));
@@ -269,9 +269,9 @@ ThrottleClass throttle;
 //------------------------------------------------------------------
 void resetsAcknowledged_callback()
 {
-  using namespace HUDCommand1;
+  using namespace HUD;
   storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
-  sendCommandToHud(1 << FLASH | 1 << FAST | 1 << GREEN);
+  sendCommandToHud(FLASH | FAST | GREEN);
 }
 //------------------------------------------------------------------
 
@@ -344,11 +344,11 @@ void setup()
 
   // force value to get first packet out
 
-  using namespace HUDCommand1;
+  using namespace HUD;
 
-  sendCommandToHud(1 << HEARTBEAT);
+  sendCommandToHud(HEARTBEAT);
   vTaskDelay(100);
-  sendCommandToHud(1 << TWO_FLASHES | 1 << BLUE | 1 << FAST);
+  sendCommandToHud(TWO_FLASHES | BLUE | FAST);
 
   while (!display_task_initialised)
   {

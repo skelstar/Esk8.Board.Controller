@@ -29,7 +29,7 @@ namespace Comms
     StateIdLength,
   };
 
-  const char *getStateName(uint8_t id)
+  const char *getStateName(uint16_t id)
   {
     switch (id)
     {
@@ -127,10 +127,10 @@ namespace Comms
     commsStateTask_initialised = true;
 
     Comms::commsFsm.begin(&Comms::fsm, BOARD_COMMS_STATE_FORMAT_LONG, BOARD_COMMS_STATE_FORMAT_SHORT);
-    Comms::commsFsm.setGetStateNameCallback([](uint8_t ev) {
+    Comms::commsFsm.setGetStateNameCallback([](uint16_t ev) {
       return Comms::getStateName(ev); // Comms::getStateNameSafely(ev);
     });
-    Comms::commsFsm.setGetEventNameCallback([](uint8_t ev) {
+    Comms::commsFsm.setGetEventNameCallback([](uint16_t ev) {
       return Comms::getEventName(ev);
     });
 

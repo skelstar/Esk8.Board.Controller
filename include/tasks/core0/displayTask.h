@@ -10,7 +10,7 @@ namespace Display
     setupLCD();
 
     dispFsm.begin(&fsm, DISP_STATE_FORMAT, DISP_STATE_STRING_FORMAT);
-    dispFsm.setGetStateNameCallback([](uint8_t id) {
+    dispFsm.setGetStateNameCallback([](uint16_t id) {
       return getStateName(id);
     });
     // dispFsm.setGetEventNameCallback([](uint8_t ev) {

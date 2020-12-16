@@ -12,7 +12,7 @@ void sendCommandToHud(uint16_t command);
 //------------------------------------------------------------------
 void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 {
-  using namespace HUDCommand1;
+  using namespace HUD;
   sinceLastBoardPacketRx = 0;
 
   VescData packet = boardClient.read(PRINT_RX_FROM_BOARD);
@@ -62,7 +62,7 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 
 void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
 {
-  using namespace HUDCommand1;
+  using namespace HUD;
   if (type != Packet::HUD)
   {
     Serial.printf("WARNING: Rx type: %d not supported!\n", type);

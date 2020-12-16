@@ -48,7 +48,7 @@ namespace HUD
         sinceHudReadFromQueue = 0;
         if (hudQueue->messageAvailable())
         {
-          using namespace HUDCommand1;
+          using namespace HUD;
 
           uint8_t task = hudQueue->read<HUDTask::Message>();
 
