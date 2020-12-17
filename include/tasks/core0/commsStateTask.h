@@ -65,13 +65,13 @@ namespace Comms
         displayQueue->send(DispState::CONNECTED);
         displayQueue->send(DispState::UPDATE);
 
-        hudQueue->send(HUDTask::BOARD_CONNECTED);
+        hudTasksQueue->send(HUDTask::BOARD_CONNECTED);
 
         if (stats.needToAckResets())
         {
           displayQueue->send(DispState::SW_RESET);
           pulseLedOn = TriState::STATE_ON;
-          hudQueue->send(HUDTask::CONTROLLER_RESET);
+          hudTasksQueue->send(HUDTask::CONTROLLER_RESET);
         }
 
         // check board version is compatible
@@ -95,7 +95,7 @@ namespace Comms
 
         stats.boardConnected = false;
         displayQueue->send(DispState::DISCONNECTED);
-        hudQueue->send(HUDTask::BOARD_DISCONNECTED);
+        hudTasksQueue->send(HUDTask::BOARD_DISCONNECTED);
       },
       NULL, NULL);
 
@@ -126,12 +126,14 @@ namespace Comms
 
     commsStateTask_initialised = true;
 
-    Comms::commsFsm.begin(&Comms::fsm, BOARD_COMMS_STATE_FORMAT_LONG, BOARD_COMMS_STATE_FORMAT_SHORT);
-    Comms::commsFsm.setGetStateNameCallback([](uint16_t ev) {
-      return Comms::getStateName(ev); // Comms::getStateNameSafely(ev);
+    Comms::commsFsm.begin(&Comms::fsm);
+    Comms::commsFsm.setPrintStateCallback([](uint16_t id) {
+      if (PRINT_COMMS_STATE)
+        Serial.printf(PRINT_STATE_FORMAT, "COMMS", Comms::getStateName(id));
     });
-    Comms::commsFsm.setGetEventNameCallback([](uint16_t ev) {
-      return Comms::getEventName(ev);
+    Comms::commsFsm.setPrintStateEventCallback([](uint16_t ev) {
+      if (PRINT_COMMS_STATE && ev != 0 && ev != Comms::PKT_RXD)
+        Serial.printf(PRINT_STATE_EVENT_FORMAT, "COMMS", Comms::getEventName(ev));
     });
 
     Comms::addTransitions();

@@ -13,6 +13,7 @@ enum ButtonClickType
 #define STORE_STATS_TRIP_TIME "trip time"
 
 #define OUT_OF_RANGE "OUT OF RANGE"
+#define NO_MESSAGE_ON_QUEUE 0
 
 //------------------------------------------------------------
 namespace DispState
@@ -184,11 +185,11 @@ namespace HUDTask
 #ifndef PRINT_BUTTON_EVENTS
 #define PRINT_BUTTON_EVENTS 0
 #endif
-#ifndef PRINT_HUD_QUEUE_SEND
-#define PRINT_HUD_QUEUE_SEND 0
+#ifndef PRINT_HUD_TASKS_QUEUE_SEND
+#define PRINT_HUD_TASKS_QUEUE_SEND 0
 #endif
-#ifndef PRINT_HUD_QUEUE_READ
-#define PRINT_HUD_QUEUE_READ 0
+#ifndef PRINT_HUD_TASKS_QUEUE_READ
+#define PRINT_HUD_TASKS_QUEUE_READ 0
 #endif
 #ifndef PRINT_HUD_ACTION_QUEUE_SEND
 #define PRINT_HUD_ACTION_QUEUE_SEND 0
@@ -221,10 +222,8 @@ namespace HUDTask
 #define HUD_SENT_PACKET_FORMAT "[TX -> HUD]: %s|%s|%s\n"
 #define HUD_READ_PACKET_FORMAT "[RX <- HUD]: %s\n"
 #define HUD_CONNECTED_FORMAT "HUD: %s\n"
-#define HUD_QUEUE_TX_FORMAT "(%s)->send->[Q:HUD]\n"
-#define HUD_QUEUE_RX_FORMAT "[Q:HUD]<-read<-(%s)\n"
-#define HUD_ACTION_QUEUE_READ_FORMAT "queue rx: %s\n"
-#define HUD_ACTION_QUEUE_SENT_FORMAT "queue tx: %s\n"
+#define QUEUE_SEND_FORMAT "%s --> send --> [Q:%s]\n"
+#define QUEUE_READ_FORMAT "[Q:%s] <-- read <-- %s\n"
 
 #define BOARD_COMMS_STATE_FORMAT_LONG "[BOARD: %s | %s ]\n"
 #define BOARD_COMMS_STATE_FORMAT_SHORT "[BOARD: %s | _ ]\n"
@@ -232,8 +231,8 @@ namespace HUDTask
 #define TX_TO_BOARD_FORMAT "[TX -> BOARD]: id=%d\n"
 #define RX_FROM_BOARD_FORMAT "[RX <- BOARD]: id=%d\n"
 
-#define DISP_STATE_FORMAT "[DISP: %s | %s ]\n"
-#define DISP_STATE_STRING_FORMAT "[DISP: %s | _ ]\n"
+#define PRINT_STATE_FORMAT "[STATE:%s] %s\n"
+#define PRINT_STATE_EVENT_FORMAT "[STATE:%s|EVENT] %s\n"
 //-----------------------------------------------------
 
 enum TriState

@@ -6,8 +6,7 @@ void processHUDPacket();
 void processBoardPacket();
 void sendConfigToBoard();
 void sendPacketToBoard();
-bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType);
-void sendCommandToHud(uint16_t command);
+void sendCommandToHud(HUD::Command command);
 
 //------------------------------------------------------------------
 void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
@@ -15,7 +14,7 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   using namespace HUD;
   sinceLastBoardPacketRx = 0;
 
-  VescData packet = boardClient.read(PRINT_RX_FROM_BOARD);
+  VescData packet = boardClient.read();
 
   board.save(packet);
 
@@ -29,7 +28,7 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
     DEBUG("*** board's first packet!! ***");
 
     nrfCommsQueue->send(Comms::Event::BOARD_FIRST_PACKET);
-    sendCommandToHud(1 << HEARTBEAT);
+    sendCommandToHud(HEARTBEAT);
 
     controller_packet.id = 0;
     sendConfigToBoard();
@@ -39,12 +38,12 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   else if (board.startedMoving())
   {
     displayQueue->send(DispState::MOVING);
-    sendCommandToHud(1 << FAST | 1 << GREEN | 1 << FLASH);
+    sendCommandToHud(FLASH | FAST | GREEN);
   }
   else if (board.hasStopped())
   {
     displayQueue->send(DispState::STOPPED);
-    sendCommandToHud(1 << SLOW | 1 << RED | 1 << FLASH);
+    sendCommandToHud(FLASH | RED | SLOW);
   }
   else if (board.valuesChanged())
   {
@@ -69,7 +68,7 @@ void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
     return;
   }
 
-  HUDAction::Event ev = hudClient.read(PRINT_RX_FROM_HUD);
+  uint16_t ev = hudClient.read();
   if ((uint16_t)ev > HUDAction::Length)
   {
     Serial.printf("WARNING: Action from HUD out of range (%d)\n", (uint16_t)ev);
@@ -77,27 +76,27 @@ void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
   }
 
   // TODO respond with appropriate action response?
-  sendCommandToHud(1 << TWO_FLASHES | 1 << BLUE | 1 << FAST);
+  sendCommandToHud(TWO_FLASHES | GREEN | FAST);
 }
 
 //------------------------------------------------------------------
 
-HUDTask::Message mapToHUDTask(HUDAction::Event ev)
-{
-  switch (ev)
-  {
-  case HUDAction::HEARTBEAT:
-    return HUDTask::HEARTBEAT;
-  case HUDAction::ONE_CLICK:
-    return HUDTask::ACKNOWLEDGE;
-  case HUDAction::TWO_CLICK:
-    return HUDTask::CYCLE_BRIGHTNESS;
-  case HUDAction::THREE_CLICK:
-    return HUDTask::THREE_FLASHES;
-  default:
-    return HUDTask::ACKNOWLEDGE;
-  }
-}
+// HUDTask::Message mapToHUDTask(HUDAction::Event ev)
+// {
+//   switch (ev)
+//   {
+//   case HUDAction::HEARTBEAT:
+//     return HUDTask::HEARTBEAT;
+//   case HUDAction::ONE_CLICK:
+//     return HUDTask::ACKNOWLEDGE;
+//   case HUDAction::TWO_CLICK:
+//     return HUDTask::CYCLE_BRIGHTNESS;
+//   case HUDAction::THREE_CLICK:
+//     return HUDTask::THREE_FLASHES;
+//   default:
+//     return HUDTask::ACKNOWLEDGE;
+//   }
+// }
 
 //------------------------------------------------------------------
 
@@ -119,17 +118,17 @@ void sendPacketToBoard()
       DEBUGVAL(board.packet.id, controller_packet.id);
   }
 
-  boardClient.sendTo(Packet::CONTROL, controller_packet, PRINT_TX_TO_BOARD);
+  boardClient.sendTo(Packet::CONTROL, controller_packet);
 
   controller_packet.id++;
 }
 //------------------------------------------------------------------
 
-void sendCommandToHud(uint16_t command)
+void sendCommandToHud(HUD::Command command)
 {
   if (hudClient.connected())
   {
-    hudClient.sendTo(Packet::HUD, command, PRINT_TX_TO_HUD);
+    hudClient.sendTo(Packet::HUD, command);
   }
   else
   {
@@ -137,14 +136,6 @@ void sendCommandToHud(uint16_t command)
   }
 }
 
-//------------------------------------------------------------------
-
-bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType)
-{
-  // bool sent = nrf24.send(COMMS_BOARD, packetType, d, len);
-
-  return true; // sent;
-}
 //------------------------------------------------------------------
 
 bool boardTimedOut()

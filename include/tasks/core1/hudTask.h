@@ -7,7 +7,7 @@
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 
 elapsedMillis
-    sinceHudReadFromQueue,
+    sinceCheckedTaskForHUDQueue,
     sinceLastConnectToHUD,
     sinceCheckedActionQueue,
     sinceSentToServer;
@@ -17,86 +17,98 @@ bool hasConnectedToHud = false;
 
 /* ---------------------------------------------- */
 
+void hudActionQueueSentCb(uint16_t ev)
+{
+  if (PRINT_HUD_ACTION_QUEUE_SEND)
+    Serial.printf(QUEUE_SEND_FORMAT, "HUD_ACTION", HUDAction::getName(ev));
+}
+void hudActionQueueReadCb(uint16_t ev)
+{
+  if (PRINT_HUD_ACTION_QUEUE_READ)
+    Serial.printf(QUEUE_READ_FORMAT, "HUD_ACTION", HUDAction::getName(ev));
+}
+
+// messages from HUD
+void readActionsFromHUDQueue()
+{
+  uint16_t action = hudActionQueue->read<HUDAction::Event>();
+  if (action >= HUDAction::Length)
+  {
+    Serial.printf("WARNING: action from HUD queue is OUT OF RANGE (%d)\n", action);
+    return;
+  }
+  if (action != NO_MESSAGE_ON_QUEUE)
+  {
+  }
+}
+
+HUD::Command mapTaskToCommand(uint16_t task)
+{
+  using namespace HUD;
+  switch (task)
+  {
+  case HUDTask::BOARD_DISCONNECTED:
+    return Command(PULSE | RED);
+  case HUDTask::BOARD_CONNECTED:
+    return Command(HEARTBEAT);
+  case HUDTask::WARNING_ACK:
+    return Command(GREEN | FLASH);
+  case HUDTask::CONTROLLER_RESET:
+    return Command(RED | FLASH | SLOW);
+  case HUDTask::BOARD_MOVING:
+    return Command(GREEN | FLASH);
+  case HUDTask::BOARD_STOPPED:
+    return Command(RED | FLASH | SLOW);
+  case HUDTask::HEARTBEAT:
+    return Command(BLUE | TWO_FLASHES);
+  case HUDTask::ACKNOWLEDGE:
+    return Command(GREEN | TWO_FLASHES);
+  case HUDTask::CYCLE_BRIGHTNESS:
+    return Command(CYCLE_BRIGHTNESS);
+  case HUDTask::GO_TO_IDLE:
+    return Command(HEARTBEAT);
+  }
+  return Command(0);
+}
+
+void readTasksForHUDQueue()
+{
+  using namespace HUD;
+  uint16_t task = hudTasksQueue->read<HUDTask::Message>();
+
+  if (hudClient.connected() == false)
+    return;
+
+  if (hudClient.connected())
+  {
+    Command command = mapTaskToCommand(task);
+    if (command.get() != 0)
+      sendCommandToHud(command);
+  }
+}
+/* ---------------------------------------------- */
+
 namespace HUD
 {
   void task(void *pvParameters)
   {
     Serial.printf("hudTask_1 running on CORE_%d\n", xPortGetCoreID());
 
-    hudActionQueue->setSentEventCallback([](uint16_t ev) {
-      if (PRINT_HUD_ACTION_QUEUE_SEND)
-        Serial.printf(HUD_ACTION_QUEUE_SENT_FORMAT, HUDAction::getName(ev));
-    });
-    hudActionQueue->setReadEventCallback([](uint16_t ev) {
-      if (PRINT_HUD_ACTION_QUEUE_READ)
-        Serial.printf(HUD_ACTION_QUEUE_READ_FORMAT, HUDAction::getName(ev));
-    });
+    hudActionQueue->setSentEventCallback(hudActionQueueSentCb);
+    hudActionQueue->setReadEventCallback(hudActionQueueReadCb);
 
     while (true)
     {
       if (sinceCheckedActionQueue > 100)
       {
         sinceCheckedActionQueue = 0;
-        HUDAction::Event action = hudActionQueue->read<HUDAction::Event>();
-        if (action != HUDAction::NONE)
-        {
-        }
+        readActionsFromHUDQueue();
       }
       // read from queue
-      if (sinceHudReadFromQueue > 500)
+      if (sinceCheckedTaskForHUDQueue > 300)
       {
-        sinceHudReadFromQueue = 0;
-        if (hudQueue->messageAvailable())
-        {
-          using namespace HUD;
-
-          uint8_t task = hudQueue->read<HUDTask::Message>();
-
-          if (hudClient.connected())
-          {
-            uint16_t command = 0;
-            switch (task)
-            {
-            case HUDTask::NONE:
-              command = 1 << HEARTBEAT;
-              break;
-            case HUDTask::BOARD_DISCONNECTED:
-              command = 1 << PULSE | 1 << RED;
-              break;
-            case HUDTask::BOARD_CONNECTED:
-              command = 1 << HEARTBEAT;
-              break;
-            case HUDTask::WARNING_ACK:
-              command = 1 << GREEN | 1 << FLASH;
-              break;
-            case HUDTask::CONTROLLER_RESET:
-              command = 1 << RED | 1 << FLASH | 1 << SLOW;
-              break;
-            case HUDTask::BOARD_MOVING:
-              command = 1 << GREEN | 1 << FLASH;
-              break;
-            case HUDTask::BOARD_STOPPED:
-              command = 1 << RED | 1 << FLASH | 1 << SLOW;
-              break;
-            case HUDTask::HEARTBEAT:
-              command = 1 << BLUE | 1 << TWO_FLASHES;
-              break;
-            case HUDTask::ACKNOWLEDGE:
-              command = 1 << GREEN | 1 << TWO_FLASHES;
-              break;
-            case HUDTask::CYCLE_BRIGHTNESS:
-              command = 1 << CYCLE_BRIGHTNESS;
-              break;
-            case HUDTask::GO_TO_IDLE:
-              command = 1 << HEARTBEAT;
-              break;
-            default:
-              break;
-            }
-
-            sendCommandToHud(command);
-          }
-        }
+        sinceCheckedTaskForHUDQueue = 0;
+        readTasksForHUDQueue();
       }
       vTaskDelay(10);
     }

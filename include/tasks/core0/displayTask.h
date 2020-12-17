@@ -9,13 +9,16 @@ namespace Display
   {
     setupLCD();
 
-    dispFsm.begin(&fsm, DISP_STATE_FORMAT, DISP_STATE_STRING_FORMAT);
-    dispFsm.setGetStateNameCallback([](uint16_t id) {
-      return getStateName(id);
+    dispFsm.begin(&fsm);
+    dispFsm.setPrintStateCallback([](uint16_t id) {
+      if (PRINT_DISP_STATE)
+        Serial.printf(PRINT_STATE_FORMAT, "DISP", Display::getStateName(id));
     });
-    // dispFsm.setGetEventNameCallback([](uint8_t ev) {
-    //   return DispState::getEvent(ev);)
-    // });
+    dispFsm.setPrintStateEventCallback([](uint16_t ev) {
+      if (PRINT_DISP_STATE_EVENT)
+        Serial.printf(PRINT_STATE_EVENT_FORMAT, "DISP", DispState::getEvent(ev));
+    });
+
     addTransitions();
 
     Serial.printf("displayTask running on core %d\n", xPortGetCoreID());
@@ -86,4 +89,4 @@ namespace Display
         NULL,
         core);
   }
-}
+} // namespace Display

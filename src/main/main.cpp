@@ -48,30 +48,41 @@ Queue::Manager *buttonQueue;
 Queue::Manager *hudActionQueue;
 
 Queue::Manager *nrfCommsQueue;
-void nrfCommsQueueInit()
+namespace NRFCommsQueue
 {
-  nrfCommsQueue = new Queue::Manager(/*length*/ 5, sizeof(uint8_t), /*ticks*/ 10);
-  nrfCommsQueue->setName("nrfCommsQueue");
-  nrfCommsQueue->setSentEventCallback([](uint16_t ev) {
-    // if (ev != 1)
-    //   Serial.printf("nrfCommsQueue sent\n", ev);
-  });
-}
+  void init()
+  {
+    nrfCommsQueue = new Queue::Manager(/*length*/ 5, sizeof(uint8_t), /*ticks*/ 10);
+    nrfCommsQueue->setName("nrfCommsQueue");
+    nrfCommsQueue->setSentEventCallback([](uint16_t ev) {
+      // if (ev != 1)
+      //   Serial.printf("nrfCommsQueue sent\n", ev);
+    });
+  }
+} // namespace NRFCommsQueue
 
-Queue::Manager *hudQueue;
-void hudQueueInit()
+Queue::Manager *hudTasksQueue;
+namespace HudTaskQueue
 {
-  hudQueue = new Queue::Manager(/*length*/ 3, sizeof(HUDTask::Message), /*ticks*/ 5);
-  hudQueue->setName("hudQueue");
-  hudQueue->setSentEventCallback([](uint16_t ev) {
-    if (PRINT_HUD_QUEUE_SEND)
-      Serial.printf(HUD_QUEUE_TX_FORMAT, HUDTask::getName(ev));
-  });
-  hudQueue->setReadEventCallback([](uint16_t ev) {
-    if (PRINT_HUD_QUEUE_READ)
-      Serial.printf(HUD_QUEUE_RX_FORMAT, HUDTask::getName(ev));
-  });
-}
+  void queueSentEventCb(uint16_t ev)
+  {
+    if (PRINT_HUD_TASKS_QUEUE_SEND)
+      Serial.printf(QUEUE_SEND_FORMAT, HUDTask::getName(ev), "HUD_TASK");
+  }
+  void queueReadEventCb(uint16_t ev)
+  {
+    if (PRINT_HUD_TASKS_QUEUE_READ)
+      Serial.printf(QUEUE_READ_FORMAT, "HUD_TASK", HUDTask::getName(ev));
+  }
+
+  void init()
+  {
+    hudTasksQueue = new Queue::Manager(/*length*/ 3, sizeof(HUDTask::Message), /*ticks*/ 5);
+    hudTasksQueue->setName("hudQueue");
+    hudTasksQueue->setSentEventCallback(queueSentEventCb);
+    hudTasksQueue->setReadEventCallback(queueReadEventCb);
+  }
+} // namespace HudTaskQueue
 
 //------------------------------------------------------------
 enum FeatureType
@@ -156,7 +167,7 @@ RF24Network network(radio);
 GenericClient<HUD::Command, HUDAction::Event> hudClient(COMMS_HUD);
 void hudClientInit()
 {
-  hudClient.begin(&network, hudPacketAvailable_cb);
+  hudClient.begin(&network, hudPacketAvailable_cb, PRINT_TX_TO_HUD, PRINT_RX_FROM_HUD);
   hudClient.setConnectedStateChangeCallback([] {
     Serial.printf(HUD_CONNECTED_FORMAT, hudClient.connected() ? "CONNECTED" : "DISCONNECTED");
   });
@@ -174,7 +185,7 @@ void hudClientInit()
 GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
 void boardClientInit()
 {
-  boardClient.begin(&network, boardPacketAvailable_cb);
+  boardClient.begin(&network, boardPacketAvailable_cb, PRINT_TX_TO_BOARD, PRINT_RX_FROM_BOARD);
   boardClient.setConnectedStateChangeCallback([] {
     Serial.printf(BOARD_CLIENT_CONNECTED_FORMAT, boardClient.connected() ? "CONNECTED" : "DISCONNECTED");
   });
@@ -337,10 +348,10 @@ void setup()
 
   displayQueue = new Queue::Manager(xDisplayEventQueue, 5);
   buttonQueue = new Queue::Manager(xButtonPushEventQueue, 10);
-  hudActionQueue = new Queue::Manager(xHUDActionQueue, 3);
+  hudActionQueue = new Queue::Manager(xHUDActionQueue, 3, NO_MESSAGE_ON_QUEUE);
 
-  nrfCommsQueueInit();
-  hudQueueInit();
+  NRFCommsQueue::init();
+  HudTaskQueue::init();
 
   // force value to get first packet out
 
