@@ -12,6 +12,7 @@
 #include <rom/rtc.h> // for reset reason
 #include <shared-utils.h>
 #include <types.h>
+#include <printFormatStrings.h>
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
 #define SOFT_SPI_MOSI_PIN 13 // Blue
@@ -67,12 +68,12 @@ namespace HudTaskQueue
   void queueSentEventCb(uint16_t ev)
   {
     if (PRINT_HUD_TASKS_QUEUE_SEND)
-      Serial.printf(QUEUE_SEND_FORMAT, HUDTask::getName(ev), "HUD_TASK");
+      Serial.printf(PRINT_QUEUE_SEND_FORMAT, HUDTask::getName(ev), "HUD_TASK");
   }
   void queueReadEventCb(uint16_t ev)
   {
     if (PRINT_HUD_TASKS_QUEUE_READ)
-      Serial.printf(QUEUE_READ_FORMAT, "HUD_TASK", HUDTask::getName(ev));
+      Serial.printf(PRINT_QUEUE_READ_FORMAT, "HUD_TASK", HUDTask::getName(ev));
   }
 
   void init()
@@ -172,13 +173,10 @@ void hudClientInit()
     Serial.printf(HUD_CONNECTED_FORMAT, hudClient.connected() ? "CONNECTED" : "DISCONNECTED");
   });
   hudClient.setSentPacketCallback([](HUD::Command command) {
-    Serial.printf(HUD_SENT_PACKET_FORMAT,
-                  command.getMode(),
-                  command.getColour(),
-                  command.getSpeed());
+    Serial.printf(PRINT_TX_PACKET_TO_FORMAT, "HUD", command.getCommand());
   });
   hudClient.setReadPacketCallback([](HUDAction::Event ev) {
-    Serial.printf(HUD_READ_PACKET_FORMAT, HUDAction::getName(ev));
+    Serial.printf(PRINT_RX_PACKET_FROM_FORMAT, "HUD", HUDAction::getName(ev));
   });
 }
 

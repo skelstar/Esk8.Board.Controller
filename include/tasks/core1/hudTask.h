@@ -20,12 +20,12 @@ bool hasConnectedToHud = false;
 void hudActionQueueSentCb(uint16_t ev)
 {
   if (PRINT_HUD_ACTION_QUEUE_SEND)
-    Serial.printf(QUEUE_SEND_FORMAT, "HUD_ACTION", HUDAction::getName(ev));
+    Serial.printf(PRINT_QUEUE_SEND_FORMAT, "HUD_ACTION", HUDAction::getName(ev));
 }
 void hudActionQueueReadCb(uint16_t ev)
 {
   if (PRINT_HUD_ACTION_QUEUE_READ)
-    Serial.printf(QUEUE_READ_FORMAT, "HUD_ACTION", HUDAction::getName(ev));
+    Serial.printf(PRINT_QUEUE_READ_FORMAT, "HUD_ACTION", HUDAction::getName(ev));
 }
 
 // messages from HUD

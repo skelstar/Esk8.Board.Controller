@@ -219,21 +219,14 @@ namespace HUDTask
 #define PRINT_RX_FROM_BOARD 0
 #endif
 
-#define HUD_SENT_PACKET_FORMAT "[TX -> HUD]: %s|%s|%s\n"
-#define HUD_READ_PACKET_FORMAT "[RX <- HUD]: %s\n"
 #define HUD_CONNECTED_FORMAT "HUD: %s\n"
-#define QUEUE_SEND_FORMAT "%s --> send --> [Q:%s]\n"
-#define QUEUE_READ_FORMAT "[Q:%s] <-- read <-- %s\n"
 
 #define BOARD_COMMS_STATE_FORMAT_LONG "[BOARD: %s | %s ]\n"
 #define BOARD_COMMS_STATE_FORMAT_SHORT "[BOARD: %s | _ ]\n"
 #define BOARD_CLIENT_CONNECTED_FORMAT "BOARD CLIENT: %s\n"
+
 #define TX_TO_BOARD_FORMAT "[TX -> BOARD]: id=%d\n"
 #define RX_FROM_BOARD_FORMAT "[RX <- BOARD]: id=%d\n"
-
-#define PRINT_STATE_FORMAT "[STATE:%s] %s\n"
-#define PRINT_STATE_EVENT_FORMAT "[STATE:%s|EVENT] %s\n"
-//-----------------------------------------------------
 
 enum TriState
 {
