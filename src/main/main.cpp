@@ -170,7 +170,7 @@ void hudClientInit()
 {
   hudClient.begin(&network, hudPacketAvailable_cb, PRINT_TX_TO_HUD, PRINT_RX_FROM_HUD);
   hudClient.setConnectedStateChangeCallback([] {
-    Serial.printf(HUD_CONNECTED_FORMAT, hudClient.connected() ? "CONNECTED" : "DISCONNECTED");
+    Serial.printf(PRINT_CLIENT_CONNECTION_FORMAT, "HUD", hudClient.connected() ? "CONNECTED" : "DISCONNECTED");
   });
   hudClient.setSentPacketCallback([](HUD::Command command) {
     Serial.printf(PRINT_TX_PACKET_TO_FORMAT, "HUD", command.getCommand());

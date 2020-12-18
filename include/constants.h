@@ -219,8 +219,6 @@ namespace HUDTask
 #define PRINT_RX_FROM_BOARD 0
 #endif
 
-#define HUD_CONNECTED_FORMAT "HUD: %s\n"
-
 #define BOARD_COMMS_STATE_FORMAT_LONG "[BOARD: %s | %s ]\n"
 #define BOARD_COMMS_STATE_FORMAT_SHORT "[BOARD: %s | _ ]\n"
 #define BOARD_CLIENT_CONNECTED_FORMAT "BOARD CLIENT: %s\n"
