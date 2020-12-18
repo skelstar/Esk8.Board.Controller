@@ -46,13 +46,15 @@ void print_build_status(String chipId)
   Serial.printf("-----------------------------------------------\n");
 #endif
 
-#ifdef DEBUG_BUILD
-  Serial.printf("-----------------------------------------------\n");
-  Serial.printf("               DEBUG BUILD!! \n");
-  Serial.printf("-----------------------------------------------\n");
-  Serial.printf("               %s \n", __TIME__);
-  Serial.printf("               %s \n", __DATE__);
-  Serial.printf("-----------------------------------------------\n");
-#endif
+  if (DEBUG_BUILD)
+  {
+    Serial.printf("-----------------------------------------------\n");
+    Serial.printf("               DEBUG BUILD!! \n");
+    Serial.printf("               BRANCH: %s \n", GIT_BRANCH_NAME);
+    Serial.printf("-----------------------------------------------\n");
+    Serial.printf("               %s \n", __TIME__);
+    Serial.printf("               %s \n", __DATE__);
+    Serial.printf("-----------------------------------------------\n");
+  }
   Serial.printf("\n");
 }
