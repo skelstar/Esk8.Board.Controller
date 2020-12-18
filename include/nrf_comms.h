@@ -45,12 +45,14 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
     displayQueue->send(DispState::STOPPED);
     sendCommandToHud(FLASH | RED | SLOW);
   }
-  else if (board.valuesChanged())
+
+  if (board.valuesChanged())
   {
     displayQueue->send(DispState::UPDATE);
   }
 
-  if (board.getCommand() == CommandType::RESET)
+  // this should only happen when using M5STACK
+  if (DEBUG_BUILD && board.getCommand() == CommandType::RESET)
   {
     ESP.restart();
   }
@@ -76,33 +78,16 @@ void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
   }
 
   // TODO respond with appropriate action response?
-  sendCommandToHud(TWO_FLASHES | GREEN | FAST);
 
   switch (HUDAction::Event(ev))
   {
   case HUDAction::ONE_CLICK:
     hudActionQueue->send(ev);
+    break;
+  default:
+    sendCommandToHud(TWO_FLASHES | GREEN | FAST);
   }
 }
-
-//------------------------------------------------------------------
-
-// HUDTask::Message mapToHUDTask(HUDAction::Event ev)
-// {
-//   switch (ev)
-//   {
-//   case HUDAction::HEARTBEAT:
-//     return HUDTask::HEARTBEAT;
-//   case HUDAction::ONE_CLICK:
-//     return HUDTask::ACKNOWLEDGE;
-//   case HUDAction::TWO_CLICK:
-//     return HUDTask::CYCLE_BRIGHTNESS;
-//   case HUDAction::THREE_CLICK:
-//     return HUDTask::THREE_FLASHES;
-//   default:
-//     return HUDTask::ACKNOWLEDGE;
-//   }
-// }
 
 //------------------------------------------------------------------
 

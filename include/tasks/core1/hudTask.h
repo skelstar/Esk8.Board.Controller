@@ -15,6 +15,9 @@ elapsedMillis
 
 bool hasConnectedToHud = false;
 
+HUD::Command mapActionToCommand(uint16_t action);
+HUD::Command mapTaskToCommand(uint16_t task);
+
 /* ---------------------------------------------- */
 
 void hudActionQueueSentCb(uint16_t ev)
@@ -31,15 +34,35 @@ void hudActionQueueReadCb(uint16_t ev)
 // messages from HUD
 void readActionsFromHUDQueue()
 {
+  using namespace HUD;
   uint16_t action = hudActionQueue->read<HUDAction::Event>();
   if (action >= HUDAction::Length)
   {
     Serial.printf("WARNING: action from HUD queue is OUT OF RANGE (%d)\n", action);
     return;
   }
-  if (action != NO_MESSAGE_ON_QUEUE)
+
+  if (action == HUDAction::NONE)
+    return;
+
+  HUD::Command command = mapActionToCommand(action);
+  Serial.printf("Sending to HUD %s\n", command.getCommand());
+  sendCommandToHud(command);
+}
+
+HUD::Command mapActionToCommand(uint16_t action)
+{
+  using namespace HUDAction;
+  switch (action)
   {
+  case ONE_CLICK:
+    return HUD::CYCLE_BRIGHTNESS;
+    // case HEARTBEAT:
+    // case TWO_CLICK:
+    // case THREE_CLICK:
+    //   break;
   }
+  return 0;
 }
 
 HUD::Command mapTaskToCommand(uint16_t task)

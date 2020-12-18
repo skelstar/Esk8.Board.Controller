@@ -218,6 +218,9 @@ namespace HUDTask
 #ifndef PRINT_RX_FROM_BOARD
 #define PRINT_RX_FROM_BOARD 0
 #endif
+#ifndef DEBUG_BUILD
+#define DEBUG_BUILD 0
+#endif
 #ifndef GIT_BRANCH_NAME
 #define GIT_BRANCH_NAME "branch not provided?"
 #endif
