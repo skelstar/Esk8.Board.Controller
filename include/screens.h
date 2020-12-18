@@ -167,6 +167,7 @@ int getQuarterY(QuarterPosition pos)
   case BOTTOM_RIGHT_QRTR:
     return (LCD_HEIGHT - STRIPE_HEIGHT) / 2 + STRIPE_HEIGHT;
   }
+  return 0;
 }
 //-----------------------------------------------------
 
