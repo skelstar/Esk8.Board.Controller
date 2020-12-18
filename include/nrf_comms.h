@@ -77,6 +77,12 @@ void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
 
   // TODO respond with appropriate action response?
   sendCommandToHud(TWO_FLASHES | GREEN | FAST);
+
+  switch (HUDAction::Event(ev))
+  {
+  case HUDAction::ONE_CLICK:
+    hudActionQueue->send(ev);
+  }
 }
 
 //------------------------------------------------------------------
