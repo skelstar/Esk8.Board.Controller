@@ -36,8 +36,6 @@ Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 #include <HUDData.h>
 #include <QueueManager.h>
 
-// HUDData hudData(HUD::MODE_NONE, HUDCommand::BLACK, HUDCommand::NO_SPEED);
-
 //------------------------------------------------------------
 
 xQueueHandle xDisplayEventQueue;
@@ -168,31 +166,40 @@ RF24Network network(radio);
 GenericClient<HUD::Command, HUDAction::Event> hudClient(COMMS_HUD);
 void hudClientInit()
 {
-  hudClient.begin(&network, hudPacketAvailable_cb, PRINT_TX_TO_HUD, PRINT_RX_FROM_HUD);
+  hudClient.begin(&network, hudPacketAvailable_cb);
   hudClient.setConnectedStateChangeCallback([] {
     Serial.printf(PRINT_CLIENT_CONNECTION_FORMAT, "HUD", hudClient.connected() ? "CONNECTED" : "DISCONNECTED");
   });
   hudClient.setSentPacketCallback([](HUD::Command command) {
-    Serial.printf(PRINT_TX_PACKET_TO_FORMAT, "HUD", command.getCommand());
+    if (PRINT_TX_TO_HUD)
+      Serial.printf(PRINT_TX_PACKET_TO_FORMAT, "HUD", command.getCommand());
   });
   hudClient.setReadPacketCallback([](HUDAction::Event ev) {
-    Serial.printf(PRINT_RX_PACKET_FROM_FORMAT, "HUD", HUDAction::getName(ev));
+    if (PRINT_RX_FROM_HUD)
+      Serial.printf(PRINT_RX_PACKET_FROM_FORMAT, "HUD", HUDAction::getName(ev));
   });
+}
+
+void printSentToBoard(ControllerData data)
+{
+  if (PRINT_TX_TO_BOARD)
+    Serial.printf(TX_TO_BOARD_FORMAT, data.id);
+}
+void printRecvFromBoard(VescData data)
+{
+  if (PRINT_RX_FROM_BOARD)
+    Serial.printf(RX_FROM_BOARD_FORMAT, data.id);
 }
 
 GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
 void boardClientInit()
 {
-  boardClient.begin(&network, boardPacketAvailable_cb, PRINT_TX_TO_BOARD, PRINT_RX_FROM_BOARD);
+  boardClient.begin(&network, boardPacketAvailable_cb);
   boardClient.setConnectedStateChangeCallback([] {
     Serial.printf(BOARD_CLIENT_CONNECTED_FORMAT, boardClient.connected() ? "CONNECTED" : "DISCONNECTED");
   });
-  boardClient.setSentPacketCallback([](ControllerData data) {
-    // Serial.printf(TX_TO_BOARD_FORMAT, data.id);
-  });
-  boardClient.setReadPacketCallback([](VescData data) {
-    // Serial.printf(RX_FROM_BOARD_FORMAT, data.id);
-  });
+  boardClient.setSentPacketCallback(printSentToBoard);
+  boardClient.setReadPacketCallback(printRecvFromBoard);
 }
 
 //------------------------------------------------------------------
@@ -355,14 +362,16 @@ void setup()
 
   using namespace HUD;
 
+  while (!Display::taskReady && !Comms::taskReady && !HUD::taskReady)
+  {
+    vTaskDelay(1);
+  }
+
   sendCommandToHud(HEARTBEAT);
   vTaskDelay(100);
   sendCommandToHud(TWO_FLASHES | BLUE | FAST);
 
-  while (!display_task_initialised)
-  {
-    vTaskDelay(1);
-  }
+  sendConfigToBoard();
 }
 //---------------------------------------------------------------
 

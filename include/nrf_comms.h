@@ -93,6 +93,7 @@ void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
 
 void sendConfigToBoard()
 {
+  controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
   controller_config.id = controller_packet.id;
   boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);
 }

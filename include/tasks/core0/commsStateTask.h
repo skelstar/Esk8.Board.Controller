@@ -21,6 +21,8 @@ Comms::Event lastCommsEvent = Comms::Event::NO_EVENT;
 
 namespace Comms
 {
+  bool taskReady = false;
+
   enum StateId
   {
     SEARCHING,
@@ -121,7 +123,6 @@ namespace Comms
 
   void task(void *pvParameters)
   {
-
     Serial.printf("commsStateTask running on core %d\n", xPortGetCoreID());
 
     commsStateTask_initialised = true;
@@ -138,7 +139,9 @@ namespace Comms
 
     Comms::addTransitions();
 
-    while (false == display_task_initialised)
+    taskReady = true;
+
+    while (!Display::taskReady)
     {
       vTaskDelay(1);
     }

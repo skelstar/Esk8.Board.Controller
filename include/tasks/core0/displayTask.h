@@ -5,6 +5,8 @@
 
 namespace Display
 {
+  bool taskReady = false;
+
   void task(void *pvParameters)
   {
     setupLCD();
@@ -26,6 +28,7 @@ namespace Display
     fsm.run_machine();
 
     display_task_initialised = true;
+    taskReady = true;
 
 #define READ_DISP_EVENT_QUEUE_PERIOD 100
 

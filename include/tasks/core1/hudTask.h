@@ -113,12 +113,20 @@ void readTasksForHUDQueue()
 
 namespace HUD
 {
+  bool taskReady = false;
+
   void task(void *pvParameters)
   {
     Serial.printf("hudTask_1 running on CORE_%d\n", xPortGetCoreID());
 
     hudActionQueue->setSentEventCallback(hudActionQueueSentCb);
     hudActionQueue->setReadEventCallback(hudActionQueueReadCb);
+
+    taskReady = true;
+
+    while (!Comms::taskReady)
+    {
+    }
 
     while (true)
     {
