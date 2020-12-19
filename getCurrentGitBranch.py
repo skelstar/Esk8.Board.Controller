@@ -9,5 +9,3 @@ for l in label.split("\n"):
     # branch = "-D BRANCH_NAME=nrfnotble"
     break;
 print("-DGIT_BRANCH_NAME='\"%s\"'" % branch)
-print('-D VERSION=2.8')
-print('-D VERSION_BOARD_COMPAT=2.6')
