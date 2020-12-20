@@ -8,43 +8,51 @@
 namespace Display
 {
   bool update_display = false;
-  DispState::Event lastDispEvent;
+  DispState::Trigger lastDispEvent;
 
   elapsedMillis sinceShowingToggleScreen;
   elapsedMillis sinceStoredMovingTime;
 
   enum StateId
   {
-    SEARCHING,
+    SEARCHING = 0,
     DISCONNECTED,
     STOPPED_SCREEN,
     MOVING_SCREEN,
     NEED_TO_ACK_RESETS_STOPPED,
     NEED_TO_ACK_RESETS_MOVING,
     BOARD_VERSION_DOESNT_MATCH_SCREEN,
+    SHOW_PUSH_TO_START,
     TOGGLE_PUSH_TO_START,
-    Length,
   };
 
-  std::string stateNames[] = {
-      "SEARCHING",
-      "DISCONNECTED",
-      "STOPPED_SCREEN",
-      "MOVING_SCREEN",
-      "NEED_TO_ACK_RESETS_STOPPED",
-      "NEED_TO_ACK_RESETS_MOVING",
-      "BOARD_VERSION_DOESNT_MATCH_SCREEN",
-      "TOGGLE_PUSH_TO_START",
-  };
-
-  const char *getStateName(uint8_t id)
+  const char *stateID(uint16_t id)
   {
-    return id < Length && ARRAY_SIZE(stateNames) == Length
-               ? stateNames[id].c_str()
-               : OUT_OF_RANGE;
+    switch (id)
+    {
+    case SEARCHING:
+      return "SEARCHING";
+    case DISCONNECTED:
+      return "DISCONNECTED";
+    case STOPPED_SCREEN:
+      return "STOPPED_SCREEN";
+    case MOVING_SCREEN:
+      return "MOVING_SCREEN";
+    case NEED_TO_ACK_RESETS_STOPPED:
+      return "NEED_TO_ACK_RESETS_STOPPED";
+    case NEED_TO_ACK_RESETS_MOVING:
+      return "NEED_TO_ACK_RESETS_MOVING";
+    case BOARD_VERSION_DOESNT_MATCH_SCREEN:
+      return "BOARD_VERSION_DOESNT_MATCH_SCREEN";
+    case SHOW_PUSH_TO_START:
+      return "SHOW_PUSH_TO_START";
+    case TOGGLE_PUSH_TO_START:
+      return "TOGGLE_PUSH_TO_START";
+    }
+    return outOfRange("Display::stateID()");
   }
 
-  FsmManager<DispState::Event> dispFsm;
+  FsmManager<DispState::Trigger> dispFsm;
 
   //---------------------------------------------------------------
   State stateSearching([] {
@@ -123,27 +131,49 @@ namespace Display
       NULL);
   //---------------------------------------------------------------
 
-  State stateTogglePushToStart(
+  State stateShowPushToStart(
       [] {
-        dispFsm.printState(TOGGLE_PUSH_TO_START);
+        dispFsm.printState(SHOW_PUSH_TO_START);
         bool currVal = featureService.get<bool>(FeatureType::PUSH_TO_START);
-        if (lastDispEvent == DispState::PRIMARY_DOUBLE_CLICK)
+        screenPropValue("push to start", (currVal == true) ? "ON" : "OFF");
+
+        if (lastDispEvent == DispState::PRIMARY_LONG_PRESS)
         {
           currVal = !currVal;
           featureService.set(PUSH_TO_START, currVal);
         }
+        else
+        {
+          Serial.printf("lastEvent was %s\n", DispState::getTrigger(lastDispEvent));
+        }
         screenPropValue("push to start", (currVal == true) ? "ON" : "OFF");
         sinceShowingToggleScreen = 0;
       },
-      [] {
-        if (sinceShowingToggleScreen > 3000)
-        {
-          sinceShowingToggleScreen = 0; // prevent excessive re-trigger
-          lastDispEvent = DispState::PRIMARY_SINGLE_CLICK;
-          dispFsm.trigger(DispState::PRIMARY_SINGLE_CLICK);
-        }
-      },
+      NULL,
       NULL);
+
+  // State stateTogglePushToStart(
+  //     [] {
+  //       dispFsm.printState(TOGGLE_PUSH_TO_START);
+  //       bool currVal = featureService.get<bool>(FeatureType::PUSH_TO_START);
+  //       Serial.printf("lastDispEvent=%s\n", DispState::getEvent(lastDispEvent));
+  //       if (lastDispEvent == DispState::PRIMARY_LONG_PRESS)
+  //       {
+  //         currVal = !currVal;
+  //         featureService.set(PUSH_TO_START, currVal);
+  //       }
+  //       screenPropValue("push to start", (currVal == true) ? "ON" : "OFF");
+  //       sinceShowingToggleScreen = 0;
+  //     },
+  //     [] {
+  //       if (sinceShowingToggleScreen > 3000)
+  //       {
+  //         sinceShowingToggleScreen = 0; // prevent excessive re-trigger
+  //         lastDispEvent = DispState::PRIMARY_SINGLE_CLICK;
+  //         dispFsm.trigger(DispState::PRIMARY_SINGLE_CLICK);
+  //       }
+  //     },
+  //     NULL);
   //---------------------------------------------------------------
   void acknowledgeResets()
   {
@@ -177,9 +207,15 @@ namespace Display
     // DispState::STOPPED
     fsm.add_transition(&stateMovingScreen, &stateStoppedScreen, DispState::STOPPED, NULL);
 
-    fsm.add_transition(&stateStoppedScreen, &stateTogglePushToStart, DispState::PRIMARY_TRIPLE_CLICK, NULL);
-    fsm.add_transition(&stateTogglePushToStart, &stateTogglePushToStart, DispState::PRIMARY_DOUBLE_CLICK, NULL);
-    fsm.add_transition(&stateTogglePushToStart, &stateStoppedScreen, DispState::PRIMARY_SINGLE_CLICK, NULL);
+    // Push to start
+    fsm.add_transition(&stateStoppedScreen, &stateShowPushToStart, DispState::PRIMARY_TRIPLE_CLICK, NULL);
+    fsm.add_timed_transition(&stateShowPushToStart, &stateStoppedScreen, 3000, NULL);
+    fsm.add_transition(&stateShowPushToStart, &stateShowPushToStart, DispState::PRIMARY_LONG_PRESS, NULL);
+    fsm.add_transition(&stateShowPushToStart, &stateStoppedScreen, DispState::PRIMARY_SINGLE_CLICK, NULL);
+
+    // fsm.add_transition(&stateStoppedScreen, &stateTogglePushToStart, DispState::PRIMARY_TRIPLE_CLICK, NULL);
+    // fsm.add_transition(&stateTogglePushToStart, &stateTogglePushToStart, DispState::PRIMARY_LONG_PRESS, NULL);
+    // fsm.add_transition(&stateTogglePushToStart, &stateStoppedScreen, DispState::PRIMARY_SINGLE_CLICK, NULL);
 
     // DispState::UPDATE
     fsm.add_transition(&stateStoppedScreen, &stateStoppedScreen, DispState::UPDATE, NULL);

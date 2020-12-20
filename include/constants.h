@@ -5,7 +5,8 @@ enum ButtonClickType
   NO_CLICK,
   SINGLE,
   DOUBLE,
-  TRIPLE
+  TRIPLE,
+  LONG_PRESS,
 };
 
 #define STORE_STATS "stats"
@@ -18,7 +19,7 @@ enum ButtonClickType
 //------------------------------------------------------------
 namespace DispState
 {
-  enum Event
+  enum Trigger
   {
     NO_EVENT = 0,
     CONNECTED,
@@ -30,11 +31,11 @@ namespace DispState
     PRIMARY_SINGLE_CLICK,
     PRIMARY_DOUBLE_CLICK,
     PRIMARY_TRIPLE_CLICK,
+    PRIMARY_LONG_PRESS,
     VERSION_DOESNT_MATCH,
-    Length, // leave this one (used for aserting)
   };
 
-  const char *getEvent(int ev)
+  const char *getTrigger(int ev)
   {
     switch (ev)
     {
@@ -58,6 +59,8 @@ namespace DispState
       return "PRIMARY_DOUBLE_CLICK";
     case PRIMARY_TRIPLE_CLICK:
       return "PRIMARY_TRIPLE_CLICK";
+    case PRIMARY_LONG_PRESS:
+      return "PRIMARY_LONG_PRESS";
     case VERSION_DOESNT_MATCH:
       return "VERSION_DOESNT_MATCH";
     }
@@ -113,7 +116,7 @@ namespace HUDTask
     CYCLE_BRIGHTNESS,
     THREE_FLASHES,
     GO_TO_IDLE,
-    MessageLength,
+    // MessageLength,
   };
 
   const char *getName(uint8_t message)

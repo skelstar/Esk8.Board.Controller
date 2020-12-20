@@ -1,7 +1,4 @@
 
-// #define LONGCLICK_MS 1000
-
-#include <Button2.h>
 
 #define BUTTON_PRIMARY 21
 Button2 primaryButton(BUTTON_PRIMARY);
@@ -30,5 +27,16 @@ void primaryButtonInit()
     if (PRINT_BUTTON_EVENTS)
       DEBUG("Primary Button triple-clicked");
     buttonQueue->send(ButtonClickType::TRIPLE);
+  });
+
+  primaryButton.setLongClickHandler([](Button2 &btn) {
+    if (PRINT_BUTTON_EVENTS)
+      DEBUG("Primary Button long-clicked");
+  });
+
+  primaryButton.setLongClickDetectedHandler([](Button2 &btn) {
+    if (PRINT_BUTTON_EVENTS)
+      DEBUG("Longpress of primary button detected");
+    buttonQueue->send(ButtonClickType::LONG_PRESS);
   });
 }

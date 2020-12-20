@@ -13,6 +13,7 @@
 #include <shared-utils.h>
 #include <types.h>
 #include <printFormatStrings.h>
+#include <Button2.h>
 
 // used in TFT_eSPI library as alternate SPI port (HSPI?)
 #define SOFT_SPI_MOSI_PIN 13 // Blue
@@ -262,8 +263,6 @@ void storeTimeMovingInMemory()
 ThrottleClass throttle;
 
 //---------------------------------------------------------------
-
-#include <Button2.h>
 
 #include <utils.h>
 #include <screens.h>

@@ -132,9 +132,9 @@ namespace Comms
       if (PRINT_COMMS_STATE)
         Serial.printf(PRINT_STATE_FORMAT, "COMMS", Comms::getStateName(id));
     });
-    Comms::commsFsm.setPrintStateEventCallback([](uint16_t ev) {
+    Comms::commsFsm.setPrintTriggerCallback([](uint16_t ev) {
       if (PRINT_COMMS_STATE && ev != 0 && ev != Comms::PKT_RXD)
-        Serial.printf(PRINT_STATE_EVENT_FORMAT, "COMMS", Comms::getEventName(ev));
+        Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "COMMS", Comms::getEventName(ev));
     });
 
     Comms::addTransitions();

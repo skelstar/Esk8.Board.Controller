@@ -14,11 +14,11 @@ namespace Display
     dispFsm.begin(&fsm);
     dispFsm.setPrintStateCallback([](uint16_t id) {
       if (PRINT_DISP_STATE)
-        Serial.printf(PRINT_STATE_FORMAT, "DISP", Display::getStateName(id));
+        Serial.printf(PRINT_STATE_FORMAT, "DISP", Display::stateID(id));
     });
-    dispFsm.setPrintStateEventCallback([](uint16_t ev) {
+    dispFsm.setPrintTriggerCallback([](uint16_t ev) {
       if (PRINT_DISP_STATE_EVENT)
-        Serial.printf(PRINT_STATE_EVENT_FORMAT, "DISP", DispState::getEvent(ev));
+        Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "DISP", DispState::getTrigger(ev));
     });
 
     addTransitions();
@@ -41,7 +41,7 @@ namespace Display
         sinceReadDispEventQueue = 0;
         fsm.run_machine();
 
-        DispState::Event displayevent = displayQueue->read<DispState::Event>();
+        DispState::Trigger displayevent = displayQueue->read<DispState::Trigger>();
         switch (displayevent)
         {
         case DispState::NO_EVENT:
@@ -72,6 +72,9 @@ namespace Display
           lastDispEvent = DispState::PRIMARY_TRIPLE_CLICK;
           dispFsm.trigger(DispState::PRIMARY_TRIPLE_CLICK);
           break;
+        case LONG_PRESS:
+          lastDispEvent = DispState::PRIMARY_LONG_PRESS;
+          dispFsm.trigger(DispState::PRIMARY_LONG_PRESS);
         }
       }
 
