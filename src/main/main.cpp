@@ -331,12 +331,12 @@ void setup()
   vTaskDelay(100);
 
   // CORE_0
-  Display::createTask(CORE_0, TASK_PRIORITY_3);
-  Comms::createTask(CORE_0, TASK_PRIORITY_1);
-  Battery::createTask("Battery Measure Task", CORE_0, TASK_PRIORITY_1);
+  Display::createTask(DISPLAY_TASK_CORE, TASK_PRIORITY_3);
+  Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_1);
+  Battery::createTask(BATTERY_TASK_CORE, TASK_PRIORITY_1);
 
   // CORE_1
-  HUD::createTask(CORE_1, TASK_PRIORITY_1);
+  HUD::createTask(HUD_TASK_CORE, TASK_PRIORITY_1);
 
   xDisplayEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
@@ -349,15 +349,13 @@ void setup()
   NRFCommsQueue::init();
   HudTaskQueue::init();
 
-  // force value to get first packet out
-
-  using namespace HUD;
-
   while (!Display::taskReady && !Comms::taskReady && !HUD::taskReady)
   {
     vTaskDelay(1);
   }
 
+  using namespace HUD;
+  // force value to get first packet out
   sendCommandToHud(HEARTBEAT);
   vTaskDelay(100);
   sendCommandToHud(TWO_FLASHES | BLUE | FAST);

@@ -33,12 +33,12 @@ namespace Battery
   }
 
   //--------------------------------------------------------
-  void createTask(const char *name, uint8_t core, uint8_t priority)
+  void createTask(uint8_t core, uint8_t priority)
   {
-    taskName = name;
+    taskName = "Battery Measure";
     xTaskCreatePinnedToCore(
         task,
-        name,
+        taskName,
         10000,
         NULL,
         priority,
