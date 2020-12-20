@@ -15,14 +15,6 @@
 #include <printFormatStrings.h>
 #include <Button2.h>
 
-// used in TFT_eSPI library as alternate SPI port (HSPI?)
-#define SOFT_SPI_MOSI_PIN 13 // Blue
-#define SOFT_SPI_MISO_PIN 12 // Orange
-#define SOFT_SPI_SCK_PIN 15  // Yellow
-
-#define NRF_CE 17
-#define NRF_CS 2
-
 #include <constants.h>
 
 Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
