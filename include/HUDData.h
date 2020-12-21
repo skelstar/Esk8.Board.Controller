@@ -8,12 +8,12 @@
 // {
 // public:
 //   uint32_t id;
-//   HUDCommand::Mode mode;
-//   HUDCommand::Colour colour;
-//   HUDCommand::Speed speed;
+//   HUDInstruction::Mode mode;
+//   HUDInstruction::Colour colour;
+//   HUDInstruction::Speed speed;
 //   uint8_t number;
 
-//   HUDData(HUDCommand::Mode m, HUDCommand::Colour c, HUDCommand::Speed spd, uint8_t num = 0)
+//   HUDData(HUDInstruction::Mode m, HUDInstruction::Colour c, HUDInstruction::Speed spd, uint8_t num = 0)
 //   {
 //     mode = m;
 //     colour = c;

@@ -119,7 +119,7 @@ namespace HUDTask
     // MessageLength,
   };
 
-  const char *getName(uint8_t message)
+  const char *getName(uint8_t message, const char *context = "")
   {
     switch (message)
     {
@@ -148,7 +148,7 @@ namespace HUDTask
     case GO_TO_IDLE:
       return "GO_TO_IDLE";
     }
-    return OUT_OF_RANGE;
+    return outOfRange(context);
   }
 }; // namespace HUDTask
 

@@ -6,7 +6,7 @@ void processHUDPacket();
 void processBoardPacket();
 void sendConfigToBoard();
 void sendPacketToBoard();
-void sendCommandToHud(HUD::Command command);
+void sendInstructionToHud(HUD::Instruction instruction);
 
 //------------------------------------------------------------------
 void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
@@ -28,7 +28,7 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
     DEBUG("*** board's first packet!! ***");
 
     nrfCommsQueue->send(Comms::Event::BOARD_FIRST_PACKET);
-    sendCommandToHud(HEARTBEAT);
+    sendInstructionToHud(HEARTBEAT);
 
     controller_packet.id = 0;
     sendConfigToBoard();
@@ -38,12 +38,12 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   else if (board.startedMoving())
   {
     displayQueue->send(DispState::MOVING);
-    sendCommandToHud(FLASH | FAST | GREEN);
+    sendInstructionToHud(FLASH | FAST | GREEN);
   }
   else if (board.hasStopped())
   {
     displayQueue->send(DispState::STOPPED);
-    sendCommandToHud(FLASH | RED | SLOW);
+    sendInstructionToHud(FLASH | RED | SLOW);
   }
 
   if (board.valuesChanged())
@@ -85,7 +85,7 @@ void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
     hudActionQueue->send(ev);
     break;
   default:
-    sendCommandToHud(TWO_FLASHES | GREEN | FAST);
+    sendInstructionToHud(TWO_FLASHES | GREEN | FAST);
   }
 }
 
@@ -116,15 +116,15 @@ void sendPacketToBoard()
 }
 //------------------------------------------------------------------
 
-void sendCommandToHud(HUD::Command command)
+void sendInstructionToHud(HUD::Instruction instruction)
 {
   if (hudClient.connected())
   {
-    hudClient.sendTo(Packet::HUD, command);
+    hudClient.sendTo(Packet::HUD, instruction);
   }
   else
   {
-    Serial.printf("WARNING: command not sent because hud offline\n");
+    Serial.printf("WARNING: instruction not sent because hud offline\n");
   }
 }
 

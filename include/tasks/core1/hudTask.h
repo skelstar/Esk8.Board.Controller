@@ -15,8 +15,8 @@ elapsedMillis
 
 bool hasConnectedToHud = false;
 
-HUD::Command mapActionToCommand(uint16_t action);
-HUD::Command mapTaskToCommand(uint16_t task);
+HUD::Instruction mapActionToInstruction(uint16_t action);
+HUD::Instruction mapTaskToInstruction(uint16_t task);
 
 /* ---------------------------------------------- */
 
@@ -45,11 +45,11 @@ void readActionsFromHUDQueue()
   if (action == HUDAction::NONE)
     return;
 
-  HUD::Command command = mapActionToCommand(action);
-  sendCommandToHud(command);
+  HUD::Instruction instruction = mapActionToInstruction(action);
+  sendInstructionToHud(instruction);
 }
 
-HUD::Command mapActionToCommand(uint16_t action)
+HUD::Instruction mapActionToInstruction(uint16_t action)
 {
   using namespace HUDAction;
   switch (action)
@@ -60,36 +60,36 @@ HUD::Command mapActionToCommand(uint16_t action)
   return 0;
 }
 
-HUD::Command mapTaskToCommand(uint16_t task)
+HUD::Instruction mapTaskToInstruction(uint16_t task)
 {
   using namespace HUD;
   switch (task)
   {
   case HUDTask::BOARD_DISCONNECTED:
-    return Command(PULSE | RED);
+    return Instruction(PULSE | RED);
   case HUDTask::BOARD_CONNECTED:
-    return Command(HEARTBEAT);
+    return Instruction(HEARTBEAT);
   case HUDTask::WARNING_ACK:
-    return Command(GREEN | FLASH);
+    return Instruction(GREEN | FLASH);
   case HUDTask::CONTROLLER_RESET:
-    return Command(RED | FLASH | SLOW);
+    return Instruction(RED | FLASH | SLOW);
   case HUDTask::BOARD_MOVING:
-    return Command(GREEN | FLASH);
+    return Instruction(GREEN | FLASH);
   case HUDTask::BOARD_STOPPED:
-    return Command(RED | FLASH | SLOW);
+    return Instruction(RED | FLASH | SLOW);
   case HUDTask::HEARTBEAT:
-    return Command(BLUE | TWO_FLASHES);
+    return Instruction(BLUE | TWO_FLASHES);
   case HUDTask::ACKNOWLEDGE:
-    return Command(GREEN | TWO_FLASHES);
+    return Instruction(GREEN | TWO_FLASHES);
   case HUDTask::CYCLE_BRIGHTNESS:
-    return Command(CYCLE_BRIGHTNESS);
+    return Instruction(CYCLE_BRIGHTNESS);
   case HUDTask::GO_TO_IDLE:
-    return Command(HEARTBEAT);
+    return Instruction(HEARTBEAT);
   }
-  return Command(0);
+  return Instruction(0);
 }
 
-void readTasksForHUDQueue()
+void readTasksFromHUDQueue()
 {
   using namespace HUD;
   uint16_t task = hudTasksQueue->read<HUDTask::Message>();
@@ -100,10 +100,12 @@ void readTasksForHUDQueue()
     return;
   }
 
-  Command command = mapTaskToCommand(task);
-  Serial.printf("command mapped to: %s\n", command.getCommand());
-  if (command.get() != 0)
-    sendCommandToHud(command);
+  Instruction instruction = mapTaskToInstruction(task);
+  if (instruction.get() != 0)
+  {
+    Serial.printf("instruction mapped to: %s\n", instruction.getInstruction());
+    sendInstructionToHud(instruction);
+  }
 }
 /* ---------------------------------------------- */
 
@@ -136,8 +138,7 @@ namespace HUD
       if (sinceCheckedTaskForHUDQueue > 300)
       {
         sinceCheckedTaskForHUDQueue = 0;
-
-        // *** this isn't being called for some reason readTasksForHUDQueue();
+        readTasksFromHUDQueue();
       }
 
       vTaskDelay(10);

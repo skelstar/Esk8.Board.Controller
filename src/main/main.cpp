@@ -59,12 +59,12 @@ namespace HudTaskQueue
   void queueSentEventCb(uint16_t ev)
   {
     if (PRINT_HUD_TASKS_QUEUE_SEND)
-      Serial.printf(PRINT_QUEUE_SEND_FORMAT, HUDTask::getName(ev), "HUD_TASK");
+      Serial.printf(PRINT_QUEUE_SEND_FORMAT, HUDTask::getName(ev, "HUDTaskQueue::SentCb()"), "HUD_TASK");
   }
   void queueReadEventCb(uint16_t ev)
   {
     if (PRINT_HUD_TASKS_QUEUE_READ)
-      Serial.printf(PRINT_QUEUE_READ_FORMAT, "HUD_TASK", HUDTask::getName(ev));
+      Serial.printf(PRINT_QUEUE_READ_FORMAT, "HUD_TASK", HUDTask::getName(ev, "HUDTaskQueue::ReadCb()"));
   }
 
   void init()
@@ -156,16 +156,16 @@ NRF24L01Lib nrf24;
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
-GenericClient<HUD::Command, HUDAction::Event> hudClient(COMMS_HUD);
+GenericClient<HUD::Instruction, HUDAction::Event> hudClient(COMMS_HUD);
 void hudClientInit()
 {
   hudClient.begin(&network, hudPacketAvailable_cb);
   hudClient.setConnectedStateChangeCallback([] {
     Serial.printf(PRINT_CLIENT_CONNECTION_FORMAT, "HUD", hudClient.connected() ? "CONNECTED" : "DISCONNECTED");
   });
-  hudClient.setSentPacketCallback([](HUD::Command command) {
+  hudClient.setSentPacketCallback([](HUD::Instruction instruction) {
     if (PRINT_TX_TO_HUD)
-      Serial.printf(PRINT_TX_PACKET_TO_FORMAT, "HUD", command.getCommand());
+      Serial.printf(PRINT_TX_PACKET_TO_FORMAT, "HUD", instruction.getInstruction());
   });
   hudClient.setReadPacketCallback([](HUDAction::Event ev) {
     if (PRINT_RX_FROM_HUD)
@@ -202,6 +202,11 @@ void m5AtomClientInit()
     uint16_t packet = m5AtomClient.read();
     Serial.printf("rx %d from M5Atom!\n", packet);
     m5AtomClient.sendTo(0, packet);
+
+    if (packet == 99)
+    {
+      hudTasksQueue->send(HUDTask::ACKNOWLEDGE);
+    }
   });
 }
 
@@ -288,7 +293,7 @@ void resetsAcknowledged_callback()
 {
   using namespace HUD;
   storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
-  sendCommandToHud(FLASH | FAST | GREEN);
+  sendInstructionToHud(FLASH | FAST | GREEN);
 }
 //------------------------------------------------------------------
 
@@ -367,9 +372,9 @@ void setup()
 
   using namespace HUD;
   // force value to get first packet out
-  sendCommandToHud(HEARTBEAT);
+  sendInstructionToHud(HEARTBEAT);
   vTaskDelay(100);
-  sendCommandToHud(TWO_FLASHES | BLUE | FAST);
+  sendInstructionToHud(TWO_FLASHES | BLUE | FAST);
 
   sendConfigToBoard();
 }
