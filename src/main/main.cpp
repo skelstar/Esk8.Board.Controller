@@ -317,7 +317,7 @@ void setup()
   }
   statsStore.end();
 
-  nrf24.begin(&radio, &network, COMMS_CONTROLLER, boardPacketAvailable_cb);
+  nrf24.begin(&radio, &network, COMMS_CONTROLLER);
 
   hudClientInit();
   boardClientInit();
