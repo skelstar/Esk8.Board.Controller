@@ -151,29 +151,6 @@ namespace Display
       },
       NULL,
       NULL);
-
-  // State stateTogglePushToStart(
-  //     [] {
-  //       dispFsm.printState(TOGGLE_PUSH_TO_START);
-  //       bool currVal = featureService.get<bool>(FeatureType::PUSH_TO_START);
-  //       Serial.printf("lastDispEvent=%s\n", DispState::getEvent(lastDispEvent));
-  //       if (lastDispEvent == DispState::PRIMARY_LONG_PRESS)
-  //       {
-  //         currVal = !currVal;
-  //         featureService.set(PUSH_TO_START, currVal);
-  //       }
-  //       screenPropValue("push to start", (currVal == true) ? "ON" : "OFF");
-  //       sinceShowingToggleScreen = 0;
-  //     },
-  //     [] {
-  //       if (sinceShowingToggleScreen > 3000)
-  //       {
-  //         sinceShowingToggleScreen = 0; // prevent excessive re-trigger
-  //         lastDispEvent = DispState::PRIMARY_SINGLE_CLICK;
-  //         dispFsm.trigger(DispState::PRIMARY_SINGLE_CLICK);
-  //       }
-  //     },
-  //     NULL);
   //---------------------------------------------------------------
   void acknowledgeResets()
   {

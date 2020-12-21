@@ -46,7 +46,6 @@ void readActionsFromHUDQueue()
     return;
 
   HUD::Command command = mapActionToCommand(action);
-  Serial.printf("Sending to HUD %s\n", command.getCommand());
   sendCommandToHud(command);
 }
 
@@ -57,10 +56,6 @@ HUD::Command mapActionToCommand(uint16_t action)
   {
   case ONE_CLICK:
     return HUD::CYCLE_BRIGHTNESS;
-    // case HEARTBEAT:
-    // case TWO_CLICK:
-    // case THREE_CLICK:
-    //   break;
   }
   return 0;
 }
@@ -100,14 +95,15 @@ void readTasksForHUDQueue()
   uint16_t task = hudTasksQueue->read<HUDTask::Message>();
 
   if (hudClient.connected() == false)
-    return;
-
-  if (hudClient.connected())
   {
-    Command command = mapTaskToCommand(task);
-    if (command.get() != 0)
-      sendCommandToHud(command);
+    Serial.printf("hud not connected\n");
+    return;
   }
+
+  Command command = mapTaskToCommand(task);
+  Serial.printf("command mapped to: %s\n", command.getCommand());
+  if (command.get() != 0)
+    sendCommandToHud(command);
 }
 /* ---------------------------------------------- */
 
@@ -126,6 +122,7 @@ namespace HUD
 
     while (!Comms::taskReady)
     {
+      vTaskDelay(5);
     }
 
     while (true)
@@ -139,8 +136,10 @@ namespace HUD
       if (sinceCheckedTaskForHUDQueue > 300)
       {
         sinceCheckedTaskForHUDQueue = 0;
-        readTasksForHUDQueue();
+
+        // *** this isn't being called for some reason readTasksForHUDQueue();
       }
+
       vTaskDelay(10);
     }
     vTaskDelete(NULL); // deletes the current task
