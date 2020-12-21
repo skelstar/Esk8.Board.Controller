@@ -195,6 +195,16 @@ void boardClientInit()
   boardClient.setReadPacketCallback(printRecvFromBoard);
 }
 
+GenericClient<uint16_t, uint16_t> m5AtomClient(COMMS_M5ATOM);
+void m5AtomClientInit()
+{
+  m5AtomClient.begin(&network, [](uint16_t from, uint8_t type) {
+    uint16_t packet = m5AtomClient.read();
+    Serial.printf("rx %d from M5Atom!\n", packet);
+    m5AtomClient.sendTo(0, packet);
+  });
+}
+
 //------------------------------------------------------------------
 
 #define BATTERY_MEASURE_PIN 34
@@ -321,6 +331,7 @@ void setup()
 
   hudClientInit();
   boardClientInit();
+  m5AtomClientInit();
 
   print_build_status(chipId);
 
@@ -351,7 +362,7 @@ void setup()
 
   while (!Display::taskReady && !Comms::taskReady && !HUD::taskReady)
   {
-    vTaskDelay(1);
+    vTaskDelay(5);
   }
 
   using namespace HUD;
@@ -383,6 +394,7 @@ void loop()
     sinceNRFUpdate = 0;
     hudClient.update();
     boardClient.update();
+    m5AtomClient.update();
   }
 
   primaryButton.loop();
