@@ -93,7 +93,7 @@ void screenWhenDisconnected()
   lcd_message(buff4, LINE_4, Aligned::ALIGNED_LEFT, FontSize::LG);
 }
 //-----------------------------------------------------
-
+template <typename T>
 void screenPropValue(char *propName, const char *value)
 {
   tft.fillScreen(TFT_DEFAULT_BG);
@@ -102,7 +102,19 @@ void screenPropValue(char *propName, const char *value)
   chunkyDigit = new ChunkyDigit(&tft, CHUNKY_PIXEL_MED, CHUNKY_SPACING_MED, TFT_DEFAULT_BG);
 
   int w = chunkyDigit->getWidth((const char *)value);
-  chunkyDigit->drawText(value, LCD_WIDTH / 2 - w / 2, LCD_HEIGHT - chunkyDigit->getHeight() - 30);
+
+  int x = LCD_WIDTH / 2 - w / 2,
+      y = LCD_HEIGHT - chunkyDigit->getHeight() - 30;
+
+  if (std::is_same<T, int>::value ||
+      std::is_same<T, uint8_t>::value ||
+      std::is_same<T, uint16_t>::value ||
+      std::is_same<T, float>::value)
+    chunkyDigit->draw_float(x, y, (char *)value);
+  else if (std::is_same<T, bool>::value)
+    chunkyDigit->drawText(value, x, y);
+  else
+    chunkyDigit->drawText("-", x, y);
 }
 //-----------------------------------------------------
 

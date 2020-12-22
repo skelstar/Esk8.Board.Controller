@@ -102,10 +102,7 @@ void readTasksFromHUDQueue()
 
   Instruction instruction = mapTaskToInstruction(task);
   if (instruction.get() != 0)
-  {
-    Serial.printf("instruction mapped to: %s\n", instruction.getInstruction());
     sendInstructionToHud(instruction);
-  }
 }
 /* ---------------------------------------------- */
 

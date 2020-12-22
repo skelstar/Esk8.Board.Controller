@@ -279,6 +279,8 @@ public:
         idx = SpecialChar::LETTER_F - 1;
       else if (ch == 'N')
         idx = SpecialChar::LETTER_N - 1;
+      else if (0 < int(ch) && int(ch) < 9)
+        idx = int(ch);
       else
         idx = SpecialChar::LETTER_MISSING - 1;
       chunky_draw_digit(idx, cursor_x, y, _pixel_size);
