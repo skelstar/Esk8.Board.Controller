@@ -327,10 +327,10 @@ private:
     }
   }
 
-  int _getY(ScreenLine line)
   /*
   returns the top of the line
   */
+  int _getY(ScreenLine line)
   {
     const uint8_t lines3margin = 3, lines2margin = 10;
     uint8_t digitHeight = _pixel_size * 5;

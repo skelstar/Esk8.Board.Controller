@@ -1,4 +1,5 @@
 #include <ChunkyDigit.h>
+#include <SlantyDigit.h>
 #include <math.h>
 
 #ifndef TFT_H
@@ -21,6 +22,7 @@
 void drawStatusStripe(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour);
 
 ChunkyDigit *chunkyDigit;
+SlantyDigit *slantyDigit;
 
 //-----------------------------------------------------
 void screen_searching()
@@ -219,6 +221,8 @@ void quarterScreen(QuarterPosition position, float value, char *title, uint32_t 
 
 void screenWhenStopped(bool init = false)
 {
+  int x_right = 200, y = 30;
+
   uint32_t bgColour = TFT_BLACK;
 
   if (init || chunkyDigit == NULL)
