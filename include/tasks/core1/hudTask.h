@@ -38,7 +38,8 @@ void readActionsFromHUDQueue()
   uint16_t action = hudActionQueue->read<HUDAction::Event>();
   if (action >= HUDAction::Length)
   {
-    Serial.printf("WARNING: action from HUD queue is OUT OF RANGE (%d)\n", action);
+    if (DEBUG_BUILD)
+      Serial.printf("WARNING: action from HUD queue is OUT OF RANGE (%d)\n", action);
     return;
   }
 
@@ -112,7 +113,7 @@ namespace HUD
 
   void task(void *pvParameters)
   {
-    Serial.printf("hudTask_1 running on CORE_%d\n", xPortGetCoreID());
+    Serial.printf(PRINT_TASK_STARTED_FORMAT, "hudTask_1", xPortGetCoreID());
 
     hudActionQueue->setSentEventCallback(hudActionQueueSentCb);
     hudActionQueue->setReadEventCallback(hudActionQueueReadCb);

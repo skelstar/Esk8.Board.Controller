@@ -161,7 +161,8 @@ void hudClientInit()
 {
   hudClient.begin(&network, hudPacketAvailable_cb);
   hudClient.setConnectedStateChangeCallback([] {
-    Serial.printf(PRINT_CLIENT_CONNECTION_FORMAT, "HUD", hudClient.connected() ? "CONNECTED" : "DISCONNECTED");
+    if (PRINT_HUD_CLIENT_CONNECTED_CHANGED)
+      Serial.printf(PRINT_CLIENT_CONNECTION_FORMAT, "HUD", hudClient.connected() ? "CONNECTED" : "DISCONNECTED");
   });
   hudClient.setSentPacketCallback([](HUD::Instruction instruction) {
     if (PRINT_TX_TO_HUD)
@@ -189,12 +190,14 @@ void boardClientInit()
 {
   boardClient.begin(&network, boardPacketAvailable_cb);
   boardClient.setConnectedStateChangeCallback([] {
-    Serial.printf(BOARD_CLIENT_CONNECTED_FORMAT, boardClient.connected() ? "CONNECTED" : "DISCONNECTED");
+    if (PRINT_BOARD_CLIENT_CONNECTED_CHANGED)
+      Serial.printf(BOARD_CLIENT_CONNECTED_FORMAT, boardClient.connected() ? "CONNECTED" : "DISCONNECTED");
   });
   boardClient.setSentPacketCallback(printSentToBoard);
   boardClient.setReadPacketCallback(printRecvFromBoard);
 }
 
+#ifdef COMMS_M5ATOM
 GenericClient<uint16_t, uint16_t> m5AtomClient(COMMS_M5ATOM);
 void m5AtomClientInit()
 {
@@ -209,6 +212,7 @@ void m5AtomClientInit()
     }
   });
 }
+#endif
 
 //------------------------------------------------------------------
 
@@ -336,7 +340,9 @@ void setup()
 
   hudClientInit();
   boardClientInit();
+#ifdef COMMS_M5ATOM
   m5AtomClientInit();
+#endif
 
   print_build_status(chipId);
 
@@ -404,7 +410,9 @@ void loop()
     sinceNRFUpdate = 0;
     hudClient.update();
     boardClient.update();
+#ifdef COMMS_M5ATOM
     m5AtomClient.update();
+#endif
   }
 
   primaryButton.loop();

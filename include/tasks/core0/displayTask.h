@@ -9,6 +9,8 @@ namespace Display
 
   void task(void *pvParameters)
   {
+    Serial.printf(PRINT_TASK_STARTED_FORMAT, "Display", xPortGetCoreID());
+
     setupLCD();
 
     dispFsm.begin(&fsm);
@@ -22,8 +24,6 @@ namespace Display
     });
 
     addTransitions();
-
-    Serial.printf("displayTask running on core %d\n", xPortGetCoreID());
 
     fsm.run_machine();
 

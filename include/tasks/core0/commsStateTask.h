@@ -123,7 +123,7 @@ namespace Comms
 
   void task(void *pvParameters)
   {
-    Serial.printf("commsStateTask running on core %d\n", xPortGetCoreID());
+    Serial.printf(PRINT_TASK_STARTED_FORMAT, "Comms State", xPortGetCoreID());
 
     commsStateTask_initialised = true;
 

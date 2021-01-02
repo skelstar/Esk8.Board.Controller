@@ -18,7 +18,7 @@ namespace Battery
   {
     remote_batt.setup(battVoltsChanged_cb);
 
-    Serial.printf("TASK: %s on Core %d\n", taskName, xPortGetCoreID());
+    Serial.printf(PRINT_TASK_STARTED_FORMAT, taskName, xPortGetCoreID());
 
     while (true)
     {

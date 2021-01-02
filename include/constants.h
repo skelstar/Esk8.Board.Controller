@@ -224,8 +224,18 @@ namespace HUDTask
 #ifndef DEBUG_BUILD
 #define DEBUG_BUILD 0
 #endif
+#ifndef RELEASE_BUILD
+#define RELEASE_BUILD 0
+#endif
 #ifndef GIT_BRANCH_NAME
 #define GIT_BRANCH_NAME "branch not provided?"
+#endif
+
+#ifndef PRINT_HUD_CLIENT_CONNECTED_CHANGED
+#define PRINT_HUD_CLIENT_CONNECTED_CHANGED 0
+#endif
+#ifndef PRINT_BOARD_CLIENT_CONNECTED_CHANGED
+#define PRINT_BOARD_CLIENT_CONNECTED_CHANGED 0
 #endif
 
 #define BOARD_COMMS_STATE_FORMAT_LONG "[BOARD: %s | %s ]\n"
@@ -234,12 +244,12 @@ namespace HUDTask
 
 #define TX_TO_BOARD_FORMAT "[TX -> BOARD]: id=%d\n"
 #define RX_FROM_BOARD_FORMAT "[RX <- BOARD]: id=%d\n"
+#define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
 
-enum TriState
-{
-  STATE_NONE,
-  STATE_ON,
-  STATE_OFF
-};
+    enum TriState {
+      STATE_NONE,
+      STATE_ON,
+      STATE_OFF
+    };
 
 TriState pulseLedOn;

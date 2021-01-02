@@ -125,7 +125,8 @@ void sendInstructionToHud(HUD::Instruction instruction)
   }
   else
   {
-    Serial.printf("WARNING: instruction not sent because hud offline\n");
+    if (DEBUG_BUILD)
+      Serial.printf("WARNING: instruction not sent because hud offline\n");
   }
 }
 
