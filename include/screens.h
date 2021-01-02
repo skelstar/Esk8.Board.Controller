@@ -117,6 +117,11 @@ void screenPropValue(char *propName, const char *value)
     chunkyDigit->drawText(value, x, y);
   else
     chunkyDigit->drawText("-", x, y);
+
+  tft.setFreeFont(FONT_SM);
+  tft.setTextDatum(BC_DATUM);
+  tft.setTextColor(TFT_DARKGREY);
+  tft.drawString("long hold | tap ->", LCD_WIDTH / 2, LCD_HEIGHT - 5);
 }
 //-----------------------------------------------------
 
