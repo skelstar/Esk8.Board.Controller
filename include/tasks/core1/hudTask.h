@@ -96,7 +96,7 @@ void readTasksFromHUDQueue()
 
   if (hudClient.connected() == false)
   {
-    Serial.printf("hud not connected\n");
+    // Serial.printf("hud not connected\n");
     return;
   }
 

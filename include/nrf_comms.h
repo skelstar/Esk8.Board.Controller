@@ -118,6 +118,7 @@ void sendPacketToBoard()
 
 void sendInstructionToHud(HUD::Instruction instruction)
 {
+  // TODO: this online check probably shouldn't be in here
   if (hudClient.connected())
   {
     hudClient.sendTo(Packet::HUD, instruction);
