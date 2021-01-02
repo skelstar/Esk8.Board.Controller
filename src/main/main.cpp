@@ -340,7 +340,12 @@ void setup()
 
   print_build_status(chipId);
 
-  throttle.init(/*pin*/ 27);
+  throttle.init(/*pin*/ 27, [](uint8_t throttle) {
+    // Serial.printf("throttle changed: %d (cruise: %d, pressed: %d)\n",
+    //               throttle,
+    //               controller_packet.cruise_control,
+    //               primaryButton.isPressedRaw());
+  });
 
   primaryButtonInit();
 
@@ -416,12 +421,12 @@ void sendToBoard()
       throttle.get() < 127 || // braking
       board.packet.moving ||
       !featureService.get<bool>(PUSH_TO_START) ||
-      (featureService.get<bool>(PUSH_TO_START) && primaryButton.isPressed());
+      (featureService.get<bool>(PUSH_TO_START) && primaryButton.isPressedRaw());
 
   bool cruiseControlActive =
       board.packet.moving &&
       FEATURE_CRUISE_CONTROL &&
-      primaryButton.isPressed();
+      primaryButton.isPressedRaw();
 
   sinceSentToBoard = 0;
   controller_packet.throttle = throttle.get(/*enabled*/ throttleEnabled);

@@ -11,6 +11,7 @@ void primaryButtonInit()
     if (PRINT_BUTTON_EVENTS)
       DEBUG("Primary Button pressed");
   });
+
   primaryButton.setClickHandler([](Button2 &btn) {
     if (PRINT_BUTTON_EVENTS)
       DEBUG("Primary Button click");
@@ -27,11 +28,6 @@ void primaryButtonInit()
     if (PRINT_BUTTON_EVENTS)
       DEBUG("Primary Button triple-clicked");
     buttonQueue->send(ButtonClickType::TRIPLE);
-  });
-
-  primaryButton.setLongClickHandler([](Button2 &btn) {
-    if (PRINT_BUTTON_EVENTS)
-      DEBUG("Primary Button long-clicked");
   });
 
   primaryButton.setLongClickDetectedHandler([](Button2 &btn) {
