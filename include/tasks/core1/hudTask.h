@@ -47,7 +47,8 @@ void readActionsFromHUDQueue()
     return;
 
   HUD::Instruction instruction = mapActionToInstruction(action);
-  sendInstructionToHud(instruction);
+  if (FEATURE_SEND_TO_HUD)
+    sendInstructionToHud(instruction);
 }
 
 HUD::Instruction mapActionToInstruction(uint16_t action)
@@ -92,7 +93,11 @@ HUD::Instruction mapTaskToInstruction(uint16_t task)
 
 void readTasksFromHUDQueue()
 {
+  if (!FEATURE_SEND_TO_HUD)
+    return;
+
   using namespace HUD;
+
   uint16_t task = hudTasksQueue->read<HUDTask::Message>();
 
   if (hudClient.connected() == false)
@@ -103,7 +108,8 @@ void readTasksFromHUDQueue()
 
   Instruction instruction = mapTaskToInstruction(task);
   if (instruction.get() != 0)
-    sendInstructionToHud(instruction);
+    if (FEATURE_SEND_TO_HUD)
+      sendInstructionToHud(instruction);
 }
 /* ---------------------------------------------- */
 

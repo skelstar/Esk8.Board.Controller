@@ -300,5 +300,6 @@ void drawStatusStripe(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColou
   tft.fillScreen(bgColour);
   tft.fillRect(0, 0, LCD_WIDTH, STRIPE_HEIGHT, stripeColour);
   // Hud icon
-  updateHudIcon(hudClient.connected());
+  if (FEATURE_SEND_TO_HUD)
+    updateHudIcon(hudClient.connected());
 }

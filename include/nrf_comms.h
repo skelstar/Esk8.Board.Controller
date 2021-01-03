@@ -28,7 +28,8 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
     DEBUG("*** board's first packet!! ***");
 
     nrfCommsQueue->send(Comms::Event::BOARD_FIRST_PACKET);
-    sendInstructionToHud(HEARTBEAT);
+    if (FEATURE_SEND_TO_HUD)
+      sendInstructionToHud(HEARTBEAT);
 
     controller_packet.id = 0;
     sendConfigToBoard();
@@ -38,12 +39,14 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   else if (board.startedMoving())
   {
     displayQueue->send(DispState::MOVING);
-    sendInstructionToHud(FLASH | FAST | GREEN);
+    if (FEATURE_SEND_TO_HUD)
+      sendInstructionToHud(FLASH | FAST | GREEN);
   }
   else if (board.hasStopped())
   {
     displayQueue->send(DispState::STOPPED);
-    sendInstructionToHud(FLASH | RED | SLOW);
+    if (FEATURE_SEND_TO_HUD)
+      sendInstructionToHud(FLASH | RED | SLOW);
   }
 
   if (board.valuesChanged())
@@ -70,6 +73,9 @@ void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
     return;
   }
 
+  if (!FEATURE_SEND_TO_HUD)
+    return;
+
   uint16_t ev = hudClient.read();
   if ((uint16_t)ev > HUDAction::Length)
   {
@@ -85,7 +91,8 @@ void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
     hudActionQueue->send(ev);
     break;
   default:
-    sendInstructionToHud(TWO_FLASHES | GREEN | FAST);
+    if (FEATURE_SEND_TO_HUD)
+      sendInstructionToHud(TWO_FLASHES | GREEN | FAST);
   }
 }
 
@@ -118,6 +125,8 @@ void sendPacketToBoard()
 
 void sendInstructionToHud(HUD::Instruction instruction)
 {
+  if (!FEATURE_SEND_TO_HUD)
+    return;
   // TODO: this online check probably shouldn't be in here
   if (hudClient.connected())
   {

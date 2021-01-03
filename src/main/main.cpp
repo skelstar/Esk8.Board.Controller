@@ -206,7 +206,7 @@ void m5AtomClientInit()
     Serial.printf("rx %d from M5Atom!\n", packet);
     m5AtomClient.sendTo(0, packet);
 
-    if (packet == 99)
+    if (packet == 99 && FEATURE_SEND_TO_HUD)
     {
       hudTasksQueue->send(HUDTask::ACKNOWLEDGE);
     }
@@ -297,7 +297,8 @@ void resetsAcknowledged_callback()
 {
   using namespace HUD;
   storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
-  sendInstructionToHud(FLASH | FAST | GREEN);
+  if (FEATURE_SEND_TO_HUD)
+    sendInstructionToHud(FLASH | FAST | GREEN);
 }
 //------------------------------------------------------------------
 
@@ -338,7 +339,8 @@ void setup()
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER);
 
-  hudClientInit();
+  if (FEATURE_SEND_TO_HUD)
+    hudClientInit();
   boardClientInit();
 #ifdef COMMS_M5ATOM
   m5AtomClientInit();
@@ -363,30 +365,35 @@ void setup()
   Battery::createTask(BATTERY_TASK_CORE, TASK_PRIORITY_1);
 
   // CORE_1
-  HUD::createTask(HUD_TASK_CORE, TASK_PRIORITY_1);
+  if (FEATURE_SEND_TO_HUD)
+  {
+    HUD::createTask(HUD_TASK_CORE, TASK_PRIORITY_1);
+    xHUDActionQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
+    hudActionQueue = new Queue::Manager(xHUDActionQueue, 3, NO_MESSAGE_ON_QUEUE);
+    HudTaskQueue::init();
+  }
 
   xDisplayEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
-  xHUDActionQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
 
   displayQueue = new Queue::Manager(xDisplayEventQueue, 5);
   buttonQueue = new Queue::Manager(xButtonPushEventQueue, 10);
-  hudActionQueue = new Queue::Manager(xHUDActionQueue, 3, NO_MESSAGE_ON_QUEUE);
 
   NRFCommsQueue::init();
-  HudTaskQueue::init();
 
-  while (!Display::taskReady && !Comms::taskReady && !HUD::taskReady)
+  while (!Display::taskReady && !Comms::taskReady && (!FEATURE_SEND_TO_HUD || !HUD::taskReady))
   {
     vTaskDelay(5);
   }
 
   using namespace HUD;
   // force value to get first packet out
-  sendInstructionToHud(HEARTBEAT);
-  vTaskDelay(100);
-  sendInstructionToHud(TWO_FLASHES | BLUE | FAST);
-
+  if (FEATURE_SEND_TO_HUD)
+  {
+    sendInstructionToHud(HEARTBEAT);
+    vTaskDelay(100);
+    sendInstructionToHud(TWO_FLASHES | BLUE | FAST);
+  }
   sendConfigToBoard();
 }
 //---------------------------------------------------------------
@@ -408,7 +415,8 @@ void loop()
   if (sinceNRFUpdate > 20)
   {
     sinceNRFUpdate = 0;
-    hudClient.update();
+    if (FEATURE_SEND_TO_HUD)
+      hudClient.update();
     boardClient.update();
 #ifdef COMMS_M5ATOM
     m5AtomClient.update();

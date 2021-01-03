@@ -81,7 +81,8 @@ namespace Display
           update_display = false;
           stats.update = false;
           screenWhenStopped(/*init*/ false);
-          updateHudIcon(hudClient.connected());
+          if (FEATURE_SEND_TO_HUD)
+            updateHudIcon(hudClient.connected());
         }
       },
       NULL);
@@ -98,7 +99,8 @@ namespace Display
           update_display = false;
           stats.update = false;
           screenWhenMoving(/*init*/ false);
-          updateHudIcon(hudClient.connected());
+          if (FEATURE_SEND_TO_HUD)
+            updateHudIcon(hudClient.connected());
         }
 
         stats.addMovingTime(sinceStoredMovingTime);

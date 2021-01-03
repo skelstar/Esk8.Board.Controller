@@ -67,13 +67,15 @@ namespace Comms
         displayQueue->send(DispState::CONNECTED);
         displayQueue->send(DispState::UPDATE);
 
-        hudTasksQueue->send(HUDTask::BOARD_CONNECTED);
+        if (FEATURE_SEND_TO_HUD)
+          hudTasksQueue->send(HUDTask::BOARD_CONNECTED);
 
         if (stats.needToAckResets())
         {
           displayQueue->send(DispState::SW_RESET);
           pulseLedOn = TriState::STATE_ON;
-          hudTasksQueue->send(HUDTask::CONTROLLER_RESET);
+          if (FEATURE_SEND_TO_HUD)
+            hudTasksQueue->send(HUDTask::CONTROLLER_RESET);
         }
 
         // check board version is compatible
@@ -97,7 +99,8 @@ namespace Comms
 
         stats.boardConnected = false;
         displayQueue->send(DispState::DISCONNECTED);
-        hudTasksQueue->send(HUDTask::BOARD_DISCONNECTED);
+        if (FEATURE_SEND_TO_HUD)
+          hudTasksQueue->send(HUDTask::BOARD_DISCONNECTED);
       },
       NULL, NULL);
 
