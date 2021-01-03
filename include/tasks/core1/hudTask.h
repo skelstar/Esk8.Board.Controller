@@ -69,7 +69,7 @@ HUD::Instruction mapTaskToInstruction(uint16_t task)
   case HUDTask::BOARD_DISCONNECTED:
     return Instruction(PULSE | RED);
   case HUDTask::BOARD_CONNECTED:
-    return Instruction(HEARTBEAT);
+    return Instruction(TWO_FLASHES | GREEN | FAST);
   case HUDTask::WARNING_ACK:
     return Instruction(GREEN | FLASH);
   case HUDTask::CONTROLLER_RESET:
