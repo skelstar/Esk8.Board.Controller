@@ -95,6 +95,48 @@ void screenWhenDisconnected()
   lcd_message(buff4, LINE_4, Aligned::ALIGNED_LEFT, FontSize::LG);
 }
 //-----------------------------------------------------
+
+#define BATTERY_WIDTH (LCD_WIDTH / 8) * 6
+#define BATTERY_HEIGHT (LCD_HEIGHT / 8) * 6
+#define BORDER_SIZE 12
+#define KNOB_HEIGHT (BATTERY_HEIGHT / 8) * 4
+
+void screenBoardBattery(float batteryVolts)
+{
+  uint8_t percent = getBatteryPercentage(batteryVolts);
+  tft.fillScreen(TFT_DEFAULT_BG);
+  int outsideX = (LCD_WIDTH - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
+  int outsideY = (LCD_HEIGHT - BATTERY_HEIGHT) / 2;
+  // body
+  tft.fillRect(outsideX, outsideY, BATTERY_WIDTH, BATTERY_HEIGHT, TFT_WHITE);
+  // knob
+  tft.fillRect(
+      outsideX + BATTERY_WIDTH,
+      outsideY + (BATTERY_HEIGHT - KNOB_HEIGHT) / 2,
+      BORDER_SIZE,
+      KNOB_HEIGHT,
+      TFT_WHITE);
+  // inside
+  tft.fillRect(
+      outsideX + BORDER_SIZE,
+      outsideY + BORDER_SIZE,
+      BATTERY_WIDTH - BORDER_SIZE * 2,
+      BATTERY_HEIGHT - BORDER_SIZE * 2,
+      TFT_DEFAULT_BG);
+  // capacity
+  uint32_t colour = percent > 50
+                        ? TFT_WHITE
+                        : percent > 20
+                              ? TFT_ORANGE
+                              : TFT_RED;
+  tft.fillRect(
+      outsideX + BORDER_SIZE * 2,
+      outsideY + BORDER_SIZE * 2,
+      (BATTERY_WIDTH - BORDER_SIZE * 4) * percent / 100,
+      BATTERY_HEIGHT - BORDER_SIZE * 4,
+      colour);
+}
+//-----------------------------------------------------
 template <typename T>
 void screenPropValue(char *propName, const char *value)
 {

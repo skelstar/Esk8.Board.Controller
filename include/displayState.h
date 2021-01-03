@@ -17,6 +17,7 @@ namespace Display
   {
     SEARCHING = 0,
     DISCONNECTED,
+    BOARD_BATTERY,
     STOPPED_SCREEN,
     MOVING_SCREEN,
     NEED_TO_ACK_RESETS_STOPPED,
@@ -35,6 +36,8 @@ namespace Display
       return "SEARCHING";
     case DISCONNECTED:
       return "DISCONNECTED";
+    case BOARD_BATTERY:
+      return "BOARD_BATTERY";
     case STOPPED_SCREEN:
       return "STOPPED_SCREEN";
     case MOVING_SCREEN:
@@ -67,6 +70,13 @@ namespace Display
       [] {
         dispFsm.printState(DISCONNECTED);
         screenWhenDisconnected();
+      },
+      NULL, NULL);
+  //---------------------------------------------------------------
+  State stBoardBattery(
+      [] {
+        dispFsm.printState(BOARD_BATTERY);
+        screenBoardBattery(board.packet.batteryVoltage);
       },
       NULL, NULL);
   //---------------------------------------------------------------
@@ -318,7 +328,9 @@ namespace Display
   void addTransitions()
   {
     // DispState::CONNECTED
-    fsm.add_transition(&stateSearching, &stateStoppedScreen, DispState::CONNECTED, NULL);
+    // fsm.add_transition(&stateSearching, &stateStoppedScreen, DispState::CONNECTED, NULL);
+    fsm.add_transition(&stateSearching, &stBoardBattery, DispState::CONNECTED, NULL);
+    fsm.add_timed_transition(&stBoardBattery, &stateStoppedScreen, DISP_BOARD_BATTERY_TIME, NULL);
     fsm.add_transition(&stateDisconnected, &stateStoppedScreen, DispState::CONNECTED, NULL);
 
     // DispState::DISCONNECTED
@@ -337,7 +349,8 @@ namespace Display
     // DispState::MOVING
     fsm.add_transition(&stateStoppedScreen, &stateMovingScreen, DispState::MOVING, NULL);
     // DispState::STOPPED
-    fsm.add_transition(&stateMovingScreen, &stateStoppedScreen, DispState::STOPPED, NULL);
+    fsm.add_transition(&stateMovingScreen, &stBoardBattery, DispState::STOPPED, NULL);
+    // fsm.add_transition(&stateMovingScreen, &stateStoppedScreen, DispState::STOPPED, NULL);
 
     // Push to start
     fsm.add_transition(&stateStoppedScreen, &stShowSettings, DispState::PRIMARY_TRIPLE_CLICK, NULL);
