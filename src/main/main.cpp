@@ -11,45 +11,77 @@
 #include <elapsedMillis.h>
 #include <rom/rtc.h> // for reset reason
 #include <shared-utils.h>
+#include <types.h>
+#include <printFormatStrings.h>
+#include <Button2.h>
 
-// used in TFT_eSPI library as alternate SPI port (HSPI?)
-#define SOFT_SPI_MOSI_PIN 13 // Blue
-#define SOFT_SPI_MISO_PIN 12 // Orange
-#define SOFT_SPI_SCK_PIN 15  // Yellow
+#include <constants.h>
 
-#define NRF_CE 17
-#define NRF_CS 2
-
-enum ButtonClickType
-{
-  NO_EVENT = 0,
-  SINGLE,
-  DOUBLE,
-  TRIPLE
-};
+Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
+#include <GenericClient.h>
 
 #include <TFT_eSPI.h>
 #include <Preferences.h>
 #include <BatteryLib.h>
-#include <EventQueueManager.h>
-#include <FsmManager.h>
-#include <EnumManager.h>
+#include <HUDData.h>
+#include <QueueManager.h>
 
+//------------------------------------------------------------
+
+xQueueHandle xDisplayEventQueue;
+xQueueHandle xButtonPushEventQueue;
+xQueueHandle xHUDActionQueue;
+
+Queue::Manager *displayQueue;
+Queue::Manager *buttonQueue;
+Queue::Manager *hudActionQueue;
+
+Queue::Manager *nrfCommsQueue;
+namespace NRFCommsQueue
+{
+  void init()
+  {
+    nrfCommsQueue = new Queue::Manager(/*length*/ 5, sizeof(uint8_t), /*ticks*/ 10);
+    nrfCommsQueue->setName("nrfCommsQueue");
+    nrfCommsQueue->setSentEventCallback([](uint16_t ev) {
+      // if (ev != 1)
+      //   Serial.printf("nrfCommsQueue sent\n", ev);
+    });
+  }
+} // namespace NRFCommsQueue
+
+Queue::Manager *hudTasksQueue;
+namespace HudTaskQueue
+{
+  void queueSentEventCb(uint16_t ev)
+  {
+    if (PRINT_HUD_TASKS_QUEUE_SEND)
+      Serial.printf(PRINT_QUEUE_SEND_FORMAT, HUDTask::getName(ev, "HUDTaskQueue::SentCb()"), "HUD_TASK");
+  }
+  void queueReadEventCb(uint16_t ev)
+  {
+    if (PRINT_HUD_TASKS_QUEUE_READ)
+      Serial.printf(PRINT_QUEUE_READ_FORMAT, "HUD_TASK", HUDTask::getName(ev, "HUDTaskQueue::ReadCb()"));
+  }
+
+  void init()
+  {
+    hudTasksQueue = new Queue::Manager(/*length*/ 3, sizeof(HUDTask::Message), /*ticks*/ 5);
+    hudTasksQueue->setName("hudQueue");
+    hudTasksQueue->setSentEventCallback(queueSentEventCb);
+    hudTasksQueue->setReadEventCallback(queueReadEventCb);
+  }
+} // namespace HudTaskQueue
+
+//------------------------------------------------------------
 enum FeatureType
 {
   CRUISE_CONTROL,
   PUSH_TO_START
 };
-
-#ifndef FEATURE_CRUISE_CONTROL
-#define FEATURE_CRUISE_CONTROL false
-#endif
-#ifndef FEATURE_PUSH_TO_START
-#define FEATURE_PUSH_TO_START false
-#endif
 
 class FeatureServiceClass
 {
@@ -94,10 +126,6 @@ private:
 
 //------------------------------------------------------------------
 
-#define COMMS_BOARD 00
-#define COMMS_CONTROLLER 01
-#define COMMS_HUD 02
-
 ControllerData controller_packet;
 ControllerConfig controller_config;
 
@@ -107,10 +135,84 @@ BoardClass board;
 
 //------------------------------------------------------------------
 
+Preferences statsStore;
+
+//------------------------------------------------------------------
+
+#include <Storage.h>
+
+#include <stats.h>
+
+Stats stats;
+
+//------------------------------------------------------------------
+
+// prototypes
+void hudPacketAvailable_cb(uint16_t from_id, uint8_t type);
+void boardPacketAvailable_cb(uint16_t from_id, uint8_t t);
+
 NRF24L01Lib nrf24;
 
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
+
+GenericClient<HUD::Instruction, HUDAction::Event> hudClient(COMMS_HUD);
+void hudClientInit()
+{
+  hudClient.begin(&network, hudPacketAvailable_cb);
+  hudClient.setConnectedStateChangeCallback([] {
+    if (PRINT_HUD_CLIENT_CONNECTED_CHANGED)
+      Serial.printf(PRINT_CLIENT_CONNECTION_FORMAT, "HUD", hudClient.connected() ? "CONNECTED" : "DISCONNECTED");
+  });
+  hudClient.setSentPacketCallback([](HUD::Instruction instruction) {
+    if (PRINT_TX_TO_HUD)
+      Serial.printf(PRINT_TX_PACKET_TO_FORMAT, "HUD", instruction.getInstruction());
+  });
+  hudClient.setReadPacketCallback([](HUDAction::Event ev) {
+    if (PRINT_RX_FROM_HUD)
+      Serial.printf(PRINT_RX_PACKET_FROM_FORMAT, "HUD", HUDAction::getName(ev));
+  });
+}
+
+void printSentToBoard(ControllerData data)
+{
+  if (PRINT_TX_TO_BOARD)
+    Serial.printf(TX_TO_BOARD_FORMAT, data.id);
+}
+void printRecvFromBoard(VescData data)
+{
+  if (PRINT_RX_FROM_BOARD)
+    Serial.printf(RX_FROM_BOARD_FORMAT, data.id);
+}
+
+GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
+void boardClientInit()
+{
+  boardClient.begin(&network, boardPacketAvailable_cb);
+  boardClient.setConnectedStateChangeCallback([] {
+    if (PRINT_BOARD_CLIENT_CONNECTED_CHANGED)
+      Serial.printf(BOARD_CLIENT_CONNECTED_FORMAT, boardClient.connected() ? "CONNECTED" : "DISCONNECTED");
+  });
+  boardClient.setSentPacketCallback(printSentToBoard);
+  boardClient.setReadPacketCallback(printRecvFromBoard);
+}
+
+#ifdef COMMS_M5ATOM
+GenericClient<uint16_t, uint16_t> m5AtomClient(COMMS_M5ATOM);
+void m5AtomClientInit()
+{
+  m5AtomClient.begin(&network, [](uint16_t from, uint8_t type) {
+    uint16_t packet = m5AtomClient.read();
+    Serial.printf("rx %d from M5Atom!\n", packet);
+    m5AtomClient.sendTo(0, packet);
+
+    if (packet == 99 && FEATURE_SEND_TO_HUD)
+    {
+      hudTasksQueue->send(HUDTask::ACKNOWLEDGE);
+    }
+  });
+}
+#endif
 
 //------------------------------------------------------------------
 
@@ -125,23 +227,14 @@ BatteryLib remote_batt(BATTERY_MEASURE_PIN);
 #endif
 //------------------------------------------------------------------
 
-#define LCD_WIDTH 240
-#define LCD_HEIGHT 135
-
-#define TFT_DEFAULT_BG TFT_BLACK
-
 TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
+
 //------------------------------------------------------------------
-
-#define STORE_STATS "stats"
-#define STORE_STATS_SOFT_RSTS "soft resets"
-#define STORE_STATS_TRIP_TIME "trip time"
-
-Preferences statsStore;
 
 elapsedMillis
     sinceSentToBoard,
     sinceLastBoardPacketRx,
+    sinceLastHudPacket,
     sinceSentRequest,
     since_read_trigger,
     sinceBoardConnected,
@@ -153,52 +246,23 @@ bool display_task_initialised = false;
 bool display_task_showing_option_screen = false;
 int oldCounter = 0;
 
-//------------------------------------------------------------
-
-xQueueHandle xDisplayChangeEventQueue;
-xQueueHandle xCommsStateEventQueue;
-xQueueHandle xButtonPushEventQueue;
-
-EventQueueManager *displayChangeQueueManager;
-EventQueueManager *buttonQueueManager;
-EventQueueManager *commsEventQueue;
-
-//------------------------------------------------------------------
-
-// namespace Disp
-// {
-// } // namespace Disp
-
-// fsm - prototypes
+// prototypes
 void sendToBoard();
 
 //------------------------------------------------------------------
-
-#include <Storage.h>
-#include <stats.h>
-
-Stats stats;
-
-//------------------------------------------------------------------
-
-#define ENCODER_BRAKE_COUNTS 20
-#define ENCODER_ACCEL_COUNTS 20
 
 class Config
 {
 public:
   uint8_t headlightMode;
-} config;
+};
+
+Config config;
 
 #define STORE_CONFIG "config"
 #define STORE_CONFIG_ACCEL_COUNTS "accel counts"
 #define STORE_CONFIG_BRAKE_COUNTS "brake counts"
 Preferences configStore;
-
-void resetsAcknowledged_callback()
-{
-  storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
-}
 
 void storeTimeMovingInMemory()
 {
@@ -211,24 +275,36 @@ ThrottleClass throttle;
 
 //---------------------------------------------------------------
 
-#include <Button2.h>
-
 #include <utils.h>
 #include <screens.h>
-#include <displayState.h>
 
-#include <display_task_0.h>
-#include <comms_connected_state.h>
-#include <features/battery_measure.h>
+#include <displayState.h>
 
 #include <nrf_comms.h>
 
-#include <peripherals.h>
+#include <tasks/core0/displayTask.h>
+#include <tasks/core0/commsStateTask.h>
+#include <tasks/core1/hudTask.h>
 
-//---------------------------------------------------------------
+#include <features/battery_measure.h>
+
+#include <peripherals.h>
+#include <assert.h>
+#define __ASSERT_USE_STDERR
+
+//------------------------------------------------------------------
+void resetsAcknowledged_callback()
+{
+  using namespace HUD;
+  storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
+  if (FEATURE_SEND_TO_HUD)
+    sendInstructionToHud(FLASH | FAST | GREEN);
+}
+//------------------------------------------------------------------
 
 void setup()
 {
+
   Serial.begin(115200);
   Serial.printf("------------------------ BOOT ------------------------\n");
 
@@ -249,12 +325,10 @@ void setup()
   if (stats.watchdogReset())
   {
     stats.soft_resets++;
-    // statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
     storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, stats.soft_resets);
     stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS_TRIP_TIME);
-#ifdef PRINT_RESET_DETECTION
-    Serial.printf("RESET!!! =========> %d (%ums)\n", stats.soft_resets, stats.timeMovingMS);
-#endif
+    if (PRINT_RESET_DETECTION)
+      Serial.printf("RESET!!! =========> %d (%ums)\n", stats.soft_resets, stats.timeMovingMS);
   }
   else if (stats.powerOnReset())
   {
@@ -263,86 +337,95 @@ void setup()
   }
   statsStore.end();
 
-  nrf24.begin(&radio, &network, COMMS_CONTROLLER, packetAvailable_cb);
+  nrf24.begin(&radio, &network, COMMS_CONTROLLER);
+
+  if (FEATURE_SEND_TO_HUD)
+    hudClientInit();
+  boardClientInit();
+#ifdef COMMS_M5ATOM
+  m5AtomClientInit();
+#endif
 
   print_build_status(chipId);
 
-  throttle.init(/*pin*/ 27);
+  throttle.init(/*pin*/ 27, [](uint8_t throttle) {
+    // Serial.printf("throttle changed: %d (cruise: %d, pressed: %d)\n",
+    //               throttle,
+    //               controller_packet.cruise_control,
+    //               primaryButton.isPressedRaw());
+  });
 
   primaryButtonInit();
+  rightButtonInit();
 
   vTaskDelay(100);
 
-  // core 0
-  xTaskCreatePinnedToCore(
-      display_task_0,
-      "display_task_0",
-      10000,
-      NULL,
-      /*priority*/ 3,
-      NULL,
-      /*core*/ 0);
-  xTaskCreatePinnedToCore(
-      commsStateTask_0,
-      "commsStateTask_0",
-      10000,
-      NULL,
-      /*priority*/ 2,
-      NULL,
-      0);
-  xTaskCreatePinnedToCore(
-      batteryMeasureTask_0,
-      "batteryMeasureTask_0",
-      10000,
-      NULL,
-      /*priority*/
-      1,
-      NULL,
-      0);
+  // CORE_0
+  Display::createTask(DISPLAY_TASK_CORE, TASK_PRIORITY_3);
+  Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_1);
+  Battery::createTask(BATTERY_TASK_CORE, TASK_PRIORITY_1);
 
-  xDisplayChangeEventQueue = xQueueCreate(5, sizeof(uint8_t));
-  xCommsStateEventQueue = xQueueCreate(5, sizeof(uint8_t));
+  // CORE_1
+  if (FEATURE_SEND_TO_HUD)
+  {
+    HUD::createTask(HUD_TASK_CORE, TASK_PRIORITY_1);
+    xHUDActionQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
+    hudActionQueue = new Queue::Manager(xHUDActionQueue, 3, NO_MESSAGE_ON_QUEUE);
+    HudTaskQueue::init();
+  }
+
+  xDisplayEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
 
-  displayChangeQueueManager = new EventQueueManager(xDisplayChangeEventQueue, 5);
-  buttonQueueManager = new EventQueueManager(xButtonPushEventQueue, 10);
-  commsEventQueue = new EventQueueManager(xCommsStateEventQueue, 10);
+  displayQueue = new Queue::Manager(xDisplayEventQueue, 5);
+  buttonQueue = new Queue::Manager(xButtonPushEventQueue, 10);
 
-  while (!display_task_initialised)
+  NRFCommsQueue::init();
+
+  while (!Display::taskReady && !Comms::taskReady && (!FEATURE_SEND_TO_HUD || !HUD::taskReady))
   {
-    vTaskDelay(1);
+    vTaskDelay(5);
   }
+
+  using namespace HUD;
+  // force value to get first packet out
+  if (FEATURE_SEND_TO_HUD)
+  {
+    sendInstructionToHud(HEARTBEAT);
+    vTaskDelay(100);
+    sendInstructionToHud(TWO_FLASHES | BLUE | FAST);
+  }
+  sendConfigToBoard();
 }
 //---------------------------------------------------------------
 
-elapsedMillis
-    since_sent_config_to_board,
-    sinceNRFUpdate,
-    sinceLastSwReset;
-uint8_t old_throttle;
-ulong loopNum = 0;
+elapsedMillis sinceNRFUpdate, sinceSentToHudTest;
 
 void loop()
 {
   if (sinceSentToBoard > SEND_TO_BOARD_INTERVAL)
   {
-    loopNum++;
-
     sendToBoard();
   }
 
   if (board.hasTimedout())
   {
-    commsEventQueue->send(Comms::BOARD_TIMEDOUT);
+    nrfCommsQueue->send(Comms::Event::BOARD_TIMEDOUT);
   }
 
   if (sinceNRFUpdate > 20)
   {
     sinceNRFUpdate = 0;
-    nrf24.update();
+    if (FEATURE_SEND_TO_HUD)
+      hudClient.update();
+    boardClient.update();
+#ifdef COMMS_M5ATOM
+    m5AtomClient.update();
+#endif
   }
 
   primaryButton.loop();
+  rightButton.loop();
 
   vTaskDelay(1);
 }
@@ -356,12 +439,12 @@ void sendToBoard()
       throttle.get() < 127 || // braking
       board.packet.moving ||
       !featureService.get<bool>(PUSH_TO_START) ||
-      (featureService.get<bool>(PUSH_TO_START) && primaryButton.isPressed());
+      (featureService.get<bool>(PUSH_TO_START) && primaryButton.isPressedRaw());
 
   bool cruiseControlActive =
       board.packet.moving &&
       FEATURE_CRUISE_CONTROL &&
-      primaryButton.isPressed();
+      primaryButton.isPressedRaw();
 
   sinceSentToBoard = 0;
   controller_packet.throttle = throttle.get(/*enabled*/ throttleEnabled);

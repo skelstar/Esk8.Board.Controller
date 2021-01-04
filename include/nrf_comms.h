@@ -1,26 +1,22 @@
+#ifndef ESK8_SHARED_TYPES_H
+#include <types.h>
+#endif
 
+void processHUDPacket();
+void processBoardPacket();
 void sendConfigToBoard();
 void sendPacketToBoard();
-bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType);
-bool sendPacketWithRetries(uint8_t *d, uint8_t len, uint8_t packetType, uint8_t numRetries);
+void sendInstructionToHud(HUD::Instruction instruction);
 
 //------------------------------------------------------------------
-void packetAvailable_cb(uint16_t from_id, uint8_t type)
+void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 {
+  using namespace HUD;
   sinceLastBoardPacketRx = 0;
 
-  if (from_id == COMMS_HUD)
-  {
-    Serial.printf("WARNINGL rx from COMMS_HUD. Ignored.\n");
-    return;
-  }
+  VescData packet = boardClient.read();
 
-  VescData board_packet;
-  uint8_t buff[sizeof(VescData)];
-  nrf24.read_into(buff, sizeof(VescData));
-  memcpy(&board_packet, &buff, sizeof(VescData));
-
-  board.save(board_packet);
+  board.save(packet);
 
   if (board.packet.reason == FIRST_PACKET)
   {
@@ -30,7 +26,10 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
     * send controller "CONFIG" packet to board
     */
     DEBUG("*** board's first packet!! ***");
-    commsEventQueue->send(Comms::BD_FIRST_PACKET);
+
+    nrfCommsQueue->send(Comms::Event::BOARD_FIRST_PACKET);
+    if (FEATURE_SEND_TO_HUD)
+      sendInstructionToHud(HEARTBEAT);
 
     controller_packet.id = 0;
     sendConfigToBoard();
@@ -39,34 +38,71 @@ void packetAvailable_cb(uint16_t from_id, uint8_t type)
   }
   else if (board.startedMoving())
   {
-    displayChangeQueueManager->send(Disp::MOVING);
+    displayQueue->send(DispState::MOVING);
+    if (FEATURE_SEND_TO_HUD)
+      sendInstructionToHud(FLASH | FAST | GREEN);
   }
   else if (board.hasStopped())
   {
-    displayChangeQueueManager->send(Disp::STOPPED);
-  }
-  else if (board.valuesChanged())
-  {
-    displayChangeQueueManager->send(Disp::UPDATE);
+    displayQueue->send(DispState::STOPPED);
+    if (FEATURE_SEND_TO_HUD)
+      sendInstructionToHud(FLASH | RED | SLOW);
   }
 
-  if (board.getCommand() == CommandType::RESET)
+  if (board.valuesChanged())
+  {
+    displayQueue->send(DispState::UPDATE);
+  }
+
+  // this should only happen when using M5STACK
+  if (DEBUG_BUILD && board.getCommand() == CommandType::RESET)
   {
     ESP.restart();
   }
 
-  commsEventQueue->send(Comms::PKT_RXD);
+  nrfCommsQueue->send(Comms::Event::PKT_RXD);
 }
+//------------------------------------------------------------------
+
+void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
+{
+  using namespace HUD;
+  if (type != Packet::HUD)
+  {
+    Serial.printf("WARNING: Rx type: %d not supported!\n", type);
+    return;
+  }
+
+  if (!FEATURE_SEND_TO_HUD)
+    return;
+
+  uint16_t ev = hudClient.read();
+  if ((uint16_t)ev > HUDAction::Length)
+  {
+    Serial.printf("WARNING: Action from HUD out of range (%d)\n", (uint16_t)ev);
+    return;
+  }
+
+  // TODO respond with appropriate action response?
+
+  switch (HUDAction::Event(ev))
+  {
+  case HUDAction::ONE_CLICK:
+    hudActionQueue->send(ev);
+    break;
+  default:
+    if (FEATURE_SEND_TO_HUD)
+      sendInstructionToHud(TWO_FLASHES | GREEN | FAST);
+  }
+}
+
 //------------------------------------------------------------------
 
 void sendConfigToBoard()
 {
+  controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
   controller_config.id = controller_packet.id;
-  uint8_t bs[sizeof(ControllerConfig)];
-  memcpy(bs, &controller_config, sizeof(ControllerConfig));
-  uint8_t len = sizeof(ControllerConfig);
-
-  sendPacket(bs, len, PacketType::CONFIG);
+  boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);
 }
 //------------------------------------------------------------------
 
@@ -74,47 +110,35 @@ void sendPacketToBoard()
 {
   bool rxLastResponse = board.packet.id == controller_packet.id - 1 &&
                         board.packet.id > 0;
-  if (!rxLastResponse && comms_state_connected)
+  if (!rxLastResponse && stats.boardConnected)
   {
     stats.total_failed_sending += 1;
-    DEBUGVAL(board.packet.id, controller_packet.id);
+    if (PRINT_IF_TOTAL_FAILED_SENDING)
+      DEBUGVAL(board.packet.id, controller_packet.id);
   }
 
-  uint8_t bs[sizeof(ControllerData)];
-  memcpy(bs, &controller_packet, sizeof(ControllerData));
-
-  sendPacket(bs, sizeof(ControllerData), PacketType::CONTROL);
+  boardClient.sendTo(Packet::CONTROL, controller_packet);
 
   controller_packet.id++;
 }
 //------------------------------------------------------------------
 
-bool sendPacket(uint8_t *d, uint8_t len, uint8_t packetType)
+void sendInstructionToHud(HUD::Instruction instruction)
 {
-  bool sent = nrf24.send(COMMS_BOARD, packetType, d, len);
-
-  return sent;
-}
-//------------------------------------------------------------------
-
-bool sendPacketWithRetries(uint8_t *d, uint8_t len, uint8_t packetType, uint8_t maxTries)
-{
-  bool sent = false;
-  int tries = 0;
-  while (!sent && tries++ < maxTries)
+  if (!FEATURE_SEND_TO_HUD)
+    return;
+  // TODO: this online check probably shouldn't be in here
+  if (hudClient.connected())
   {
-    sent = nrf24.send(COMMS_BOARD, packetType, d, len);
-    if (!sent)
-      vTaskDelay(10);
+    hudClient.sendTo(Packet::HUD, instruction);
   }
-#ifdef PRINT_SEND_RETRIES
-  if (tries > 1)
-    // DEBUGMVAL("Retried: ", tries, sent);
-    DEBUGVAL("Retried: ", tries, sent);
-#endif
-
-  return sent;
+  else
+  {
+    if (DEBUG_BUILD)
+      Serial.printf("WARNING: instruction not sent because hud offline\n");
+  }
 }
+
 //------------------------------------------------------------------
 
 bool boardTimedOut()
@@ -122,5 +146,3 @@ bool boardTimedOut()
   unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
   return board.sinceLastPacket > (timeout + 100);
 }
-
-//------------------------------------------------------------------

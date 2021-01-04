@@ -1,160 +1,143 @@
 #ifndef Fsm
 #include <Fsm.h>
 #endif
-// #ifndef ENUMMANAGER_H
-// #include <EnumManager.h>
-// #endif
+#ifndef FSMMANAGER_H
+#include <FsmManager.h>
+#endif
 
-bool update_display = false;
-
-// prototypes
-
-elapsedMillis sinceShowingToggleScreen;
-elapsedMillis sinceStoredMovingTime;
-
-FsmManager dispFsm;
-
-namespace Disp
+namespace Display
 {
-  enum Event
+  bool update_display = false;
+  DispState::Trigger lastDispEvent;
+
+  elapsedMillis sinceShowingToggleScreen;
+  elapsedMillis sinceStoredMovingTime;
+
+  enum StateId
   {
-    NO_EVENT = 0,
-    CONNECTED,
+    SEARCHING = 0,
     DISCONNECTED,
-    STOPPED,
-    MOVING,
-    SW_RESET,
-    UPDATE,
-    PRIMARY_SINGLE_CLICK,
-    PRIMARY_DOUBLE_CLICK,
-    PRIMARY_TRIPLE_CLICK,
-    VERSION_DOESNT_MATCH,
-    EventLength,
+    SOFTWARE_STATS,
+    BOARD_BATTERY,
+    STOPPED_SCREEN,
+    MOVING_SCREEN,
+    NEED_TO_ACK_RESETS_STOPPED,
+    NEED_TO_ACK_RESETS_MOVING,
+    BOARD_VERSION_DOESNT_MATCH_SCREEN,
+    SHOW_PUSH_TO_START,
+    SHOW_SETTINGS,
+    TOGGLE_PUSH_TO_START,
   };
 
-  std::string eventNames[] = {
-      "NO_EVENT",
-      "CONNECTED",
-      "DISCONNECTED",
-      "STOPPED",
-      "MOVING",
-      "SW_RESET",
-      "UPDATE",
-      "PRIMARY_SINGLE_CLICK",
-      "PRIMARY_DOUBLE_CLICK",
-      "PRIMARY_TRIPLE_CLICK",
-      "VERSION_DOESNT_MATCH",
-  };
-
-  const char *getName(int ev)
+  const char *stateID(uint16_t id)
   {
-    return ev >= 0 && ev < EventLength ? eventNames[ev].c_str() : "WARNING: OUT OF RANGE";
+    switch (id)
+    {
+    case SEARCHING:
+      return "SEARCHING";
+    case DISCONNECTED:
+      return "DISCONNECTED";
+    case SOFTWARE_STATS:
+      return "SOFTWARE_STATS";
+    case BOARD_BATTERY:
+      return "BOARD_BATTERY";
+    case STOPPED_SCREEN:
+      return "STOPPED_SCREEN";
+    case MOVING_SCREEN:
+      return "MOVING_SCREEN";
+    case NEED_TO_ACK_RESETS_STOPPED:
+      return "NEED_TO_ACK_RESETS_STOPPED";
+    case NEED_TO_ACK_RESETS_MOVING:
+      return "NEED_TO_ACK_RESETS_MOVING";
+    case BOARD_VERSION_DOESNT_MATCH_SCREEN:
+      return "BOARD_VERSION_DOESNT_MATCH_SCREEN";
+    case SHOW_PUSH_TO_START:
+      return "SHOW_PUSH_TO_START";
+    case SHOW_SETTINGS:
+      return "SHOW_SETTINGS";
+    case TOGGLE_PUSH_TO_START:
+      return "TOGGLE_PUSH_TO_START";
+    }
+    return outOfRange("Display::stateID()");
   }
 
-  enum StateIDs
-  {
-    STATE_SEARCHING,
-    STATE_DISCONNECTED,
-    STATE_STOPPED,
-    STATE_MOVING,
-    STATE_NEEDTOACKRESETSSTOPPED,
-    STATE_NEEDTOACKRESETSMOVING,
-    STATE_BOARDVERSIONDOESNTMATCHSCREEN,
-    STATE_TOGGLEPUSHTOSTART,
-    STATE_Length,
-  };
+  FsmManager<DispState::Trigger> dispFsm;
 
-  std::string stateNames[] = {
-      "STATE_SEARCHING",
-      "STATE_DISCONNECTED",
-      "STATE_STOPPED",
-      "STATE_MOVING",
-      "STATE_NEEDTOACKRESETSSTOPPED",
-      "STATE_NEEDTOACKRESETSMOVING",
-      "STATE_BOARDVERSIONDOESNTMATCHSCREEN",
-      "STATE_TOGGLEPUSHTOSTART",
-  };
-
-  EnumManager<Event> eventsMgr(eventNames);
-  EnumManager<StateIDs> stateIDsMgr(stateNames);
-
-  State stateSearching(
-      STATE_SEARCHING,
-      [] {
-        dispFsm.printState(STATE_SEARCHING);
-        screen_searching();
-      },
-      NULL, NULL);
-
+  //---------------------------------------------------------------
+  State stateSearching([] {
+    dispFsm.printState(SEARCHING);
+    screen_searching();
+  });
+  //---------------------------------------------------------------
   State stateDisconnected(
-      STATE_DISCONNECTED,
       [] {
-        dispFsm.printState(STATE_DISCONNECTED);
+        dispFsm.printState(DISCONNECTED);
         screenWhenDisconnected();
       },
       NULL, NULL);
-
-  State stateStopped(
-      STATE_STOPPED,
+  //---------------------------------------------------------------
+  State stSoftwareStats(
       [] {
-        dispFsm.printState(STATE_STOPPED);
-#ifdef PRINT_RESET_DETECTION
-        Serial.printf("STOPPED at %lums\n", stats.timeMovingMS);
-#endif
+        dispFsm.printState(SOFTWARE_STATS);
+        screenSoftwareStats();
+      },
+      NULL, NULL);
+  //---------------------------------------------------------------
+  State stBoardBattery(
+      [] {
+        dispFsm.printState(BOARD_BATTERY);
+        screenBoardBattery(board.packet.batteryVoltage);
+      },
+      NULL, NULL);
+  //---------------------------------------------------------------
+  State stateStoppedScreen(
+      [] {
+        dispFsm.printState(STOPPED_SCREEN);
         screenWhenStopped(/*init*/ true);
       },
       [] {
-        if (update_display)
+        if (update_display || stats.update)
         {
           update_display = false;
+          stats.update = false;
           screenWhenStopped(/*init*/ false);
+          if (FEATURE_SEND_TO_HUD)
+            updateHudIcon(hudClient.connected());
         }
       },
       NULL);
-
-  State stateMoving(
-      STATE_MOVING,
+  //---------------------------------------------------------------
+  State stateMovingScreen(
       [] {
-        dispFsm.printState(STATE_MOVING);
-#ifdef PRINT_RESET_DETECTION
-        Serial.printf("MOVING at %lums\n", stats.timeMovingMS);
-#endif
+        dispFsm.printState(MOVING_SCREEN);
         sinceStoredMovingTime = 0;
         screenWhenMoving(/*init*/ true);
       },
       [] {
-        if (update_display)
+        if (update_display || stats.update)
         {
           update_display = false;
+          stats.update = false;
           screenWhenMoving(/*init*/ false);
+          if (FEATURE_SEND_TO_HUD)
+            updateHudIcon(hudClient.connected());
         }
 
         stats.addMovingTime(sinceStoredMovingTime);
         sinceStoredMovingTime = 0;
       },
-      [] {
-      });
-
+      NULL);
   //---------------------------------------------------------------
   State stateNeedToAckResetsStopped(
-      STATE_NEEDTOACKRESETSSTOPPED,
       [] {
-        dispFsm.printState(STATE_NEEDTOACKRESETSSTOPPED);
-
-#ifdef PRINT_RESET_DETECTION
-        Serial.printf("ACK STOPPED at %lums\n", stats.timeMovingMS);
-#endif
+        dispFsm.printState(NEED_TO_ACK_RESETS_STOPPED);
         screenNeedToAckResets();
       },
       NULL, NULL);
   //---------------------------------------------------------------
   State stateNeedToAckResetsMoving(
-      STATE_NEEDTOACKRESETSMOVING,
       [] {
-        dispFsm.printState(STATE_NEEDTOACKRESETSMOVING);
-#ifdef PRINT_RESET_DETECTION
-        Serial.printf("ACK MOVING at %lums\n", stats.timeMovingMS);
-#endif
+        dispFsm.printState(NEED_TO_ACK_RESETS_MOVING);
         sinceStoredMovingTime = 0;
         screenNeedToAckResets();
       },
@@ -165,36 +148,163 @@ namespace Disp
       NULL);
   //---------------------------------------------------------------
   State stateBoardVersionDoesntMatchScreen(
-      STATE_BOARDVERSIONDOESNTMATCHSCREEN,
       [] {
-        dispFsm.printState(STATE_BOARDVERSIONDOESNTMATCHSCREEN);
+        dispFsm.printState(BOARD_VERSION_DOESNT_MATCH_SCREEN);
         screenBoardNotCompatible(board.packet.version);
       },
       NULL,
       NULL);
   //---------------------------------------------------------------
 
-  State stateTogglePushToStart(
-      STATE_TOGGLEPUSHTOSTART,
+  class SettingHandlerBase
+  {
+  public:
+    virtual void display() = 0;
+    virtual void changeValue() = 0;
+  };
+
+  class PushToStart : public SettingHandlerBase
+  {
+  public:
+    PushToStart(char *text)
+    {
+      _text = text;
+      _currVal = featureService.get<bool>(FeatureType::PUSH_TO_START);
+    }
+
+    void display()
+    {
+      const char *value = _currVal == true ? "ON" : "OFF";
+      screenPropValue<bool>(_text, value);
+    }
+
+    void changeValue()
+    {
+      _currVal = !_currVal;
+      featureService.set(PUSH_TO_START, _currVal);
+    }
+
+  private:
+    char *_text;
+    bool _currVal;
+  };
+
+  template <typename T>
+  class GenericOptionHandler : public SettingHandlerBase
+  {
+    typedef const char *(*GetCallback)();
+    typedef void (*SetCallback)();
+
+  public:
+    GenericOptionHandler(char *title, GetCallback getCallback, SetCallback setCallback)
+    {
+      _title = title;
+      _getCallback = getCallback;
+      _setCallback = setCallback;
+      _currVal = getCallback();
+    }
+
+    void display()
+    {
+      Serial.printf("%s changed value to %s\n", _title, _currVal);
+      screenPropValue<T>(_title, _currVal);
+    }
+
+    void changeValue()
+    {
+      if (_setCallback != nullptr)
+      {
+        _setCallback();
+        _currVal = _getCallback();
+      }
+      else
+        Serial.printf("WARNING: setCallback not set in GenericOptionHandler (%s)\n", _title);
+    }
+
+  private:
+    char *_title;
+    const char *_currVal;
+    GetCallback _getCallback = nullptr;
+    SetCallback _setCallback = nullptr;
+  };
+
+  enum SettingOption
+  {
+    OPT_PUSH_TO_START = 0,
+    OPT_SECOND_SETTING,
+    OPT_THIRD_SETTING,
+    OPT_Length,
+  };
+
+  uint16_t settingPtr = PUSH_TO_START;
+
+  uint8_t secondOptionVal = 0;
+  const char *getSecondOption()
+  {
+    static char buff[4];
+    sprintf(buff, "%d", secondOptionVal);
+    return buff;
+  }
+
+  uint8_t thirdOptionVal = 0;
+  const char *getThirdOption()
+  {
+    static char buff[4];
+    sprintf(buff, "%d", thirdOptionVal);
+    return buff;
+  }
+
+  PushToStart pushToStartHandler("push to start");
+  GenericOptionHandler<uint8_t> secondOptionHandler(
+      "second option",
+      getSecondOption,
+      []() { secondOptionVal++; });
+  GenericOptionHandler<uint8_t> thirdOptionHandler(
+      "third option",
+      getThirdOption,
+      []() { thirdOptionVal++; });
+
+  // array of the options
+  SettingHandlerBase *optionHandlers[] = {
+      &pushToStartHandler,
+      &secondOptionHandler,
+      &thirdOptionHandler};
+
+  void nextSetting()
+  {
+    settingPtr++;
+    settingPtr = settingPtr == OPT_Length
+                     ? SettingOption(0)
+                     : SettingOption(settingPtr);
+  }
+  //---------------------------------------------------------------
+  State stShowSettings(
       [] {
-        dispFsm.printState(STATE_TOGGLEPUSHTOSTART);
-        bool currVal = featureService.get<bool>(FeatureType::PUSH_TO_START);
-        if (dispFsm.lastEvent() == Disp::PRIMARY_DOUBLE_CLICK)
-        {
-          currVal = !currVal;
-          featureService.set(PUSH_TO_START, currVal);
-        }
-        screenPropValue("push to start", (currVal == true) ? "ON" : "OFF");
+        dispFsm.printState(SHOW_SETTINGS);
         sinceShowingToggleScreen = 0;
-      },
-      [] {
-        if (sinceShowingToggleScreen > 3000)
+        switch (lastDispEvent)
         {
-          sinceShowingToggleScreen = 0; // prevent excessive re-trigger
-          dispFsm.trigger(Disp::PRIMARY_SINGLE_CLICK);
+        case DispState::PRIMARY_TRIPLE_CLICK:
+        {
+          settingPtr = SettingOption::OPT_PUSH_TO_START;
+          optionHandlers[settingPtr]->display();
+          break;
+        }
+        case DispState::PRIMARY_SINGLE_CLICK:
+        {
+          nextSetting();
+          optionHandlers[settingPtr]->display();
+          break;
+        }
+        case DispState::PRIMARY_LONG_PRESS:
+        {
+          optionHandlers[settingPtr]->changeValue();
+          optionHandlers[settingPtr]->display();
+          break;
+        }
         }
       },
-      NULL);
+      NULL, NULL);
   //---------------------------------------------------------------
   void acknowledgeResets()
   {
@@ -206,35 +316,54 @@ namespace Disp
 
   void addTransitions()
   {
-    // Disp::CONNECTED
-    fsm.add_transition(&stateSearching, &stateStopped, Disp::CONNECTED, NULL);
-    fsm.add_transition(&stateDisconnected, &stateStopped, Disp::CONNECTED, NULL);
+    // DispState::CONNECTED
+    // fsm.add_transition(&stateSearching, &stateStoppedScreen, DispState::CONNECTED, NULL);
+    // fsm.add_transition(&stateSearching, &stBoardBattery, DispState::CONNECTED, NULL);
+    fsm.add_transition(&stateSearching, &stSoftwareStats, DispState::CONNECTED, NULL);
+    fsm.add_timed_transition(&stSoftwareStats, &stBoardBattery, DISP_SOFTWARE_STATS_TIME, NULL);
+    fsm.add_timed_transition(&stBoardBattery, &stateStoppedScreen, DISP_BOARD_BATTERY_TIME, NULL);
+    fsm.add_transition(&stateDisconnected, &stateStoppedScreen, DispState::CONNECTED, NULL);
 
-    // Disp::DISCONNECTED
-    fsm.add_transition(&stateStopped, &stateDisconnected, Disp::DISCONNECTED, NULL);
-    fsm.add_transition(&stateMoving, &stateDisconnected, Disp::DISCONNECTED, NULL);
+    // DispState::DISCONNECTED
+    fsm.add_transition(&stateStoppedScreen, &stateDisconnected, DispState::DISCONNECTED, NULL);
+    fsm.add_transition(&stateMovingScreen, &stateDisconnected, DispState::DISCONNECTED, NULL);
 
-    // Disp::SW_RESET
-    fsm.add_transition(&stateStopped, &stateNeedToAckResetsStopped, Disp::SW_RESET, NULL);
-    fsm.add_transition(&stateMoving, &stateNeedToAckResetsMoving, Disp::SW_RESET, NULL);
+    // DispState::SW_RESET
+    fsm.add_transition(&stateStoppedScreen, &stateNeedToAckResetsStopped, DispState::SW_RESET, NULL);
+    fsm.add_transition(&stateMovingScreen, &stateNeedToAckResetsMoving, DispState::SW_RESET, NULL);
 
-    fsm.add_transition(&stateNeedToAckResetsStopped, &stateStopped, Disp::PRIMARY_DOUBLE_CLICK, acknowledgeResets);
-    fsm.add_transition(&stateNeedToAckResetsStopped, &stateNeedToAckResetsMoving, Disp::MOVING, NULL);
-    fsm.add_transition(&stateNeedToAckResetsMoving, &stateNeedToAckResetsStopped, Disp::STOPPED, NULL);
-    fsm.add_transition(&stateNeedToAckResetsMoving, &stateMoving, Disp::PRIMARY_DOUBLE_CLICK, acknowledgeResets);
+    fsm.add_transition(&stateNeedToAckResetsStopped, &stateStoppedScreen, DispState::PRIMARY_DOUBLE_CLICK, acknowledgeResets);
+    fsm.add_transition(&stateNeedToAckResetsStopped, &stateNeedToAckResetsMoving, DispState::MOVING, NULL);
+    fsm.add_transition(&stateNeedToAckResetsMoving, &stateNeedToAckResetsStopped, DispState::STOPPED, NULL);
+    fsm.add_transition(&stateNeedToAckResetsMoving, &stateMovingScreen, DispState::PRIMARY_DOUBLE_CLICK, acknowledgeResets);
 
-    // Disp::MOVING
-    fsm.add_transition(&stateStopped, &stateMoving, Disp::MOVING, NULL);
-    // Disp::STOPPED
-    fsm.add_transition(&stateMoving, &stateStopped, Disp::STOPPED, NULL);
+    // RIGHT_BUTTON_CLICKED
+    fsm.add_transition(&stateStoppedScreen, &stSoftwareStats, DispState::RIGHT_BUTTON_CLICKED, NULL);
 
-    fsm.add_transition(&stateStopped, &stateTogglePushToStart, Disp::PRIMARY_TRIPLE_CLICK, NULL);
-    fsm.add_transition(&stateTogglePushToStart, &stateTogglePushToStart, Disp::PRIMARY_DOUBLE_CLICK, NULL);
-    fsm.add_transition(&stateTogglePushToStart, &stateStopped, Disp::PRIMARY_SINGLE_CLICK, NULL);
+    // DispState::MOVING
+    fsm.add_transition(&stateStoppedScreen, &stateMovingScreen, DispState::MOVING, NULL);
+    // DispState::STOPPED
+    fsm.add_transition(&stateMovingScreen, &stBoardBattery, DispState::STOPPED, NULL);
+    // fsm.add_transition(&stateMovingScreen, &stateStoppedScreen, DispState::STOPPED, NULL);
 
-    // Disp::VERSION_DOESNT_MATCH
-    fsm.add_transition(&stateStopped, &stateBoardVersionDoesntMatchScreen, Disp::VERSION_DOESNT_MATCH, NULL);
-    fsm.add_transition(&stateMoving, &stateBoardVersionDoesntMatchScreen, Disp::VERSION_DOESNT_MATCH, NULL);
+    // settings
+    /*
+    - PRIMARY_TRIPLE_CLICK takes us to first settings screen
+    - will do back to Stopped screen after 3 seconds if nothing done
+    - PRIMARY_SINGLE_CLICK retriggers stShowSettings (navigate to next setting)
+    - PRIMARY_LONG_PRESS retriggers stShowSettings (toggle value)
+    */
+    fsm.add_transition(&stateStoppedScreen, &stShowSettings, DispState::PRIMARY_TRIPLE_CLICK, NULL);
+    fsm.add_timed_transition(&stShowSettings, &stateStoppedScreen, 3000, NULL);
+    fsm.add_transition(&stShowSettings, &stShowSettings, DispState::PRIMARY_SINGLE_CLICK, NULL);
+    fsm.add_transition(&stShowSettings, &stShowSettings, DispState::PRIMARY_LONG_PRESS, NULL);
+
+    // DispState::UPDATE
+    fsm.add_transition(&stateStoppedScreen, &stateStoppedScreen, DispState::UPDATE, NULL);
+    fsm.add_transition(&stateMovingScreen, &stateMovingScreen, DispState::UPDATE, NULL);
+
+    // DispState::VERSION_DOESNT_MATCH
+    fsm.add_transition(&stateStoppedScreen, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
+    fsm.add_transition(&stateMovingScreen, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
   }
-} // namespace Disp
-  //---------------------------------------------------------------
+} // namespace Display

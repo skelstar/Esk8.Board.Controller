@@ -1,7 +1,6 @@
 #include <ChunkyDigit.h>
+#include <SlantyDigit.h>
 #include <math.h>
-
-#include <WidgetClass.h>
 
 #ifndef TFT_H
 #include <tft.h>
@@ -20,10 +19,12 @@
 #define STRIPE_HEIGHT 10
 
 // prototypes
-void setupScreenWithStripe(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour);
+void drawStatusStripe(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour);
+
+ChunkyDigit *chunkyDigit;
+SlantyDigit *slantyDigit;
 
 //-----------------------------------------------------
-
 void screen_searching()
 {
   tft.setTextDatum(TL_DATUM);
@@ -70,7 +71,7 @@ void screen_searching()
 //-----------------------------------------------------
 void screenWhenDisconnected()
 {
-  setupScreenWithStripe(/*bg*/ TFT_DEFAULT_BG, /*fg*/ TFT_WHITE, TFT_RED);
+  drawStatusStripe(/*bg*/ TFT_DEFAULT_BG, /*fg*/ TFT_WHITE, TFT_RED);
 
   // line 1
   char buff1[20];
@@ -95,26 +96,70 @@ void screenWhenDisconnected()
 }
 //-----------------------------------------------------
 
-// void screen_with_stats(bool connected = true)
-// {
-//   uint32_t bgColour = connected ? TFT_DEFAULT_BG : TFT_RED;
-//   tft.fillScreen(bgColour);
-//   // battery
-//   drawSmallBattery(remote_battery_percent, LCD_WIDTH - MARGIN, 0 + MARGIN, TR_DATUM);
-//   // line 1
-//   char buff1[20];
-//   sprintf(buff1, "bd rsts: %d", stats.boardResets);
-//   lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, FontSize::LG, getStatus(stats.boardResets, 0, 1, 1));
-//   // line 2
-//   char buff2[20];
-//   sprintf(buff2, "failed tx: %d", stats.total_failed_sending);
-//   lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, FontSize::LG, getStatus(stats.total_failed_sending, 0, 1, 2));
-//   // line 3
-// }
-//-----------------------------------------------------
+void screenSoftwareStats()
+{
+  tft.fillScreen(TFT_DEFAULT_BG);
+  tft.setFreeFont(FONT_LG);
+  tft.setTextSize(1);
+  tft.setTextDatum(TL_DATUM);
+  const int lineHeight = tft.fontHeight() + 3;
+  int line1 = MARGIN, line2 = line1 + lineHeight, xmargin = 15;
 
-ChunkyDigit *chunkyDigit;
+  char branch[30];
+  sprintf(branch, "%s", GIT_BRANCH_NAME);
+  char build[30];
+  sprintf(build, "%s", DEBUG_BUILD ? "DEBUG" : "RELEASE");
+
+  tft.setTextColor(TFT_DARKGREY);
+  tft.drawString("br: ", MARGIN, line1);
+  tft.drawString("bld: ", MARGIN, line2);
+  tft.setTextColor(TFT_WHITE);
+  tft.drawString(branch, MARGIN + tft.textWidth("br: ") + xmargin, line1);
+  tft.drawString(build, MARGIN + tft.textWidth("bld: ") + xmargin, line2);
+}
+
+#define BATTERY_WIDTH (LCD_WIDTH / 8) * 6
+#define BATTERY_HEIGHT (LCD_HEIGHT / 8) * 6
+#define BORDER_SIZE 12
+#define KNOB_HEIGHT (BATTERY_HEIGHT / 8) * 4
+
+void screenBoardBattery(float batteryVolts)
+{
+  uint8_t percent = getBatteryPercentage(batteryVolts);
+  tft.fillScreen(TFT_DEFAULT_BG);
+  int outsideX = (LCD_WIDTH - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
+  int outsideY = (LCD_HEIGHT - BATTERY_HEIGHT) / 2;
+  // body
+  tft.fillRect(outsideX, outsideY, BATTERY_WIDTH, BATTERY_HEIGHT, TFT_WHITE);
+  // knob
+  tft.fillRect(
+      outsideX + BATTERY_WIDTH,
+      outsideY + (BATTERY_HEIGHT - KNOB_HEIGHT) / 2,
+      BORDER_SIZE,
+      KNOB_HEIGHT,
+      TFT_WHITE);
+  // inside
+  tft.fillRect(
+      outsideX + BORDER_SIZE,
+      outsideY + BORDER_SIZE,
+      BATTERY_WIDTH - BORDER_SIZE * 2,
+      BATTERY_HEIGHT - BORDER_SIZE * 2,
+      TFT_DEFAULT_BG);
+  // capacity
+  uint32_t colour = percent > 50
+                        ? TFT_WHITE
+                        : percent > 20
+                              ? TFT_ORANGE
+                              : TFT_RED;
+  tft.fillRect(
+      outsideX + BORDER_SIZE * 2,
+      outsideY + BORDER_SIZE * 2,
+      (BATTERY_WIDTH - BORDER_SIZE * 4) * percent / 100,
+      BATTERY_HEIGHT - BORDER_SIZE * 4,
+      colour);
+}
 //-----------------------------------------------------
+template <typename T>
 void screenPropValue(char *propName, const char *value)
 {
   tft.fillScreen(TFT_DEFAULT_BG);
@@ -123,7 +168,24 @@ void screenPropValue(char *propName, const char *value)
   chunkyDigit = new ChunkyDigit(&tft, CHUNKY_PIXEL_MED, CHUNKY_SPACING_MED, TFT_DEFAULT_BG);
 
   int w = chunkyDigit->getWidth((const char *)value);
-  chunkyDigit->drawText(value, LCD_WIDTH / 2 - w / 2, LCD_HEIGHT - chunkyDigit->getHeight() - 30);
+
+  int x = LCD_WIDTH / 2 - w / 2,
+      y = LCD_HEIGHT - chunkyDigit->getHeight() - 30;
+
+  if (std::is_same<T, int>::value ||
+      std::is_same<T, uint8_t>::value ||
+      std::is_same<T, uint16_t>::value ||
+      std::is_same<T, float>::value)
+    chunkyDigit->draw_float(x, y, (char *)value);
+  else if (std::is_same<T, bool>::value)
+    chunkyDigit->drawText(value, x, y);
+  else
+    chunkyDigit->drawText("-", x, y);
+
+  tft.setFreeFont(FONT_SM);
+  tft.setTextDatum(BC_DATUM);
+  tft.setTextColor(TFT_DARKGREY);
+  tft.drawString("long hold | tap ->", LCD_WIDTH / 2, LCD_HEIGHT - 5);
 }
 //-----------------------------------------------------
 
@@ -135,7 +197,7 @@ void screenOneMetricWithStripe(float value, char *title, uint32_t stripeColour, 
   // setup
   if (init || chunkyDigit == NULL)
   {
-    setupScreenWithStripe(/*bg*/ bgColour, /*fg*/ TFT_WHITE, stripeColour);
+    drawStatusStripe(/*bg*/ bgColour, /*fg*/ TFT_WHITE, stripeColour);
 
     tft.setFreeFont(FONT_MED);
     tft.setTextColor(TFT_DARKGREY);
@@ -188,6 +250,7 @@ int getQuarterY(QuarterPosition pos)
   case BOTTOM_RIGHT_QRTR:
     return (LCD_HEIGHT - STRIPE_HEIGHT) / 2 + STRIPE_HEIGHT;
   }
+  return 0;
 }
 //-----------------------------------------------------
 
@@ -210,41 +273,37 @@ void quarterScreen(QuarterPosition position, char *buff, char *title, uint32_t b
   chunkyDigit->draw_float(x + (LCD_WIDTH / 2) - w - RIGHT_MARGIN, y + qrtrHeight - chunkyDigit->getHeight() - BOTTOM_MARGIN, buff);
 }
 //-----------------------------------------------------
-
-template <typename T>
-void quarterScreen(QuarterPosition position, T value, char *title, uint32_t bgColour)
+void quarterScreen(QuarterPosition position, int value, char *title, uint32_t bgColour)
 {
   char buff[20];
-  if (std::is_same<T, float>::value)
-  {
-    sprintf(buff, value < 1000.0 ? "%.1f" : "%.0f", value);
-  }
-  else if (std::is_same<T, int>::value)
-  {
-    sprintf(buff, value < 10000 ? "%d" : ">E", value);
-  }
-  else
-  {
-    return;
-  }
+  sprintf(buff, value < 10000 ? "%d" : ">E", value);
+  quarterScreen(position, buff, title, bgColour);
+}
+//-----------------------------------------------------
+void quarterScreen(QuarterPosition position, float value, char *title, uint32_t bgColour)
+{
+  char buff[20];
+  sprintf(buff, value < 1000.0 ? "%.1f" : "%.0f", value);
   quarterScreen(position, buff, title, bgColour);
 }
 //-----------------------------------------------------
 
 void screenWhenStopped(bool init = false)
 {
+  int x_right = 200, y = 30;
+
   uint32_t bgColour = TFT_BLACK;
 
   if (init || chunkyDigit == NULL)
   {
-    setupScreenWithStripe(/*bg*/ bgColour, /*fg*/ TFT_WHITE, /*stripe*/ TFT_DARKGREY);
+    drawStatusStripe(/*bg*/ bgColour, /*fg*/ TFT_WHITE, /*stripe*/ TFT_DARKGREY);
     tft.setFreeFont(FONT_MED);
   }
 
-  quarterScreen<float>(TOP_LEFT_QRTR, board.packet.odometer, "trip (km)", bgColour);
-  quarterScreen<float>(TOP_RIGHT_QRTR, stats.getTimeMovingInMinutes(), "time (m)", bgColour);
-  quarterScreen<int>(BOTTOM_LEFT_QRTR, board.packet.ampHours, "mAH", bgColour);
-  quarterScreen<float>(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHoursPerSecond(board.packet.ampHours), "mAH/s", bgColour);
+  quarterScreen(TOP_LEFT_QRTR, board.packet.odometer, "trip (km)", bgColour);
+  quarterScreen(TOP_RIGHT_QRTR, stats.getTimeMovingInMinutes(), "time (m)", bgColour);
+  quarterScreen(BOTTOM_LEFT_QRTR, board.packet.ampHours, "mAH", bgColour);
+  quarterScreen(BOTTOM_RIGHT_QRTR, stats.getAverageAmpHoursPerSecond(board.packet.ampHours), "mAH/s", bgColour);
 }
 //-----------------------------------------------------W
 
@@ -295,8 +354,16 @@ void screenBoardNotCompatible(float boardVersion)
 
 //-----------------------------------------------------
 
-void setupScreenWithStripe(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour)
+void updateHudIcon(bool connected)
+{
+  tft.fillRect(LCD_WIDTH - 30, 0, 30, STRIPE_HEIGHT, connected ? TFT_BLUE : TFT_RED);
+}
+
+void drawStatusStripe(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour)
 {
   tft.fillScreen(bgColour);
   tft.fillRect(0, 0, LCD_WIDTH, STRIPE_HEIGHT, stripeColour);
+  // Hud icon
+  if (FEATURE_SEND_TO_HUD)
+    updateHudIcon(hudClient.connected());
 }

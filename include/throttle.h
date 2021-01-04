@@ -1,11 +1,14 @@
 
 
+typedef void (*ThrottleChangedCallback)(uint8_t);
+
 class ThrottleClass
 {
 public:
-  void init(int pin)
+  void init(int pin, ThrottleChangedCallback throttleChangedCb)
   {
     _pin = pin;
+    _throttleChangedCb = throttleChangedCb;
     pinMode(pin, INPUT);
     _oldMapped = 127;
   }
@@ -16,9 +19,10 @@ public:
     {
       _raw = _getRaw();
       uint8_t mapped = getMappedFromRaw();
-#ifdef PRINT_THROTTLE
-      DEBUGVAL(_raw, mapped);
-#endif
+      if (_oldMapped != mapped && _throttleChangedCb != nullptr)
+        _throttleChangedCb(mapped);
+      if (PRINT_THROTTLE && _oldMapped != mapped)
+        DEBUGVAL(_raw, mapped);
       _oldMapped = mapped;
       return mapped;
     }
@@ -34,6 +38,7 @@ private:
   uint8_t _oldMapped;
   uint16_t _centre = 1280, _min = 0, _max = 2530;
   uint16_t _deadband = 50;
+  ThrottleChangedCallback _throttleChangedCb = nullptr;
 
   uint16_t _getRaw()
   {
