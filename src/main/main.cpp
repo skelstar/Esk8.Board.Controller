@@ -356,6 +356,7 @@ void setup()
   });
 
   primaryButtonInit();
+  rightButtonInit();
 
   vTaskDelay(100);
 
@@ -424,6 +425,7 @@ void loop()
   }
 
   primaryButton.loop();
+  rightButton.loop();
 
   vTaskDelay(1);
 }

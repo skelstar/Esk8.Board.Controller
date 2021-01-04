@@ -96,6 +96,28 @@ void screenWhenDisconnected()
 }
 //-----------------------------------------------------
 
+void screenSoftwareStats()
+{
+  tft.fillScreen(TFT_DEFAULT_BG);
+  tft.setFreeFont(FONT_LG);
+  tft.setTextSize(1);
+  tft.setTextDatum(TL_DATUM);
+  const int lineHeight = tft.fontHeight() + 3;
+  int line1 = MARGIN, line2 = line1 + lineHeight, xmargin = 15;
+
+  char branch[30];
+  sprintf(branch, "%s", GIT_BRANCH_NAME);
+  char build[30];
+  sprintf(build, "%s", DEBUG_BUILD ? "DEBUG" : "RELEASE");
+
+  tft.setTextColor(TFT_DARKGREY);
+  tft.drawString("br: ", MARGIN, line1);
+  tft.drawString("bld: ", MARGIN, line2);
+  tft.setTextColor(TFT_WHITE);
+  tft.drawString(branch, MARGIN + tft.textWidth("br: ") + xmargin, line1);
+  tft.drawString(build, MARGIN + tft.textWidth("bld: ") + xmargin, line2);
+}
+
 #define BATTERY_WIDTH (LCD_WIDTH / 8) * 6
 #define BATTERY_HEIGHT (LCD_HEIGHT / 8) * 6
 #define BORDER_SIZE 12

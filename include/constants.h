@@ -33,6 +33,7 @@ namespace DispState
     PRIMARY_TRIPLE_CLICK,
     PRIMARY_LONG_PRESS,
     VERSION_DOESNT_MATCH,
+    RIGHT_BUTTON_CLICKED,
   };
 
   const char *getTrigger(int ev)
@@ -63,6 +64,8 @@ namespace DispState
       return "PRIMARY_LONG_PRESS";
     case VERSION_DOESNT_MATCH:
       return "VERSION_DOESNT_MATCH";
+    case RIGHT_BUTTON_CLICKED:
+      return "RIGHT_BUTTON_CLICKED";
     }
     return OUT_OF_RANGE;
   }

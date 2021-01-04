@@ -17,6 +17,7 @@ namespace Display
   {
     SEARCHING = 0,
     DISCONNECTED,
+    SOFTWARE_STATS,
     BOARD_BATTERY,
     STOPPED_SCREEN,
     MOVING_SCREEN,
@@ -36,6 +37,8 @@ namespace Display
       return "SEARCHING";
     case DISCONNECTED:
       return "DISCONNECTED";
+    case SOFTWARE_STATS:
+      return "SOFTWARE_STATS";
     case BOARD_BATTERY:
       return "BOARD_BATTERY";
     case STOPPED_SCREEN:
@@ -70,6 +73,13 @@ namespace Display
       [] {
         dispFsm.printState(DISCONNECTED);
         screenWhenDisconnected();
+      },
+      NULL, NULL);
+  //---------------------------------------------------------------
+  State stSoftwareStats(
+      [] {
+        dispFsm.printState(SOFTWARE_STATS);
+        screenSoftwareStats();
       },
       NULL, NULL);
   //---------------------------------------------------------------
@@ -296,27 +306,6 @@ namespace Display
       },
       NULL, NULL);
   //---------------------------------------------------------------
-  State stateShowPushToStart(
-      [] {
-        dispFsm.printState(SHOW_PUSH_TO_START);
-        bool currVal = featureService.get<bool>(FeatureType::PUSH_TO_START);
-        screenPropValue<bool>("push to start", (currVal == true) ? "ON" : "OFF");
-
-        if (lastDispEvent == DispState::PRIMARY_LONG_PRESS)
-        {
-          currVal = !currVal;
-          featureService.set(PUSH_TO_START, currVal);
-        }
-        else
-        {
-          Serial.printf("lastEvent was %s\n", DispState::getTrigger(lastDispEvent));
-        }
-        screenPropValue<bool>("push to start", (currVal == true) ? "ON" : "OFF");
-        sinceShowingToggleScreen = 0;
-      },
-      NULL,
-      NULL);
-  //---------------------------------------------------------------
   void acknowledgeResets()
   {
     stats.ackResets();
@@ -329,7 +318,9 @@ namespace Display
   {
     // DispState::CONNECTED
     // fsm.add_transition(&stateSearching, &stateStoppedScreen, DispState::CONNECTED, NULL);
-    fsm.add_transition(&stateSearching, &stBoardBattery, DispState::CONNECTED, NULL);
+    // fsm.add_transition(&stateSearching, &stBoardBattery, DispState::CONNECTED, NULL);
+    fsm.add_transition(&stateSearching, &stSoftwareStats, DispState::CONNECTED, NULL);
+    fsm.add_timed_transition(&stSoftwareStats, &stBoardBattery, DISP_SOFTWARE_STATS_TIME, NULL);
     fsm.add_timed_transition(&stBoardBattery, &stateStoppedScreen, DISP_BOARD_BATTERY_TIME, NULL);
     fsm.add_transition(&stateDisconnected, &stateStoppedScreen, DispState::CONNECTED, NULL);
 
@@ -346,26 +337,26 @@ namespace Display
     fsm.add_transition(&stateNeedToAckResetsMoving, &stateNeedToAckResetsStopped, DispState::STOPPED, NULL);
     fsm.add_transition(&stateNeedToAckResetsMoving, &stateMovingScreen, DispState::PRIMARY_DOUBLE_CLICK, acknowledgeResets);
 
+    // RIGHT_BUTTON_CLICKED
+    fsm.add_transition(&stateStoppedScreen, &stSoftwareStats, DispState::RIGHT_BUTTON_CLICKED, NULL);
+
     // DispState::MOVING
     fsm.add_transition(&stateStoppedScreen, &stateMovingScreen, DispState::MOVING, NULL);
     // DispState::STOPPED
     fsm.add_transition(&stateMovingScreen, &stBoardBattery, DispState::STOPPED, NULL);
     // fsm.add_transition(&stateMovingScreen, &stateStoppedScreen, DispState::STOPPED, NULL);
 
-    // Push to start
+    // settings
+    /*
+    - PRIMARY_TRIPLE_CLICK takes us to first settings screen
+    - will do back to Stopped screen after 3 seconds if nothing done
+    - PRIMARY_SINGLE_CLICK retriggers stShowSettings (navigate to next setting)
+    - PRIMARY_LONG_PRESS retriggers stShowSettings (toggle value)
+    */
     fsm.add_transition(&stateStoppedScreen, &stShowSettings, DispState::PRIMARY_TRIPLE_CLICK, NULL);
     fsm.add_timed_transition(&stShowSettings, &stateStoppedScreen, 3000, NULL);
     fsm.add_transition(&stShowSettings, &stShowSettings, DispState::PRIMARY_SINGLE_CLICK, NULL);
     fsm.add_transition(&stShowSettings, &stShowSettings, DispState::PRIMARY_LONG_PRESS, NULL);
-
-    // fsm.add_transition(&stateStoppedScreen, &stateShowPushToStart, DispState::PRIMARY_TRIPLE_CLICK, NULL);
-    // fsm.add_timed_transition(&stateShowPushToStart, &stateStoppedScreen, 3000, NULL);
-    // fsm.add_transition(&stateShowPushToStart, &stateShowPushToStart, DispState::PRIMARY_LONG_PRESS, NULL);
-    // fsm.add_transition(&stateShowPushToStart, &stateStoppedScreen, DispState::PRIMARY_SINGLE_CLICK, NULL);
-
-    // fsm.add_transition(&stateStoppedScreen, &stateTogglePushToStart, DispState::PRIMARY_TRIPLE_CLICK, NULL);
-    // fsm.add_transition(&stateTogglePushToStart, &stateTogglePushToStart, DispState::PRIMARY_LONG_PRESS, NULL);
-    // fsm.add_transition(&stateTogglePushToStart, &stateStoppedScreen, DispState::PRIMARY_SINGLE_CLICK, NULL);
 
     // DispState::UPDATE
     fsm.add_transition(&stateStoppedScreen, &stateStoppedScreen, DispState::UPDATE, NULL);
