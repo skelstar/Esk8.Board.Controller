@@ -244,6 +244,12 @@ namespace HUDTask
 #ifndef FEATURE_SEND_TO_HUD
 #define FEATURE_SEND_TO_HUD 0
 #endif
+#ifndef FEATURE_PUSH_TO_START
+#define FEATURE_PUSH_TO_START 0
+#endif
+#ifndef FEATURE_START_MOVING_BOOST
+#define FEATURE_START_MOVING_BOOST 0
+#endif
 
 #define BOARD_COMMS_STATE_FORMAT_LONG "[BOARD: %s | %s ]\n"
 #define BOARD_COMMS_STATE_FORMAT_SHORT "[BOARD: %s | _ ]\n"
