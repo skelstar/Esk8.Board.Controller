@@ -25,7 +25,7 @@ public:
     _resetsAcknowledgedCallback = cb;
   }
 
-  bool ctrlrUnintendedReset()
+  bool wasUnintendedReset()
   {
     return soft_resets > 0 && !_resetsAcknowledged;
   }
@@ -55,7 +55,7 @@ public:
 
   void ackResets()
   {
-    _resetsAcknowledged = true;
+    // _resetsAcknowledged = true;
     soft_resets = 0;
     _resetsAcknowledgedCallback();
   }

@@ -59,32 +59,32 @@ namespace Comms
       NULL,
       NULL);
 
-    State stateConnected(
-        [] {
-          commsFsm.printState(StateId::CONNECTED);
-          bool boardCompatible = boardVersionCompatible(board.packet.version);
+  State stateConnected(
+      [] {
+        commsFsm.printState(StateId::CONNECTED);
+        bool boardCompatible = boardVersionCompatible(board.packet.version);
 
-          if (stats.boardConnected && triggerEvent == Comms::Event::BOARD_FIRST_PACKET)
-          {
-            stats.boardResets++;
-            displayQueue->send(DispState::BOARD_UNINTENDED_RESET);
-          }
-          else if (!boardCompatible)
-            displayQueue->send(DispState::VERSION_DOESNT_MATCH);
-          else if (stats.ctrlrUnintendedReset())
-            displayQueue->send(DispState::UNINTENDED_RESET);
-          else
-            displayQueue->send(DispState::CONNECTED);
+        if (stats.boardConnected && triggerEvent == Comms::Event::BOARD_FIRST_PACKET)
+        {
+          stats.boardResets++;
+          displayQueue->send(DispState::BOARD_UNINTENDED_RESET);
+        }
+        else if (!boardCompatible)
+          displayQueue->send(DispState::VERSION_DOESNT_MATCH);
+        else if (stats.wasUnintendedReset())
+          displayQueue->send(DispState::UNINTENDED_RESET);
+        else
+          displayQueue->send(DispState::CONNECTED);
 
-          comms_session_started = true;
-          stats.boardConnected = true;
-        },
-        NULL,
-        NULL);
+        comms_session_started = true;
+        stats.boardConnected = true;
+      },
+      NULL,
+      NULL);
 
-    namespace
-    {
-      Fsm fsm(&stateDisconnected);
+  namespace
+  {
+    Fsm fsm(&stateDisconnected);
   }
   //-----------------------------------------------------
 
