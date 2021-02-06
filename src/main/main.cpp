@@ -376,6 +376,7 @@ void setup()
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
 
   displayQueue = new Queue::Manager(xDisplayEventQueue, 5);
+  displayQueue->setReadEventCallback(Display::queueReadCb);
   buttonQueue = new Queue::Manager(xButtonPushEventQueue, 10);
 
   NRFCommsQueue::init();

@@ -353,4 +353,11 @@ namespace Display
     fsm.add_transition(&stateStopped, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
     fsm.add_transition(&stateMoving, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
   }
+
+  void queueReadCb(uint16_t ev)
+  {
+    if (PRINT_DISP_QUEUE_READ && ev != DispState::NO_EVENT)
+      Serial.printf(PRINT_QUEUE_READ_FORMAT, "DISP", DispState::getTrigger(ev));
+  }
+
 } // namespace Display
