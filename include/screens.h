@@ -71,6 +71,9 @@ void screen_searching()
 //-----------------------------------------------------
 void screenWhenDisconnected()
 {
+  tft.setFreeFont(FONT_LG);
+  tft.setTextSize(1);
+
   drawStatusStripe(/*bg*/ TFT_DEFAULT_BG, /*fg*/ TFT_WHITE, TFT_RED);
 
   // line 1

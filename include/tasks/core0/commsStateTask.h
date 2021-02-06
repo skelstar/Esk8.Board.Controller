@@ -25,7 +25,6 @@ namespace Comms
 
   enum StateId
   {
-    SEARCHING,
     CONNECTED,
     DISCONNECTED,
     StateIdLength,
@@ -35,8 +34,6 @@ namespace Comms
   {
     switch (id)
     {
-    case SEARCHING:
-      return "SEARCHING";
     case CONNECTED:
       return "CONNECTED";
     case DISCONNECTED:
@@ -48,80 +45,60 @@ namespace Comms
   FsmManager<Event> commsFsm;
 
   //------------------------------------------
-  State stateCommsSearching([] {
-    commsFsm.printState(StateId::SEARCHING);
-  });
 
-  State stateCommsConnected(
+  State stateDisconnected(
       [] {
-        commsFsm.printState(StateId::CONNECTED);
-        if (triggerEvent == Comms::Event::BOARD_FIRST_PACKET)
-        {
-          stats.boardResets++;
-          displayQueue->send(DispState::UPDATE);
-        }
+        commsFsm.printState(StateId::DISCONNECTED);
+        stats.boardConnected = false;
 
-        comms_session_started = true;
-        stats.boardConnected = true;
-
-        displayQueue->send(DispState::CONNECTED);
-        displayQueue->send(DispState::UPDATE);
-
-        if (FEATURE_SEND_TO_HUD)
-          hudTasksQueue->send(HUDTask::BOARD_CONNECTED);
-
-        if (stats.needToAckResets())
-        {
-          displayQueue->send(DispState::SW_RESET);
-          pulseLedOn = TriState::STATE_ON;
-          if (FEATURE_SEND_TO_HUD)
-            hudTasksQueue->send(HUDTask::CONTROLLER_RESET);
-        }
-
-        // check board version is compatible
-        bool boardCompatible = boardVersionCompatible(board.packet.version);
-        if (!boardCompatible)
-        {
-          displayQueue->send(DispState::VERSION_DOESNT_MATCH);
-        }
+        if (lastCommsEvent == Comms::Event::BOARD_TIMEDOUT)
+          displayQueue->send(DispState::DISCONNECTED);
+        else
+          displayQueue->send(DispState::DISCONNECTED);
       },
       NULL,
       NULL);
 
-  State stateCommsDisconnected(
-      [] {
-        commsFsm.printState(StateId::DISCONNECTED);
-        if (triggerEvent == Comms::Event::BOARD_FIRST_PACKET)
-        {
-          stats.boardResets++;
-          displayQueue->send(DispState::UPDATE);
-        }
+    State stateConnected(
+        [] {
+          commsFsm.printState(StateId::CONNECTED);
+          bool boardCompatible = boardVersionCompatible(board.packet.version);
 
-        stats.boardConnected = false;
-        displayQueue->send(DispState::DISCONNECTED);
-        if (FEATURE_SEND_TO_HUD)
-          hudTasksQueue->send(HUDTask::BOARD_DISCONNECTED);
-      },
-      NULL, NULL);
+          if (stats.boardConnected && triggerEvent == Comms::Event::BOARD_FIRST_PACKET)
+          {
+            stats.boardResets++;
+            displayQueue->send(DispState::BOARD_UNINTENDED_RESET);
+          }
+          else if (!boardCompatible)
+            displayQueue->send(DispState::VERSION_DOESNT_MATCH);
+          else if (stats.ctrlrUnintendedReset())
+            displayQueue->send(DispState::UNINTENDED_RESET);
+          else
+            displayQueue->send(DispState::CONNECTED);
 
-  namespace
-  {
-    Fsm fsm(&stateCommsSearching);
+          comms_session_started = true;
+          stats.boardConnected = true;
+        },
+        NULL,
+        NULL);
+
+    namespace
+    {
+      Fsm fsm(&stateDisconnected);
   }
   //-----------------------------------------------------
 
   void addTransitions()
   {
     // Comms::PKT_RXD
-    fsm.add_transition(&stateCommsSearching, &stateCommsConnected, Comms::Event::PKT_RXD, NULL);
-    fsm.add_transition(&stateCommsDisconnected, &stateCommsConnected, Comms::Event::PKT_RXD, NULL);
+    fsm.add_transition(&stateDisconnected, &stateConnected, Comms::Event::PKT_RXD, NULL);
 
     // Comms::BOARD_TIMEDOUT
-    fsm.add_transition(&stateCommsConnected, &stateCommsDisconnected, Comms::Event::BOARD_TIMEDOUT, NULL);
+    fsm.add_transition(&stateConnected, &stateDisconnected, Comms::Event::BOARD_TIMEDOUT, NULL);
 
     // Comms::BD_RESET
-    fsm.add_transition(&stateCommsConnected, &stateCommsConnected, Comms::Event::BOARD_FIRST_PACKET, NULL);
-    fsm.add_transition(&stateCommsDisconnected, &stateCommsDisconnected, Comms::Event::BOARD_FIRST_PACKET, NULL);
+    fsm.add_transition(&stateConnected, &stateConnected, Comms::Event::BOARD_FIRST_PACKET, NULL);
+    fsm.add_transition(&stateDisconnected, &stateDisconnected, Comms::Event::BOARD_FIRST_PACKET, NULL);
   }
 
   void task(void *pvParameters)

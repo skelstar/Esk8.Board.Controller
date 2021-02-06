@@ -297,8 +297,6 @@ void resetsAcknowledged_callback()
 {
   using namespace HUD;
   storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
-  if (FEATURE_SEND_TO_HUD)
-    sendInstructionToHud(FLASH | FAST | GREEN);
 }
 //------------------------------------------------------------------
 

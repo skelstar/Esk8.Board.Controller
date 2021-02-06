@@ -25,7 +25,7 @@ public:
     _resetsAcknowledgedCallback = cb;
   }
 
-  bool needToAckResets()
+  bool ctrlrUnintendedReset()
   {
     return soft_resets > 0 && !_resetsAcknowledged;
   }

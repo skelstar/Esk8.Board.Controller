@@ -26,8 +26,9 @@ namespace DispState
     DISCONNECTED,
     STOPPED,
     MOVING,
-    SW_RESET,
+    UNINTENDED_RESET,
     UPDATE,
+    BOARD_UNINTENDED_RESET,
     PRIMARY_SINGLE_CLICK,
     PRIMARY_DOUBLE_CLICK,
     PRIMARY_TRIPLE_CLICK,
@@ -50,10 +51,12 @@ namespace DispState
       return "STOPPED";
     case MOVING:
       return "MOVING";
-    case SW_RESET:
-      return "SW_RESET";
+    case UNINTENDED_RESET:
+      return "UNINTENDED_RESET";
     case UPDATE:
       return "UPDATE";
+    case BOARD_UNINTENDED_RESET:
+      return "BOARD_UNINTENDED_RESET";
     case PRIMARY_SINGLE_CLICK:
       return "PRIMARY_SINGLE_CLICK";
     case PRIMARY_DOUBLE_CLICK:
@@ -212,6 +215,9 @@ namespace HUDTask
 #ifndef IGNORE_IF_HUD_OFFLINE
 #define IGNORE_IF_HUD_OFFLINE 0
 #endif
+#ifndef PRINT_NRF24L01_DETAILS
+#define PRINT_NRF24L01_DETAILS 0
+#endif
 #ifndef PRINT_TX_TO_HUD
 #define PRINT_TX_TO_HUD 0
 #endif
@@ -259,10 +265,11 @@ namespace HUDTask
 #define RX_FROM_BOARD_FORMAT "[RX <- BOARD]: id=%d\n"
 #define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
 
-    enum TriState {
-      STATE_NONE,
-      STATE_ON,
-      STATE_OFF
-    };
+enum TriState
+{
+  STATE_NONE,
+  STATE_ON,
+  STATE_OFF
+};
 
 TriState pulseLedOn;

@@ -15,14 +15,13 @@ namespace Display
 
   enum StateId
   {
-    SEARCHING = 0,
     DISCONNECTED,
     SOFTWARE_STATS,
     BOARD_BATTERY,
     STOPPED_SCREEN,
     MOVING_SCREEN,
-    NEED_TO_ACK_RESETS_STOPPED,
-    NEED_TO_ACK_RESETS_MOVING,
+    // NEED_TO_ACK_RESETS_STOPPED,
+    // NEED_TO_ACK_RESETS_MOVING,
     BOARD_VERSION_DOESNT_MATCH_SCREEN,
     SHOW_PUSH_TO_START,
     SHOW_SETTINGS,
@@ -33,8 +32,6 @@ namespace Display
   {
     switch (id)
     {
-    case SEARCHING:
-      return "SEARCHING";
     case DISCONNECTED:
       return "DISCONNECTED";
     case SOFTWARE_STATS:
@@ -45,10 +42,10 @@ namespace Display
       return "STOPPED_SCREEN";
     case MOVING_SCREEN:
       return "MOVING_SCREEN";
-    case NEED_TO_ACK_RESETS_STOPPED:
-      return "NEED_TO_ACK_RESETS_STOPPED";
-    case NEED_TO_ACK_RESETS_MOVING:
-      return "NEED_TO_ACK_RESETS_MOVING";
+    // case NEED_TO_ACK_RESETS_STOPPED:
+    //   return "NEED_TO_ACK_RESETS_STOPPED";
+    // case NEED_TO_ACK_RESETS_MOVING:
+    //   return "NEED_TO_ACK_RESETS_MOVING";
     case BOARD_VERSION_DOESNT_MATCH_SCREEN:
       return "BOARD_VERSION_DOESNT_MATCH_SCREEN";
     case SHOW_PUSH_TO_START:
@@ -63,11 +60,6 @@ namespace Display
 
   FsmManager<DispState::Trigger> dispFsm;
 
-  //---------------------------------------------------------------
-  State stateSearching([] {
-    dispFsm.printState(SEARCHING);
-    screen_searching();
-  });
   //---------------------------------------------------------------
   State stateDisconnected(
       [] {
@@ -90,10 +82,16 @@ namespace Display
       },
       NULL, NULL);
   //---------------------------------------------------------------
-  State stateStoppedScreen(
+  State stateStopped(
       [] {
         dispFsm.printState(STOPPED_SCREEN);
-        screenWhenStopped(/*init*/ true);
+        // if (stats.soft_resets > 0)
+        //   screenNeedToAckResets();
+        // else
+        if (dispFsm.lastEvent() == DispState::CONNECTED && board.packet.moving)
+          dispFsm.trigger(DispState::MOVING);
+        else
+          screenWhenStopped(/*init*/ true);
       },
       [] {
         if (update_display || stats.update)
@@ -101,16 +99,14 @@ namespace Display
           update_display = false;
           stats.update = false;
           screenWhenStopped(/*init*/ false);
-          if (FEATURE_SEND_TO_HUD)
-            updateHudIcon(hudClient.connected());
         }
       },
       NULL);
   //---------------------------------------------------------------
-  State stateMovingScreen(
+  State stateMoving(
       [] {
         dispFsm.printState(MOVING_SCREEN);
-        sinceStoredMovingTime = 0;
+        // sinceStoredMovingTime = 0;
         screenWhenMoving(/*init*/ true);
       },
       [] {
@@ -119,8 +115,6 @@ namespace Display
           update_display = false;
           stats.update = false;
           screenWhenMoving(/*init*/ false);
-          if (FEATURE_SEND_TO_HUD)
-            updateHudIcon(hudClient.connected());
         }
 
         stats.addMovingTime(sinceStoredMovingTime);
@@ -128,24 +122,24 @@ namespace Display
       },
       NULL);
   //---------------------------------------------------------------
-  State stateNeedToAckResetsStopped(
-      [] {
-        dispFsm.printState(NEED_TO_ACK_RESETS_STOPPED);
-        screenNeedToAckResets();
-      },
-      NULL, NULL);
-  //---------------------------------------------------------------
-  State stateNeedToAckResetsMoving(
-      [] {
-        dispFsm.printState(NEED_TO_ACK_RESETS_MOVING);
-        sinceStoredMovingTime = 0;
-        screenNeedToAckResets();
-      },
-      [] {
-        stats.addMovingTime(sinceStoredMovingTime);
-        sinceStoredMovingTime = 0;
-      },
-      NULL);
+  // State stateNeedToAckResetsStopped(
+  //     [] {
+  //       dispFsm.printState(NEED_TO_ACK_RESETS_STOPPED);
+  //       screenNeedToAckResets();
+  //     },
+  //     NULL, NULL);
+  // //---------------------------------------------------------------
+  // State stateNeedToAckResetsMoving(
+  //     [] {
+  //       dispFsm.printState(NEED_TO_ACK_RESETS_MOVING);
+  //       sinceStoredMovingTime = 0;
+  //       screenNeedToAckResets();
+  //     },
+  //     [] {
+  //       stats.addMovingTime(sinceStoredMovingTime);
+  //       sinceStoredMovingTime = 0;
+  //     },
+  //     NULL);
   //---------------------------------------------------------------
   State stateBoardVersionDoesntMatchScreen(
       [] {
@@ -306,45 +300,38 @@ namespace Display
       },
       NULL, NULL);
   //---------------------------------------------------------------
-  void acknowledgeResets()
+
+  Fsm fsm(&stateDisconnected);
+
+  void ackUnintendedResets()
   {
     stats.ackResets();
   }
-  //---------------------------------------------------------------
-
-  Fsm fsm(&stateSearching);
 
   void addTransitions()
   {
     // DispState::CONNECTED
-    // fsm.add_transition(&stateSearching, &stateStoppedScreen, DispState::CONNECTED, NULL);
-    // fsm.add_transition(&stateSearching, &stBoardBattery, DispState::CONNECTED, NULL);
-    fsm.add_transition(&stateSearching, &stSoftwareStats, DispState::CONNECTED, NULL);
-    fsm.add_timed_transition(&stSoftwareStats, &stBoardBattery, DISP_SOFTWARE_STATS_TIME, NULL);
-    fsm.add_timed_transition(&stBoardBattery, &stateStoppedScreen, DISP_BOARD_BATTERY_TIME, NULL);
-    fsm.add_transition(&stateDisconnected, &stateStoppedScreen, DispState::CONNECTED, NULL);
+    fsm.add_transition(&stateDisconnected, &stateStopped, DispState::CONNECTED, NULL);
 
     // DispState::DISCONNECTED
-    fsm.add_transition(&stateStoppedScreen, &stateDisconnected, DispState::DISCONNECTED, NULL);
-    fsm.add_transition(&stateMovingScreen, &stateDisconnected, DispState::DISCONNECTED, NULL);
+    fsm.add_transition(&stateStopped, &stateDisconnected, DispState::DISCONNECTED, NULL);
+    fsm.add_transition(&stateMoving, &stateDisconnected, DispState::DISCONNECTED, NULL);
 
-    // DispState::SW_RESET
-    fsm.add_transition(&stateStoppedScreen, &stateNeedToAckResetsStopped, DispState::SW_RESET, NULL);
-    fsm.add_transition(&stateMovingScreen, &stateNeedToAckResetsMoving, DispState::SW_RESET, NULL);
+    // DispState::UNINTENDED_RESET
+    fsm.add_transition(&stateStopped, &stateStopped, DispState::UNINTENDED_RESET, NULL);
+    fsm.add_transition(&stateMoving, &stateMoving, DispState::UNINTENDED_RESET, NULL);
 
-    fsm.add_transition(&stateNeedToAckResetsStopped, &stateStoppedScreen, DispState::PRIMARY_DOUBLE_CLICK, acknowledgeResets);
-    fsm.add_transition(&stateNeedToAckResetsStopped, &stateNeedToAckResetsMoving, DispState::MOVING, NULL);
-    fsm.add_transition(&stateNeedToAckResetsMoving, &stateNeedToAckResetsStopped, DispState::STOPPED, NULL);
-    fsm.add_transition(&stateNeedToAckResetsMoving, &stateMovingScreen, DispState::PRIMARY_DOUBLE_CLICK, acknowledgeResets);
-
-    // RIGHT_BUTTON_CLICKED
-    fsm.add_transition(&stateStoppedScreen, &stSoftwareStats, DispState::RIGHT_BUTTON_CLICKED, NULL);
+    // DispState::PRIMARY_DOUBLE_CLICK
+    fsm.add_transition(&stateStopped, &stateStopped, DispState::PRIMARY_DOUBLE_CLICK, ackUnintendedResets);
+    fsm.add_transition(&stateMoving, &stateMoving, DispState::PRIMARY_DOUBLE_CLICK, ackUnintendedResets);
 
     // DispState::MOVING
-    fsm.add_transition(&stateStoppedScreen, &stateMovingScreen, DispState::MOVING, NULL);
+    fsm.add_transition(&stateStopped, &stateMoving, DispState::MOVING, NULL);
+
     // DispState::STOPPED
-    fsm.add_transition(&stateMovingScreen, &stBoardBattery, DispState::STOPPED, NULL);
-    // fsm.add_transition(&stateMovingScreen, &stateStoppedScreen, DispState::STOPPED, NULL);
+    fsm.add_transition(&stateMoving, &stBoardBattery, DispState::STOPPED, NULL);
+
+    fsm.add_timed_transition(&stBoardBattery, &stateStopped, 2000, NULL);
 
     // settings
     /*
@@ -353,17 +340,17 @@ namespace Display
     - PRIMARY_SINGLE_CLICK retriggers stShowSettings (navigate to next setting)
     - PRIMARY_LONG_PRESS retriggers stShowSettings (toggle value)
     */
-    fsm.add_transition(&stateStoppedScreen, &stShowSettings, DispState::PRIMARY_TRIPLE_CLICK, NULL);
-    fsm.add_timed_transition(&stShowSettings, &stateStoppedScreen, 3000, NULL);
+    fsm.add_transition(&stateStopped, &stShowSettings, DispState::PRIMARY_TRIPLE_CLICK, NULL);
+    fsm.add_timed_transition(&stShowSettings, &stateStopped, 3000, NULL);
     fsm.add_transition(&stShowSettings, &stShowSettings, DispState::PRIMARY_SINGLE_CLICK, NULL);
     fsm.add_transition(&stShowSettings, &stShowSettings, DispState::PRIMARY_LONG_PRESS, NULL);
 
     // DispState::UPDATE
-    fsm.add_transition(&stateStoppedScreen, &stateStoppedScreen, DispState::UPDATE, NULL);
-    fsm.add_transition(&stateMovingScreen, &stateMovingScreen, DispState::UPDATE, NULL);
+    fsm.add_transition(&stateStopped, &stateStopped, DispState::UPDATE, NULL);
+    fsm.add_transition(&stateMoving, &stateMoving, DispState::UPDATE, NULL);
 
     // DispState::VERSION_DOESNT_MATCH
-    fsm.add_transition(&stateStoppedScreen, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
-    fsm.add_transition(&stateMovingScreen, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
+    fsm.add_transition(&stateStopped, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
+    fsm.add_transition(&stateMoving, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
   }
 } // namespace Display

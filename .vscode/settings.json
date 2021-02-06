@@ -71,6 +71,5 @@
     "ciso646": "cpp",
     "climits": "cpp"
   },
-  "peacock.color": "#ff3d00",
-  "editor.formatOnSaveMode": "modifications"
+  "peacock.color": "#ff3d00"
 }
