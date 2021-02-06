@@ -326,7 +326,7 @@ void setup()
     storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, stats.soft_resets);
     stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS_TRIP_TIME);
     if (PRINT_RESET_DETECTION)
-      Serial.printf("RESET!!! =========> %d (%ums)\n", stats.soft_resets, stats.timeMovingMS);
+      Serial.printf("RESET!!! =========> soft_resets: %d\n", stats.soft_resets);
   }
   else if (stats.powerOnReset())
   {

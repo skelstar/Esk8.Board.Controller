@@ -27,7 +27,7 @@ public:
 
   bool wasUnintendedReset()
   {
-    return soft_resets > 0 && !_resetsAcknowledged;
+    return soft_resets > 0;
   }
 
   void setResetReasons(RESET_REASON reason0, RESET_REASON reason1)

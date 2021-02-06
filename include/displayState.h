@@ -20,8 +20,6 @@ namespace Display
     BOARD_BATTERY,
     STOPPED_SCREEN,
     MOVING_SCREEN,
-    // NEED_TO_ACK_RESETS_STOPPED,
-    // NEED_TO_ACK_RESETS_MOVING,
     BOARD_VERSION_DOESNT_MATCH_SCREEN,
     SHOW_PUSH_TO_START,
     SHOW_SETTINGS,
@@ -42,10 +40,6 @@ namespace Display
       return "STOPPED_SCREEN";
     case MOVING_SCREEN:
       return "MOVING_SCREEN";
-    // case NEED_TO_ACK_RESETS_STOPPED:
-    //   return "NEED_TO_ACK_RESETS_STOPPED";
-    // case NEED_TO_ACK_RESETS_MOVING:
-    //   return "NEED_TO_ACK_RESETS_MOVING";
     case BOARD_VERSION_DOESNT_MATCH_SCREEN:
       return "BOARD_VERSION_DOESNT_MATCH_SCREEN";
     case SHOW_PUSH_TO_START:
@@ -85,17 +79,17 @@ namespace Display
   State stateStopped(
       [] {
         dispFsm.printState(STOPPED_SCREEN);
-        if (stats.soft_resets > 0)
-        {
+
+        // Serial.printf("lastEvent: %s moving: %d\n",
+        //               DispState::getTrigger(dispFsm.lastEvent()),
+        //               board.packet.moving);
+
+        if (dispFsm.lastEvent() == DispState::UNINTENDED_RESET && board.packet.moving)
+          dispFsm.trigger(DispState::MOVING);
+        else if (stats.soft_resets > 0)
           screenNeedToAckResets();
-        }
         else
-        {
-          if (dispFsm.lastEvent() == DispState::CONNECTED && board.packet.moving)
-            dispFsm.trigger(DispState::MOVING);
-          else
-            screenWhenStopped(/*init*/ true);
-        }
+          screenWhenStopped(/*init*/ true);
       },
       [] {
         if (stats.soft_resets == 0)
@@ -113,40 +107,23 @@ namespace Display
   State stateMoving(
       [] {
         dispFsm.printState(MOVING_SCREEN);
-        // sinceStoredMovingTime = 0;
-        screenWhenMoving(/*init*/ true);
+        if (stats.soft_resets > 0)
+          screenNeedToAckResets();
+        else
+          screenWhenMoving(/*init*/ true);
       },
       [] {
-        if (update_display || stats.update)
+        if (stats.soft_resets == 0)
         {
-          update_display = false;
-          stats.update = false;
-          screenWhenMoving(/*init*/ false);
+          if (update_display || stats.update)
+          {
+            update_display = false;
+            stats.update = false;
+            screenWhenMoving(/*init*/ false);
+          }
         }
-
-        stats.addMovingTime(sinceStoredMovingTime);
-        sinceStoredMovingTime = 0;
       },
       NULL);
-  //---------------------------------------------------------------
-  // State stateNeedToAckResetsStopped(
-  //     [] {
-  //       dispFsm.printState(NEED_TO_ACK_RESETS_STOPPED);
-  //       screenNeedToAckResets();
-  //     },
-  //     NULL, NULL);
-  // //---------------------------------------------------------------
-  // State stateNeedToAckResetsMoving(
-  //     [] {
-  //       dispFsm.printState(NEED_TO_ACK_RESETS_MOVING);
-  //       sinceStoredMovingTime = 0;
-  //       screenNeedToAckResets();
-  //     },
-  //     [] {
-  //       stats.addMovingTime(sinceStoredMovingTime);
-  //       sinceStoredMovingTime = 0;
-  //     },
-  //     NULL);
   //---------------------------------------------------------------
   State stateBoardVersionDoesntMatchScreen(
       [] {
@@ -202,6 +179,7 @@ namespace Display
     // DispState::CONNECTED
     fsm.add_transition(&stateDisconnected, &stateStopped, DispState::CONNECTED, NULL);
     fsm.add_transition(&stateDisconnected, &stateStopped, DispState::UNINTENDED_RESET, NULL);
+    fsm.add_transition(&stateDisconnected, &stateStopped, DispState::STOPPED, NULL);
 
     // DispState::DISCONNECTED
     fsm.add_transition(&stateStopped, &stateDisconnected, DispState::DISCONNECTED, NULL);
@@ -216,12 +194,11 @@ namespace Display
     fsm.add_transition(&stateMoving, &stateMoving, DispState::PRIMARY_DOUBLE_CLICK, ackUnintendedResets);
 
     // DispState::MOVING
+    fsm.add_transition(&stateDisconnected, &stateMoving, DispState::MOVING, NULL);
     fsm.add_transition(&stateStopped, &stateMoving, DispState::MOVING, NULL);
 
     // DispState::STOPPED
-    fsm.add_transition(&stateMoving, &stBoardBattery, DispState::STOPPED, NULL);
-
-    fsm.add_timed_transition(&stBoardBattery, &stateStopped, 2000, NULL);
+    fsm.add_transition(&stateMoving, &stateStopped, DispState::STOPPED, NULL);
 
     // settings
     /*
