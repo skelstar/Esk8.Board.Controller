@@ -2,11 +2,8 @@
 #include <Arduino.h>
 #include <rom/rtc.h> // for reset reason
 #endif
-#ifndef STORAGE_H
-#include <Storage.h>
-#endif
 
-class Stats
+class StatsClass
 {
   typedef void (*ResetsAcknowledgedCallback)();
 
@@ -104,13 +101,13 @@ private:
 
   void _storeTimeMoving()
   {
-    if (timeMovingMS - _lastStoreTimeMs > STORE_SNAPSHOT_INTERVAL)
-    {
-      // time to store in memory
-      storeInMemory<ulong>(STORE_STATS_TRIP_TIME, timeMovingMS);
-      _lastStoreTimeMs = timeMovingMS;
-      if (PRINT_RESET_DETECTION)
-        Serial.printf("Storing time in memory now : %ums\n", timeMovingMS);
-    }
+    // if (timeMovingMS - _lastStoreTimeMs > STORE_SNAPSHOT_INTERVAL)
+    // {
+    //   // time to store in memory
+    //   // Stats::storeInMemory<ulong>(STORE_STATS_TRIP_TIME, timeMovingMS);
+    //   _lastStoreTimeMs = timeMovingMS;
+    //   if (PRINT_RESET_DETECTION)
+    //     Serial.printf("Storing time in memory now : %ums\n", timeMovingMS);
+    // }
   }
 };

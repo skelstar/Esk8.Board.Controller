@@ -39,14 +39,12 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   else if (board.startedMoving())
   {
     displayQueue->send(DispState::MOVING);
-    if (FEATURE_SEND_TO_HUD)
-      sendInstructionToHud(FLASH | FAST | GREEN);
+    Stats::queue->send(Stats::MOVING);
   }
   else if (board.hasStopped())
   {
     displayQueue->send(DispState::STOPPED);
-    if (FEATURE_SEND_TO_HUD)
-      sendInstructionToHud(FLASH | RED | SLOW);
+    Stats::queue->send(Stats::STOPPED);
   }
 
   if (board.valuesChanged())

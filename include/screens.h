@@ -151,9 +151,9 @@ void screenBoardBattery(float batteryVolts)
   // capacity
   uint32_t colour = percent > 50
                         ? TFT_WHITE
-                        : percent > 20
-                              ? TFT_ORANGE
-                              : TFT_RED;
+                    : percent > 20
+                        ? TFT_ORANGE
+                        : TFT_RED;
   tft.fillRect(
       outsideX + BORDER_SIZE * 2,
       outsideY + BORDER_SIZE * 2,

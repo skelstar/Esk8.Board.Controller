@@ -135,16 +135,6 @@ BoardClass board;
 
 //------------------------------------------------------------------
 
-Preferences statsStore;
-
-//------------------------------------------------------------------
-
-#include <Storage.h>
-
-#include <stats.h>
-
-Stats stats;
-
 //------------------------------------------------------------------
 
 // prototypes
@@ -264,17 +254,13 @@ Config config;
 #define STORE_CONFIG_BRAKE_COUNTS "brake counts"
 Preferences configStore;
 
-void storeTimeMovingInMemory()
-{
-  storeInMemory<ulong>(STORE_STATS_TRIP_TIME, stats.timeMovingMS);
-}
-
 #include <throttle.h>
 
 ThrottleClass throttle;
 
 //---------------------------------------------------------------
 
+#include <tasks/core0/statsTask.h>
 #include <utils.h>
 #include <screens.h>
 
@@ -293,16 +279,9 @@ ThrottleClass throttle;
 #define __ASSERT_USE_STDERR
 
 //------------------------------------------------------------------
-void resetsAcknowledged_callback()
-{
-  using namespace HUD;
-  storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, 0);
-}
-//------------------------------------------------------------------
 
 void setup()
 {
-
   Serial.begin(115200);
   Serial.printf("------------------------ BOOT ------------------------\n");
 
@@ -310,30 +289,23 @@ void setup()
   String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
   chipId.toUpperCase();
 
-  statsStore.begin(STORE_STATS, /*read-only*/ false);
-
-  // get the number of resets
-  stats.soft_resets = statsStore.getUInt(STORE_STATS_SOFT_RSTS, 0);
-
-  stats.setResetReasons(rtc_get_reset_reason(0), rtc_get_reset_reason(1));
-  stats.setResetsAcknowledgedCallback(resetsAcknowledged_callback);
+  Stats::init();
 
   configStore.begin(STORE_CONFIG, false);
 
   if (stats.watchdogReset())
   {
     stats.soft_resets++;
-    storeInMemory<uint16_t>(STORE_STATS_SOFT_RSTS, stats.soft_resets);
-    stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS_TRIP_TIME);
+    storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.soft_resets);
+    stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS, STORE_STATS_TRIP_TIME);
     if (PRINT_RESET_DETECTION)
       Serial.printf("RESET!!! =========> soft_resets: %d\n", stats.soft_resets);
   }
   else if (stats.powerOnReset())
   {
     stats.soft_resets = 0;
-    statsStore.putUInt(STORE_STATS_SOFT_RSTS, stats.soft_resets);
+    storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.soft_resets);
   }
-  statsStore.end();
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER);
 
@@ -360,8 +332,9 @@ void setup()
 
   // CORE_0
   Display::createTask(DISPLAY_TASK_CORE, TASK_PRIORITY_3);
-  Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_1);
+  Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_2);
   Battery::createTask(BATTERY_TASK_CORE, TASK_PRIORITY_1);
+  Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
 
   // CORE_1
   if (FEATURE_SEND_TO_HUD)

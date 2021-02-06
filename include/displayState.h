@@ -11,7 +11,6 @@ namespace Display
   DispState::Trigger lastDispEvent;
 
   elapsedMillis sinceShowingToggleScreen;
-  elapsedMillis sinceStoredMovingTime;
 
   enum StateId
   {
@@ -79,10 +78,6 @@ namespace Display
   State stateStopped(
       [] {
         dispFsm.printState(STOPPED_SCREEN);
-
-        // Serial.printf("lastEvent: %s moving: %d\n",
-        //               DispState::getTrigger(dispFsm.lastEvent()),
-        //               board.packet.moving);
 
         if (dispFsm.lastEvent() == DispState::UNINTENDED_RESET && board.packet.moving)
           dispFsm.trigger(DispState::MOVING);
@@ -171,7 +166,7 @@ namespace Display
   void ackUnintendedResets()
   {
     stats.ackResets();
-    DEBUGVAL(stats.soft_resets);
+    Stats::queue->send(Stats::CLEAR_RESETS);
   }
 
   void addTransitions()

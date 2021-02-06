@@ -250,6 +250,13 @@ namespace HUDTask
 #define PRINT_BOARD_CLIENT_CONNECTED_CHANGED 0
 #endif
 
+#ifndef PRINT_STATS_QUEUE_SEND
+#define PRINT_STATS_QUEUE_SEND 0
+#endif
+#ifndef PRINT_STATS_QUEUE_READ
+#define PRINT_STATS_QUEUE_READ 0
+#endif
+
 #ifndef FEATURE_SEND_TO_HUD
 #define FEATURE_SEND_TO_HUD 0
 #endif
