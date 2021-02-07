@@ -17,12 +17,21 @@ namespace Stats
 
   bool taskReady = false;
 
+  enum ResetsType
+  {
+    NO_TYPE = 0,
+    CONTROLLER_RESETS,
+    BOARD_RESETS,
+  };
+
   enum StatsEvent
   {
     NONE = 0,
     STOPPED,
     MOVING,
-    CLEAR_RESETS,
+    CLEAR_CONTROLLER_RESETS,
+    CLEAR_BOARD_RESETS,
+    BOARD_FIRST_PACKET,
   };
 
   char *getName(uint8_t ev)
@@ -35,8 +44,12 @@ namespace Stats
       return "STOPPED";
     case MOVING:
       return "MOVING";
-    case CLEAR_RESETS:
-      return "CLEAR_RESETS";
+    case CLEAR_CONTROLLER_RESETS:
+      return "CLEAR_CONTROLLER_RESETS";
+    case CLEAR_BOARD_RESETS:
+      return "CLEAR_BOARD_RESETS";
+    case BOARD_FIRST_PACKET:
+      return "BOARD_FIRST_PACKET";
     }
     return "Out of range (StatsQueue getName())";
   }
@@ -73,9 +86,23 @@ namespace Stats
           // start the clock
           sinceStartedMoving = 0;
           break;
-        case StatsEvent::CLEAR_RESETS:
-          stats.ackResets();
+        case StatsEvent::CLEAR_CONTROLLER_RESETS:
+          stats.clearControllerResets();
           break;
+        case StatsEvent::CLEAR_BOARD_RESETS:
+          stats.clearControllerResets();
+          break;
+        case StatsEvent::BOARD_FIRST_PACKET:
+          if (stats.boardConnectedThisSession)
+          {
+            stats.boardResets++;
+            DEBUG("sending DispState::UPDATE");
+            displayQueue->send(DispState::UPDATE);
+          }
+          else
+          {
+            DEBUG("stats.boardConnectedThisSession == false");
+          }
         }
       }
 
@@ -122,7 +149,7 @@ namespace Stats
     queue->setReadEventCallback(queueReadEventCb);
 
     // get the number of resets
-    stats.soft_resets = readFromMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS);
+    stats.controllerResets = readFromMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS);
 
     stats.setResetReasons(rtc_get_reset_reason(0), rtc_get_reset_reason(1));
     stats.setResetsAcknowledgedCallback(resetsAcknowledged_callback);

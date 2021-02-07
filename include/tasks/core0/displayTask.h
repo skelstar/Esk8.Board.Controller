@@ -27,7 +27,6 @@ namespace Display
 
     fsm.run_machine();
 
-    display_task_initialised = true;
     taskReady = true;
 
 #define READ_DISP_EVENT_QUEUE_PERIOD 100
@@ -45,9 +44,6 @@ namespace Display
         switch (displayevent)
         {
         case DispState::NO_EVENT:
-          break;
-        case DispState::UPDATE:
-          update_display = true;
           break;
         default:
           lastDispEvent = displayevent;

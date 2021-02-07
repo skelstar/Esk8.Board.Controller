@@ -2,16 +2,35 @@
 #include <types.h>
 #endif
 
-void processHUDPacket();
 void processBoardPacket();
 void sendConfigToBoard();
 void sendPacketToBoard();
-void sendInstructionToHud(HUD::Instruction instruction);
+
+const char *getReason(ReasonType reason)
+{
+  switch (reason)
+  {
+  case BOARD_STOPPED:
+    return "BOARD_STOPPED";
+  case BOARD_MOVING:
+    return "BOARD_MOVING";
+  case FIRST_PACKET:
+    return "FIRST_PACKET";
+  case LAST_WILL:
+    return "LAST_WILL";
+  case REQUESTED:
+    return "REQUESTED";
+  case VESC_OFFLINE:
+    return "VESC_OFFLINE";
+  case RESPONSE:
+    return "RESPONSE";
+  }
+  return "Out of range (getReason())";
+}
 
 //------------------------------------------------------------------
 void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 {
-  using namespace HUD;
   sinceLastBoardPacketRx = 0;
 
   VescData packet = boardClient.read();
@@ -28,13 +47,13 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
     DEBUG("*** board's first packet!! ***");
 
     nrfCommsQueue->send(Comms::Event::BOARD_FIRST_PACKET);
-    if (FEATURE_SEND_TO_HUD)
-      sendInstructionToHud(HEARTBEAT);
 
     controller_packet.id = 0;
     sendConfigToBoard();
 
     sinceBoardConnected = 0;
+
+    Stats::queue->send(Stats::BOARD_FIRST_PACKET);
   }
   else if (board.startedMoving())
   {
@@ -62,40 +81,6 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 }
 //------------------------------------------------------------------
 
-void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
-{
-  using namespace HUD;
-  if (type != Packet::HUD)
-  {
-    Serial.printf("WARNING: Rx type: %d not supported!\n", type);
-    return;
-  }
-
-  if (!FEATURE_SEND_TO_HUD)
-    return;
-
-  uint16_t ev = hudClient.read();
-  if ((uint16_t)ev > HUDAction::Length)
-  {
-    Serial.printf("WARNING: Action from HUD out of range (%d)\n", (uint16_t)ev);
-    return;
-  }
-
-  // TODO respond with appropriate action response?
-
-  switch (HUDAction::Event(ev))
-  {
-  case HUDAction::ONE_CLICK:
-    hudActionQueue->send(ev);
-    break;
-  default:
-    if (FEATURE_SEND_TO_HUD)
-      sendInstructionToHud(TWO_FLASHES | GREEN | FAST);
-  }
-}
-
-//------------------------------------------------------------------
-
 void sendConfigToBoard()
 {
   controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
@@ -119,24 +104,6 @@ void sendPacketToBoard()
 
   controller_packet.id++;
 }
-//------------------------------------------------------------------
-
-void sendInstructionToHud(HUD::Instruction instruction)
-{
-  if (!FEATURE_SEND_TO_HUD)
-    return;
-  // TODO: this online check probably shouldn't be in here
-  if (hudClient.connected())
-  {
-    hudClient.sendTo(Packet::HUD, instruction);
-  }
-  else
-  {
-    if (DEBUG_BUILD)
-      Serial.printf("WARNING: instruction not sent because hud offline\n");
-  }
-}
-
 //------------------------------------------------------------------
 
 bool boardTimedOut()

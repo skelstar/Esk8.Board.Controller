@@ -321,17 +321,32 @@ void screenWhenMoving(bool init = false)
 }
 //-----------------------------------------------------
 
-void screenNeedToAckResets()
+void screenNeedToAckResets(Stats::ResetsType type)
 {
-  tft.fillScreen(TFT_RED);
+  char buff[10];
+  uint32_t bgColour = 0;
+  if (type == Stats::CONTROLLER_RESETS)
+  {
+    bgColour = TFT_RED;
+    sprintf(buff, "%d", stats.controllerResets);
+  }
+  else if (type == Stats::BOARD_RESETS)
+  {
+    bgColour = TFT_NAVY;
+    sprintf(buff, "%d", stats.boardResets);
+  }
+  else
+  {
+    return;
+  }
+
+  tft.fillScreen(bgColour);
   tft.setFreeFont(FONT_LG);
   tft.setTextColor(TFT_WHITE);
   tft.setTextDatum(TC_DATUM);
   tft.drawString("ACK RESETS!\n", /*x*/ LCD_WIDTH / 2, /*y*/ 20);
 
-  char buff[10];
-  sprintf(buff, "%d", stats.soft_resets);
-  chunkyDigit = new ChunkyDigit(&tft, CHUNKY_PIXEL_MED, CHUNKY_SPACING_MED, TFT_RED);
+  chunkyDigit = new ChunkyDigit(&tft, CHUNKY_PIXEL_MED, CHUNKY_SPACING_MED, bgColour);
 
   int w = chunkyDigit->getWidth(buff);
   int x = LCD_WIDTH / 2 - w / 2;
@@ -342,7 +357,7 @@ void screenNeedToAckResets()
 
 void screenBoardNotCompatible(float boardVersion)
 {
-  tft.fillScreen(TFT_RED);
+  tft.fillScreen(TFT_NAVY);
   tft.setFreeFont(FONT_LG);
   tft.setTextColor(TFT_WHITE);
   tft.setTextDatum(TC_DATUM);
@@ -357,16 +372,8 @@ void screenBoardNotCompatible(float boardVersion)
 
 //-----------------------------------------------------
 
-void updateHudIcon(bool connected)
-{
-  tft.fillRect(LCD_WIDTH - 30, 0, 30, STRIPE_HEIGHT, connected ? TFT_BLUE : TFT_RED);
-}
-
 void drawStatusStripe(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour)
 {
   tft.fillScreen(bgColour);
   tft.fillRect(0, 0, LCD_WIDTH, STRIPE_HEIGHT, stripeColour);
-  // Hud icon
-  if (FEATURE_SEND_TO_HUD)
-    updateHudIcon(hudClient.connected());
 }

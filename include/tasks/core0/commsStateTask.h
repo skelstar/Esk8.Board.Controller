@@ -67,17 +67,17 @@ namespace Comms
         if (stats.boardConnected && triggerEvent == Comms::Event::BOARD_FIRST_PACKET)
         {
           stats.boardResets++;
-          displayQueue->send(DispState::BOARD_UNINTENDED_RESET);
         }
         else if (!boardCompatible)
           displayQueue->send(DispState::VERSION_DOESNT_MATCH);
-        else if (stats.wasUnintendedReset())
+        else if (stats.wasUnintendedControllerReset())
           displayQueue->send(DispState::UNINTENDED_RESET);
         else
           displayQueue->send(DispState::CONNECTED);
 
         comms_session_started = true;
         stats.boardConnected = true;
+        stats.boardConnectedThisSession = true;
       },
       NULL,
       NULL);

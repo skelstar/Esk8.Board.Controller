@@ -26,18 +26,15 @@ Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 #include <TFT_eSPI.h>
 #include <Preferences.h>
 #include <BatteryLib.h>
-#include <HUDData.h>
 #include <QueueManager.h>
 
 //------------------------------------------------------------
 
 xQueueHandle xDisplayEventQueue;
 xQueueHandle xButtonPushEventQueue;
-xQueueHandle xHUDActionQueue;
 
 Queue::Manager *displayQueue;
 Queue::Manager *buttonQueue;
-Queue::Manager *hudActionQueue;
 
 Queue::Manager *nrfCommsQueue;
 namespace NRFCommsQueue
@@ -52,29 +49,6 @@ namespace NRFCommsQueue
     });
   }
 } // namespace NRFCommsQueue
-
-Queue::Manager *hudTasksQueue;
-namespace HudTaskQueue
-{
-  void queueSentEventCb(uint16_t ev)
-  {
-    if (PRINT_HUD_TASKS_QUEUE_SEND)
-      Serial.printf(PRINT_QUEUE_SEND_FORMAT, HUDTask::getName(ev, "HUDTaskQueue::SentCb()"), "HUD_TASK");
-  }
-  void queueReadEventCb(uint16_t ev)
-  {
-    if (PRINT_HUD_TASKS_QUEUE_READ)
-      Serial.printf(PRINT_QUEUE_READ_FORMAT, "HUD_TASK", HUDTask::getName(ev, "HUDTaskQueue::ReadCb()"));
-  }
-
-  void init()
-  {
-    hudTasksQueue = new Queue::Manager(/*length*/ 3, sizeof(HUDTask::Message), /*ticks*/ 5);
-    hudTasksQueue->setName("hudQueue");
-    hudTasksQueue->setSentEventCallback(queueSentEventCb);
-    hudTasksQueue->setReadEventCallback(queueReadEventCb);
-  }
-} // namespace HudTaskQueue
 
 //------------------------------------------------------------
 enum FeatureType
@@ -138,31 +112,12 @@ BoardClass board;
 //------------------------------------------------------------------
 
 // prototypes
-void hudPacketAvailable_cb(uint16_t from_id, uint8_t type);
 void boardPacketAvailable_cb(uint16_t from_id, uint8_t t);
 
 NRF24L01Lib nrf24;
 
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
-
-GenericClient<HUD::Instruction, HUDAction::Event> hudClient(COMMS_HUD);
-void hudClientInit()
-{
-  hudClient.begin(&network, hudPacketAvailable_cb);
-  hudClient.setConnectedStateChangeCallback([] {
-    if (PRINT_HUD_CLIENT_CONNECTED_CHANGED)
-      Serial.printf(PRINT_CLIENT_CONNECTION_FORMAT, "HUD", hudClient.connected() ? "CONNECTED" : "DISCONNECTED");
-  });
-  hudClient.setSentPacketCallback([](HUD::Instruction instruction) {
-    if (PRINT_TX_TO_HUD)
-      Serial.printf(PRINT_TX_PACKET_TO_FORMAT, "HUD", instruction.getInstruction());
-  });
-  hudClient.setReadPacketCallback([](HUDAction::Event ev) {
-    if (PRINT_RX_FROM_HUD)
-      Serial.printf(PRINT_RX_PACKET_FROM_FORMAT, "HUD", HUDAction::getName(ev));
-  });
-}
 
 void printSentToBoard(ControllerData data)
 {
@@ -195,11 +150,6 @@ void m5AtomClientInit()
     uint16_t packet = m5AtomClient.read();
     Serial.printf("rx %d from M5Atom!\n", packet);
     m5AtomClient.sendTo(0, packet);
-
-    if (packet == 99 && FEATURE_SEND_TO_HUD)
-    {
-      hudTasksQueue->send(HUDTask::ACKNOWLEDGE);
-    }
   });
 }
 #endif
@@ -224,7 +174,6 @@ TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 elapsedMillis
     sinceSentToBoard,
     sinceLastBoardPacketRx,
-    sinceLastHudPacket,
     sinceSentRequest,
     since_read_trigger,
     sinceBoardConnected,
@@ -232,8 +181,6 @@ elapsedMillis
 
 uint16_t remote_battery_percent = 0;
 bool remoteBattCharging = false;
-bool display_task_initialised = false;
-bool display_task_showing_option_screen = false;
 int oldCounter = 0;
 
 // prototypes
@@ -270,7 +217,6 @@ ThrottleClass throttle;
 
 #include <tasks/core0/displayTask.h>
 #include <tasks/core0/commsStateTask.h>
-#include <tasks/core1/hudTask.h>
 
 #include <features/battery_measure.h>
 
@@ -293,24 +239,22 @@ void setup()
 
   configStore.begin(STORE_CONFIG, false);
 
-  if (stats.watchdogReset())
+  if (stats.wasWatchdogReset())
   {
-    stats.soft_resets++;
-    storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.soft_resets);
+    stats.controllerResets++;
+    storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
     stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS, STORE_STATS_TRIP_TIME);
     if (PRINT_RESET_DETECTION)
-      Serial.printf("RESET!!! =========> soft_resets: %d\n", stats.soft_resets);
+      Serial.printf("RESET!!! =========> controllerResets: %d\n", stats.controllerResets);
   }
   else if (stats.powerOnReset())
   {
-    stats.soft_resets = 0;
-    storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.soft_resets);
+    stats.controllerResets = 0;
+    storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
   }
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER);
 
-  if (FEATURE_SEND_TO_HUD)
-    hudClientInit();
   boardClientInit();
 #ifdef COMMS_M5ATOM
   m5AtomClientInit();
@@ -337,14 +281,6 @@ void setup()
   Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
 
   // CORE_1
-  if (FEATURE_SEND_TO_HUD)
-  {
-    HUD::createTask(HUD_TASK_CORE, TASK_PRIORITY_1);
-    xHUDActionQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
-    hudActionQueue = new Queue::Manager(xHUDActionQueue, 3, NO_MESSAGE_ON_QUEUE);
-    HudTaskQueue::init();
-  }
-
   xDisplayEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
 
@@ -354,24 +290,16 @@ void setup()
 
   NRFCommsQueue::init();
 
-  while (!Display::taskReady && !Comms::taskReady && (!FEATURE_SEND_TO_HUD || !HUD::taskReady))
+  while (!Display::taskReady && !Comms::taskReady && !Stats::taskReady)
   {
     vTaskDelay(5);
   }
 
-  using namespace HUD;
-  // force value to get first packet out
-  if (FEATURE_SEND_TO_HUD)
-  {
-    sendInstructionToHud(HEARTBEAT);
-    vTaskDelay(100);
-    sendInstructionToHud(TWO_FLASHES | BLUE | FAST);
-  }
   sendConfigToBoard();
 }
 //---------------------------------------------------------------
 
-elapsedMillis sinceNRFUpdate, sinceSentToHudTest;
+elapsedMillis sinceNRFUpdate;
 
 void loop()
 {
@@ -388,8 +316,6 @@ void loop()
   if (sinceNRFUpdate > 20)
   {
     sinceNRFUpdate = 0;
-    if (FEATURE_SEND_TO_HUD)
-      hudClient.update();
     boardClient.update();
 #ifdef COMMS_M5ATOM
     m5AtomClient.update();

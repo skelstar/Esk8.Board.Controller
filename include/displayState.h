@@ -77,17 +77,20 @@ namespace Display
   //---------------------------------------------------------------
   State stateStopped(
       [] {
-        dispFsm.printState(STOPPED_SCREEN);
+        if (dispFsm.lastEvent() != DispState::UPDATE)
+          dispFsm.printState(STOPPED_SCREEN);
 
         if (dispFsm.lastEvent() == DispState::UNINTENDED_RESET && board.packet.moving)
           dispFsm.trigger(DispState::MOVING);
-        else if (stats.soft_resets > 0)
-          screenNeedToAckResets();
+        else if (stats.controllerResets > 0)
+          screenNeedToAckResets(Stats::CONTROLLER_RESETS);
+        else if (stats.boardResets > 0)
+          screenNeedToAckResets(Stats::BOARD_RESETS);
         else
           screenWhenStopped(/*init*/ true);
       },
       [] {
-        if (stats.soft_resets == 0)
+        if (stats.controllerResets == 0 && stats.boardResets == 0)
         {
           if (update_display || stats.update)
           {
@@ -102,13 +105,15 @@ namespace Display
   State stateMoving(
       [] {
         dispFsm.printState(MOVING_SCREEN);
-        if (stats.soft_resets > 0)
-          screenNeedToAckResets();
+        if (stats.controllerResets > 0)
+          screenNeedToAckResets(Stats::CONTROLLER_RESETS);
+        else if (stats.boardResets > 0)
+          screenNeedToAckResets(Stats::BOARD_RESETS);
         else
           screenWhenMoving(/*init*/ true);
       },
       [] {
-        if (stats.soft_resets == 0)
+        if (stats.controllerResets == 0)
         {
           if (update_display || stats.update)
           {
@@ -163,10 +168,13 @@ namespace Display
 
   Fsm fsm(&stateDisconnected);
 
-  void ackUnintendedResets()
+  void clearResetCounters()
   {
-    stats.ackResets();
-    Stats::queue->send(Stats::CLEAR_RESETS);
+    if (stats.controllerResets > 0)
+      stats.clearControllerResets();
+    else if (stats.boardResets > 0)
+      stats.clearBoardResets();
+    Stats::queue->send(Stats::CLEAR_CONTROLLER_RESETS);
   }
 
   void addTransitions()
@@ -185,8 +193,8 @@ namespace Display
     fsm.add_transition(&stateMoving, &stateMoving, DispState::UNINTENDED_RESET, NULL);
 
     // DispState::PRIMARY_DOUBLE_CLICK
-    fsm.add_transition(&stateStopped, &stateStopped, DispState::PRIMARY_DOUBLE_CLICK, ackUnintendedResets);
-    fsm.add_transition(&stateMoving, &stateMoving, DispState::PRIMARY_DOUBLE_CLICK, ackUnintendedResets);
+    fsm.add_transition(&stateStopped, &stateStopped, DispState::PRIMARY_DOUBLE_CLICK, clearResetCounters);
+    fsm.add_transition(&stateMoving, &stateMoving, DispState::PRIMARY_DOUBLE_CLICK, clearResetCounters);
 
     // DispState::MOVING
     fsm.add_transition(&stateDisconnected, &stateMoving, DispState::MOVING, NULL);

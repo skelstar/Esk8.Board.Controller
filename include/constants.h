@@ -28,7 +28,6 @@ namespace DispState
     MOVING,
     UNINTENDED_RESET,
     UPDATE,
-    BOARD_UNINTENDED_RESET,
     PRIMARY_SINGLE_CLICK,
     PRIMARY_DOUBLE_CLICK,
     PRIMARY_TRIPLE_CLICK,
@@ -55,8 +54,6 @@ namespace DispState
       return "UNINTENDED_RESET";
     case UPDATE:
       return "UPDATE";
-    case BOARD_UNINTENDED_RESET:
-      return "BOARD_UNINTENDED_RESET";
     case PRIMARY_SINGLE_CLICK:
       return "PRIMARY_SINGLE_CLICK";
     case PRIMARY_DOUBLE_CLICK:
@@ -106,66 +103,13 @@ namespace Comms
 
 //------------------------------------------------------------
 
-namespace HUDTask
-{
-  enum Message
-  {
-    NONE,
-    BOARD_DISCONNECTED,
-    BOARD_CONNECTED,
-    WARNING_ACK,
-    CONTROLLER_RESET,
-    BOARD_MOVING,
-    BOARD_STOPPED,
-    HEARTBEAT,
-    ACKNOWLEDGE,
-    CYCLE_BRIGHTNESS,
-    THREE_FLASHES,
-    GO_TO_IDLE,
-    // MessageLength,
-  };
-
-  const char *getName(uint8_t message, const char *context = "")
-  {
-    switch (message)
-    {
-    case NONE:
-      return "NONE";
-    case BOARD_DISCONNECTED:
-      return "BOARD_DISCONNECTED";
-    case BOARD_CONNECTED:
-      return "BOARD_CONNECTED";
-    case WARNING_ACK:
-      return "WARNING_ACK";
-    case CONTROLLER_RESET:
-      return "CONTROLLER_RESET";
-    case BOARD_MOVING:
-      return "BOARD_MOVING";
-    case BOARD_STOPPED:
-      return "BOARD_STOPPED";
-    case HEARTBEAT:
-      return "HEARTBEAT";
-    case ACKNOWLEDGE:
-      return "ACKNOWLEDGE";
-    case CYCLE_BRIGHTNESS:
-      return "CYCLE_BRIGHTNESS";
-    case THREE_FLASHES:
-      return "THREE_FLASHES";
-    case GO_TO_IDLE:
-      return "GO_TO_IDLE";
-    }
-    return outOfRange(context);
-  }
-}; // namespace HUDTask
-
-//------------------------------------------------------------
 #define LCD_WIDTH 240
 #define LCD_HEIGHT 135
 
 #define TFT_DEFAULT_BG TFT_BLACK
 
-  //-----------------------------------------------------
-  // build flag defaults
+//-----------------------------------------------------
+// build flag defaults
 
 #ifndef PRINT_COMMS_STATE
 #define PRINT_COMMS_STATE 0
@@ -197,35 +141,14 @@ namespace HUDTask
 #ifndef PRINT_BUTTON_EVENTS
 #define PRINT_BUTTON_EVENTS 0
 #endif
-#ifndef PRINT_HUD_TASKS_QUEUE_SEND
-#define PRINT_HUD_TASKS_QUEUE_SEND 0
-#endif
-#ifndef PRINT_HUD_TASKS_QUEUE_READ
-#define PRINT_HUD_TASKS_QUEUE_READ 0
-#endif
-#ifndef PRINT_HUD_ACTION_QUEUE_SEND
-#define PRINT_HUD_ACTION_QUEUE_SEND 0
-#endif
-#ifndef PRINT_HUD_ACTION_QUEUE_READ
-#define PRINT_HUD_ACTION_QUEUE_READ 0
-#endif
 #ifndef STORE_SNAPSHOT_INTERVAL
 #define STORE_SNAPSHOT_INTERVAL 5000
 #endif
 #ifndef SUPPRESS_EV_COMMS_PKT_RXD
 #define SUPPRESS_EV_COMMS_PKT_RXD 1
 #endif
-#ifndef IGNORE_IF_HUD_OFFLINE
-#define IGNORE_IF_HUD_OFFLINE 0
-#endif
 #ifndef PRINT_NRF24L01_DETAILS
 #define PRINT_NRF24L01_DETAILS 0
-#endif
-#ifndef PRINT_TX_TO_HUD
-#define PRINT_TX_TO_HUD 0
-#endif
-#ifndef PRINT_RX_FROM_HUD
-#define PRINT_RX_FROM_HUD 0
 #endif
 #ifndef PRINT_TX_TO_BOARD
 #define PRINT_TX_TO_BOARD 0
@@ -243,9 +166,6 @@ namespace HUDTask
 #define GIT_BRANCH_NAME "branch not provided?"
 #endif
 
-#ifndef PRINT_HUD_CLIENT_CONNECTED_CHANGED
-#define PRINT_HUD_CLIENT_CONNECTED_CHANGED 0
-#endif
 #ifndef PRINT_BOARD_CLIENT_CONNECTED_CHANGED
 #define PRINT_BOARD_CLIENT_CONNECTED_CHANGED 0
 #endif
@@ -257,9 +177,6 @@ namespace HUDTask
 #define PRINT_STATS_QUEUE_READ 0
 #endif
 
-#ifndef FEATURE_SEND_TO_HUD
-#define FEATURE_SEND_TO_HUD 0
-#endif
 #ifndef FEATURE_PUSH_TO_START
 #define FEATURE_PUSH_TO_START 0
 #endif
