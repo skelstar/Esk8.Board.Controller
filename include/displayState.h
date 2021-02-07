@@ -220,8 +220,7 @@ namespace Display
     fsm.add_transition(&stateMoving, &stateMoving, DispState::UPDATE, NULL);
 
     // DispState::VERSION_DOESNT_MATCH
-    fsm.add_transition(&stateStopped, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
-    fsm.add_transition(&stateMoving, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
+    fsm.add_transition(&stateDisconnected, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
   }
 
   void queueReadCb(uint16_t ev)

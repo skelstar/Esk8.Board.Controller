@@ -366,7 +366,7 @@ void screenBoardNotCompatible(float boardVersion)
   tft.drawString("compatible!", /*x*/ LCD_WIDTH / 2, /*y*/ line1 += lineheight);
 
   char buff[20];
-  sprintf(buff, "v%.1f <> v%.1f", boardVersion, VERSION_BOARD_COMPAT);
+  sprintf(buff, "is v%.1f not v%.1f", boardVersion, VERSION_BOARD_COMPAT);
   tft.drawString(buff, /*x*/ LCD_WIDTH / 2, /*y*/ line1 += lineheight);
 }
 
