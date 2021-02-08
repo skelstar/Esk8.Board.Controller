@@ -13,12 +13,17 @@ namespace Battery
   {
     const char *taskName = "";
   }
+
+  bool taskReady = false;
+
   //--------------------------------------------------------
   void task(void *pvParameters)
   {
     remote_batt.setup(battVoltsChanged_cb);
 
     Serial.printf(PRINT_TASK_STARTED_FORMAT, taskName, xPortGetCoreID());
+
+    taskReady = true;
 
     while (true)
     {

@@ -36,20 +36,6 @@ xQueueHandle xButtonPushEventQueue;
 Queue::Manager *displayQueue;
 Queue::Manager *buttonQueue;
 
-Queue::Manager *nrfCommsQueue;
-namespace NRFCommsQueue
-{
-  void init()
-  {
-    nrfCommsQueue = new Queue::Manager(/*length*/ 5, sizeof(uint8_t), /*ticks*/ 10);
-    nrfCommsQueue->setName("nrfCommsQueue");
-    nrfCommsQueue->setSentEventCallback([](uint16_t ev) {
-      // if (ev != 1)
-      //   Serial.printf("nrfCommsQueue sent\n", ev);
-    });
-  }
-} // namespace NRFCommsQueue
-
 //------------------------------------------------------------
 enum FeatureType
 {
@@ -119,12 +105,12 @@ NRF24L01Lib nrf24;
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
-void printSentToBoard(ControllerData data)
+void printSentToBoard_cb(ControllerData data)
 {
   if (PRINT_TX_TO_BOARD)
-    Serial.printf(TX_TO_BOARD_FORMAT, data.id);
+    Serial.printf(TX_TO_BOARD_FORMAT, (int)data.id);
 }
-void printRecvFromBoard(VescData data)
+void printRecvFromBoard_cb(VescData data)
 {
   if (PRINT_RX_FROM_BOARD)
     Serial.printf(RX_FROM_BOARD_FORMAT, data.id);
@@ -138,8 +124,8 @@ void boardClientInit()
     if (PRINT_BOARD_CLIENT_CONNECTED_CHANGED)
       Serial.printf(BOARD_CLIENT_CONNECTED_FORMAT, boardClient.connected() ? "CONNECTED" : "DISCONNECTED");
   });
-  boardClient.setSentPacketCallback(printSentToBoard);
-  boardClient.setReadPacketCallback(printRecvFromBoard);
+  boardClient.setSentPacketCallback(printSentToBoard_cb);
+  boardClient.setReadPacketCallback(printRecvFromBoard_cb);
 }
 
 #ifdef COMMS_M5ATOM
@@ -213,10 +199,9 @@ ThrottleClass throttle;
 
 #include <displayState.h>
 
-#include <nrf_comms.h>
-
 #include <tasks/core0/displayTask.h>
 #include <tasks/core0/commsStateTask.h>
+#include <nrf_comms.h>
 
 #include <features/battery_measure.h>
 
@@ -288,11 +273,12 @@ void setup()
   displayQueue->setReadEventCallback(Display::queueReadCb);
   buttonQueue = new Queue::Manager(xButtonPushEventQueue, 10);
 
-  NRFCommsQueue::init();
-
-  while (!Display::taskReady && !Comms::taskReady && !Stats::taskReady)
+  while (!Display::taskReady &&
+         !Comms::taskReady &&
+         !Stats::taskReady &&
+         !Battery::taskReady)
   {
-    vTaskDelay(5);
+    vTaskDelay(10);
   }
 
   sendConfigToBoard();
@@ -309,9 +295,7 @@ void loop()
   }
 
   if (board.hasTimedout())
-  {
-    nrfCommsQueue->send(Comms::Event::BOARD_TIMEDOUT);
-  }
+    Comms::queue1->send(Comms::Event::BOARD_TIMEDOUT);
 
   if (sinceNRFUpdate > 20)
   {

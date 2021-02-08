@@ -39,14 +39,9 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 
   if (board.packet.reason == FIRST_PACKET)
   {
-    /*
-    * send board reset event to commsState
-    * set controller_packet.id = 0
-    * send controller "CONFIG" packet to board
-    */
     DEBUG("*** board's first packet!! ***");
 
-    nrfCommsQueue->send(Comms::Event::BOARD_FIRST_PACKET);
+    Comms::queue1->send(Comms::Event::BOARD_FIRST_PACKET);
 
     controller_packet.id = 0;
     sendConfigToBoard();
@@ -66,16 +61,13 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
     Stats::queue->send(Stats::STOPPED);
   }
   else if (board.valuesChanged())
-  {
     displayQueue->send(DispState::UPDATE);
-  }
-  else
-  {
-    uint8_t command = board.isStopped()
-                          ? DispState::STOPPED
-                          : DispState::MOVING;
-    displayQueue->send(command);
-  }
+
+  else if (board.isStopped())
+    displayQueue->send(DispState::STOPPED);
+
+  else if (board.isMoving())
+    displayQueue->send(DispState::MOVING);
 
   // this should only happen when using M5STACK
   if (DEBUG_BUILD && board.getCommand() == CommandType::RESET)
@@ -83,7 +75,7 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
     ESP.restart();
   }
 
-  nrfCommsQueue->send(Comms::Event::PKT_RXD);
+  Comms::queue1->send(Comms::Event::PKT_RXD);
 }
 //------------------------------------------------------------------
 

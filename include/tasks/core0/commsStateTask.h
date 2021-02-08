@@ -12,15 +12,12 @@ bool commsStateTask_initialised = false;
 
 bool skipOnEnter = false;
 
-/* prototypes */
-
-void print(const char *stateName);
-
-int triggerEvent = Comms::Event::NO_EVENT;
-Comms::Event lastCommsEvent = Comms::Event::NO_EVENT;
-
 namespace Comms
 {
+  /* prototypes */
+  void print(const char *stateName);
+  void init();
+
   bool taskReady = false;
 
   enum StateId
@@ -44,17 +41,14 @@ namespace Comms
 
   FsmManager<Event> commsFsm;
 
+  Queue::Manager *queue1;
+
   //------------------------------------------
 
   State stateDisconnected(
       [] {
         commsFsm.printState(StateId::DISCONNECTED);
         stats.boardConnected = false;
-
-        if (lastCommsEvent == Comms::Event::BOARD_TIMEDOUT)
-          displayQueue->send(DispState::DISCONNECTED);
-        else
-          displayQueue->send(DispState::DISCONNECTED);
       },
       NULL,
       NULL);
@@ -64,18 +58,13 @@ namespace Comms
         commsFsm.printState(StateId::CONNECTED);
         bool boardCompatible = boardVersionCompatible(board.packet.version);
 
-        if (stats.boardConnected && triggerEvent == Comms::Event::BOARD_FIRST_PACKET)
-        {
+        if (!boardCompatible)
+          displayQueue->send(DispState::VERSION_DOESNT_MATCH);
+        else if (stats.boardConnectedThisSession)
           stats.boardResets++;
-        }
-        // else if (!boardCompatible)
-        //   displayQueue->send(DispState::VERSION_DOESNT_MATCH);
-        // else
-        //   displayQueue->send(DispState::CONNECTED);
 
         comms_session_started = true;
         stats.boardConnected = true;
-        stats.boardConnectedThisSession = true;
       },
       NULL,
       NULL);
@@ -88,16 +77,14 @@ namespace Comms
 
   void addTransitions()
   {
-    // Comms::PKT_RXD
     fsm.add_transition(&stateDisconnected, &stateConnected, Comms::Event::PKT_RXD, NULL);
+    fsm.add_transition(&stateDisconnected, &stateConnected, Comms::Event::BOARD_FIRST_PACKET, NULL);
 
-    // Comms::BOARD_TIMEDOUT
-    fsm.add_transition(&stateConnected, &stateDisconnected, Comms::Event::BOARD_TIMEDOUT, NULL);
-
-    // Comms::BD_RESET
     fsm.add_transition(&stateConnected, &stateConnected, Comms::Event::BOARD_FIRST_PACKET, NULL);
-    fsm.add_transition(&stateDisconnected, &stateDisconnected, Comms::Event::BOARD_FIRST_PACKET, NULL);
+
+    fsm.add_transition(&stateConnected, &stateDisconnected, Comms::Event::BOARD_TIMEDOUT, NULL);
   }
+  //-----------------------------------------------------
 
   void task(void *pvParameters)
   {
@@ -117,6 +104,10 @@ namespace Comms
 
     Comms::addTransitions();
 
+    fsm.run_machine();
+
+    init();
+
     taskReady = true;
 
     while (!Display::taskReady)
@@ -126,18 +117,37 @@ namespace Comms
 
     while (true)
     {
-      Comms::Event ev = nrfCommsQueue->read<Comms::Event>();
+      Comms::Event ev = Comms::queue1->read<Comms::Event>();
       if (ev != Comms::NO_EVENT)
-      {
-        bool print = PRINT_COMMS_STATE_EVENT && Comms::commsFsm.lastEvent() != ev; // (ev == Comms::PKT_RXD && !SUPPRESS_EV_COMMS_PKT_RXD);
-        Comms::commsFsm.trigger(ev, print);
-      }
+        Comms::commsFsm.trigger(ev);
       Comms::fsm.run_machine();
 
       vTaskDelay(10);
     }
     vTaskDelete(NULL);
   }
+  //------------------------------------------------------------
+
+  void queueSent_cb(uint16_t ev)
+  {
+    if (PRINT_COMMS_QUEUE_SENT)
+      Serial.printf(PRINT_QUEUE_SEND_FORMAT, getEventName(ev), "COMMS");
+  }
+
+  void queueRead_cb(uint16_t ev)
+  {
+    if (PRINT_COMMS_QUEUE_READ)
+      Serial.printf(PRINT_QUEUE_SEND_FORMAT, getEventName(ev), "COMMS");
+  }
+
+  void init()
+  {
+    queue1 = new Queue::Manager(/*len*/ 3, sizeof(Comms::Event), /*ticks*/ 10);
+    queue1->setName("Comms");
+    queue1->setSentEventCallback(queueSent_cb);
+    queue1->setReadEventCallback(queueRead_cb);
+  }
+
   //------------------------------------------------------------
 
   void createTask(uint8_t core, uint8_t priority)

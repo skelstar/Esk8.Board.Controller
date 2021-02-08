@@ -69,7 +69,8 @@
     "cerrno": "cpp",
     "cfloat": "cpp",
     "ciso646": "cpp",
-    "climits": "cpp"
+    "climits": "cpp",
+    "queue": "cpp"
   },
   "peacock.color": "#ff3d00"
 }

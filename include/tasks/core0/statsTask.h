@@ -12,7 +12,6 @@ T readFromMemory(char *storeName, char *key, T defaultVal = 0);
 
 namespace Stats
 {
-  xQueueHandle xStatsQueue;
   Queue::Manager *queue;
 
   bool taskReady = false;
@@ -95,13 +94,8 @@ namespace Stats
         case StatsEvent::BOARD_FIRST_PACKET:
           if (stats.boardConnectedThisSession)
           {
-            stats.boardResets++;
             DEBUG("sending DispState::UPDATE");
             displayQueue->send(DispState::UPDATE);
-          }
-          else
-          {
-            DEBUG("stats.boardConnectedThisSession == false");
           }
         }
       }
@@ -142,9 +136,9 @@ namespace Stats
 
   void init()
   {
-    xStatsQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
+    // xStatsQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
     queue = new Queue::Manager(/*length*/ 3, sizeof(StatsEvent), /*ticks*/ 5);
-    queue->setName("queue");
+    queue->setName("Stats");
     queue->setSentEventCallback(queueSentEventCb);
     queue->setReadEventCallback(queueReadEventCb);
 

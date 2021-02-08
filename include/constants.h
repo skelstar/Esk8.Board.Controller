@@ -78,7 +78,7 @@ namespace Comms
     PKT_RXD,
     BOARD_TIMEDOUT,
     BOARD_FIRST_PACKET,
-    Length, // leave this one (used for aserting)
+    Length
   };
 
   const char *getEventName(uint8_t ev)
@@ -94,7 +94,7 @@ namespace Comms
     case BOARD_FIRST_PACKET:
       return "BOARD_FIRST_PACKET";
     }
-    return OUT_OF_RANGE;
+    return "Out of range (Comms::getEventName())";
   }
 } // namespace Comms
 
@@ -172,6 +172,14 @@ namespace Comms
 #endif
 #ifndef PRINT_STATS_QUEUE_READ
 #define PRINT_STATS_QUEUE_READ 0
+#endif
+
+#ifndef PRINT_COMMS_QUEUE_SENT
+#define PRINT_COMMS_QUEUE_SENT 0
+#endif
+
+#ifndef PRINT_COMMS_QUEUE_READ
+#define PRINT_COMMS_QUEUE_READ 0
 #endif
 
 #ifndef FEATURE_PUSH_TO_START
