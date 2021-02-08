@@ -6,11 +6,11 @@ public:
     _old = packet;
     packet = latest;
 
-    _changed = packet.ampHours != _old.ampHours ||
-               packet.batteryVoltage != _old.batteryVoltage ||
-               packet.motorCurrent != _old.motorCurrent ||
-               packet.odometer != _old.odometer ||
-               packet.vescOnline != _old.vescOnline;
+    if (latest.moving)
+      _changed = packet.motorCurrent != _old.motorCurrent ||
+                 packet.vescOnline != _old.vescOnline;
+    else
+      _changed = packet.vescOnline != _old.vescOnline;
     sinceLastPacket = 0;
   }
 
