@@ -14,6 +14,7 @@ namespace Display
 
   enum StateId
   {
+    START_UP,
     DISCONNECTED,
     SOFTWARE_STATS,
     BOARD_BATTERY,
@@ -29,6 +30,8 @@ namespace Display
   {
     switch (id)
     {
+    case START_UP:
+      return "START_UP";
     case DISCONNECTED:
       return "DISCONNECTED";
     case SOFTWARE_STATS:
@@ -53,6 +56,13 @@ namespace Display
 
   FsmManager<DispState::Trigger> dispFsm;
 
+  //---------------------------------------------------------------
+  State stateStartup(
+      [] {
+        dispFsm.printState(START_UP);
+        screenSoftwareStats();
+      },
+      NULL, NULL);
   //---------------------------------------------------------------
   State stateDisconnected(
       [] {
@@ -80,9 +90,7 @@ namespace Display
         if (dispFsm.lastEvent() != DispState::UPDATE)
           dispFsm.printState(STOPPED_SCREEN);
 
-        if (dispFsm.lastEvent() == DispState::UNINTENDED_RESET && board.packet.moving)
-          dispFsm.trigger(DispState::MOVING);
-        else if (stats.controllerResets > 0)
+        if (stats.controllerResets > 0)
           screenNeedToAckResets(Stats::CONTROLLER_RESETS);
         else if (stats.boardResets > 0)
           screenNeedToAckResets(Stats::BOARD_RESETS);
@@ -166,7 +174,7 @@ namespace Display
       NULL, NULL);
   //---------------------------------------------------------------
 
-  Fsm fsm(&stateDisconnected);
+  Fsm fsm(&stateStartup);
 
   void clearResetCounters()
   {
@@ -179,18 +187,11 @@ namespace Display
 
   void addTransitions()
   {
-    // DispState::CONNECTED
-    fsm.add_transition(&stateDisconnected, &stateStopped, DispState::CONNECTED, NULL);
-    fsm.add_transition(&stateDisconnected, &stateStopped, DispState::UNINTENDED_RESET, NULL);
-    fsm.add_transition(&stateDisconnected, &stateStopped, DispState::STOPPED, NULL);
+    fsm.add_timed_transition(&stateStartup, &stateDisconnected, 2000, NULL);
 
     // DispState::DISCONNECTED
     fsm.add_transition(&stateStopped, &stateDisconnected, DispState::DISCONNECTED, NULL);
     fsm.add_transition(&stateMoving, &stateDisconnected, DispState::DISCONNECTED, NULL);
-
-    // DispState::UNINTENDED_RESET
-    fsm.add_transition(&stateStopped, &stateStopped, DispState::UNINTENDED_RESET, NULL);
-    fsm.add_transition(&stateMoving, &stateMoving, DispState::UNINTENDED_RESET, NULL);
 
     // DispState::PRIMARY_DOUBLE_CLICK
     fsm.add_transition(&stateStopped, &stateStopped, DispState::PRIMARY_DOUBLE_CLICK, clearResetCounters);
@@ -201,6 +202,7 @@ namespace Display
     fsm.add_transition(&stateStopped, &stateMoving, DispState::MOVING, NULL);
 
     // DispState::STOPPED
+    fsm.add_transition(&stateDisconnected, &stateStopped, DispState::STOPPED, NULL);
     fsm.add_transition(&stateMoving, &stateStopped, DispState::STOPPED, NULL);
 
     // settings

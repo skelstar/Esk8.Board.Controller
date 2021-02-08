@@ -68,12 +68,10 @@ namespace Comms
         {
           stats.boardResets++;
         }
-        else if (!boardCompatible)
-          displayQueue->send(DispState::VERSION_DOESNT_MATCH);
-        else if (stats.wasUnintendedControllerReset())
-          displayQueue->send(DispState::UNINTENDED_RESET);
-        else
-          displayQueue->send(DispState::CONNECTED);
+        // else if (!boardCompatible)
+        //   displayQueue->send(DispState::VERSION_DOESNT_MATCH);
+        // else
+        //   displayQueue->send(DispState::CONNECTED);
 
         comms_session_started = true;
         stats.boardConnected = true;

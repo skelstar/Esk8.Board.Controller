@@ -26,7 +26,6 @@ namespace DispState
     DISCONNECTED,
     STOPPED,
     MOVING,
-    UNINTENDED_RESET,
     UPDATE,
     PRIMARY_SINGLE_CLICK,
     PRIMARY_DOUBLE_CLICK,
@@ -50,8 +49,6 @@ namespace DispState
       return "STOPPED";
     case MOVING:
       return "MOVING";
-    case UNINTENDED_RESET:
-      return "UNINTENDED_RESET";
     case UPDATE:
       return "UPDATE";
     case PRIMARY_SINGLE_CLICK:

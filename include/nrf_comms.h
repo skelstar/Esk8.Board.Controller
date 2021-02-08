@@ -65,10 +65,16 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
     displayQueue->send(DispState::STOPPED);
     Stats::queue->send(Stats::STOPPED);
   }
-
-  if (board.valuesChanged())
+  else if (board.valuesChanged())
   {
     displayQueue->send(DispState::UPDATE);
+  }
+  else
+  {
+    uint8_t command = board.isStopped()
+                          ? DispState::STOPPED
+                          : DispState::MOVING;
+    displayQueue->send(command);
   }
 
   // this should only happen when using M5STACK

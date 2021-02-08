@@ -5,6 +5,9 @@
 
 namespace Display
 {
+  void printState(uint16_t id);
+  void printTrigger(uint16_t ev);
+
   bool taskReady = false;
 
   void task(void *pvParameters)
@@ -14,14 +17,8 @@ namespace Display
     setupLCD();
 
     dispFsm.begin(&fsm);
-    dispFsm.setPrintStateCallback([](uint16_t id) {
-      if (PRINT_DISP_STATE)
-        Serial.printf(PRINT_STATE_FORMAT, "DISP", Display::stateID(id));
-    });
-    dispFsm.setPrintTriggerCallback([](uint16_t ev) {
-      if (PRINT_DISP_STATE_EVENT)
-        Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "DISP", DispState::getTrigger(ev));
-    });
+    dispFsm.setPrintStateCallback(printState);
+    dispFsm.setPrintTriggerCallback(printTrigger);
 
     addTransitions();
 
@@ -91,4 +88,19 @@ namespace Display
         NULL,
         core);
   }
+
+  void printState(uint16_t id)
+  {
+    if (PRINT_DISP_STATE)
+      Serial.printf(PRINT_STATE_FORMAT, "DISP", Display::stateID(id));
+  }
+
+  void printTrigger(uint16_t ev)
+  {
+    if (PRINT_DISP_STATE_EVENT &&
+        !(fsm.revisit() && ev == DispState::STOPPED) &&
+        !(fsm.revisit() && ev == DispState::MOVING))
+      Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "DISP", DispState::getTrigger(ev));
+  }
+
 } // namespace Display

@@ -20,6 +20,8 @@ public:
   bool valuesChanged() { return _changed; }
   bool startedMoving() { return packet.moving && !_old.moving; }
   bool hasStopped() { return !packet.moving && _old.moving; }
+  bool isStopped() { return !packet.moving; }
+  bool isMoving() { return packet.moving; }
   bool hasTimedout()
   {
     unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
