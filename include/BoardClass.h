@@ -27,7 +27,7 @@ public:
   bool hasTimedout()
   {
     unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
-    return sinceLastPacket > (timeout + 100);
+    return sinceLastPacket > (timeout + 200);
   }
 
   CommandType getCommand() { return packet.command; }

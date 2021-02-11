@@ -81,7 +81,11 @@ namespace Display
   State stBoardBattery(
       [] {
         dispFsm.printState(BOARD_BATTERY);
-        screenBoardBattery(board.packet.batteryVoltage);
+        if (Board::mutex1.take(__func__))
+        {
+          screenBoardBattery(board.packet.batteryVoltage);
+          Board::mutex1.give(__func__);
+        }
       },
       NULL, NULL);
   //---------------------------------------------------------------
@@ -90,22 +94,32 @@ namespace Display
         if (dispFsm.lastEvent() != DispState::UPDATE)
           dispFsm.printState(STOPPED_SCREEN);
 
-        if (stats.controllerResets > 0)
-          screenNeedToAckResets(Stats::CONTROLLER_RESETS);
-        else if (stats.boardResets > 0)
-          screenNeedToAckResets(Stats::BOARD_RESETS);
-        else
-          screenWhenStopped(/*init*/ true);
+        const char *context = "disp: stateStopped (onEnter)";
+        if (Stats::mutex.take(context, TICKS_10))
+        {
+          if (stats.controllerResets > 0)
+            screenNeedToAckResets(Stats::CONTROLLER_RESETS);
+          else if (stats.boardResets > 0)
+            screenNeedToAckResets(Stats::BOARD_RESETS);
+          else
+            screenWhenStopped(/*init*/ true);
+          Stats::mutex.give(context);
+        }
       },
       [] {
-        if (stats.controllerResets == 0 && stats.boardResets == 0)
+        const char *context = "disp: stateStopped (onState)";
+        if (Stats::mutex.take(context), TICKS_10)
         {
-          if (update_display || stats.update)
+          if (stats.controllerResets == 0 && stats.boardResets == 0)
           {
-            update_display = false;
-            stats.update = false;
-            screenWhenStopped(/*init*/ false);
+            if (update_display || stats.update)
+            {
+              update_display = false;
+              stats.update = false;
+              screenWhenStopped(/*init*/ false);
+            }
           }
+          Stats::mutex.give(context);
         }
       },
       NULL);
@@ -113,22 +127,32 @@ namespace Display
   State stateMoving(
       [] {
         dispFsm.printState(MOVING_SCREEN);
-        if (stats.controllerResets > 0)
-          screenNeedToAckResets(Stats::CONTROLLER_RESETS);
-        else if (stats.boardResets > 0)
-          screenNeedToAckResets(Stats::BOARD_RESETS);
-        else
-          screenWhenMoving(/*init*/ true);
+        const char *context = "disp: stateMoving (onEnter)";
+        if (Stats::mutex.take(context, TICKS_10))
+        {
+          if (stats.controllerResets > 0)
+            screenNeedToAckResets(Stats::CONTROLLER_RESETS);
+          else if (stats.boardResets > 0)
+            screenNeedToAckResets(Stats::BOARD_RESETS);
+          else
+            screenWhenMoving(/*init*/ true);
+          Stats::mutex.give(context);
+        }
       },
       [] {
-        if (stats.controllerResets == 0)
+        const char *context = "disp: stateMoving (onState)";
+        if (Stats::mutex.take(context, TICKS_10))
         {
-          if (update_display || stats.update)
+          if (stats.controllerResets == 0)
           {
-            update_display = false;
-            stats.update = false;
-            screenWhenMoving(/*init*/ false);
+            if (update_display || stats.update)
+            {
+              update_display = false;
+              stats.update = false;
+              screenWhenMoving(/*init*/ false);
+            }
           }
+          Stats::mutex.give(context);
         }
       },
       NULL);
@@ -136,7 +160,11 @@ namespace Display
   State stateBoardVersionDoesntMatchScreen(
       [] {
         dispFsm.printState(BOARD_VERSION_DOESNT_MATCH_SCREEN);
-        screenBoardNotCompatible(board.packet.version);
+        if (Board::mutex1.take(__func__))
+        {
+          screenBoardNotCompatible(board.packet.version);
+          Board::mutex1.give(__func__);
+        }
       },
       NULL,
       NULL);
@@ -178,11 +206,15 @@ namespace Display
 
   void clearResetCounters()
   {
-    if (stats.controllerResets > 0)
-      stats.clearControllerResets();
-    else if (stats.boardResets > 0)
-      stats.clearBoardResets();
-    Stats::queue->send(Stats::CLEAR_CONTROLLER_RESETS);
+    if (Stats::mutex.take("disp: clearResetCounter"))
+    {
+      if (stats.controllerResets > 0)
+        stats.clearControllerResets();
+      else if (stats.boardResets > 0)
+        stats.clearBoardResets();
+      Stats::mutex.give("disp: clearResetCounter");
+      Stats::queue->send(Stats::CLEAR_CONTROLLER_RESETS);
+    }
   }
 
   void addTransitions()

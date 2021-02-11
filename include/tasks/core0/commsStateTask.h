@@ -48,7 +48,11 @@ namespace Comms
   State stateDisconnected(
       [] {
         commsFsm.printState(StateId::DISCONNECTED);
-        stats.boardConnected = false;
+        if (Stats::mutex.take("Comms: stateDisconnected", TICKS_100))
+        {
+          stats.boardConnected = false;
+          Stats::mutex.give("Comms: stateDisconnected");
+        }
       },
       NULL,
       NULL);
@@ -56,15 +60,23 @@ namespace Comms
   State stateConnected(
       [] {
         commsFsm.printState(StateId::CONNECTED);
-        bool boardCompatible = boardVersionCompatible(board.packet.version);
+        if (Board::mutex1.take("Comms: stateConnected", TICKS_100))
+        {
+          bool boardCompatible = boardVersionCompatible(board.packet.version);
 
-        if (!boardCompatible)
-          displayQueue->send(DispState::VERSION_DOESNT_MATCH);
-        else if (stats.boardConnectedThisSession)
-          stats.boardResets++;
+          if (Stats::mutex.take("Comms: stateConnected", TICKS_100))
+          {
+            if (!boardCompatible)
+              displayQueue->send(DispState::VERSION_DOESNT_MATCH);
+            else if (stats.boardConnectedThisSession)
+              stats.boardResets++;
 
-        comms_session_started = true;
-        stats.boardConnected = true;
+            comms_session_started = true;
+            stats.boardConnected = true;
+            Stats::mutex.give("Comms: stateConnected");
+          }
+          Board::mutex1.give("Comms: stateConnected");
+        }
       },
       NULL,
       NULL);
@@ -98,7 +110,7 @@ namespace Comms
         Serial.printf(PRINT_STATE_FORMAT, "COMMS", Comms::getStateName(id));
     });
     Comms::commsFsm.setPrintTriggerCallback([](uint16_t ev) {
-      if (PRINT_COMMS_STATE && ev != 0 && ev != Comms::PKT_RXD)
+      if (PRINT_COMMS_STATE_EVENT && ev != 0 && ev != Comms::PKT_RXD)
         Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "COMMS", Comms::getEventName(ev));
     });
 

@@ -16,6 +16,14 @@ enum ButtonClickType
 #define OUT_OF_RANGE "OUT OF RANGE"
 #define NO_MESSAGE_ON_QUEUE 0
 
+#define TICKS_0 0
+#define TICKS_1 1
+#define TICKS_2 2
+#define TICKS_5 5
+#define TICKS_10 10
+#define TICKS_50 50
+#define TICKS_100 100
+
 //------------------------------------------------------------
 namespace DispState
 {

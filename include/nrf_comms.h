@@ -35,44 +35,57 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 
   VescData packet = boardClient.read();
 
-  board.save(packet);
-
-  if (board.packet.reason == FIRST_PACKET)
+  if (Board::mutex1.take(__func__))
   {
-    DEBUG("*** board's first packet!! ***");
-
-    Comms::queue1->send(Comms::Event::BOARD_FIRST_PACKET);
-
-    controller_packet.id = 0;
-    sendConfigToBoard();
-
-    sinceBoardConnected = 0;
-
-    Stats::queue->send(Stats::BOARD_FIRST_PACKET);
+    board.save(packet);
+    Board::mutex1.give(__func__);
   }
-  else if (board.startedMoving())
+
+  if (Board::mutex1.take(__func__))
   {
-    displayQueue->send(DispState::MOVING);
-    Stats::queue->send(Stats::MOVING);
-  }
-  else if (board.hasStopped())
-  {
-    displayQueue->send(DispState::STOPPED);
-    Stats::queue->send(Stats::STOPPED);
-  }
-  else if (board.valuesChanged())
-    displayQueue->send(DispState::UPDATE);
+    if (board.packet.reason == FIRST_PACKET)
+    {
+      DEBUG("*** board's first packet!! ***");
 
-  else if (board.isStopped())
-    displayQueue->send(DispState::STOPPED);
+      Comms::queue1->send(Comms::Event::BOARD_FIRST_PACKET);
 
-  else if (board.isMoving())
-    displayQueue->send(DispState::MOVING);
+      controller_packet.id = 0;
+      sendConfigToBoard();
+
+      sinceBoardConnected = 0;
+
+      Stats::queue->send(Stats::BOARD_FIRST_PACKET);
+    }
+    else if (board.startedMoving())
+    {
+      displayQueue->send(DispState::MOVING);
+      Stats::queue->send(Stats::MOVING);
+    }
+    else if (board.hasStopped())
+    {
+      displayQueue->send(DispState::STOPPED);
+      Stats::queue->send(Stats::STOPPED);
+    }
+    else if (board.valuesChanged())
+      displayQueue->send(DispState::UPDATE);
+
+    else if (board.isStopped())
+      displayQueue->send(DispState::STOPPED);
+
+    else if (board.isMoving())
+      displayQueue->send(DispState::MOVING);
+
+    Board::mutex1.give(__func__);
+  }
 
   // this should only happen when using M5STACK
-  if (DEBUG_BUILD && board.getCommand() == CommandType::RESET)
+  if (Board::mutex1.take(__func__))
   {
-    ESP.restart();
+    if (DEBUG_BUILD && board.getCommand() == CommandType::RESET)
+    {
+      ESP.restart();
+    }
+    Board::mutex1.give(__func__);
   }
 
   Comms::queue1->send(Comms::Event::PKT_RXD);
@@ -89,18 +102,27 @@ void sendConfigToBoard()
 
 void sendPacketToBoard()
 {
-  bool rxLastResponse = board.packet.id == controller_packet.id - 1 &&
-                        board.packet.id > 0;
-  if (!rxLastResponse && stats.boardConnected)
+  if (Board::mutex1.take(__func__, (TickType_t)TICKS_10))
   {
-    stats.total_failed_sending += 1;
-    if (PRINT_IF_TOTAL_FAILED_SENDING)
-      DEBUGVAL(board.packet.id, controller_packet.id);
+    bool rxLastResponse = board.packet.id == controller_packet.id - 1 &&
+                          board.packet.id > 0;
+    Board::mutex1.give(__func__);
+
+    if (Stats::mutex.take(__func__, (TickType_t)TICKS_10))
+    {
+      if (!rxLastResponse && stats.boardConnected)
+      {
+        stats.total_failed_sending += 1;
+        if (PRINT_IF_TOTAL_FAILED_SENDING)
+          DEBUGVAL(board.packet.id, controller_packet.id);
+      }
+      Stats::mutex.give(__func__);
+    }
+
+    boardClient.sendTo(Packet::CONTROL, controller_packet);
+
+    controller_packet.id++;
   }
-
-  boardClient.sendTo(Packet::CONTROL, controller_packet);
-
-  controller_packet.id++;
 }
 //------------------------------------------------------------------
 

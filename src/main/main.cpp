@@ -29,6 +29,7 @@ Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 #include <QueueManager.h>
 
 //------------------------------------------------------------
+#include "rtosManager.h"
 
 xQueueHandle xDisplayEventQueue;
 xQueueHandle xButtonPushEventQueue;
@@ -95,7 +96,16 @@ BoardClass board;
 
 //------------------------------------------------------------------
 
-//------------------------------------------------------------------
+namespace Board
+{
+  MyMutex mutex1;
+
+  void init()
+  {
+    mutex1.create("board", TICKS_2);
+    // mutex1.enabled = false;
+  }
+} // namespace Board
 
 // prototypes
 void boardPacketAvailable_cb(uint16_t from_id, uint8_t t);
@@ -220,22 +230,27 @@ void setup()
   String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
   chipId.toUpperCase();
 
+  Board::init();
   Stats::init();
 
   configStore.begin(STORE_CONFIG, false);
 
-  if (stats.wasWatchdogReset())
+  if (Stats::mutex.take("setup()"))
   {
-    stats.controllerResets++;
-    storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
-    stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS, STORE_STATS_TRIP_TIME);
-    if (PRINT_RESET_DETECTION)
-      Serial.printf("RESET!!! =========> controllerResets: %d\n", stats.controllerResets);
-  }
-  else if (stats.powerOnReset())
-  {
-    stats.controllerResets = 0;
-    storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
+    if (stats.wasWatchdogReset())
+    {
+      stats.controllerResets++;
+      storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
+      stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS, STORE_STATS_TRIP_TIME);
+      if (PRINT_RESET_DETECTION)
+        Serial.printf("RESET!!! =========> controllerResets: %d\n", stats.controllerResets);
+    }
+    else if (stats.powerOnReset())
+    {
+      stats.controllerResets = 0;
+      storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
+    }
+    Stats::mutex.give("setup()");
   }
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER);
@@ -294,8 +309,12 @@ void loop()
     sendToBoard();
   }
 
-  if (board.hasTimedout())
-    Comms::queue1->send(Comms::Event::BOARD_TIMEDOUT);
+  if (Board::mutex1.take(__func__))
+  {
+    if (board.hasTimedout())
+      Comms::queue1->send(Comms::Event::BOARD_TIMEDOUT);
+    Board::mutex1.give(__func__);
+  }
 
   if (sinceNRFUpdate > 20)
   {
@@ -316,17 +335,23 @@ void loop()
 
 void sendToBoard()
 {
+  bool throttleEnabled = false;
+  bool cruiseControlActive = false;
 
-  bool throttleEnabled =
-      throttle.get() < 127 || // braking
-      board.packet.moving ||
-      !featureService.get<bool>(PUSH_TO_START) ||
-      (featureService.get<bool>(PUSH_TO_START) && primaryButton.isPressedRaw());
+  if (Board::mutex1.take(__func__, 50))
+  {
+    throttleEnabled =
+        throttle.get() < 127 || // braking
+        board.packet.moving ||
+        !featureService.get<bool>(PUSH_TO_START) ||
+        (featureService.get<bool>(PUSH_TO_START) && primaryButton.isPressedRaw());
 
-  bool cruiseControlActive =
-      board.packet.moving &&
-      FEATURE_CRUISE_CONTROL &&
-      primaryButton.isPressedRaw();
+    cruiseControlActive =
+        board.packet.moving &&
+        FEATURE_CRUISE_CONTROL &&
+        primaryButton.isPressedRaw();
+    Board::mutex1.give(__func__);
+  }
 
   sinceSentToBoard = 0;
   controller_packet.throttle = throttle.get(/*enabled*/ throttleEnabled);

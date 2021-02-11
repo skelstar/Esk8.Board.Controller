@@ -14,6 +14,8 @@ namespace Stats
 {
   Queue::Manager *queue;
 
+  MyMutex mutex;
+
   bool taskReady = false;
 
   enum ResetsType
@@ -76,9 +78,13 @@ namespace Stats
         case StatsEvent::STOPPED:
           if (sinceStartedMoving > 5000)
           {
-            // store moving time in memory
-            stats.addMovingTime(sinceStartedMoving);
-            storeInMemory<unsigned long>(STORE_STATS, STORE_STATS_TRIP_TIME, stats.timeMovingMS);
+            if (mutex.take(__func__))
+            {
+              // store moving time in memory
+              stats.addMovingTime(sinceStartedMoving);
+              storeInMemory<unsigned long>(STORE_STATS, STORE_STATS_TRIP_TIME, stats.timeMovingMS);
+              mutex.give(__func__);
+            }
           }
           break;
         case StatsEvent::MOVING:
@@ -86,16 +92,28 @@ namespace Stats
           sinceStartedMoving = 0;
           break;
         case StatsEvent::CLEAR_CONTROLLER_RESETS:
-          stats.clearControllerResets();
+          if (mutex.take(__func__))
+          {
+            stats.clearControllerResets();
+            mutex.give(__func__);
+          }
           break;
         case StatsEvent::CLEAR_BOARD_RESETS:
-          stats.clearControllerResets();
+          if (mutex.take(__func__))
+          {
+            stats.clearControllerResets();
+            mutex.give(__func__);
+          }
           break;
         case StatsEvent::BOARD_FIRST_PACKET:
-          if (stats.boardConnectedThisSession)
+          if (mutex.take(__func__))
           {
-            DEBUG("sending DispState::UPDATE");
-            displayQueue->send(DispState::UPDATE);
+            if (stats.boardConnectedThisSession)
+            {
+              DEBUG("sending DispState::UPDATE");
+              displayQueue->send(DispState::UPDATE);
+            }
+            mutex.give(__func__);
           }
         }
       }
@@ -136,17 +154,23 @@ namespace Stats
 
   void init()
   {
-    // xStatsQueue = xQueueCreate(/*len*/ 3, sizeof(uint8_t));
+    mutex.create("stats", TICKS_2);
+    mutex.enabled = false;
+
     queue = new Queue::Manager(/*length*/ 3, sizeof(StatsEvent), /*ticks*/ 5);
     queue->setName("Stats");
     queue->setSentEventCallback(queueSentEventCb);
     queue->setReadEventCallback(queueReadEventCb);
 
-    // get the number of resets
-    stats.controllerResets = readFromMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS);
+    if (mutex.take(__func__))
+    {
+      // get the number of resets
+      stats.controllerResets = readFromMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS);
 
-    stats.setResetReasons(rtc_get_reset_reason(0), rtc_get_reset_reason(1));
-    stats.setResetsAcknowledgedCallback(resetsAcknowledged_callback);
+      stats.setResetReasons(rtc_get_reset_reason(0), rtc_get_reset_reason(1));
+      stats.setResetsAcknowledgedCallback(resetsAcknowledged_callback);
+      mutex.give(__func__);
+    }
   }
 
   void storeTimeMovingInMemory()
