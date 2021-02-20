@@ -23,7 +23,10 @@ Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 #include <NRF24L01Lib.h>
 #include <GenericClient.h>
 
+#if OPTION_USING_DISPLAY
 #include <TFT_eSPI.h>
+#endif
+
 #include <Preferences.h>
 #include <BatteryLib.h>
 #include <QueueManager.h>
@@ -161,7 +164,9 @@ void m5AtomClientInit()
 #endif
 //------------------------------------------------------------------
 
+#if OPTION_USING_DISPLAY
 TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
+#endif
 
 //------------------------------------------------------------------
 
@@ -202,11 +207,12 @@ ThrottleClass throttle;
 #include <tasks/core0/statsTask.h>
 #include <tasks/core0/remoteTask.h>
 #include <utils.h>
+
+#if OPTION_USING_DISPLAY
 #include <screens.h>
-
 #include <displayState.h>
-
 #include <tasks/core0/displayTask.h>
+#endif
 #include <tasks/core0/commsStateTask.h>
 #include <nrf_comms.h>
 
@@ -269,24 +275,32 @@ void setup()
 
   vTaskDelay(100);
 
-  // CORE_0
+// CORE_0
+#if OPTION_USING_DISPLAY
   Display::createTask(DISPLAY_TASK_CORE, TASK_PRIORITY_3);
+#endif
   Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_2);
   Remote::createTask(BATTERY_TASK_CORE, TASK_PRIORITY_1);
   Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
 
-  // CORE_1
   xDisplayEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
 
   displayQueue = new Queue::Manager(xDisplayEventQueue, 5);
+#if OPTION_USING_DISPLAY
   displayQueue->setReadEventCallback(Display::queueReadCb);
+#endif
   buttonQueue = new Queue::Manager(xButtonPushEventQueue, 10);
 
-  while (!Display::taskReady &&
-         !Comms::taskReady &&
-         !Stats::taskReady &&
-         !Remote::taskReady)
+  bool displayReady = false;
+
+  while (
+#if OPTION_USING_DISPLAY
+      !Display::taskReady &&
+#endif
+      !Comms::taskReady &&
+      !Stats::taskReady &&
+      !Remote::taskReady)
   {
     vTaskDelay(10);
   }

@@ -1,6 +1,9 @@
 #ifndef Fsm
 #include <Fsm.h>
 #endif
+#ifndef FSMMANAGER_H
+#include <FsmManager.h>
+#endif
 
 //------------------------------------------
 /* prototypes */
@@ -122,10 +125,12 @@ namespace Comms
 
     taskReady = true;
 
+#if OPTION_USING_DISPLAY
     while (!Display::taskReady)
     {
       vTaskDelay(1);
     }
+#endif
 
     while (true)
     {
