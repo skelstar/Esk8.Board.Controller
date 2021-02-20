@@ -154,8 +154,6 @@ void m5AtomClientInit()
 
 #define BATTERY_MEASURE_PIN 34
 
-BatteryLib remote_batt(BATTERY_MEASURE_PIN);
-
 //------------------------------------------------------------------
 
 #ifndef SEND_TO_BOARD_INTERVAL
@@ -175,8 +173,6 @@ elapsedMillis
     sinceBoardConnected,
     sinceStoredSnapshot;
 
-uint16_t remote_battery_percent = 0;
-bool remoteBattCharging = false;
 int oldCounter = 0;
 
 // prototypes
@@ -204,6 +200,7 @@ ThrottleClass throttle;
 //---------------------------------------------------------------
 
 #include <tasks/core0/statsTask.h>
+#include <tasks/core0/remoteTask.h>
 #include <utils.h>
 #include <screens.h>
 
@@ -212,8 +209,6 @@ ThrottleClass throttle;
 #include <tasks/core0/displayTask.h>
 #include <tasks/core0/commsStateTask.h>
 #include <nrf_comms.h>
-
-#include <features/battery_measure.h>
 
 #include <peripherals.h>
 #include <assert.h>
@@ -277,7 +272,7 @@ void setup()
   // CORE_0
   Display::createTask(DISPLAY_TASK_CORE, TASK_PRIORITY_3);
   Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_2);
-  Battery::createTask(BATTERY_TASK_CORE, TASK_PRIORITY_1);
+  Remote::createTask(BATTERY_TASK_CORE, TASK_PRIORITY_1);
   Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
 
   // CORE_1
@@ -291,7 +286,7 @@ void setup()
   while (!Display::taskReady &&
          !Comms::taskReady &&
          !Stats::taskReady &&
-         !Battery::taskReady)
+         !Remote::taskReady)
   {
     vTaskDelay(10);
   }

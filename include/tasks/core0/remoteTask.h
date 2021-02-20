@@ -5,9 +5,13 @@ elapsedMillis since_measure_battery;
 
 // prototypes
 
-namespace Battery
+namespace Remote
 {
   void battVoltsChanged_cb();
+
+  MyMutex mutex;
+
+  BatteryLib battery(BATTERY_MEASURE_PIN);
 
   namespace
   {
@@ -19,18 +23,28 @@ namespace Battery
   //--------------------------------------------------------
   void task(void *pvParameters)
   {
-    remote_batt.setup(battVoltsChanged_cb);
+    Remote::battery.setup(battVoltsChanged_cb);
 
     Serial.printf(PRINT_TASK_STARTED_FORMAT, taskName, xPortGetCoreID());
 
     taskReady = true;
+
+    mutex.create("remote", TICKS_2);
+    mutex.enabled = true;
 
     while (true)
     {
       if (since_measure_battery > BATTERY_MEASURE_INTERVAL)
       {
         since_measure_battery = 0;
-        remote_batt.update();
+        if (Remote::mutex.take(__func__, TICKS_50))
+          battery.update();
+
+        if (battery.isCharging)
+        {
+          displayQueue->send(DispState::UPDATE);
+        }
+        Remote::mutex.give(__func__);
       }
       vTaskDelay(10);
     }
@@ -57,4 +71,4 @@ namespace Battery
     displayQueue->send(DispState::UPDATE);
   }
   //--------------------------------------------------------
-} // namespace Battery
+} // namespace Remote

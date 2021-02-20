@@ -35,6 +35,7 @@ namespace DispState
     STOPPED,
     MOVING,
     UPDATE,
+    REMOTE_BATTERY_CHANGED,
     PRIMARY_SINGLE_CLICK,
     PRIMARY_DOUBLE_CLICK,
     PRIMARY_TRIPLE_CLICK,
@@ -59,6 +60,8 @@ namespace DispState
       return "MOVING";
     case UPDATE:
       return "UPDATE";
+    case REMOTE_BATTERY_CHANGED:
+      return "REMOTE_BATTERY_CHANGED";
     case PRIMARY_SINGLE_CLICK:
       return "PRIMARY_SINGLE_CLICK";
     case PRIMARY_DOUBLE_CLICK:

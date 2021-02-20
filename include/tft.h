@@ -45,8 +45,8 @@ enum MessageStatus
 
 uint16_t status_colours[3] = {TFT_BLUE, TFT_ORANGE, TFT_RED};
 
-uint16_t get_x_from_datum(uint16_t x, uint16_t width, uint8_t datum);
-uint16_t get_y_from_datum(uint16_t y, uint16_t height, uint8_t datum);
+uint16_t calulateX(uint16_t x, uint16_t width, uint8_t datum);
+uint16_t calculateY(uint16_t y, uint16_t height, uint8_t datum);
 
 TFT_eSprite _spr = TFT_eSprite(&tft);
 
@@ -208,43 +208,58 @@ void drawBattery(BatteryLib batt, uint8_t x1, uint8_t y1, uint8_t width, uint8_t
 }
 //--------------------------------------------------------------------------------
 
-#define SM_BATT_WIDTH 30
-#define SM_BATT_HEIGHT 12
-#define SM_BATT_KNOB_WIDTH 3
-
-//--------------------------------------------------------------------------------
-void drawSmallBattery(uint8_t percent, uint16_t x, uint16_t y, uint8_t datum)
+void drawSmallBattery(uint8_t percent, uint16_t x, uint16_t y, uint16_t width, uint8_t datum, bool charging, uint32_t bgColour = TFT_BLACK)
 {
-  uint32_t colour = percent > 50 ? TFT_WHITE : percent > 30 ? TFT_YELLOW : TFT_ORANGE;
+  DEBUGVAL(datum);
+  uint32_t colour = TFT_WHITE;
+  uint16_t height = (0.45) * width,
+           knobWidth = (0.1) * width;
+  uint16_t x1 = x;
+  x = calulateX(x, width, datum);
+  y = calculateY(y, height, datum);
 
-  x = get_x_from_datum(x, SM_BATT_WIDTH, datum);
-  y = get_y_from_datum(y, SM_BATT_HEIGHT, datum);
+  DEBUGVAL(LCD_WIDTH, LCD_WIDTH / 2, x1, x, width, datum);
 
-  tft.fillRect(x + SM_BATT_KNOB_WIDTH, y, SM_BATT_WIDTH - SM_BATT_KNOB_WIDTH, SM_BATT_HEIGHT, colour);
+  // body
+  tft.fillRect(x + knobWidth, y, width - knobWidth, height, colour);
   // knob
-  tft.fillRect(x, y + 3, SM_BATT_KNOB_WIDTH, SM_BATT_HEIGHT - (3 * 2), colour);
-  // capacity (remove from 100% using black box)
-  uint8_t remove_box_width = ((100 - percent) / 100.0) * (SM_BATT_WIDTH - SM_BATT_KNOB_WIDTH);
-  tft.fillRect(x + SM_BATT_KNOB_WIDTH + 1, y + 1, remove_box_width, SM_BATT_HEIGHT - 2, TFT_BLUE);
+  tft.fillRect(x, y + (height / 4), knobWidth, height - ((height / 4) * 2), colour);
+
+  if (charging)
+  {
+    uint8_t halfx = x + ((knobWidth + width) / 2.0),
+            halfy = y + height / 2,
+            trixoffset = width / 9.0;
+    tft.fillTriangle(halfx, y + 2, halfx - trixoffset, halfy, halfx, halfy, bgColour);
+    tft.fillTriangle(halfx, halfy, halfx + trixoffset, halfy, halfx, y + height - 2, bgColour);
+  }
+  else
+  {
+    // capacity (remove from 100% using black box)
+    uint8_t remove_box_width = ((100 - percent) / 100.0) * (width - knobWidth);
+    tft.fillRect(x + knobWidth + 1, y + 1, remove_box_width, height - 2, bgColour);
+  }
+  // is charging
 }
+
 //--------------------------------------------------------------------------------
-uint16_t get_x_from_datum(uint16_t x, uint16_t width, uint8_t datum)
+uint16_t calulateX(uint16_t x, uint16_t width, uint8_t datum)
 {
   switch (datum)
   {
-  case TL_DATUM:
-  case ML_DATUM:
-  case BL_DATUM:
+  case (uint8_t)TL_DATUM:
+  case (uint8_t)ML_DATUM:
+  case (uint8_t)BL_DATUM:
     return x;
     break;
-  case TC_DATUM:
-  case MC_DATUM:
-  case BC_DATUM:
+  case (uint8_t)TC_DATUM:
+  case (uint8_t)MC_DATUM:
+  case (uint8_t)BC_DATUM:
     return x - (width / 2);
     break;
-  case TR_DATUM:
-  case MR_DATUM:
-  case BR_DATUM:
+  case (uint8_t)TR_DATUM:
+  case (uint8_t)MR_DATUM:
+  case (uint8_t)BR_DATUM:
     return x - width;
     break;
   }
@@ -252,7 +267,7 @@ uint16_t get_x_from_datum(uint16_t x, uint16_t width, uint8_t datum)
 }
 //--------------------------------------------------------------------------------
 // returns the top of the object from y being the bottom/top/middle depending on datum
-uint16_t get_y_from_datum(uint16_t y, uint16_t height, uint8_t datum)
+uint16_t calculateY(uint16_t y, uint16_t height, uint8_t datum)
 {
   switch (datum)
   {

@@ -72,5 +72,6 @@
     "climits": "cpp",
     "queue": "cpp"
   },
-  "peacock.color": "#ff3d00"
+  "peacock.color": "#ff3d00",
+  "workbench.editor.enablePreviewFromQuickOpen": true
 }

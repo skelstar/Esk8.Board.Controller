@@ -1,6 +1,7 @@
 #include <ChunkyDigit.h>
 #include <SlantyDigit.h>
 #include <math.h>
+#include <string.h>
 
 #ifndef TFT_H
 #include <tft.h>
@@ -288,6 +289,61 @@ void quarterScreen(QuarterPosition position, float value, char *title, uint32_t 
   char buff[20];
   sprintf(buff, value < 1000.0 ? "%.1f" : "%.0f", value);
   quarterScreen(position, buff, title, bgColour);
+}
+//-----------------------------------------------------
+
+void simpleStoppedScreen(const char *text, uint32_t colour)
+{
+  uint8_t y = 0;
+  tft.fillScreen(TFT_BLACK);
+
+  y = (LCD_HEIGHT / 2) - tft.fontHeight() - 15;
+  tft.setFreeFont(FONT_LG);
+  tft.setTextColor(TFT_CYAN);
+  tft.setTextDatum(TC_DATUM);
+  tft.drawString(text, LCD_WIDTH / 2, y);
+  y += tft.fontHeight();
+
+  // remote battery
+  const int batteryWidth = 50;
+  if (Remote::mutex.take(__func__, TICKS_50))
+  {
+    y += 15;
+    uint8_t percent = Remote::battery.chargePercent;
+    Remote::mutex.give(__func__);
+    drawSmallBattery(percent, LCD_WIDTH / 2 - 5, y, batteryWidth, TR_DATUM, Remote::battery.isCharging);
+
+    char buff[10];
+    sprintf(buff, "%0.1fv", Remote::battery.getVolts());
+    tft.setTextDatum(TL_DATUM);
+    tft.setFreeFont(FONT_LG);
+    tft.setTextColor(TFT_DARKGREY);
+    tft.drawString(buff, LCD_WIDTH / 2 + 5, y - 4);
+  }
+
+  y += 30;
+  tft.setTextColor(TFT_DARKGREY);
+
+  tft.setFreeFont(FONT_MED);
+  tft.setTextDatum(TC_DATUM);
+  std::string s(GIT_BRANCH_NAME);
+  if (s.length() > 20)
+    s = s.substr(0, 20) + "..."; // truncate and add "..."
+  tft.drawString(s.c_str(), LCD_WIDTH / 2, y);
+}
+//-----------------------------------------------------
+
+void simpleMovingScreen()
+{
+  uint8_t y = 0;
+  tft.fillScreen(TFT_BLACK);
+
+  y = (LCD_HEIGHT / 2);
+  tft.setFreeFont(FONT_LG);
+  tft.setTextColor(TFT_CYAN);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("MOVING", LCD_WIDTH / 2, y);
+  y += tft.fontHeight();
 }
 //-----------------------------------------------------
 

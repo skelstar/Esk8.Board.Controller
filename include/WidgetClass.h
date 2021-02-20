@@ -146,7 +146,6 @@ public:
       // black rect for used part
       w = w * (1 - (batt.chargePercent / 100.0));
       _spr.fillRect(x, y, w, h, _bgColour);
-      DEBUGVAL(batt.chargePercent);
     }
     else
     {
@@ -177,9 +176,9 @@ private:
     bool swapped = _statusDirSwapped;
     return ((val >= _crit && !swapped) || (val <= _crit && swapped))
                ? CRITICAL
-               : ((val >= _warn && !swapped) || (val <= _warn && swapped))
-                     ? WARNING
-                     : OKAY;
+           : ((val >= _warn && !swapped) || (val <= _warn && swapped))
+               ? WARNING
+               : OKAY;
   }
 
   void _setPosition(WidgetPos pos, WidgetSize size)

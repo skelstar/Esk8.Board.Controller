@@ -7,7 +7,6 @@
 
 namespace Display
 {
-  bool update_display = false;
   DispState::Trigger lastDispEvent;
 
   elapsedMillis sinceShowingToggleScreen;
@@ -91,8 +90,12 @@ namespace Display
   //---------------------------------------------------------------
   State stateStopped(
       [] {
-        if (dispFsm.lastEvent() != DispState::UPDATE)
-          dispFsm.printState(STOPPED_SCREEN);
+        // don't need UPDATE at this stage
+        if (dispFsm.lastEvent() == DispState::UPDATE)
+          return;
+
+        // if (dispFsm.lastEvent() != DispState::UPDATE)
+        dispFsm.printState(STOPPED_SCREEN);
 
         const char *context = "disp: stateStopped (onEnter)";
         if (Stats::mutex.take(context, TICKS_10))
@@ -102,30 +105,34 @@ namespace Display
           else if (stats.boardResets > 0)
             screenNeedToAckResets(Stats::BOARD_RESETS);
           else
-            screenWhenStopped(/*init*/ true);
+            simpleStoppedScreen("STOPPED", TFT_CASET);
+          // screenWhenStopped(/*init*/ true);
           Stats::mutex.give(context);
         }
       },
       [] {
-        const char *context = "disp: stateStopped (onState)";
-        if (Stats::mutex.take(context), TICKS_10)
-        {
-          if (stats.controllerResets == 0 && stats.boardResets == 0)
-          {
-            if (update_display || stats.update)
-            {
-              update_display = false;
-              stats.update = false;
-              screenWhenStopped(/*init*/ false);
-            }
-          }
-          Stats::mutex.give(context);
-        }
+        // const char *context = "disp: stateStopped (onState)";
+        // if (Stats::mutex.take(context), TICKS_10)
+        // {
+        //   if (stats.controllerResets == 0 && stats.boardResets == 0)
+        //   {
+        //     if (stats.update)
+        //     {
+        //       stats.update = false;
+        //       screenWhenStopped(/*init*/ false);
+        //     }
+        //   }
+        //   Stats::mutex.give(context);
+        // }
       },
       NULL);
   //---------------------------------------------------------------
   State stateMoving(
       [] {
+        // don't need UPDATE at this stage
+        if (dispFsm.lastEvent() == DispState::UPDATE)
+          return;
+
         dispFsm.printState(MOVING_SCREEN);
         const char *context = "disp: stateMoving (onEnter)";
         if (Stats::mutex.take(context, TICKS_10))
@@ -135,25 +142,24 @@ namespace Display
           else if (stats.boardResets > 0)
             screenNeedToAckResets(Stats::BOARD_RESETS);
           else
-            screenWhenMoving(/*init*/ true);
+            simpleMovingScreen();
           Stats::mutex.give(context);
         }
       },
       [] {
-        const char *context = "disp: stateMoving (onState)";
-        if (Stats::mutex.take(context, TICKS_10))
-        {
-          if (stats.controllerResets == 0)
-          {
-            if (update_display || stats.update)
-            {
-              update_display = false;
-              stats.update = false;
-              screenWhenMoving(/*init*/ false);
-            }
-          }
-          Stats::mutex.give(context);
-        }
+        // const char *context = "disp: stateMoving (onState)";
+        // if (Stats::mutex.take(context, TICKS_10))
+        // {
+        //   if (stats.controllerResets == 0)
+        //   {
+        //     if (stats.update)
+        //     {
+        //       stats.update = false;
+        //       screenWhenMoving(/*init*/ false);
+        //     }
+        //   }
+        //   Stats::mutex.give(context);
+        // }
       },
       NULL);
   //---------------------------------------------------------------
@@ -236,6 +242,9 @@ namespace Display
     // DispState::STOPPED
     fsm.add_transition(&stateDisconnected, &stateStopped, DispState::STOPPED, NULL);
     fsm.add_transition(&stateMoving, &stateStopped, DispState::STOPPED, NULL);
+
+    //DispState::REMOTE_BATTERY_CHANGED
+    fsm.add_transition(&stateStopped, &stateStopped, DispState::REMOTE_BATTERY_CHANGED, NULL);
 
     // settings
     /*
