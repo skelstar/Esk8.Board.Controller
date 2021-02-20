@@ -17,6 +17,7 @@ public:
     _pin = pin;
 
     _mapper.init(REMOTE_BATTERY_EMPTY, REMOTE_BATTERY_FULL, 0, 10);
+    _voltsMapper.init(REMOTE_BATTERY_EMPTY, REMOTE_BATTERY_FULL, 3.4, 4.2);
   }
 
   void setup(BatteryValueChangedCallback cb)
@@ -42,6 +43,11 @@ public:
     return _rawVolts;
   }
 
+  float getVolts()
+  {
+    return _voltsMapper.constrainedMap(_rawVolts);
+  }
+
 public:
   uint8_t chargePercent = 0;
 
@@ -57,5 +63,5 @@ private:
   BatteryValueChangedCallback _battery_value_changed_cb;
   uint8_t _pin;
   uint16_t _rawVolts;
-  FastMap _mapper;
+  FastMap _mapper, _voltsMapper;
 };

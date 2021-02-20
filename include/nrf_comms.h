@@ -2,100 +2,94 @@
 #include <types.h>
 #endif
 
-void processHUDPacket();
 void processBoardPacket();
 void sendConfigToBoard();
 void sendPacketToBoard();
-void sendInstructionToHud(HUD::Instruction instruction);
+
+const char *getReason(ReasonType reason)
+{
+  switch (reason)
+  {
+  case BOARD_STOPPED:
+    return "BOARD_STOPPED";
+  case BOARD_MOVING:
+    return "BOARD_MOVING";
+  case FIRST_PACKET:
+    return "FIRST_PACKET";
+  case LAST_WILL:
+    return "LAST_WILL";
+  case REQUESTED:
+    return "REQUESTED";
+  case VESC_OFFLINE:
+    return "VESC_OFFLINE";
+  case RESPONSE:
+    return "RESPONSE";
+  }
+  return "Out of range (getReason())";
+}
 
 //------------------------------------------------------------------
 void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 {
-  using namespace HUD;
   sinceLastBoardPacketRx = 0;
 
   VescData packet = boardClient.read();
 
-  board.save(packet);
-
-  if (board.packet.reason == FIRST_PACKET)
+  if (Board::mutex.take(__func__))
   {
-    /*
-    * send board reset event to commsState
-    * set controller_packet.id = 0
-    * send controller "CONFIG" packet to board
-    */
-    DEBUG("*** board's first packet!! ***");
-
-    nrfCommsQueue->send(Comms::Event::BOARD_FIRST_PACKET);
-    if (FEATURE_SEND_TO_HUD)
-      sendInstructionToHud(HEARTBEAT);
-
-    controller_packet.id = 0;
-    sendConfigToBoard();
-
-    sinceBoardConnected = 0;
-  }
-  else if (board.startedMoving())
-  {
-    displayQueue->send(DispState::MOVING);
-    if (FEATURE_SEND_TO_HUD)
-      sendInstructionToHud(FLASH | FAST | GREEN);
-  }
-  else if (board.hasStopped())
-  {
-    displayQueue->send(DispState::STOPPED);
-    if (FEATURE_SEND_TO_HUD)
-      sendInstructionToHud(FLASH | RED | SLOW);
+    board.save(packet);
+    Board::mutex.give(__func__);
   }
 
-  if (board.valuesChanged())
+  if (Board::mutex.take(__func__))
   {
-    displayQueue->send(DispState::UPDATE);
+    if (board.packet.reason == FIRST_PACKET)
+    {
+      DEBUG("*** board's first packet!! ***");
+
+      Comms::queue1->send(Comms::Event::BOARD_FIRST_PACKET);
+
+      controller_packet.id = 0;
+      sendConfigToBoard();
+
+      sinceBoardConnected = 0;
+
+      Stats::queue->send(Stats::BOARD_FIRST_PACKET);
+    }
+    else if (board.startedMoving())
+    {
+      displayQueue->send(DispState::MOVING);
+      Stats::queue->send(Stats::MOVING);
+    }
+    else if (board.hasStopped())
+    {
+      displayQueue->send(DispState::STOPPED);
+      Stats::queue->send(Stats::STOPPED);
+    }
+    else if (board.valuesChanged())
+      displayQueue->send(DispState::UPDATE);
+
+    else if (board.isStopped())
+      displayQueue->send(DispState::STOPPED);
+
+    else if (board.isMoving())
+      displayQueue->send(DispState::MOVING);
+
+    Board::mutex.give(__func__);
   }
 
   // this should only happen when using M5STACK
-  if (DEBUG_BUILD && board.getCommand() == CommandType::RESET)
+  if (Board::mutex.take(__func__))
   {
-    ESP.restart();
+    if (DEBUG_BUILD && board.getCommand() == CommandType::RESET)
+    {
+      ESP.restart();
+    }
+    Board::mutex.give(__func__);
   }
 
-  nrfCommsQueue->send(Comms::Event::PKT_RXD);
+  Comms::queue1->send(Comms::Event::PKT_RXD);
 }
-//------------------------------------------------------------------
-
-void hudPacketAvailable_cb(uint16_t from_id, uint8_t type)
-{
-  using namespace HUD;
-  if (type != Packet::HUD)
-  {
-    Serial.printf("WARNING: Rx type: %d not supported!\n", type);
-    return;
-  }
-
-  if (!FEATURE_SEND_TO_HUD)
-    return;
-
-  uint16_t ev = hudClient.read();
-  if ((uint16_t)ev > HUDAction::Length)
-  {
-    Serial.printf("WARNING: Action from HUD out of range (%d)\n", (uint16_t)ev);
-    return;
-  }
-
-  // TODO respond with appropriate action response?
-
-  switch (HUDAction::Event(ev))
-  {
-  case HUDAction::ONE_CLICK:
-    hudActionQueue->send(ev);
-    break;
-  default:
-    if (FEATURE_SEND_TO_HUD)
-      sendInstructionToHud(TWO_FLASHES | GREEN | FAST);
-  }
-}
-
 //------------------------------------------------------------------
 
 void sendConfigToBoard()
@@ -108,37 +102,28 @@ void sendConfigToBoard()
 
 void sendPacketToBoard()
 {
-  bool rxLastResponse = board.packet.id == controller_packet.id - 1 &&
-                        board.packet.id > 0;
-  if (!rxLastResponse && stats.boardConnected)
+  if (Board::mutex.take(__func__, (TickType_t)TICKS_10))
   {
-    stats.total_failed_sending += 1;
-    if (PRINT_IF_TOTAL_FAILED_SENDING)
-      DEBUGVAL(board.packet.id, controller_packet.id);
-  }
+    bool rxLastResponse = board.packet.id == controller_packet.id - 1 &&
+                          board.packet.id > 0;
+    Board::mutex.give(__func__);
 
-  boardClient.sendTo(Packet::CONTROL, controller_packet);
+    if (Stats::mutex.take(__func__, (TickType_t)TICKS_10))
+    {
+      if (!rxLastResponse && stats.boardConnected)
+      {
+        stats.total_failed_sending += 1;
+        if (PRINT_IF_TOTAL_FAILED_SENDING)
+          DEBUGVAL(board.packet.id, controller_packet.id);
+      }
+      Stats::mutex.give(__func__);
+    }
 
-  controller_packet.id++;
-}
-//------------------------------------------------------------------
+    boardClient.sendTo(Packet::CONTROL, controller_packet);
 
-void sendInstructionToHud(HUD::Instruction instruction)
-{
-  if (!FEATURE_SEND_TO_HUD)
-    return;
-  // TODO: this online check probably shouldn't be in here
-  if (hudClient.connected())
-  {
-    hudClient.sendTo(Packet::HUD, instruction);
-  }
-  else
-  {
-    if (DEBUG_BUILD)
-      Serial.printf("WARNING: instruction not sent because hud offline\n");
+    controller_packet.id++;
   }
 }
-
 //------------------------------------------------------------------
 
 bool boardTimedOut()
