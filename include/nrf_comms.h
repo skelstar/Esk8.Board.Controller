@@ -35,13 +35,13 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 
   VescData packet = boardClient.read();
 
-  if (Board::mutex1.take(__func__))
+  if (Board::mutex.take(__func__))
   {
     board.save(packet);
-    Board::mutex1.give(__func__);
+    Board::mutex.give(__func__);
   }
 
-  if (Board::mutex1.take(__func__))
+  if (Board::mutex.take(__func__))
   {
     if (board.packet.reason == FIRST_PACKET)
     {
@@ -75,17 +75,17 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
     else if (board.isMoving())
       displayQueue->send(DispState::MOVING);
 
-    Board::mutex1.give(__func__);
+    Board::mutex.give(__func__);
   }
 
   // this should only happen when using M5STACK
-  if (Board::mutex1.take(__func__))
+  if (Board::mutex.take(__func__))
   {
     if (DEBUG_BUILD && board.getCommand() == CommandType::RESET)
     {
       ESP.restart();
     }
-    Board::mutex1.give(__func__);
+    Board::mutex.give(__func__);
   }
 
   Comms::queue1->send(Comms::Event::PKT_RXD);
@@ -102,11 +102,11 @@ void sendConfigToBoard()
 
 void sendPacketToBoard()
 {
-  if (Board::mutex1.take(__func__, (TickType_t)TICKS_10))
+  if (Board::mutex.take(__func__, (TickType_t)TICKS_10))
   {
     bool rxLastResponse = board.packet.id == controller_packet.id - 1 &&
                           board.packet.id > 0;
-    Board::mutex1.give(__func__);
+    Board::mutex.give(__func__);
 
     if (Stats::mutex.take(__func__, (TickType_t)TICKS_10))
     {

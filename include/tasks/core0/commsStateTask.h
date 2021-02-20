@@ -60,7 +60,7 @@ namespace Comms
   State stateConnected(
       [] {
         commsFsm.printState(StateId::CONNECTED);
-        if (Board::mutex1.take("Comms: stateConnected", TICKS_100))
+        if (Board::mutex.take("Comms: stateConnected", TICKS_100))
         {
           bool boardCompatible = boardVersionCompatible(board.packet.version);
 
@@ -75,7 +75,7 @@ namespace Comms
             stats.boardConnected = true;
             Stats::mutex.give("Comms: stateConnected");
           }
-          Board::mutex1.give("Comms: stateConnected");
+          Board::mutex.give("Comms: stateConnected");
         }
       },
       NULL,

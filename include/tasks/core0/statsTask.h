@@ -155,7 +155,7 @@ namespace Stats
   void init()
   {
     mutex.create("stats", TICKS_2);
-    mutex.enabled = false;
+    mutex.enabled = true;
 
     queue = new Queue::Manager(/*length*/ 3, sizeof(StatsEvent), /*ticks*/ 5);
     queue->setName("Stats");

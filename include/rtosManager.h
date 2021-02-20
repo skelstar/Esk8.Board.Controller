@@ -17,7 +17,7 @@ public:
   bool take(const char *funcname, TickType_t ticks)
   {
     bool success = xSemaphoreTake(_mutex, ticks) == pdPASS || !enabled;
-    if (!success)
+    if (!success && PRINT_STATS_MUTEX_TAKE_STATE)
       Serial.printf("Unable to take mutex: '%s' (%d ticks: %s)\n",
                     _name, ticks, funcname);
     return success;
@@ -35,7 +35,7 @@ public:
       Serial.printf("ERROR: mutex is nullptr");
       return;
     }
-    if (xSemaphoreGive(_mutex) != pdPASS)
+    if (xSemaphoreGive(_mutex) != pdPASS && PRINT_STATS_MUTEX_GIVE_STATE)
       Serial.printf("WARNING: unable to give mutex: '%s' (%s)\n", _name, funcname);
   }
 

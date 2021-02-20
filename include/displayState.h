@@ -81,10 +81,10 @@ namespace Display
   State stBoardBattery(
       [] {
         dispFsm.printState(BOARD_BATTERY);
-        if (Board::mutex1.take(__func__))
+        if (Board::mutex.take(__func__))
         {
           screenBoardBattery(board.packet.batteryVoltage);
-          Board::mutex1.give(__func__);
+          Board::mutex.give(__func__);
         }
       },
       NULL, NULL);
@@ -160,10 +160,10 @@ namespace Display
   State stateBoardVersionDoesntMatchScreen(
       [] {
         dispFsm.printState(BOARD_VERSION_DOESNT_MATCH_SCREEN);
-        if (Board::mutex1.take(__func__))
+        if (Board::mutex.take(__func__))
         {
           screenBoardNotCompatible(board.packet.version);
-          Board::mutex1.give(__func__);
+          Board::mutex.give(__func__);
         }
       },
       NULL,

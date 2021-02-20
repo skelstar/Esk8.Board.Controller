@@ -98,12 +98,12 @@ BoardClass board;
 
 namespace Board
 {
-  MyMutex mutex1;
+  MyMutex mutex;
 
   void init()
   {
-    mutex1.create("board", TICKS_2);
-    // mutex1.enabled = false;
+    mutex.create("board", TICKS_2);
+    // mutex.enabled = false;
   }
 } // namespace Board
 
@@ -309,11 +309,11 @@ void loop()
     sendToBoard();
   }
 
-  if (Board::mutex1.take(__func__))
+  if (Board::mutex.take(__func__))
   {
     if (board.hasTimedout())
       Comms::queue1->send(Comms::Event::BOARD_TIMEDOUT);
-    Board::mutex1.give(__func__);
+    Board::mutex.give(__func__);
   }
 
   if (sinceNRFUpdate > 20)
@@ -338,7 +338,7 @@ void sendToBoard()
   bool throttleEnabled = false;
   bool cruiseControlActive = false;
 
-  if (Board::mutex1.take(__func__, 50))
+  if (Board::mutex.take(__func__, 50))
   {
     throttleEnabled =
         throttle.get() < 127 || // braking
@@ -350,7 +350,7 @@ void sendToBoard()
         board.packet.moving &&
         FEATURE_CRUISE_CONTROL &&
         primaryButton.isPressedRaw();
-    Board::mutex1.give(__func__);
+    Board::mutex.give(__func__);
   }
 
   sinceSentToBoard = 0;
