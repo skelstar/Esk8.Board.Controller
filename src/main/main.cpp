@@ -263,11 +263,7 @@ void setup()
 
   print_build_status(chipId);
 
-  throttle.init(/*pin*/ 27, [](uint8_t throttle) {
-    // Serial.printf("throttle changed: %d (cruise: %d, pressed: %d)\n",
-    //               throttle,
-    //               controller_packet.cruise_control,
-    //               primaryButton.isPressedRaw());
+  throttle.init(/*pin*/ THROTTLE_PIN, [](uint8_t throttle) {
   });
 
   primaryButtonInit();
@@ -334,7 +330,7 @@ void loop()
 #endif
   }
 
-  primaryButton.loop();
+  primaryButtonLoop();
   rightButton.loop();
 
   vTaskDelay(1);
@@ -346,6 +342,10 @@ void sendToBoard()
 {
   bool throttleEnabled = false;
   bool cruiseControlActive = false;
+  bool primaryButtonPressed = false;
+#ifdef PRIMARY_BUTTON_PIN
+  primaryButtonPressed = primaryButton.isPressedRaw();
+#endif
 
   if (Board::mutex.take(__func__, 50))
   {
@@ -353,12 +353,12 @@ void sendToBoard()
         throttle.get() < 127 || // braking
         board.packet.moving ||
         !featureService.get<bool>(PUSH_TO_START) ||
-        (featureService.get<bool>(PUSH_TO_START) && primaryButton.isPressedRaw());
+        (featureService.get<bool>(PUSH_TO_START) && primaryButtonPressed);
 
     cruiseControlActive =
         board.packet.moving &&
         FEATURE_CRUISE_CONTROL &&
-        primaryButton.isPressedRaw();
+        primaryButtonPressed;
     Board::mutex.give(__func__);
   }
 
