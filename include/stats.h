@@ -2,32 +2,29 @@
 #include <Arduino.h>
 #include <rom/rtc.h> // for reset reason
 #endif
-#ifndef STORAGE_H
-#include <Storage.h>
-#endif
 
-class Stats
+class StatsClass
 {
   typedef void (*ResetsAcknowledgedCallback)();
 
 public:
   uint16_t total_failed_sending;
   unsigned long consecutive_resps;
-  uint16_t soft_resets = 0;
-  uint8_t boardResets = 0;
+  uint16_t controllerResets = 0,
+           boardResets = 0;
   unsigned long timeMovingMS = 0;
-  bool hudConnected = false;
-  bool boardConnected = false;
+  bool boardConnected = false,
+       boardConnectedThisSession = false;
   bool update = false;
 
   void setResetsAcknowledgedCallback(ResetsAcknowledgedCallback cb)
   {
-    _resetsAcknowledgedCallback = cb;
+    _controllerResetsAckdCallback = cb;
   }
 
-  bool needToAckResets()
+  bool wasUnintendedControllerReset()
   {
-    return soft_resets > 0 && !_resetsAcknowledged;
+    return controllerResets > 0;
   }
 
   void setResetReasons(RESET_REASON reason0, RESET_REASON reason1)
@@ -42,7 +39,7 @@ public:
     Serial.printf("CPU1 reset reason: %s\n", get_reset_reason_text(_reset_reason_core1));
   }
 
-  bool watchdogReset()
+  bool wasWatchdogReset()
   {
     return _reset_reason_core0 == RESET_REASON::SW_CPU_RESET ||
            _reset_reason_core1 == RESET_REASON::SW_CPU_RESET;
@@ -53,17 +50,23 @@ public:
     return _reset_reason_core0 == RESET_REASON::POWERON_RESET;
   }
 
-  void ackResets()
+  void clearControllerResets()
   {
-    _resetsAcknowledged = true;
-    soft_resets = 0;
-    _resetsAcknowledgedCallback();
+    controllerResets = 0;
+    if (_controllerResetsAckdCallback != nullptr)
+      _controllerResetsAckdCallback();
+  }
+
+  void clearBoardResets()
+  {
+    boardResets = 0;
+    if (_boardResetsAckdCallback != nullptr)
+      _boardResetsAckdCallback();
   }
 
   void addMovingTime(ulong ms)
   {
     timeMovingMS += ms;
-    _storeTimeMoving();
   }
 
   float getTimeMovingInSeconds()
@@ -83,34 +86,12 @@ public:
                : 0;
   }
 
-  void updateHud(bool lastSentPacketResult)
-  {
-    if (lastSentPacketResult && hudConnected == false)
-    {
-      hudConnected = true;
-    }
-    else if (!lastSentPacketResult && hudConnected)
-    {
-      hudConnected = false;
-    }
-  }
-
 private:
   bool _resetsAcknowledged = false;
   ulong _lastStoreTimeMs;
-  ResetsAcknowledgedCallback _resetsAcknowledgedCallback;
+  ResetsAcknowledgedCallback
+      _controllerResetsAckdCallback = nullptr,
+      _boardResetsAckdCallback = nullptr;
   RESET_REASON _reset_reason_core0,
       _reset_reason_core1;
-
-  void _storeTimeMoving()
-  {
-    if (timeMovingMS - _lastStoreTimeMs > STORE_SNAPSHOT_INTERVAL)
-    {
-      // time to store in memory
-      storeInMemory<ulong>(STORE_STATS_TRIP_TIME, timeMovingMS);
-      _lastStoreTimeMs = timeMovingMS;
-      if (PRINT_RESET_DETECTION)
-        Serial.printf("Storing time in memory now : %ums\n", timeMovingMS);
-    }
-  }
 };

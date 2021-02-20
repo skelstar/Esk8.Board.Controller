@@ -33,29 +33,26 @@ const char *reason_toString(ReasonType reason)
 
 void print_build_status(String chipId)
 {
+  const char *line = "-----------------------------------------------\n";
+  const char *spaces = "    ";
+
   Serial.printf("\n");
-  Serial.printf("               Esk8.Board.Controller \n");
-  Serial.printf("               Chip id: %s\n", chipId.c_str());
+  Serial.printf(line);
+  Serial.printf("%s Esk8.Board.Controller \n", spaces);
+  Serial.printf("%s Chip id: %s\n", spaces, chipId.c_str());
+  Serial.printf("\n");
 
-#ifdef RELEASE_BUILD
-  Serial.printf("-----------------------------------------------\n");
-  Serial.printf("               RELEASE BUILD!! \n");
-  Serial.printf("-----------------------------------------------\n");
-  Serial.printf("               %s \n", __TIME__);
-  Serial.printf("               %s \n", __DATE__);
-  Serial.printf("-----------------------------------------------\n");
-#endif
-
+  if (RELEASE_BUILD)
+    Serial.printf("%s RELEASE BUILD!! \n", spaces);
   if (DEBUG_BUILD)
-  {
-    Serial.printf("-----------------------------------------------\n");
-    Serial.printf("               DEBUG BUILD!! \n");
-    Serial.printf("               BRANCH: %s \n", GIT_BRANCH_NAME);
-    Serial.printf("-----------------------------------------------\n");
-    Serial.printf("               %s \n", __TIME__);
-    Serial.printf("               %s \n", __DATE__);
-    Serial.printf("-----------------------------------------------\n");
-  }
+    Serial.printf("%s DEBUG BUILD!! \n", spaces);
+
+  Serial.printf("\n");
+  Serial.printf("%s BRANCH: %s \n", spaces, GIT_BRANCH_NAME);
+  Serial.printf("\n");
+  Serial.printf("%s %s \n", spaces, __TIME__);
+  Serial.printf("%s %s \n", spaces, __DATE__);
+  Serial.printf(line);
   Serial.printf("\n");
 }
 
