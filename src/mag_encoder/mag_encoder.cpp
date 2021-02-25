@@ -31,14 +31,6 @@ void button35_doubleClick(Button2 &btn)
   // ams5600.setEndPosition();
 }
 
-float convertRawAngleToDegrees(word newAngle)
-{
-  /* Raw data reports 0 - 4095 segments, which is 0.087 of a degree */
-  float retVal = newAngle * 0.087;
-  ang = retVal;
-  return retVal;
-}
-
 void i2cScanner()
 {
   Serial.printf("\n\ni2c scanner\n\n");
@@ -89,7 +81,6 @@ MagThrottle mag_throttle;
 
 void setup()
 {
-  // delay(1000); // for comms reasons
   Serial.begin(115200);
   Serial.printf("Mag Encoder Ready\n");
 
@@ -118,57 +109,7 @@ void setup()
     }
   }
 
-  mag_throttle.init(ams5600, 30);
-
-
-
-  // ams5600.setStartPosition(ams5600.getRawAngle());
-  // ams5600.setEndPosition(0);
-  // ams5600.setMaxAngle();
-
-#define SWEEP_ANGLE 30.0
-
-  float current = convertRawAngleToDegrees(ams5600.getRawAngle());
-  last_angle = current;
-
-  mapped_min = current - SWEEP_ANGLE;
-  mapped_max = current + SWEEP_ANGLE;
-  mapped_centre = current;
-
-  Serial.printf("\n\nmin: %0.1f  ", mapped_min);
-  Serial.printf("centre: %0.1f  ", mapped_centre);
-  Serial.printf("max: %0.1f  ", mapped_max);
-  Serial.println();
-
-  outlier = current < SWEEP_ANGLE || current > 360 - SWEEP_ANGLE;
-
-  if (outlier)
-  {
-    float l_min_i, l_min_o, l_max_i, l_max_o;
-    float u_min_i, u_min_o, u_max_i, u_max_o;
-
-    l_min_i = mapped_min + 360.0;
-    l_max_i = 360.0;
-    l_min_o = 0;
-    l_max_o = abs(mapped_min);
-    lower.init(l_min_i, l_max_i, l_min_o, l_max_o);
-
-    u_min_i = 0;
-    u_max_i = mapped_max;
-    u_min_o = abs(mapped_min);
-    u_max_o = SWEEP_ANGLE * 2;
-    upper.init(u_min_i, u_max_i, u_min_o, u_max_o);
-
-    Serial.printf("outlier ");
-    Serial.printf("current: %.1f ", current);
-    Serial.printf("lower: %.1f->%.1f => %.1f->%.1f |  ", l_min_i, l_max_i, l_min_o, l_max_o);
-    Serial.printf("upper: %.1f->%.1f => %.1f->%.1f\n", u_min_i, u_max_i, u_min_o, u_max_o);
-  }
-  else
-  {
-    upper.init(mapped_min, mapped_max, 0, SWEEP_ANGLE * 2);
-    Serial.printf("normal current: %.1f upper: %.1f->%.1f \n", current, mapped_min, mapped_max);
-  }
+  mag_throttle.init(&ams5600, &fsm, /*sweep angle*/ 30);
 
   delay(1000);
 }
@@ -176,20 +117,7 @@ void setup()
 #include <stdlib.h>
 #include <math.h>
 
-float constrainAngleToSweep(float x)
-{
-  if (outlier)
-  {
-    if (x > mapped_min + 360)
-      return lower.constrainedMap(x);
-    else
-      return upper.constrainedMap(x);
-  }
-  else
-  {
-    return upper.map(x);
-  }
-}
+uint8_t old_throttle;
 
 void loop()
 {
@@ -198,22 +126,13 @@ void loop()
   if (since_read_angle > 100)
   {
     since_read_angle = 0;
-    float angle = convertRawAngleToDegrees(ams5600.getRawAngle());
 
-    float delta = last_angle - angle;
+    uint8_t t = mag_throttle.get();
 
-    if (abs(delta) > 0.5)
-    {
-      Serial.printf("raw: %0.1fdeg   ", angle);
-      // Serial.printf("last: %0.1fdeg ", last_angle);
-      // Serial.printf("delta: %0.1fdeg ", delta);
-      // Serial.printf("start: %0.1fdeg ", mapped_centre);
-      // Serial.printf("scaled: %0.1fdeg ", convertScaledAngleToDegrees(ams5600.getScaledAngle()));
-      Serial.printf("constrained: %0.1fdeg   ", constrainAngleToSweep(angle));
-      Serial.printf("\n");
-    }
-    last_angle = angle;
+    old_throttle = t;
   }
+
+  mag_throttle.loop();
 
   vTaskDelay(10);
 }

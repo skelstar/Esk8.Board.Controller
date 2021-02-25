@@ -264,6 +264,9 @@ void setup()
   print_build_status(chipId);
 
   throttle.init(/*pin*/ THROTTLE_PIN, [](uint8_t throttle) {
+    Serial.printf("throttle changed: %d (cruise: %d)\n",
+                  throttle,
+                  controller_packet.cruise_control);
   });
 
   primaryButtonInit();
