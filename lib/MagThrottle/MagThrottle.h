@@ -19,13 +19,14 @@ namespace MagThrottle
   FastMap _lower_map, _upper_map, _throttle_map;
 
   bool _wraps = false;
-  uint8_t _sweep_angle = 0;
+  float _sweep_angle = 0;
   float _last = -1,
         _currentAngle = 0,
         _prevAngle = 0,
         _centre = 0,
-        _max = 0,
-        _min = 0;
+        _offset = 0,
+        _upperLimit = 0,
+        _lowerLimit = 0;
   // _lowerLimit = 0,
   // _upperLimit = 0
 
@@ -35,10 +36,11 @@ namespace MagThrottle
   void centre(bool print = false);
   void _addTransitions();
   float _convertRawAngleToDegrees(word newAngle);
-  uint8_t _getZone(float raw);
+  uint8_t _getZone(float raw, bool print = false);
   void _setMaps(bool print = false);
   void _print();
   float to360(float val);
+  float _normalise(float raw, bool print = false);
 
   enum DialZone
   {
@@ -185,7 +187,7 @@ namespace MagThrottle
 
   Fsm fsm(&stLowerLimit);
 
-  void init(uint8_t sweep_angle, ThrottleChangedCallback throttleChangedCb)
+  void init(float sweep_angle, ThrottleChangedCallback throttleChangedCb)
   {
     _sweep_angle = sweep_angle;
     _throttleChangedCb = throttleChangedCb;
@@ -202,13 +204,9 @@ namespace MagThrottle
     fsm.run_machine();
   }
 
-  void get(bool enabled = true)
+  void _triggerFsm(uint8_t zone)
   {
-    _prevAngle = _currentAngle;
-    _currentAngle = _convertRawAngleToDegrees(ams5600.getRawAngle());
-    _currentZone = _getZone(_currentAngle);
-
-    switch (_currentZone)
+    switch (zone)
     {
     case LOWER_LIMIT:
       fsm.trigger(TR_LOWER_LIMIT);
@@ -228,6 +226,15 @@ namespace MagThrottle
     default:
       Serial.printf("OUTOF RANGE: mapping state to trigger\n");
     }
+  }
+
+  void get(bool enabled = true)
+  {
+    _prevAngle = _currentAngle;
+    _currentAngle = _convertRawAngleToDegrees(ams5600.getRawAngle());
+    float _mapped = _normalise(_currentAngle);
+    _currentZone = _getZone(_currentAngle);
+    _triggerFsm(_currentZone);
 
     // if (abs(delta) > 0.5)
     // {
@@ -262,42 +269,40 @@ namespace MagThrottle
     fsm.add_transition(&stUpperLimit, &stAccelerating, TR_ACCEL, NULL);
   }
 
-  uint8_t _state;
-
-  uint8_t _getState(FsmTrigger trigger)
-  {
-    switch (_currentZone)
-    {
-    case LOWER_LIMIT:
-      break;
-    case BRAKING:
-      if (trigger == TR_IDLE)
-        _state = IDLE;
-      else if (trigger == TR_LOWER_LIMIT)
-        _state = LOWER_LIMIT;
-      else if (trigger == TR_ACCEL)
-        _state = ACCEL;
-      break;
-    case IDLE:
-      if (trigger == TR_ACCEL)
-        _state = ACCEL;
-      else if (trigger == TR_BRAKING)
-        _state = BRAKING;
-      break;
-    case ACCEL:
-      if (trigger == TR_UPPER_LIMIT)
-        _state = UPPER_LIMIT;
-      else if (trigger == TR_IDLE)
-        _state = IDLE;
-      else if (trigger == TR_BRAKING)
-        _state = BRAKING;
-      break;
-    case UPPER_LIMIT:
-      if (trigger == TR_ACCEL)
-        _state = ACCEL;
-      break;
-    }
-  }
+  // uint8_t _getState(FsmTrigger trigger)
+  // {
+  //   switch (_currentZone)
+  //   {
+  //   case LOWER_LIMIT:
+  //     break;
+  //   case BRAKING:
+  //     if (trigger == TR_IDLE)
+  //       _state = IDLE;
+  //     else if (trigger == TR_LOWER_LIMIT)
+  //       _state = LOWER_LIMIT;
+  //     else if (trigger == TR_ACCEL)
+  //       _state = ACCEL;
+  //     break;
+  //   case IDLE:
+  //     if (trigger == TR_ACCEL)
+  //       _state = ACCEL;
+  //     else if (trigger == TR_BRAKING)
+  //       _state = BRAKING;
+  //     break;
+  //   case ACCEL:
+  //     if (trigger == TR_UPPER_LIMIT)
+  //       _state = UPPER_LIMIT;
+  //     else if (trigger == TR_IDLE)
+  //       _state = IDLE;
+  //     else if (trigger == TR_BRAKING)
+  //       _state = BRAKING;
+  //     break;
+  //   case UPPER_LIMIT:
+  //     if (trigger == TR_ACCEL)
+  //       _state = ACCEL;
+  //     break;
+  //   }
+  // }
 
   float _convertRawAngleToDegrees(word newAngle)
   {
@@ -311,14 +316,29 @@ namespace MagThrottle
     void _setBoundaries(float raw)
     {
       _centre = raw;
-      _min = to360(_centre - _sweep_angle);
-      _max = to360(_centre + _sweep_angle);
+      _lowerLimit = to360(_centre - _sweep_angle);
+      _upperLimit = to360(_centre + _sweep_angle);
       _last = raw;
-      _wraps = _min > _max;
-      _zone = DialZone::IDLE;
+      _wraps = to360(_lowerLimit) > _upperLimit;
+      _offset = _sweep_angle - _centre;
+      // _zone = DialZone::IDLE;
 
-      // Serial.printf("_setBoundaries: min: %.1f   _centre:%.1f   max: %.1f \n", _min, _centre, _max);
+      // Serial.printf("_setBoundaries: min: %.1f   _centre:%.1f  _offset: %.1f  max: %.1f \n", _lowerLimit, _centre, _offset, _upperLimit);
     }
+
+    // raw is 0.0 -> 360.0
+  }
+
+  float _normalise(float raw, bool print)
+  {
+    if (print)
+    {
+      Serial.printf("normalisedAngle: raw: %.1f   offset: %.1f   ", raw, _offset);
+      Serial.printf("mapped: %.1f ", to360(raw + _offset));
+      Serial.println();
+    }
+
+    return to360(raw + _offset);
   }
 
   void centre(bool print)
@@ -327,82 +347,7 @@ namespace MagThrottle
 
     _setBoundaries(_currentAngle);
 
-    _setMaps(print);
-  }
-
-  float delta(float a, float b)
-  {
-    float d1 = abs(a - b);
-    if (a > b)
-    {
-      float d2 = abs(a - (b + 360.0));
-      return d1 > d2 ? d2 : d1;
-    }
-    else
-    {
-      float d2 = abs(b - (a + 360.0));
-      return d1 > d2 ? d2 : d1;
-    }
-  }
-
-  // raw is 0.0 -> 360.0
-  float cheese(float raw)
-  {
-    // Serial.printf("raw: %.1f normalised: %.1f \n", raw, to360(_centre - _sweep_angle));
-
-        Serial.printf("raw %.1f offset %.1f new %.1f \n", raw, 360.0 - raw, abs(360.0 - raw));
-
-    // if (delta(raw, _centre) <= _sweep_angle)
-    // {
-    //   // in range
-    //   Serial.printf("in range | raw: %0.1f _centre %0.1f delta: %0.1f \n", raw, _centre, delta(raw, _centre));
-    // }
-    // else
-    // {
-    //   Serial.printf("outside of limits | raw: %0.1f _centre %0.1f delta: %0.1f \n", raw, _centre, delta(raw, _centre));
-    // }
-
-    // if (to360(_centre - _sweep_angle))
-    // {
-    // }
-    // if (raw > _centre && delta(raw, _centre) <= _sweep_angle)
-    // {
-    //   Serial.printf("accelerating | raw: %0.1f _centre %0.1f \n", raw, _centre);
-    // }
-    // else if (raw < _centre && delta(raw, _centre) <= _sweep_angle)
-    // {
-    //   Serial.printf("braking | raw: %0.1f _centre %0.1f \n", raw, _centre);
-    // }
-    // else
-    // {
-    //   Serial.printf("outside of limits | raw: %0.1f _centre %0.1f \n", raw, _centre);
-    // }
-    return 0.0;
-  }
-
-  void _setMaps(bool print)
-  {
-    // normalises the angle to 0 -> sweep_angle -> sweep_angle*2
-    if (_wraps)
-    {
-      _l[MIN_IN] = _min;
-      _l[MAX_IN] = 360.0;
-      _l[MIN_OUT] = 0.0;
-      _l[MAX_OUT] = 360.0 - _min;
-      _lower_map.init(_l[MIN_IN], _l[MAX_IN], _l[MIN_OUT], _l[MAX_OUT]);
-
-      _u[MIN_IN] = 0;
-      _u[MAX_IN] = _max;
-      _u[MIN_OUT] = 360.0 - _min;
-      _u[MAX_OUT] = _sweep_angle * 2;
-      _upper_map.init(_u[MIN_IN], _u[MAX_IN], _u[MIN_OUT], _u[MAX_OUT]);
-    }
-    else
-    {
-      _upper_map.init(_min, _max, 0, _sweep_angle * 2.0);
-    }
-    if (print)
-      _print();
+    // _setMaps(print);
   }
 
   void _print()
@@ -411,75 +356,50 @@ namespace MagThrottle
     if (_wraps)
     {
       Serial.printf("setMaps(%.1f): **WRAPS**  |  ", _currentAngle);
-      Serial.printf("min: %.1f - max: %.1f  |  ", _min, _max);
+      Serial.printf("min: %.1f - max: %.1f  |  ", _lowerLimit, _upperLimit);
       Serial.printf("lower: %.1f - %.1f maps to %.1f - %.1f  |  ", _l[MIN_IN], _l[MAX_IN], _l[MIN_OUT], _l[MAX_OUT]);
       Serial.printf("upper: %.1f - %.1f maps to %.1f - %.1f", _u[MIN_IN], _u[MAX_IN], _u[MIN_OUT], _u[MAX_OUT]);
     }
     else
     {
       Serial.printf("setMaps(%.1f): NORMAL  |  ", _currentAngle);
-      Serial.printf("min: %.1f - max: &.1f  |  ", _min, _max);
+      Serial.printf("min: %.1f - max: &.1f  |  ", _lowerLimit, _upperLimit);
       Serial.printf("current: %.1f  |  ", _currentAngle);
-      Serial.printf("upper: %.1f - %.1f  maps to %.1f - %.1f", _min, _max, 0, _sweep_angle * 2.0);
+      Serial.printf("upper: %.1f - %.1f  maps to %.1f - %.1f", _lowerLimit, _upperLimit, 0, _sweep_angle * 2.0);
     }
     Serial.println("\n------------------------------------------------------\n\n");
   }
 
-  float normaliseAngle(float raw)
+  uint8_t _getZone(float norm, bool print)
   {
-    if (_wraps)
-    {
-      Serial.printf("WRAPS: raw: %.1f | _l(MIN_IN): %.1f | _l(MAX_IN) %.1f | _u(MIN_IN): %.1f | _u(MAX_IN) %.1f \n",
-                    raw, _l[MIN_IN], _l[MAX_IN], _u[MIN_IN], _u[MAX_IN]);
-
-      if (raw >= _l[MIN_IN] && raw <= _l[MAX_IN])
-        return _lower_map.constrainedMap(raw);
-      else if (raw >= _u[MIN_IN] && raw <= _u[MAX_IN])
-        return _upper_map.constrainedMap(raw);
-      else
-        Serial.printf("OUT OF RANGE getMap: raw=%0.1f\n", raw);
-      return _sweep_angle;
-    }
-    return _upper_map.constrainedMap(raw);
-  }
-
-  uint8_t _getZone(float raw)
-  {
-    if (_wraps)
-    {
-      FastMap map = getMap(raw);
-      float angle = map.constrainedMap(raw);
-
-      Serial.printf("it wraps... raw:%.1f min:%.1f(%.1f) max:%.1f centre:%.1f\n", raw, _min, 360.0 + _min, _max, _centre);
-      // if (raw >= 360.0 + _min && raw < _centre)
-      if (angle >= 0.0 && raw < _sweep_angle)
-        return DialZone::BRAKING;
-      else if (angle >= 0.0 && raw < _sweep_angle)
-        return DialZone::BRAKING;
-      else if (angle == _sweep_angle)
-        return DialZone::IDLE;
-      else if (angle > _sweep_angle && angle <= _sweep_angle * 2.0)
-        return DialZone::ACCEL;
-      else if (angle > _sweep_angle * 2.0)
-        return DialZone::UPPER_LIMIT;
-      else
-        return DialZone::LOWER_LIMIT;
-    }
+    if (print)
+      Serial.printf("_getZone()... norm: %.1f \n", norm);
+    if (norm >= 0.0 && norm < _sweep_angle)
+      return DialZone::BRAKING;
+    else if (norm == _sweep_angle)
+      return DialZone::IDLE;
+    else if (norm > _sweep_angle && norm <= _sweep_angle * 2.0)
+      return DialZone::ACCEL;
+    else if (norm > _sweep_angle * 2.0 && norm < 210)
+      return DialZone::UPPER_LIMIT;
     else
-    {
-      Serial.printf("it NORMAL raw:%.1f min:%.1f max:%.1f \n", raw, _min, _max);
-      if (raw > _min && raw < _centre)
-        return DialZone::BRAKING;
-      else if (raw == _centre)
-        return DialZone::IDLE;
-      else if (raw > _centre && raw <= _max)
-        return DialZone::ACCEL;
-      else if (raw > _max && raw < _max + 180)
-        return DialZone::UPPER_LIMIT;
-      else
-        return DialZone::LOWER_LIMIT;
-    }
+      return DialZone::LOWER_LIMIT;
   }
+
+  // float delta(float a, float b)
+  // {
+  //   float d1 = abs(a - b);
+  //   if (a > b)
+  //   {
+  //     float d2 = abs(a - (b + 360.0));
+  //     return d1 > d2 ? d2 : d1;
+  //   }
+  //   else
+  //   {
+  //     float d2 = abs(b - (a + 360.0));
+  //     return d1 > d2 ? d2 : d1;
+  //   }
+  // }
 
   float to360(float val)
   {
@@ -487,6 +407,20 @@ namespace MagThrottle
       val = 360.0 + val;
     else if (val > 360.0)
       val = fmod(val, 360.0);
+    if (val == 360.0)
+      val = 0.0;
     return val;
+  }
+
+  float toRel(float val, float centre)
+  {
+    float delta = abs(centre - val);
+    if (delta < 180.0)
+    {
+      Serial.printf(" < 180\n");
+      return 0.0;
+    }
+    Serial.printf(" >= 180\n");
+    return 0.0;
   }
 };

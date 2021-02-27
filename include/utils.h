@@ -76,3 +76,36 @@ uint8_t getBatteryPercentage(float voltage)
   }
   return percent;
 }
+
+// void i2cScanner()
+// {
+//   Serial.printf("\n\ni2c scanner\n\n");
+
+//   bool found = false;
+//   elapsedMillis since_looking;
+
+//   while (!found)
+//   {
+//     Serial.printf("scanning\n");
+//     for (int addr = 1; addr < 127; addr++)
+//     {
+//       Wire.beginTransmission(addr);
+//       byte error = Wire.endTransmission();
+
+//       if (error == 0)
+//       {
+//         Serial.printf("device found at 0x02%x\n", addr);
+//         found = true;
+//       }
+//       else if (error == 4)
+//       {
+//         Serial.printf("unknown error found at 0x02%x\n", addr);
+//       }
+//     }
+
+//     if (!found)
+//       delay(2000);
+//   }
+
+//   Serial.printf("Finished scanning for devices\n");
+// }
