@@ -6,13 +6,23 @@
 #include <FastMap.h>
 #include <Fsm.h>
 
+#include <SparkFun_Qwiic_Button.h>
+
 namespace MagThrottle
 {
   const char *statePrintFormat = "[State]: %s\n";
 
   typedef void (*ThrottleChangedCallback)(uint8_t);
+  typedef void (*ButtonEventCallback)(uint8_t);
 
   ThrottleChangedCallback _throttleChangedCb = nullptr;
+  ButtonEventCallback _buttonEventCb = nullptr;
+
+  enum ButtonEvent
+  {
+    CLICKED,
+    RELEASED,
+  };
 
   AMS_5600 *_ams = nullptr;
 
@@ -27,10 +37,13 @@ namespace MagThrottle
         _offset = 0,
         _upperLimit = 0,
         _lowerLimit = 0;
-  // _lowerLimit = 0,
-  // _upperLimit = 0
+
+  //https://www.sparkfun.com/products/15932
+  // int _buttoni2cAddr = 0x6f;
+  QwiicButton button;
 
   uint8_t _throttle = 127,
+          _old_throttle = 127,
           _currentZone = 0;
 
   void centre(bool print = false);
@@ -40,7 +53,8 @@ namespace MagThrottle
   void _setMaps(bool print = false);
   void _print();
   float to360(float val);
-  float _normalise(float raw, bool print = false);
+  float _normaliseTo0toMax(float raw, bool print = false);
+  uint8_t get(bool enabled = true);
 
   enum DialZone
   {
@@ -86,7 +100,8 @@ namespace MagThrottle
     TR_BRAKING,
     TR_IDLE,
     TR_ACCEL,
-    TR_UPPER_LIMIT
+    TR_UPPER_LIMIT,
+    TR_CENTRE,
   };
 
   const char *_getTrigger(FsmTrigger trigger)
@@ -103,206 +118,237 @@ namespace MagThrottle
       return "TR_ACCEL";
     case TR_UPPER_LIMIT:
       return "TR_UPPER_LIMIT";
+    case TR_CENTRE:
+      return "TR_CENTRE";
     }
     return "OUT OF RANGE (_getTrigger())";
   }
 
-  bool angleChanged()
+  enum StateList
   {
-    return abs(_currentAngle - _prevAngle) > 0.5;
+    ST_LOWER_LIMIT,
+    ST_BRAKING,
+    ST_IDLE,
+    ST_ACCELERATING,
+    ST_UPPER_LIMIT,
+  } _currentState;
+
+  const char *getStateList(StateList s)
+  {
+    switch (s)
+    {
+    case ST_LOWER_LIMIT:
+      return "ST_LOWER_LIMIT";
+    case ST_BRAKING:
+      return "ST_BRAKING";
+    case ST_IDLE:
+      return "ST_IDLE";
+    case ST_ACCELERATING:
+      return "ST_ACCELERATING";
+    case ST_UPPER_LIMIT:
+      return "ST_UPPER_LIMIT";
+    }
+    return "OUT OF RANGE getStateList()";
   }
 
-  FastMap getMap(float raw)
+  void printState(StateList st)
   {
-    if (_wraps)
-    {
-      if (raw >= _l[MIN_IN] && raw <= _l[MAX_IN])
-        return _lower_map;
-      else if (raw >= _u[MIN_IN] && raw <= _u[MAX_IN])
-        return _upper_map;
-      else
-        Serial.printf("OUT OF RANGE getMap: raw=%0.1f\n", raw);
-      return _lower_map;
-    }
+    if (PRINT_ZONE_CHANGE == 1)
+      Serial.printf(statePrintFormat, getStateList(st));
+  }
+
+  void updateThrottle()
+  {
+    _old_throttle = _throttle;
+    uint8_t t = get();
+
+    if (_currentState != ST_LOWER_LIMIT && _currentState != UPPER_LIMIT)
+      _throttle = t;
+
+    if (_old_throttle != _throttle && _throttleChangedCb != nullptr)
+      _throttleChangedCb(_throttle);
   }
 
   State stLowerLimit(
       [] {
-        Serial.printf(statePrintFormat, "stLowerLimit");
+        printState(ST_LOWER_LIMIT);
+        _currentState = ST_LOWER_LIMIT;
         _throttle = 0;
         if (_throttleChangedCb != nullptr)
           _throttleChangedCb(_throttle);
       },
-      NULL, NULL);
-
-  void updateThrottle()
-  {
-    if (abs(_currentAngle - _prevAngle) > 0.5)
-    {
-      FastMap map = getMap(_currentAngle);
-      float angle = map.constrainedMap(_currentAngle);
-      Serial.printf("angle: %0.1f\n", angle);
-      _throttle = _throttle_map.map(angle);
-
-      if (_throttleChangedCb != nullptr)
-        _throttleChangedCb(_throttle);
-    }
-  }
+      updateThrottle,
+      NULL);
 
   State stBraking(
       [] {
-        Serial.printf(statePrintFormat, "stBraking");
+        printState(ST_BRAKING);
+        _currentState = ST_BRAKING;
       },
-      [] {
-        updateThrottle();
-      },
+      updateThrottle,
       NULL);
 
   State stIdle(
       [] {
-        Serial.printf(statePrintFormat, "stIdle");
+        printState(ST_IDLE);
+        _currentState = ST_IDLE;
         _throttle = 127;
         if (_throttleChangedCb != nullptr)
           _throttleChangedCb(_throttle);
       },
-      NULL, NULL);
+      updateThrottle,
+      NULL);
 
   State stAccelerating(
       [] {
-        Serial.printf(statePrintFormat, "stAccelerating");
+        printState(ST_ACCELERATING);
+        _currentState = ST_ACCELERATING;
       },
-      [] {
-        updateThrottle();
-      },
+      updateThrottle,
       NULL);
 
   State stUpperLimit(
       [] {
-        Serial.printf(statePrintFormat, "stUpperLimit");
+        printState(ST_UPPER_LIMIT);
+        _currentState = ST_UPPER_LIMIT;
         _throttle = 255;
         if (_throttleChangedCb != nullptr)
           _throttleChangedCb(_throttle);
       },
-      NULL, NULL);
+      updateThrottle,
+      NULL);
 
-  Fsm fsm(&stLowerLimit);
+  void resetCentre()
+  {
+    centre(/*print*/ true);
+  }
 
-  void init(float sweep_angle, ThrottleChangedCallback throttleChangedCb)
+  Fsm fsm(&stIdle);
+
+  //------------------------------------------------------
+  void init(float sweep_angle, ThrottleChangedCallback throttleChangedCb, ButtonEventCallback buttonClickedCb)
   {
     _sweep_angle = sweep_angle;
     _throttleChangedCb = throttleChangedCb;
+    _buttonEventCb = buttonClickedCb;
 
     _throttle_map.init(0, sweep_angle * 2, 0, 255);
+
+    if (button.begin() == false)
+    {
+      Serial.printf("ERROR: Could not find button!\n");
+    }
 
     centre(/*print*/ true);
 
     _addTransitions();
   }
 
+  //------------------------------------------------------
+
+  int _buttonState = 0;
+  elapsedMillis sincePressedButton;
+
   void loop()
   {
     fsm.run_machine();
+
+    int old_state = _buttonState;
+    _buttonState = button.isPressed();
+
+    if (old_state != _buttonState)
+    {
+      // Serial.printf("button state: %d\n", _buttonState);
+      if (_buttonState == 1)
+        sincePressedButton = 0;
+      if (_buttonState == 0) // released
+      {
+        if (sincePressedButton < 500)
+        {
+          centre(/*print*/ true);
+          if (_buttonEventCb != nullptr)
+            _buttonEventCb(ButtonEvent::CLICKED);
+        }
+        else if (_buttonEventCb != nullptr)
+          _buttonEventCb(ButtonEvent::RELEASED);
+        centre(/*print*/ true);
+      }
+    }
+
+    // if (button.hasBeenClicked())
+    // {
+    //   button.clearEventBits();
+    //   Serial.printf("button clicked\n");
+    // }
+    old_state = _buttonState;
   }
 
-  void _triggerFsm(uint8_t zone)
+  FsmTrigger toTrigger(uint8_t zone)
   {
     switch (zone)
     {
     case LOWER_LIMIT:
-      fsm.trigger(TR_LOWER_LIMIT);
-      break;
+      return TR_LOWER_LIMIT;
     case BRAKING:
-      fsm.trigger(TR_BRAKING);
-      break;
+      return TR_BRAKING;
     case IDLE:
-      fsm.trigger(TR_IDLE);
-      break;
+      return TR_IDLE;
     case ACCEL:
-      fsm.trigger(TR_ACCEL);
-      break;
+      return TR_ACCEL;
     case UPPER_LIMIT:
-      fsm.trigger(TR_UPPER_LIMIT);
-      break;
-    default:
-      Serial.printf("OUTOF RANGE: mapping state to trigger\n");
+      return TR_UPPER_LIMIT;
     }
+    Serial.printf("WARNING: OUT OF RANGE toTrigger(DialZone) \n");
+    return TR_IDLE;
   }
 
-  void get(bool enabled = true)
+  uint8_t get(bool enabled)
   {
     _prevAngle = _currentAngle;
     _currentAngle = _convertRawAngleToDegrees(ams5600.getRawAngle());
-    float _mapped = _normalise(_currentAngle);
-    _currentZone = _getZone(_currentAngle);
-    _triggerFsm(_currentZone);
 
-    // if (abs(delta) > 0.5)
-    // {
-    //   Serial.printf("raw: %0.1fdeg (%0.1f deg)  ", _currentAngle, _centre);
-    //   Serial.printf("mapped to: %0.1fdeg   ", angle);
-    //   Serial.printf("throttle: %d   ", throttle);
-    //   Serial.printf("state: %d   ", _zone);
-    //   Serial.printf("state: %s   ", _getDialZone(_zone));
-    //   Serial.printf("\n");
-    // }
-    // _last = _currentAngle;
+    float _normalised = _normaliseTo0toMax(_currentAngle); // now between 0 - middle - 60 degrees
 
-    return;
+    _currentZone = _getZone(/*normalised*/ _normalised);
+    fsm.trigger(toTrigger(_currentZone));
+
+    if (abs(_prevAngle - _currentAngle) > 0.5)
+    {
+      // Serial.printf("_current: %.1f  |  _normalised: %.1f  |  centre: %.1f \n", _currentAngle, _normalised, _centre);
+    }
+
+    return _throttle_map.constrainedMap(_normalised);
   }
 
   void _addTransitions()
   {
     // stLowerLimit
     fsm.add_transition(&stLowerLimit, &stBraking, TR_BRAKING, NULL);
+
     // stBraking
     fsm.add_transition(&stBraking, &stIdle, TR_IDLE, NULL);
     fsm.add_transition(&stBraking, &stLowerLimit, TR_LOWER_LIMIT, NULL);
     fsm.add_transition(&stBraking, &stAccelerating, TR_ACCEL, NULL);
+
     // stIdle
     fsm.add_transition(&stIdle, &stAccelerating, TR_ACCEL, NULL);
     fsm.add_transition(&stIdle, &stBraking, TR_BRAKING, NULL);
+
     // stAccelerating
     fsm.add_transition(&stAccelerating, &stUpperLimit, TR_UPPER_LIMIT, NULL);
     fsm.add_transition(&stAccelerating, &stIdle, TR_IDLE, NULL);
     fsm.add_transition(&stAccelerating, &stBraking, TR_BRAKING, NULL);
+
     // stUpperLimit
     fsm.add_transition(&stUpperLimit, &stAccelerating, TR_ACCEL, NULL);
-  }
 
-  // uint8_t _getState(FsmTrigger trigger)
-  // {
-  //   switch (_currentZone)
-  //   {
-  //   case LOWER_LIMIT:
-  //     break;
-  //   case BRAKING:
-  //     if (trigger == TR_IDLE)
-  //       _state = IDLE;
-  //     else if (trigger == TR_LOWER_LIMIT)
-  //       _state = LOWER_LIMIT;
-  //     else if (trigger == TR_ACCEL)
-  //       _state = ACCEL;
-  //     break;
-  //   case IDLE:
-  //     if (trigger == TR_ACCEL)
-  //       _state = ACCEL;
-  //     else if (trigger == TR_BRAKING)
-  //       _state = BRAKING;
-  //     break;
-  //   case ACCEL:
-  //     if (trigger == TR_UPPER_LIMIT)
-  //       _state = UPPER_LIMIT;
-  //     else if (trigger == TR_IDLE)
-  //       _state = IDLE;
-  //     else if (trigger == TR_BRAKING)
-  //       _state = BRAKING;
-  //     break;
-  //   case UPPER_LIMIT:
-  //     if (trigger == TR_ACCEL)
-  //       _state = ACCEL;
-  //     break;
-  //   }
-  // }
+    // TR_CENTRE
+    fsm.add_transition(&stLowerLimit, &stIdle, TR_CENTRE, resetCentre);
+    fsm.add_transition(&stBraking, &stIdle, TR_CENTRE, resetCentre);
+    fsm.add_transition(&stIdle, &stIdle, TR_CENTRE, resetCentre);
+    fsm.add_transition(&stAccelerating, &stIdle, TR_CENTRE, resetCentre);
+    fsm.add_transition(&stUpperLimit, &stIdle, TR_CENTRE, resetCentre);
+  }
 
   float _convertRawAngleToDegrees(word newAngle)
   {
@@ -321,15 +367,12 @@ namespace MagThrottle
       _last = raw;
       _wraps = to360(_lowerLimit) > _upperLimit;
       _offset = _sweep_angle - _centre;
-      // _zone = DialZone::IDLE;
 
       // Serial.printf("_setBoundaries: min: %.1f   _centre:%.1f  _offset: %.1f  max: %.1f \n", _lowerLimit, _centre, _offset, _upperLimit);
     }
-
-    // raw is 0.0 -> 360.0
   }
 
-  float _normalise(float raw, bool print)
+  float _normaliseTo0toMax(float raw, bool print)
   {
     if (print)
     {
@@ -347,7 +390,8 @@ namespace MagThrottle
 
     _setBoundaries(_currentAngle);
 
-    // _setMaps(print);
+    if (print)
+      Serial.printf("throttle: centred: %.1f\n", _centre);
   }
 
   void _print()
@@ -386,21 +430,6 @@ namespace MagThrottle
       return DialZone::LOWER_LIMIT;
   }
 
-  // float delta(float a, float b)
-  // {
-  //   float d1 = abs(a - b);
-  //   if (a > b)
-  //   {
-  //     float d2 = abs(a - (b + 360.0));
-  //     return d1 > d2 ? d2 : d1;
-  //   }
-  //   else
-  //   {
-  //     float d2 = abs(b - (a + 360.0));
-  //     return d1 > d2 ? d2 : d1;
-  //   }
-  // }
-
   float to360(float val)
   {
     if (val < 0.0)
@@ -410,17 +439,5 @@ namespace MagThrottle
     if (val == 360.0)
       val = 0.0;
     return val;
-  }
-
-  float toRel(float val, float centre)
-  {
-    float delta = abs(centre - val);
-    if (delta < 180.0)
-    {
-      Serial.printf(" < 180\n");
-      return 0.0;
-    }
-    Serial.printf(" >= 180\n");
-    return 0.0;
   }
 };

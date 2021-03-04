@@ -140,13 +140,13 @@ void test_normaliseAngle_centre_at_0()
   _centre = 0.0;
   _setBoundaries(/*current*/ _centre);
 
-  TEST_ASSERT_EQUAL(62.0, _normalise(32.0));   // 2 degs past upperLimit
-  TEST_ASSERT_EQUAL(359.0, _normalise(329.0)); // 1 deg before lower limit
-  TEST_ASSERT_EQUAL(19.0, _normalise(349.0));  //
-  TEST_ASSERT_EQUAL(0.0, _normalise(330.0));   // lower limit
-  TEST_ASSERT_EQUAL(10.0, _normalise(340.0));
-  TEST_ASSERT_EQUAL(40.0, _normalise(10.0));
-  TEST_ASSERT_EQUAL(30.0, _normalise(0.0));
+  TEST_ASSERT_EQUAL(62.0, _normaliseTo0toMax(32.0));   // 2 degs past upperLimit
+  TEST_ASSERT_EQUAL(359.0, _normaliseTo0toMax(329.0)); // 1 deg before lower limit
+  TEST_ASSERT_EQUAL(19.0, _normaliseTo0toMax(349.0));  //
+  TEST_ASSERT_EQUAL(0.0, _normaliseTo0toMax(330.0));   // lower limit
+  TEST_ASSERT_EQUAL(10.0, _normaliseTo0toMax(340.0));
+  TEST_ASSERT_EQUAL(40.0, _normaliseTo0toMax(10.0));
+  TEST_ASSERT_EQUAL(30.0, _normaliseTo0toMax(0.0));
 }
 
 void test_normaliseAngle_centre_at_20()
@@ -156,12 +156,12 @@ void test_normaliseAngle_centre_at_20()
   _centre = 20.0;
   _setBoundaries(/*current*/ _centre);
 
-  TEST_ASSERT_EQUAL(62.0, _normalise(52.0));
-  TEST_ASSERT_EQUAL(359.0, _normalise(349.0));
-  TEST_ASSERT_EQUAL(0.0, _normalise(350.0));
-  TEST_ASSERT_EQUAL(20.0, _normalise(10.0));
-  TEST_ASSERT_EQUAL(40.0, _normalise(30.0));
-  TEST_ASSERT_EQUAL(30.0, _normalise(20.0));
+  TEST_ASSERT_EQUAL(62.0, _normaliseTo0toMax(52.0));
+  TEST_ASSERT_EQUAL(359.0, _normaliseTo0toMax(349.0));
+  TEST_ASSERT_EQUAL(0.0, _normaliseTo0toMax(350.0));
+  TEST_ASSERT_EQUAL(20.0, _normaliseTo0toMax(10.0));
+  TEST_ASSERT_EQUAL(40.0, _normaliseTo0toMax(30.0));
+  TEST_ASSERT_EQUAL(30.0, _normaliseTo0toMax(20.0));
 }
 
 void test_normaliseAngle_centre_at_90()
@@ -171,12 +171,12 @@ void test_normaliseAngle_centre_at_90()
   _centre = 90.0;
   _setBoundaries(/*current*/ _centre);
 
-  TEST_ASSERT_EQUAL(330.0, _normalise(30.0));
-  TEST_ASSERT_EQUAL(0.0, _normalise(60.0));
-  TEST_ASSERT_EQUAL(30.0, _normalise(90.0));
-  TEST_ASSERT_EQUAL(60.0, _normalise(120.0));
-  TEST_ASSERT_EQUAL(90.0, _normalise(150.0));
-  TEST_ASSERT_EQUAL(120.0, _normalise(180.0));
+  TEST_ASSERT_EQUAL(330.0, _normaliseTo0toMax(30.0));
+  TEST_ASSERT_EQUAL(0.0, _normaliseTo0toMax(60.0));
+  TEST_ASSERT_EQUAL(30.0, _normaliseTo0toMax(90.0));
+  TEST_ASSERT_EQUAL(60.0, _normaliseTo0toMax(120.0));
+  TEST_ASSERT_EQUAL(90.0, _normaliseTo0toMax(150.0));
+  TEST_ASSERT_EQUAL(120.0, _normaliseTo0toMax(180.0));
 }
 
 void test_normaliseAngle_centre_at_150()
@@ -186,11 +186,11 @@ void test_normaliseAngle_centre_at_150()
   _centre = 150.0;
   _setBoundaries(/*current*/ _centre);
 
-  TEST_ASSERT_EQUAL(_sweep_angle, _normalise(150.0));
-  TEST_ASSERT_EQUAL(to360(_sweep_angle + 10.0), _normalise(160.0));
-  TEST_ASSERT_EQUAL(to360(_sweep_angle + 40.0), _normalise(190.0));
-  TEST_ASSERT_EQUAL(to360(_sweep_angle + 120.0), _normalise(270.0));
-  TEST_ASSERT_EQUAL(to360(_sweep_angle + 200.0), _normalise(350.0));
+  TEST_ASSERT_EQUAL(_sweep_angle, _normaliseTo0toMax(150.0));
+  TEST_ASSERT_EQUAL(to360(_sweep_angle + 10.0), _normaliseTo0toMax(160.0));
+  TEST_ASSERT_EQUAL(to360(_sweep_angle + 40.0), _normaliseTo0toMax(190.0));
+  TEST_ASSERT_EQUAL(to360(_sweep_angle + 120.0), _normaliseTo0toMax(270.0));
+  TEST_ASSERT_EQUAL(to360(_sweep_angle + 200.0), _normaliseTo0toMax(350.0));
 }
 
 void test_normaliseAngle_centre_at_350()
@@ -200,15 +200,15 @@ void test_normaliseAngle_centre_at_350()
   _centre = 350.0;
   _setBoundaries(/*current*/ _centre);
 
-  TEST_ASSERT_EQUAL(350.0, _normalise(310.0));
-  TEST_ASSERT_EQUAL(0.0, _normalise(320.0));
-  TEST_ASSERT_EQUAL(_sweep_angle - 20.0, _normalise(330.0));
-  TEST_ASSERT_EQUAL(_sweep_angle - 10.0, _normalise(340.0));
-  TEST_ASSERT_EQUAL(_sweep_angle, _normalise(350.0));
-  TEST_ASSERT_EQUAL(to360(_sweep_angle + 10.0), _normalise(0.0));
-  TEST_ASSERT_EQUAL(to360(_sweep_angle + 30.0), _normalise(20.0));
-  TEST_ASSERT_EQUAL(to360(_sweep_angle + 120.0), _normalise(110.0));
-  TEST_ASSERT_EQUAL(to360(_sweep_angle + 200.0), _normalise(190.0));
+  TEST_ASSERT_EQUAL(350.0, _normaliseTo0toMax(310.0));
+  TEST_ASSERT_EQUAL(0.0, _normaliseTo0toMax(320.0));
+  TEST_ASSERT_EQUAL(_sweep_angle - 20.0, _normaliseTo0toMax(330.0));
+  TEST_ASSERT_EQUAL(_sweep_angle - 10.0, _normaliseTo0toMax(340.0));
+  TEST_ASSERT_EQUAL(_sweep_angle, _normaliseTo0toMax(350.0));
+  TEST_ASSERT_EQUAL(to360(_sweep_angle + 10.0), _normaliseTo0toMax(0.0));
+  TEST_ASSERT_EQUAL(to360(_sweep_angle + 30.0), _normaliseTo0toMax(20.0));
+  TEST_ASSERT_EQUAL(to360(_sweep_angle + 120.0), _normaliseTo0toMax(110.0));
+  TEST_ASSERT_EQUAL(to360(_sweep_angle + 200.0), _normaliseTo0toMax(190.0));
 }
 
 void test_getZone_at_0()
@@ -220,13 +220,13 @@ void test_getZone_at_0()
 
   bool print = false;
 
-  TEST_ASSERT_EQUAL(DialZone::LOWER_LIMIT, _getZone(/*norm*/ _normalise(329.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normalise(359.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normalise(330.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::IDLE, _getZone(/*norm*/ _normalise(0.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normalise(1.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normalise(30.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::UPPER_LIMIT, _getZone(/*norm*/ _normalise(31.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::LOWER_LIMIT, _getZone(/*norm*/ _normaliseTo0toMax(329.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normaliseTo0toMax(359.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normaliseTo0toMax(330.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::IDLE, _getZone(/*norm*/ _normaliseTo0toMax(0.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normaliseTo0toMax(1.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normaliseTo0toMax(30.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::UPPER_LIMIT, _getZone(/*norm*/ _normaliseTo0toMax(31.0, print), print));
 }
 
 void test_getZone_at_20()
@@ -238,13 +238,13 @@ void test_getZone_at_20()
 
   bool print = false;
 
-  TEST_ASSERT_EQUAL(DialZone::LOWER_LIMIT, _getZone(/*norm*/ _normalise(349.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normalise(19.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normalise(351.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::IDLE, _getZone(/*norm*/ _normalise(20.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normalise(21.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normalise(50.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::UPPER_LIMIT, _getZone(/*norm*/ _normalise(51.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::LOWER_LIMIT, _getZone(/*norm*/ _normaliseTo0toMax(349.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normaliseTo0toMax(19.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normaliseTo0toMax(351.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::IDLE, _getZone(/*norm*/ _normaliseTo0toMax(20.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normaliseTo0toMax(21.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normaliseTo0toMax(50.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::UPPER_LIMIT, _getZone(/*norm*/ _normaliseTo0toMax(51.0, print), print));
 }
 
 void test_getZone_at_90()
@@ -256,13 +256,13 @@ void test_getZone_at_90()
 
   bool print = false;
 
-  TEST_ASSERT_EQUAL(DialZone::LOWER_LIMIT, _getZone(/*norm*/ _normalise(59.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normalise(60.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normalise(89.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::IDLE, _getZone(/*norm*/ _normalise(90.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normalise(91.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normalise(120.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::UPPER_LIMIT, _getZone(/*norm*/ _normalise(121.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::LOWER_LIMIT, _getZone(/*norm*/ _normaliseTo0toMax(59.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normaliseTo0toMax(60.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normaliseTo0toMax(89.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::IDLE, _getZone(/*norm*/ _normaliseTo0toMax(90.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normaliseTo0toMax(91.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normaliseTo0toMax(120.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::UPPER_LIMIT, _getZone(/*norm*/ _normaliseTo0toMax(121.0, print), print));
 }
 
 void test_getZone_at_350()
@@ -274,13 +274,13 @@ void test_getZone_at_350()
 
   bool print = false;
 
-  TEST_ASSERT_EQUAL(DialZone::LOWER_LIMIT, _getZone(/*norm*/ _normalise(319.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normalise(320.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normalise(349.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::IDLE, _getZone(/*norm*/ _normalise(350.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normalise(351.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normalise(20.0, print), print));
-  TEST_ASSERT_EQUAL(DialZone::UPPER_LIMIT, _getZone(/*norm*/ _normalise(21.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::LOWER_LIMIT, _getZone(/*norm*/ _normaliseTo0toMax(319.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normaliseTo0toMax(320.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::BRAKING, _getZone(/*norm*/ _normaliseTo0toMax(349.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::IDLE, _getZone(/*norm*/ _normaliseTo0toMax(350.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normaliseTo0toMax(351.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::ACCEL, _getZone(/*norm*/ _normaliseTo0toMax(20.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::UPPER_LIMIT, _getZone(/*norm*/ _normaliseTo0toMax(21.0, print), print));
 }
 
 void test_1()
@@ -295,11 +295,11 @@ void test_1()
 
   // MagThrottle::loop();
 
-  // float norm = _normalise(100.0);
+  // float norm = _normaliseTo0toMax(100.0);
 
   bool print = false;
 
-  TEST_ASSERT_EQUAL(DialZone::LOWER_LIMIT, _getZone(/*norm*/ _normalise(319.0, print), print));
+  TEST_ASSERT_EQUAL(DialZone::LOWER_LIMIT, _getZone(/*norm*/ _normaliseTo0toMax(319.0, print), print));
 }
 
 void setup()

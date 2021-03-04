@@ -9,6 +9,8 @@
 
 #include <FastMap.h>
 
+#include <utils.h>
+
 Button2 button35(35);
 
 // https://ams.com/documents/20143/36005/AS5600_DS000365_5-00.pdf
@@ -16,44 +18,31 @@ Button2 button35(35);
 AMS_5600 ams5600;
 
 int ang, lang = 0;
+//---------------------------------------------------------
+
+#include <MagThrottle.h>
+
+//---------------------------------------------------------
 
 void button35_click(Button2 &btn)
 {
   Serial.printf("button 35 click\n");
-  ams5600.setStartPosition();
+  MagThrottle::centre(/*print*/ true);
+  MagThrottle::fsm.trigger(MagThrottle::TR_CENTRE);
 }
-
-void button35_doubleClick(Button2 &btn)
-{
-  Serial.printf("button 35 doubleclick\n");
-  // ams5600.setEndPosition();
-}
-
-//---------------------------------------------------------
-
-elapsedMillis since_read_angle;
-// float last_angle = -1,
-//       mapped = 0,
-//       mapped_centre = 0,
-//       mapped_max = 0,
-//       mapped_min = 0,
-//       mapped_offset = 0;
-
-#include <MagThrottle.h>
 
 //---------------------------------------------------------
 
 void setup()
 {
   Serial.begin(115200);
-  Serial.printf("Mag Encoder Ready\n");
+  Serial.printf("\n\nMag Encoder Ready\n\n");
 
   button35.setPressedHandler(button35_click);
-  button35.setDoubleClickHandler(button35_doubleClick);
 
   Wire.begin();
 
-  // i2cScanner(); // in utils.h
+  i2cScanner(); // in utils.h
 
   if (ams5600.detectMagnet() == 0)
   {
@@ -73,9 +62,17 @@ void setup()
     }
   }
 
-  MagThrottle::init(/*sweep*/ 30, [](uint8_t throttle) {
-    // Serial.printf("   throttle: %d\n", throttle);
-  });
+  MagThrottle::init(
+      /*sweep*/ 60,
+      [](uint8_t throttle) {
+        // Serial.printf("   throttle: %d\n", throttle);
+      },
+      [](uint8_t ev) {
+        if (ev == MagThrottle::CLICKED)
+          Serial.printf("   event: CLICKED\n");
+        else if (ev == MagThrottle::RELEASED)
+          Serial.printf("   event: RELEASED\n");
+      });
 
   delay(1000);
 }
@@ -84,6 +81,7 @@ void setup()
 #include <math.h>
 
 uint8_t old_throttle;
+elapsedMillis since_read_angle;
 
 void loop()
 {
@@ -93,10 +91,10 @@ void loop()
   {
     since_read_angle = 0;
 
-    MagThrottle::get();
+    // MagThrottle::get();
 
-    if (MagThrottle::angleChanged())
-      MagThrottle::loop();
+    // if (MagThrottle::angleChanged())
+    MagThrottle::loop();
     // old_throttle = t;
   }
 

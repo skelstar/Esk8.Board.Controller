@@ -10,6 +10,7 @@ uint8_t printDot(uint8_t num_dots)
   return 0;
 }
 
+#ifdef ReasonType
 const char *reason_toString(ReasonType reason)
 {
   switch (reason)
@@ -30,6 +31,9 @@ const char *reason_toString(ReasonType reason)
     return "unhandle reason ";
   }
 }
+#endif
+
+#ifdef RELEASE_BUILD
 
 void print_build_status(String chipId)
 {
@@ -56,6 +60,8 @@ void print_build_status(String chipId)
   Serial.printf("\n");
 }
 
+#endif
+
 #define BATTERY_VOLTAGE_FULL 4.2 * 11         // 46.2
 #define BATTERY_VOLTAGE_CUTOFF_START 3.4 * 11 // 37.4
 #define BATTERY_VOLTAGE_CUTOFF_END 3.1 * 11   // 34.1
@@ -77,35 +83,35 @@ uint8_t getBatteryPercentage(float voltage)
   return percent;
 }
 
-// void i2cScanner()
-// {
-//   Serial.printf("\n\ni2c scanner\n\n");
+void i2cScanner()
+{
+  Serial.printf("\n\ni2c scanner\n\n");
 
-//   bool found = false;
-//   elapsedMillis since_looking;
+  bool found = false;
+  elapsedMillis since_looking;
 
-//   while (!found)
-//   {
-//     Serial.printf("scanning\n");
-//     for (int addr = 1; addr < 127; addr++)
-//     {
-//       Wire.beginTransmission(addr);
-//       byte error = Wire.endTransmission();
+  while (!found)
+  {
+    Serial.printf("scanning\n");
+    for (int addr = 1; addr < 127; addr++)
+    {
+      Wire.beginTransmission(addr);
+      byte error = Wire.endTransmission();
 
-//       if (error == 0)
-//       {
-//         Serial.printf("device found at 0x02%x\n", addr);
-//         found = true;
-//       }
-//       else if (error == 4)
-//       {
-//         Serial.printf("unknown error found at 0x02%x\n", addr);
-//       }
-//     }
+      if (error == 0)
+      {
+        Serial.printf("device found at 0x02%x\n", addr);
+        found = true;
+      }
+      else if (error == 4)
+      {
+        Serial.printf("unknown error found at 0x02%x\n", addr);
+      }
+    }
 
-//     if (!found)
-//       delay(2000);
-//   }
+    if (!found)
+      delay(2000);
+  }
 
-//   Serial.printf("Finished scanning for devices\n");
-// }
+  Serial.printf("Finished scanning for devices\n");
+}
