@@ -21,6 +21,7 @@ int ang, lang = 0;
 //---------------------------------------------------------
 
 #include <MagThrottle.h>
+#include <NintendoButtons.h>
 
 //---------------------------------------------------------
 
@@ -44,6 +45,8 @@ void setup()
 
   i2cScanner(); // in utils.h
 
+  ClassicButtons::init();
+
   if (ams5600.detectMagnet() == 0)
   {
     Serial.printf("searching....\n");
@@ -66,12 +69,6 @@ void setup()
       /*sweep*/ 60,
       [](uint8_t throttle) {
         // Serial.printf("   throttle: %d\n", throttle);
-      },
-      [](uint8_t ev) {
-        if (ev == MagThrottle::CLICKED)
-          Serial.printf("   event: CLICKED\n");
-        else if (ev == MagThrottle::RELEASED)
-          Serial.printf("   event: RELEASED\n");
       });
 
   delay(1000);
@@ -81,7 +78,7 @@ void setup()
 #include <math.h>
 
 uint8_t old_throttle;
-elapsedMillis since_read_angle;
+elapsedMillis since_read_angle, since_read_classic;
 
 void loop()
 {
@@ -96,6 +93,12 @@ void loop()
     // if (MagThrottle::angleChanged())
     MagThrottle::loop();
     // old_throttle = t;
+  }
+
+  if (since_read_classic > 100)
+  {
+    since_read_classic = 0;
+    ClassicButtons::loop();
   }
 
   vTaskDelay(10);

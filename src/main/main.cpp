@@ -200,7 +200,9 @@ Preferences configStore;
 
 #include <throttle.h>
 
-ThrottleClass throttle;
+#include <MagThrottle.h>
+
+// ThrottleClass throttle;
 
 //---------------------------------------------------------------
 
@@ -220,6 +222,12 @@ ThrottleClass throttle;
 #include <assert.h>
 #define __ASSERT_USE_STDERR
 
+void throttleChanged_cb(uint8_t throttle)
+{
+  if (PRINT_THROTTLE)
+    Serial.printf("throttle: %d\n", throttle);
+}
+
 //------------------------------------------------------------------
 
 void setup()
@@ -233,6 +241,7 @@ void setup()
 
   Board::init();
   Stats::init();
+  MagThrottle::init(/*angle*/ 60.0, throttleChanged_cb);
 
   configStore.begin(STORE_CONFIG, false);
 

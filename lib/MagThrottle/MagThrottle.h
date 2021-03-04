@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #endif
 
+#include <Wire.h>
 #include <AS5600.h>
 #include <FastMap.h>
 #include <Fsm.h>
@@ -10,6 +11,10 @@
 
 namespace MagThrottle
 {
+  // https://ams.com/documents/20143/36005/AS5600_DS000365_5-00.pdf
+
+  AMS_5600 ams5600;
+
   const char *statePrintFormat = "[State]: %s\n";
 
   typedef void (*ThrottleChangedCallback)(uint8_t);
@@ -226,11 +231,10 @@ namespace MagThrottle
   Fsm fsm(&stIdle);
 
   //------------------------------------------------------
-  void init(float sweep_angle, ThrottleChangedCallback throttleChangedCb, ButtonEventCallback buttonClickedCb)
+  void init(float sweep_angle, ThrottleChangedCallback throttleChangedCb)
   {
     _sweep_angle = sweep_angle;
     _throttleChangedCb = throttleChangedCb;
-    _buttonEventCb = buttonClickedCb;
 
     _throttle_map.init(0, sweep_angle * 2, 0, 255);
 
@@ -275,11 +279,6 @@ namespace MagThrottle
       }
     }
 
-    // if (button.hasBeenClicked())
-    // {
-    //   button.clearEventBits();
-    //   Serial.printf("button clicked\n");
-    // }
     old_state = _buttonState;
   }
 
