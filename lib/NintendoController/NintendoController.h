@@ -6,6 +6,7 @@
 
 class NintendoController
 {
+  typedef void (*ButtonEventCb)(uint8_t btn);
 
 public:
   static const int BUTTON_UP = 0;
@@ -30,10 +31,15 @@ public:
   bool was_pressed(int button_index);
   bool was_released(int button_index);
   void debug();
+  void setPressedEventCb(ButtonEventCb cb);
+  void setReleasedEventCb(ButtonEventCb cb);
+  const char* getButton(uint8_t i);
 
 private:
   int address = I2C_ADDRESS;
   uint8_t buttonStates[BUTTON_COUNT];
+  ButtonEventCb _buttonPressedEventCb = nullptr;
+  ButtonEventCb _buttonReleasedEventCb = nullptr;
 
   static const int BUTTON_BYTES_UP = 0x0001;
   static const int BUTTON_BYTES_RIGHT = 0x8000;

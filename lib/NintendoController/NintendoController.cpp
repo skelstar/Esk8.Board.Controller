@@ -67,6 +67,10 @@ void NintendoController::update()
   {
     this->old_buttons[i].pressed = this->buttons[i].pressed;
     this->buttons[i].pressed = ((button_bytes & this->buttons[i].bytes) == this->buttons[i].bytes);
+    if (_buttonPressedEventCb != nullptr && was_pressed(i))
+      _buttonPressedEventCb(i);
+    if (_buttonReleasedEventCb != nullptr && was_released(i))
+      _buttonReleasedEventCb(i);
   }
 }
 
@@ -136,6 +140,15 @@ void NintendoController::debug()
     Serial.println(debug_str);
 }
 
+void NintendoController::setPressedEventCb(ButtonEventCb cb)
+{
+  this->_buttonPressedEventCb = cb;
+}
+void NintendoController::setReleasedEventCb(ButtonEventCb cb)
+{
+  _buttonReleasedEventCb = cb;
+}
+
 void NintendoController::reset_buttons()
 {
   for (int i = 0; i < BUTTONS_NUMBER; i++)
@@ -147,4 +160,21 @@ void NintendoController::reset_buttons()
     this->old_buttons[i].wasPressed = false;
     this->old_buttons[i].wasReleased = false;
   }
+}
+
+const char *NintendoController::getButton(uint8_t i)
+{
+  switch (i)
+  {
+  case this->BUTTON_UP: return "BUTTON_UP";
+  case this->BUTTON_RIGHT: return "BUTTON_RIGHT";
+  case this->BUTTON_DOWN: return "BUTTON_DOWN";
+  case this->BUTTON_LEFT: return "BUTTON_LEFT";
+  case this->BUTTON_A: return "BUTTON_A";
+  case this->BUTTON_B: return "BUTTON_B";
+  case this->BUTTON_START: return "BUTTON_START";
+  case this->BUTTON_SELECT: return "BUTTON_SELECT";
+  case this->BUTTON_COUNT: return "BUTTON_COUNT";
+  }
+  return "OUT OF RANGE getButton(uint8_t i)";
 }
