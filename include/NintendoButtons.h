@@ -24,8 +24,5 @@ namespace ClassicButtons
     classic.update(); // Get new data from the controller
 
     classic.debug();
-
-    if (classic.was_released(classic.BUTTON_A))
-      Serial.printf("BUTTON A released!\n");
   }
 }

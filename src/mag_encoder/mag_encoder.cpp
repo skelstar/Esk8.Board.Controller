@@ -82,7 +82,7 @@ elapsedMillis since_read_angle, since_read_classic;
 
 void loop()
 {
-  button35.loop();
+  // button35.loop();
 
   if (since_read_angle > 100)
   {

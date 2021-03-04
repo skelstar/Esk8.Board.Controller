@@ -27,8 +27,6 @@ void NintendoController::init()
   delay(10);
 
   reset_buttons();
-
-  // notice that doesn't trigger any error
 }
 
 void NintendoController::update()
@@ -72,19 +70,11 @@ void NintendoController::update()
   }
 }
 
-bool NintendoController::is_pressed()
-{
-  for (int i = 0; i < BUTTONS_NUMBER; i++)
-  {
-    if (this->buttons[i].pressed)
-      return true;
-  }
-  return false;
-}
-
 bool NintendoController::is_pressed(int button_index)
 {
-  return (button_index >= 0 && button_index <= BUTTONS_NUMBER && this->buttons[button_index].pressed);
+  return (button_index >= 0 && 
+          button_index <= BUTTONS_NUMBER && 
+          this->buttons[button_index].pressed);
 }
 
 bool NintendoController::was_pressed(int button_index)
@@ -109,30 +99,38 @@ void NintendoController::debug()
 {
   String debug_str = "";
 
-  if (this->buttons[0].pressed)
-    debug_str += "UP ";
-  if (this->buttons[1].pressed)
-    debug_str += "RIGHT ";
-  if (this->buttons[2].pressed)
-    debug_str += "DOWN ";
-  if (this->buttons[3].pressed)
-    debug_str += "LEFT ";
-  if (this->buttons[4].pressed)
-    debug_str += "A ";
-  if (this->buttons[5].pressed)
-    debug_str += "B ";
-  if (this->buttons[6].pressed)
-    debug_str += "X ";
-  if (this->buttons[7].pressed)
-    debug_str += "Y ";
-  if (this->buttons[8].pressed)
-    debug_str += "L ";
-  if (this->buttons[9].pressed)
-    debug_str += "R ";
-  if (this->buttons[10].pressed)
-    debug_str += "START ";
-  if (this->buttons[11].pressed)
-    debug_str += "SELECT ";
+  if (was_pressed(BUTTON_UP))
+    debug_str += "UP pressed";
+  if (was_pressed(BUTTON_RIGHT))
+    debug_str += "RIGHT pressed";
+  if (was_pressed(BUTTON_DOWN))
+    debug_str += "DOWN pressed";
+  if (was_pressed(BUTTON_LEFT))
+    debug_str += "LEFT pressed";
+  if (was_pressed(BUTTON_A))
+    debug_str += "A pressed";
+  if (was_pressed(BUTTON_B))
+    debug_str += "B pressed";
+  if (was_pressed(BUTTON_START))
+    debug_str += "START pressed";
+  if (was_pressed(BUTTON_SELECT))
+    debug_str += "SELECT pressed";
+  if (was_released(BUTTON_UP))
+    debug_str += "UP released";
+  if (was_released(BUTTON_RIGHT))
+    debug_str += "RIGHT released";
+  if (was_released(BUTTON_DOWN))
+    debug_str += "DOWN released";
+  if (was_released(BUTTON_LEFT))
+    debug_str += "LEFT released";
+  if (was_released(BUTTON_A))
+    debug_str += "A released";
+  if (was_released(BUTTON_B))
+    debug_str += "B released";
+  if (was_released(BUTTON_START))
+    debug_str += "START released";
+  if (was_released(BUTTON_SELECT))
+    debug_str += "SELECT released";
 
   if (debug_str != "")
     Serial.println(debug_str);

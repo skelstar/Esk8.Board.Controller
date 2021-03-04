@@ -26,7 +26,6 @@ public:
 
   void init();
   void update();
-  bool is_pressed();
   bool is_pressed(int button_index);
   bool was_pressed(int button_index);
   bool was_released(int button_index);
