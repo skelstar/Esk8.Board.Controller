@@ -5,13 +5,9 @@
 #include <Wire.h>
 #include <AS5600.h>
 
-#include <Button2.h>
-
 #include <FastMap.h>
 
 #include <utils.h>
-
-Button2 button35(35);
 
 // https://ams.com/documents/20143/36005/AS5600_DS000365_5-00.pdf
 
@@ -25,21 +21,12 @@ int ang, lang = 0;
 
 //---------------------------------------------------------
 
-void button35_click(Button2 &btn)
-{
-  Serial.printf("button 35 click\n");
-  MagThrottle::centre(/*print*/ true);
-  MagThrottle::fsm.trigger(MagThrottle::TR_CENTRE);
-}
-
 //---------------------------------------------------------
 
 void setup()
 {
   Serial.begin(115200);
   Serial.printf("\n\nMag Encoder Ready\n\n");
-
-  button35.setPressedHandler(button35_click);
 
   Wire.begin();
 
