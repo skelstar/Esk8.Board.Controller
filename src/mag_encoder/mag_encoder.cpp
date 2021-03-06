@@ -68,31 +68,22 @@ void setup()
   MagThrottle::init(
       /*sweep*/ 60,
       [](uint8_t throttle) {
-        // Serial.printf("   throttle: %d\n", throttle);
+        Serial.printf("   throttle: %d\n", throttle);
       });
 
   delay(1000);
 }
-
-#include <stdlib.h>
-#include <math.h>
 
 uint8_t old_throttle;
 elapsedMillis since_read_angle, since_read_classic;
 
 void loop()
 {
-  // button35.loop();
-
   if (since_read_angle > 100)
   {
     since_read_angle = 0;
 
-    // MagThrottle::get();
-
-    // if (MagThrottle::angleChanged())
     MagThrottle::loop();
-    // old_throttle = t;
   }
 
   if (since_read_classic > 100)

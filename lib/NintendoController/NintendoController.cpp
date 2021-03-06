@@ -67,13 +67,17 @@ void NintendoController::update()
   {
     this->old_buttons[i].pressed = this->buttons[i].pressed;
     this->buttons[i].pressed = ((button_bytes & this->buttons[i].bytes) == this->buttons[i].bytes);
+    if (this->was_pressed(i) && _buttonPressed_cb != nullptr)
+      _buttonPressed_cb(i);
+    if (this->was_released(i) && _buttonReleased_cb != nullptr)
+      _buttonReleased_cb(i);
   }
 }
 
 bool NintendoController::is_pressed(int button_index)
 {
-  return (button_index >= 0 && 
-          button_index <= BUTTONS_NUMBER && 
+  return (button_index >= 0 &&
+          button_index <= BUTTONS_NUMBER &&
           this->buttons[button_index].pressed);
 }
 
@@ -93,6 +97,16 @@ bool NintendoController::was_released(int button_index)
       button_index <= BUTTONS_NUMBER &&
       this->buttons[button_index].pressed == 0 &&
       this->old_buttons[button_index].pressed == 1);
+}
+
+void NintendoController::setButtonPressedCb(ButtonEventCallback cb)
+{
+  _buttonPressed_cb = cb;
+}
+
+void NintendoController::setButtonReleasedCb(ButtonEventCallback cb)
+{
+  _buttonReleased_cb = cb;
 }
 
 void NintendoController::debug()

@@ -15,6 +15,12 @@ namespace ClassicButtons
   void init()
   {
     classic.init();
+    classic.setButtonPressedCb([](uint8_t button) {
+      Serial.printf("button %d was pressed\n", button);
+    });
+    classic.setButtonReleasedCb([](uint8_t button) {
+      Serial.printf("button %d was released\n", button);
+    });
 
     classicButtonsQueue = new Queue::Manager(xClassicButtons, 5);
   }
@@ -22,7 +28,5 @@ namespace ClassicButtons
   void loop()
   {
     classic.update(); // Get new data from the controller
-
-    classic.debug();
   }
 }

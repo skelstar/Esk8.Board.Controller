@@ -23,6 +23,7 @@ public:
   static const int BUTTON_COUNT = 12;
 
   // NintendoController::NintendoController();
+  typedef void (*ButtonEventCallback)(uint8_t button);
 
   void init();
   void update();
@@ -30,10 +31,15 @@ public:
   bool was_pressed(int button_index);
   bool was_released(int button_index);
   void debug();
+  void setButtonPressedCb(ButtonEventCallback cb);
+  void setButtonReleasedCb(ButtonEventCallback cb);
 
 private:
+
   int address = I2C_ADDRESS;
   uint8_t buttonStates[BUTTON_COUNT];
+  ButtonEventCallback _buttonPressed_cb = nullptr;
+  ButtonEventCallback _buttonReleased_cb = nullptr;
 
   static const int BUTTON_BYTES_UP = 0x0001;
   static const int BUTTON_BYTES_RIGHT = 0x8000;
