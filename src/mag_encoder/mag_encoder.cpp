@@ -18,6 +18,11 @@ AMS_5600 ams5600;
 #include <NintendoController.h>
 
 #include <NintendoButtons.h>
+
+#include <SparkFun_Qwiic_Button.h>
+//https://www.sparkfun.com/products/15932
+QwiicButton qwiicButton;
+
 //---------------------------------------------------------
 
 void setup()
@@ -43,18 +48,24 @@ void setup()
       }
       else
       {
-        Serial.println("Can not detect magnet");
+        Serial.println("Can not d etect magnet");
       }
       delay(1000);
     }
   }
 
-  MagThrottle::init(30.0, 50.0, MagThrottle::CLOCKWISE);
+  qwiicButton.begin();
+
+  MagThrottle::init(SWEEP_ANGLE, LIMIT_DELTA, MagThrottle::ANTI_CLOCKWISE);
+  MagThrottle::setThrottleEnabledCb([] {
+    return qwiicButton.isPressed(); // ClassicButtons::buttonPressed(NintendoController::BUTTON_B);
+  });
 
   delay(1000);
 }
 
-elapsedMillis since_update_throttle, since_read_classic;
+elapsedMillis since_update_throttle, since_read_classic, since_read_qwiicButton;
+uint8_t last_qwiic = 0;
 
 void loop()
 {
@@ -62,7 +73,19 @@ void loop()
   {
     since_update_throttle = 0;
 
-    MagThrottle::update(/*enabled*/ ClassicButtons::throttle_enabled());
+    MagThrottle::update();
+  }
+
+  if (since_read_qwiicButton > 100)
+  {
+    since_read_qwiicButton = 0;
+    uint8_t pressed = qwiicButton.isPressed();
+    if (!pressed && last_qwiic == 1)
+    {
+      // released
+      MagThrottle::centre();
+    }
+    last_qwiic = pressed;
   }
 
   if (since_read_classic > 100)

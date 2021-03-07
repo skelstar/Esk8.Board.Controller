@@ -2,7 +2,7 @@
 #define NintendoController_h
 
 #define BUTTONS_NUMBER 12
-#define I2C_ADDRESS 0x52
+#define I2C_ADDR 0x52
 
 class NintendoController
 {
@@ -35,8 +35,7 @@ public:
   void setButtonReleasedCb(ButtonEventCallback cb);
 
 private:
-
-  int address = I2C_ADDRESS;
+  int address = I2C_ADDR;
   uint8_t buttonStates[BUTTON_COUNT];
   ButtonEventCallback _buttonPressed_cb = nullptr;
   ButtonEventCallback _buttonReleased_cb = nullptr;

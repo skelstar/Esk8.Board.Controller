@@ -57,6 +57,11 @@ namespace ClassicButtons
     classic.update(); // Get new data from the controller
   }
 
+  bool buttonPressed(uint8_t button)
+  {
+    return classic.is_pressed(button);
+  }
+
   bool throttle_enabled()
   {
     return classic.is_pressed(NintendoController::BUTTON_B);
