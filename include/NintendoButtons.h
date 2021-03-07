@@ -1,7 +1,6 @@
 
 
 #include <Wire.h>
-
 #include <NintendoController.h>
 #include <QueueManager.h>
 
@@ -42,10 +41,12 @@ namespace ClassicButtons
   {
     classic.init();
     classic.setButtonPressedCb([](uint8_t button) {
-      Serial.printf("button %d was pressed\n", button);
+      // Serial.printf("button %s was pressed\n", getButtonName(button));
     });
     classic.setButtonReleasedCb([](uint8_t button) {
-      Serial.printf("button %d was released\n", button);
+      if (button == NintendoController::BUTTON_B)
+        MagThrottle::centre();
+      // Serial.printf("button %s was released\n", getButtonName(button));
     });
 
     classicButtonsQueue = new Queue::Manager(xClassicButtons, 5);
@@ -54,5 +55,10 @@ namespace ClassicButtons
   void loop()
   {
     classic.update(); // Get new data from the controller
+  }
+
+  bool throttle_enabled()
+  {
+    return classic.is_pressed(NintendoController::BUTTON_B);
   }
 }
