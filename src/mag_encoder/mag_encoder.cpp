@@ -48,7 +48,7 @@ void setup()
       }
       else
       {
-        Serial.println("Can not d etect magnet");
+        Serial.println("Can not detect magnet");
       }
       delay(1000);
     }

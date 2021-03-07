@@ -27,7 +27,7 @@ namespace MagThrottle
     float _centre = 0.0,
           _last = 0.0,
           _sweep = 0.0,
-          _limit = 0.0;
+          _delta_limit = 0.0;
     FastMap _bar_map;
     ThrottleEnabled_Cb _throttleEnabled_cb = nullptr;
 
@@ -112,7 +112,7 @@ namespace MagThrottle
       // Serial.printf("\n");
     }
 
-    if (abs(delta) < _limit)
+    if (abs(delta) < _delta_limit)
     {
       _throttle += (delta / 360.0) * 255;
 
@@ -140,7 +140,7 @@ namespace MagThrottle
     else if (PRINT_THROTTLE)
     {
       Serial.printf("%s ", transition ? "EDGE" : "----");
-      Serial.printf("| limit (%.1f) EXCEEDED!!! ", delta);
+      Serial.printf("| delta_limit (%.1f) EXCEEDED!!! ", delta);
       Serial.printf("| throttle: %03d", _throttle);
       Serial.printf("  \n");
     }
@@ -161,10 +161,10 @@ namespace MagThrottle
     _throttleEnabled_cb = cb;
   }
 
-  void init(float sweep, float limit, Direction direction)
+  void init(float sweep, float delta_limit, Direction direction)
   {
     _sweep = sweep;
-    _limit = limit;
+    _delta_limit = delta_limit;
     _direction = direction;
     _bar_map.init(0, 255, 0, _bar_len + 1 + _bar_len);
     centre();
