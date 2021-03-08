@@ -41,11 +41,13 @@ namespace ClassicButtons
   {
     classic.init();
     classic.setButtonPressedCb([](uint8_t button) {
+      // if (button == NintendoController::BUTTON_B)
+      //   MagThrottle::centre();
       // Serial.printf("button %s was pressed\n", getButtonName(button));
     });
     classic.setButtonReleasedCb([](uint8_t button) {
-      if (button == NintendoController::BUTTON_B)
-        MagThrottle::centre();
+      // if (button == NintendoController::BUTTON_B)
+      //   MagThrottle::centre();
       // Serial.printf("button %s was released\n", getButtonName(button));
     });
 

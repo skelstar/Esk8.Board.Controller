@@ -198,11 +198,51 @@ Config config;
 #define STORE_CONFIG_BRAKE_COUNTS "brake counts"
 Preferences configStore;
 
-#include <throttle.h>
+// #include <throttle.h>
+
+//---------------------------------------------------------------
+// https://ams.com/documents/20143/36005/AS5600_DS000365_5-00.pdf
+
+#if OPTION_USING_MAG_THROTTLE
+
+#include <AS5600.h>
+
+AMS_5600 ams5600;
+
+namespace MagThrottle
+{
+  bool connected()
+  {
+    if (ams5600.detectMagnet() == 0)
+    {
+      Serial.printf("searching....\n");
+      while (1)
+      {
+        if (ams5600.detectMagnet() == 1)
+        {
+          Serial.printf("Current Magnitude: %d\n", ams5600.getMagnitude());
+          break;
+        }
+        else
+        {
+          Serial.println("Can not detect magnet");
+        }
+        delay(1000);
+      }
+    }
+  }
+} // namespace MagThrottle
 
 #include <MagThrottle.h>
 
-// ThrottleClass throttle;
+#include <NintendoController.h>
+#include <NintendoButtons.h>
+#include <SparkFun_Qwiic_Button.h>
+//https://www.sparkfun.com/products/15932
+
+QwiicButton qwiicButton;
+
+#endif
 
 //---------------------------------------------------------------
 
@@ -222,12 +262,6 @@ Preferences configStore;
 #include <assert.h>
 #define __ASSERT_USE_STDERR
 
-void throttleChanged_cb(uint8_t throttle)
-{
-  if (PRINT_THROTTLE)
-    Serial.printf("throttle: %d\n", throttle);
-}
-
 //------------------------------------------------------------------
 
 void setup()
@@ -235,13 +269,26 @@ void setup()
   Serial.begin(115200);
   Serial.printf("------------------------ BOOT ------------------------\n");
 
+  Wire.begin();
+
+  if (OPTION_USING_MAG_THROTTLE)
+  {
+    if (!MagThrottle::connected())
+      Serial.printf("ERROR: Could not find mag throttle\n");
+    qwiicButton.begin();
+
+    MagThrottle::init(SWEEP_ANGLE, LIMIT_DELTA, THROTTLE_DIRECTION);
+    MagThrottle::setThrottleEnabledCb([] {
+      return qwiicButton.isPressed();
+    });
+  }
+
   //get chip id
   String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
   chipId.toUpperCase();
 
   Board::init();
   Stats::init();
-  MagThrottle::init(/*angle*/ 60.0, throttleChanged_cb);
 
   configStore.begin(STORE_CONFIG, false);
 
@@ -272,14 +319,18 @@ void setup()
 
   print_build_status(chipId);
 
-  throttle.init(/*pin*/ THROTTLE_PIN, [](uint8_t throttle) {
-    Serial.printf("throttle changed: %d (cruise: %d)\n",
-                  throttle,
-                  controller_packet.cruise_control);
-  });
+#if (OPTION_USING_MAG_THROTTLE == 0)
+  {
+    throttle.init(/*pin*/ THROTTLE_PIN, [](uint8_t throttle) {
+      Serial.printf("throttle changed: %d (cruise: %d)\n",
+                    throttle,
+                    controller_packet.cruise_control);
+    });
 
-  primaryButtonInit();
-  rightButtonInit();
+    primaryButtonInit();
+    rightButtonInit();
+  }
+#endif
 
   vTaskDelay(100);
 
@@ -317,7 +368,8 @@ void setup()
 }
 //---------------------------------------------------------------
 
-elapsedMillis sinceNRFUpdate;
+elapsedMillis sinceNRFUpdate, since_update_throttle;
+uint8_t last_qwiic = 0;
 
 void loop()
 {
@@ -342,6 +394,21 @@ void loop()
 #endif
   }
 
+#if OPTION_USING_MAG_THROTTLE
+  if (since_update_throttle > SEND_TO_BOARD_INTERVAL)
+  {
+    since_update_throttle = 0;
+    uint8_t pressed = qwiicButton.isPressed();
+    if (pressed != last_qwiic) // press or release
+    {
+      MagThrottle::centre();
+    }
+    last_qwiic = pressed;
+
+    MagThrottle::update();
+  }
+#endif
+
   primaryButtonLoop();
   rightButton.loop();
 
@@ -355,27 +422,42 @@ void sendToBoard()
   bool throttleEnabled = false;
   bool cruiseControlActive = false;
   bool primaryButtonPressed = false;
+  bool braking = false;
+
 #ifdef PRIMARY_BUTTON_PIN
   primaryButtonPressed = primaryButton.isPressedRaw();
+  braking = throttle.get() < 127;
+
+#endif
+#if OPTION_USING_MAG_THROTTLE
+  primaryButtonPressed = qwiicButton.isPressed();
+  braking = MagThrottle::get() < 127;
+#else
+
 #endif
 
   if (Board::mutex.take(__func__, 50))
   {
     throttleEnabled =
-        throttle.get() < 127 || // braking
+        braking || // braking
         board.packet.moving ||
         !featureService.get<bool>(PUSH_TO_START) ||
         (featureService.get<bool>(PUSH_TO_START) && primaryButtonPressed);
 
+#if OPTION_USING_MAG_THROTTLE
+    cruiseControlActive = false;
+#else
     cruiseControlActive =
         board.packet.moving &&
         FEATURE_CRUISE_CONTROL &&
         primaryButtonPressed;
+#endif
     Board::mutex.give(__func__);
   }
 
   sinceSentToBoard = 0;
-  controller_packet.throttle = throttle.get(/*enabled*/ throttleEnabled);
+  // controller_packet.throttle = throttle.get(/*enabled*/ throttleEnabled);
+  controller_packet.throttle = MagThrottle::get();
   controller_packet.cruise_control = cruiseControlActive;
   sendPacketToBoard();
 }

@@ -13,16 +13,16 @@ namespace MagThrottle
 
   typedef bool (*ThrottleEnabled_Cb)();
 
-  enum Direction
-  {
-    CLOCKWISE = 0,
-    ANTI_CLOCKWISE
-  };
+  // enum Direction
+  // {
+  //   CLOCKWISE = 0,
+  //   ANTI_CLOCKWISE
+  // };
 
   namespace // private
   {
-    Direction _direction = CLOCKWISE;
-    int16_t _throttle = 127;
+    uint8_t _direction = DIR_CLOCKWISE;
+    uint8_t _throttle = 127;
     uint8_t _bar_len = 10;
     float _centre = 0.0,
           _last = 0.0,
@@ -82,10 +82,15 @@ namespace MagThrottle
 
     float getDelta(float deg, float last)
     {
-      return _direction == CLOCKWISE
+      return _direction == DIR_CLOCKWISE
                  ? deg - last
                  : last - deg;
     }
+  }
+
+  uint8_t get()
+  {
+    return _throttle;
   }
 
   void update(bool force_print = false)
@@ -108,15 +113,16 @@ namespace MagThrottle
       // Serial.printf("_last: %.1f | ", _last);
       // Serial.printf("=> adj: %.1f | ", adj);
       // Serial.printf("delta: %.1f | ", delta);
-      // Serial.printf("direction: %s ", _direction == CLOCKWISE ? "CLOCK" : "ANTI");
+      // Serial.printf("direction: %s ", _direction == DIR_CLOCKWISE ? "CLOCK" : "ANTI");
       // Serial.printf("\n");
     }
 
     if (abs(delta) < _delta_limit)
     {
-      _throttle += (delta / 360.0) * 255;
+      int16_t running = _throttle;
+      running += (delta / 360.0) * 255;
 
-      _throttle = constrain(_throttle, 0, 255);
+      _throttle = constrain(running, 0, 255);
 
       if (_throttleEnabled_cb == nullptr)
       {
@@ -161,11 +167,13 @@ namespace MagThrottle
     _throttleEnabled_cb = cb;
   }
 
-  void init(float sweep, float delta_limit, Direction direction)
+  void init(float sweep, float delta_limit, uint8_t direction)
   {
     _sweep = sweep;
     _delta_limit = delta_limit;
-    _direction = direction;
+    _direction = direction == DIR_CLOCKWISE || direction == DIR_ANIT_CLOCKWISE
+                     ? direction
+                     : DIR_CLOCKWISE;
     _bar_map.init(0, 255, 0, _bar_len + 1 + _bar_len);
     centre();
   }
