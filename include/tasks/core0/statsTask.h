@@ -12,6 +12,7 @@ T readFromMemory(char *storeName, char *key, T defaultVal = 0);
 
 namespace Stats
 {
+  QueueHandle_t statsQueue = NULL;
   Queue::Manager *queue;
 
   MyMutex mutex;
@@ -157,8 +158,9 @@ namespace Stats
     mutex.create("stats", TICKS_2);
     mutex.enabled = true;
 
-    queue = new Queue::Manager(/*length*/ 3, sizeof(StatsEvent), /*ticks*/ 5);
-    queue->setName("Stats");
+    statsQueue = xQueueCreate(/*len*/ 3, sizeof(StatsEvent));
+    queue = new Queue::Manager(statsQueue, (TickType_t)5);
+    // queue->setName("Stats");
     queue->setSentEventCallback(queueSentEventCb);
     queue->setReadEventCallback(queueReadEventCb);
 

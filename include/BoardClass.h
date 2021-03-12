@@ -34,6 +34,7 @@ public:
 
   VescData packet;
   elapsedMillis sinceLastPacket;
+  unsigned long id;
 
 private:
   VescData _old;

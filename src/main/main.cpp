@@ -36,59 +36,15 @@ Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 
 xQueueHandle xDisplayEventQueue;
 xQueueHandle xButtonPushEventQueue;
+xQueueHandle xBoardPacketQueue;
+xQueueHandle xControllerPacketQueue;
 
 Queue::Manager *displayQueue;
 Queue::Manager *buttonQueue;
+Queue::Manager *boardPacketQueue;
+Queue::Manager *controllerPacketQueue;
 
 //------------------------------------------------------------
-enum FeatureType
-{
-  CRUISE_CONTROL,
-  PUSH_TO_START
-};
-
-class FeatureServiceClass
-{
-public:
-  FeatureServiceClass()
-  {
-    set(CRUISE_CONTROL, FEATURE_CRUISE_CONTROL);
-    set(PUSH_TO_START, FEATURE_PUSH_TO_START);
-  }
-
-  template <class T>
-  void set(FeatureType feature, T value)
-  {
-    switch (feature)
-    {
-    case CRUISE_CONTROL:
-      _featureCruiseControl = value;
-      break;
-    case PUSH_TO_START:
-      _featurePushToStart = value;
-      break;
-    }
-  }
-
-  template <class T>
-  T get(FeatureType feature)
-  {
-    switch (feature)
-    {
-    case CRUISE_CONTROL:
-      return _featureCruiseControl;
-    case PUSH_TO_START:
-      return _featurePushToStart;
-    }
-    return NULL;
-  }
-
-private:
-  bool _featureCruiseControl;
-  bool _featurePushToStart;
-} featureService;
-
-//------------------------------------------------------------------
 
 ControllerData controller_packet;
 ControllerConfig controller_config;
@@ -96,6 +52,10 @@ ControllerConfig controller_config;
 #include <BoardClass.h>
 
 BoardClass board;
+
+//------------------------------------------------------------------
+
+#include <FeatureService.h>
 
 //------------------------------------------------------------------
 
@@ -344,6 +304,9 @@ void setup()
 
   xDisplayEventQueue = xQueueCreate(5, sizeof(uint8_t));
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
+  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
+
+  boardPacketQueue = new Queue::Manager(xBoardPacketQueue, 5);
 
   displayQueue = new Queue::Manager(xDisplayEventQueue, 5);
 #if OPTION_USING_DISPLAY
@@ -376,13 +339,6 @@ void loop()
   if (sinceSentToBoard > SEND_TO_BOARD_INTERVAL)
   {
     sendToBoard();
-  }
-
-  if (Board::mutex.take(__func__))
-  {
-    if (board.hasTimedout())
-      Comms::queue1->send(Comms::Event::BOARD_TIMEDOUT);
-    Board::mutex.give(__func__);
   }
 
   if (sinceNRFUpdate > 20)
@@ -436,24 +392,20 @@ void sendToBoard()
 
 #endif
 
-  if (Board::mutex.take(__func__, 50))
-  {
-    throttleEnabled =
-        braking || // braking
-        board.packet.moving ||
-        !featureService.get<bool>(PUSH_TO_START) ||
-        (featureService.get<bool>(PUSH_TO_START) && primaryButtonPressed);
+  throttleEnabled =
+      braking || // braking
+      board.packet.moving ||
+      !featureService.get<bool>(FeatureType::PUSH_TO_START) ||
+      (featureService.get<bool>(FeatureType::PUSH_TO_START) && primaryButtonPressed);
 
 #if OPTION_USING_MAG_THROTTLE
-    cruiseControlActive = false;
+  cruiseControlActive = false;
 #else
-    cruiseControlActive =
-        board.packet.moving &&
-        FEATURE_CRUISE_CONTROL &&
-        primaryButtonPressed;
+  cruiseControlActive =
+      board.packet.moving &&
+      FEATURE_CRUISE_CONTROL &&
+      primaryButtonPressed;
 #endif
-    Board::mutex.give(__func__);
-  }
 
   sinceSentToBoard = 0;
   // controller_packet.throttle = throttle.get(/*enabled*/ throttleEnabled);

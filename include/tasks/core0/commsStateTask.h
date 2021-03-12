@@ -44,7 +44,10 @@ namespace Comms
 
   FsmManager<Event> commsFsm;
 
+  QueueHandle_t commsQueue = NULL;
   Queue::Manager *queue1;
+
+  elapsedMillis since_peeked;
 
   //------------------------------------------
 
@@ -63,22 +66,18 @@ namespace Comms
   State stateConnected(
       [] {
         commsFsm.printState(StateId::CONNECTED);
-        if (Board::mutex.take("Comms: stateConnected", TICKS_100))
+        bool boardCompatible = boardVersionCompatible(board.packet.version);
+
+        if (Stats::mutex.take("Comms: stateConnected", TICKS_100))
         {
-          bool boardCompatible = boardVersionCompatible(board.packet.version);
+          if (!boardCompatible)
+            displayQueue->send(DispState::VERSION_DOESNT_MATCH);
+          else if (stats.boardConnectedThisSession)
+            stats.boardResets++;
 
-          if (Stats::mutex.take("Comms: stateConnected", TICKS_100))
-          {
-            if (!boardCompatible)
-              displayQueue->send(DispState::VERSION_DOESNT_MATCH);
-            else if (stats.boardConnectedThisSession)
-              stats.boardResets++;
-
-            comms_session_started = true;
-            stats.boardConnected = true;
-            Stats::mutex.give("Comms: stateConnected");
-          }
-          Board::mutex.give("Comms: stateConnected");
+          comms_session_started = true;
+          stats.boardConnected = true;
+          Stats::mutex.give("Comms: stateConnected");
         }
       },
       NULL,
@@ -134,10 +133,33 @@ namespace Comms
 
     while (true)
     {
-      Comms::Event ev = Comms::queue1->read<Comms::Event>();
-      if (ev != Comms::NO_EVENT)
-        Comms::commsFsm.trigger(ev);
-      Comms::fsm.run_machine();
+      if (since_peeked > 500)
+      {
+        since_peeked = 0;
+
+        if (boardPacketQueue != NULL)
+        {
+          BoardClass *res = boardPacketQueue->peek<BoardClass>();
+          if (res != nullptr)
+          {
+            if (false == res->hasTimedout())
+            {
+              if (res->packet.reason == ReasonType::FIRST_PACKET)
+                Comms::commsFsm.trigger(Event::BOARD_FIRST_PACKET);
+              else
+                Comms::commsFsm.trigger(Event::PKT_RXD);
+            }
+            else
+              Comms::commsFsm.trigger(Event::BOARD_TIMEDOUT);
+          }
+          Comms::commsFsm.runMachine();
+        }
+      }
+
+      // Comms::Event ev = Comms::queue1->read<Comms::Event>();
+      // if (ev != Comms::NO_EVENT)
+      //   Comms::commsFsm.trigger(ev);
+      // Comms::fsm.run_machine();
 
       vTaskDelay(10);
     }
@@ -159,8 +181,8 @@ namespace Comms
 
   void init()
   {
-    queue1 = new Queue::Manager(/*len*/ 3, sizeof(Comms::Event), /*ticks*/ 10);
-    queue1->setName("Comms");
+    commsQueue = xQueueCreate(/*len*/ 3, sizeof(Comms::Event));
+    queue1 = new Queue::Manager(commsQueue, (TickType_t)10);
     queue1->setSentEventCallback(queueSent_cb);
     queue1->setReadEventCallback(queueRead_cb);
   }
