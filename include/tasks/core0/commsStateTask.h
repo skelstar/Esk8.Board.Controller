@@ -54,11 +54,7 @@ namespace Comms
   State stateDisconnected(
       [] {
         commsFsm.printState(StateId::DISCONNECTED);
-        if (Stats::mutex.take("Comms: stateDisconnected", TICKS_100))
-        {
-          stats.boardConnected = false;
-          Stats::mutex.give("Comms: stateDisconnected");
-        }
+        stats.boardConnected = false;
       },
       NULL,
       NULL);
@@ -68,17 +64,13 @@ namespace Comms
         commsFsm.printState(StateId::CONNECTED);
         bool boardCompatible = boardVersionCompatible(board.packet.version);
 
-        if (Stats::mutex.take("Comms: stateConnected", TICKS_100))
-        {
-          if (!boardCompatible)
-            displayQueue->send(DispState::VERSION_DOESNT_MATCH);
-          else if (stats.boardConnectedThisSession)
-            stats.boardResets++;
+        if (!boardCompatible)
+          displayQueue->send(DispState::VERSION_DOESNT_MATCH);
+        else if (stats.boardConnectedThisSession)
+          stats.boardResets++;
 
-          comms_session_started = true;
-          stats.boardConnected = true;
-          Stats::mutex.give("Comms: stateConnected");
-        }
+        comms_session_started = true;
+        stats.boardConnected = true;
       },
       NULL,
       NULL);

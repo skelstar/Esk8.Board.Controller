@@ -17,7 +17,6 @@ public:
   unsigned long timeMovingMS = 0;
   bool boardConnected = false,
        boardConnectedThisSession = false;
-  bool update = false;
 
   void setResetsAcknowledgedCallback(ResetsAcknowledgedCallback cb)
   {

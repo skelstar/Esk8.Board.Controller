@@ -49,18 +49,18 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 
     sinceBoardConnected = 0;
 
-    Stats::queue->send(Stats::BOARD_FIRST_PACKET);
+    // Stats::queue->send(Stats::BOARD_FIRST_PACKET);
   }
   else if (board.startedMoving())
   {
     // TODO move this stuff to display
     displayQueue->send(DispState::MOVING);
-    Stats::queue->send(Stats::MOVING);
+    // Stats::queue->send(Stats::MOVING);
   }
   else if (board.hasStopped())
   {
     displayQueue->send(DispState::STOPPED);
-    Stats::queue->send(Stats::STOPPED);
+    // Stats::queue->send(Stats::STOPPED);
   }
   else if (board.valuesChanged())
     displayQueue->send(DispState::UPDATE);
@@ -92,15 +92,11 @@ void sendPacketToBoard()
   bool rxLastResponse = board.packet.id == controller_packet.id - 1 &&
                         board.packet.id > 0;
 
-  if (Stats::mutex.take(__func__, (TickType_t)TICKS_10))
+  if (!rxLastResponse && stats.boardConnected)
   {
-    if (!rxLastResponse && stats.boardConnected)
-    {
-      stats.total_failed_sending += 1;
-      if (PRINT_IF_TOTAL_FAILED_SENDING)
-        DEBUGVAL(board.packet.id, controller_packet.id);
-    }
-    Stats::mutex.give(__func__);
+    stats.total_failed_sending += 1;
+    if (PRINT_IF_TOTAL_FAILED_SENDING)
+      DEBUGVAL(board.packet.id, controller_packet.id);
   }
 
   boardClient.sendTo(Packet::CONTROL, controller_packet);
@@ -109,8 +105,21 @@ void sendPacketToBoard()
 }
 //------------------------------------------------------------------
 
-bool boardTimedOut()
+void updateThrottle(nsPeripherals::Peripherals *periph)
 {
-  unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
-  return board.sinceLastPacket > (timeout + 100);
+  if (periph == nullptr)
+  {
+    Serial.printf("ERROR: periph is null\n");
+    return;
+  }
+
+  if (periph->throttle > 127 && periph->primary_button == 1)
+    controller_packet.throttle = periph->throttle;
+  else if (periph->throttle > 127)
+    controller_packet.throttle = 127;
+  else
+    controller_packet.throttle = periph->throttle;
+
+  if (PRINT_THROTTLE)
+    DEBUGVAL(controller_packet.throttle);
 }

@@ -3,10 +3,14 @@
 #include <tft.h>
 #endif
 
+#include <statsClass.h>
+
 namespace Display
 {
   void printState(uint16_t id);
   void printTrigger(uint16_t ev);
+
+  StatsClass *_stats;
 
   bool taskReady = false;
 
@@ -28,10 +32,17 @@ namespace Display
 
 #define READ_DISP_EVENT_QUEUE_PERIOD 100
 
-    elapsedMillis sinceReadDispEventQueue;
+    elapsedMillis sinceReadDispEventQueue, since_checked_queues;
 
     while (true)
     {
+      if (since_checked_queue > 500)
+      {
+        since_checked_queue = 0;
+
+        _stats = statsQueue->peek<StatsClass>();
+      }
+
       if (sinceReadDispEventQueue > READ_DISP_EVENT_QUEUE_PERIOD)
       {
         sinceReadDispEventQueue = 0;

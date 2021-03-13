@@ -11,7 +11,7 @@ public:
                  packet.vescOnline != _old.vescOnline;
     else
       _changed = packet.vescOnline != _old.vescOnline;
-    sinceLastPacket = 0;
+    _sinceLastPacket = 0;
   }
 
   bool valuesChanged() { return _changed; }
@@ -27,16 +27,16 @@ public:
   bool hasTimedout()
   {
     unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
-    return sinceLastPacket > (timeout + 200);
+    return _sinceLastPacket > (timeout + 200);
   }
 
   CommandType getCommand() { return packet.command; }
 
   VescData packet;
-  elapsedMillis sinceLastPacket;
   unsigned long id;
 
 private:
+  elapsedMillis _sinceLastPacket;
   VescData _old;
   bool _changed = false;
 };

@@ -254,22 +254,18 @@ void setup()
 
   configStore.begin(STORE_CONFIG, false);
 
-  if (Stats::mutex.take("setup()"))
+  if (stats.wasWatchdogReset())
   {
-    if (stats.wasWatchdogReset())
-    {
-      stats.controllerResets++;
-      storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
-      stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS, STORE_STATS_TRIP_TIME);
-      if (PRINT_RESET_DETECTION)
-        Serial.printf("RESET!!! =========> controllerResets: %d\n", stats.controllerResets);
-    }
-    else if (stats.powerOnReset())
-    {
-      stats.controllerResets = 0;
-      storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
-    }
-    Stats::mutex.give("setup()");
+    stats.controllerResets++;
+    storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
+    stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS, STORE_STATS_TRIP_TIME);
+    if (PRINT_RESET_DETECTION)
+      Serial.printf("RESET!!! =========> controllerResets: %d\n", stats.controllerResets);
+  }
+  else if (stats.powerOnReset())
+  {
+    stats.controllerResets = 0;
+    storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
   }
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER);
