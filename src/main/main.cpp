@@ -49,6 +49,9 @@ Queue::Manager *boardPacketQueue;
 xQueueHandle xStatsQueue;
 Queue::Manager *statsQueue;
 
+xQueueHandle xPerihperals;
+Queue::Manager *mgPeripherals;
+
 //------------------------------------------------------------
 
 ControllerData controller_packet;
@@ -57,6 +60,8 @@ ControllerConfig controller_config;
 #include <BoardClass.h>
 
 BoardClass board;
+
+nsPeripherals::Peripherals *peripherals;
 
 //------------------------------------------------------------------
 
@@ -227,6 +232,8 @@ QwiicButton qwiicButton;
 #include <nrf_comms.h>
 
 #include <peripherals.h>
+#include <tasks/core0/peripheralsTask.h>
+
 #include <assert.h>
 #define __ASSERT_USE_STDERR
 
@@ -238,18 +245,6 @@ void setup()
   Serial.printf("------------------------ BOOT ------------------------\n");
 
   Wire.begin();
-
-  if (OPTION_USING_MAG_THROTTLE)
-  {
-    if (!MagThrottle::connected())
-      Serial.printf("ERROR: Could not find mag throttle\n");
-    qwiicButton.begin();
-
-    MagThrottle::init(SWEEP_ANGLE, LIMIT_DELTA, THROTTLE_DIRECTION);
-    MagThrottle::setThrottleEnabledCb([] {
-      return qwiicButton.isPressed();
-    });
-  }
 
   //get chip id
   String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
@@ -287,18 +282,18 @@ void setup()
 
   print_build_status(chipId);
 
-#if (OPTION_USING_MAG_THROTTLE == 0)
-  {
-    throttle.init(/*pin*/ THROTTLE_PIN, [](uint8_t throttle) {
-      Serial.printf("throttle changed: %d (cruise: %d)\n",
-                    throttle,
-                    controller_packet.cruise_control);
-    });
+  // #if (OPTION_USING_MAG_THROTTLE == 0)
+  //   {
+  //     throttle.init(/*pin*/ THROTTLE_PIN, [](uint8_t throttle) {
+  //       Serial.printf("throttle changed: %d (cruise: %d)\n",
+  //                     throttle,
+  //                     controller_packet.cruise_control);
+  //     });
 
-    primaryButtonInit();
-    rightButtonInit();
-  }
-#endif
+  //     primaryButtonInit();
+  //     rightButtonInit();
+  //   }
+  // #endif
 
   vTaskDelay(100);
 
@@ -309,6 +304,7 @@ void setup()
   Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_2);
   Remote::createTask(BATTERY_TASK_CORE, TASK_PRIORITY_1);
   Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
+  nsPeripherals::createTask(PERIPHERALS_TASK_CORE, 3);
 
 #if (FEATURE_LED_COUNT > 0)
   Led::createTask(LED_TASK_CORE, TASK_PRIORITY_1);
@@ -331,7 +327,11 @@ void setup()
   xStatsQueue = xQueueCreate(3, sizeof(StatsClass *));
   statsQueue = new Queue::Manager(xStatsQueue, (TickType_t)5);
 
+  xPerihperals = xQueueCreate(1, sizeof(nsPeripherals::Peripherals *));
+  mgPeripherals = new Queue::Manager(xPerihperals, (TickType_t)5);
+
   bool displayReady = false;
+  peripherals = new nsPeripherals::Peripherals();
 
   while (
 #if OPTION_USING_DISPLAY
@@ -349,7 +349,6 @@ void setup()
 //---------------------------------------------------------------
 
 elapsedMillis sinceNRFUpdate, since_update_throttle;
-uint8_t last_qwiic = 0;
 
 void loop()
 {
@@ -371,14 +370,27 @@ void loop()
   if (since_update_throttle > SEND_TO_BOARD_INTERVAL)
   {
     since_update_throttle = 0;
-    uint8_t pressed = qwiicButton.isPressed();
-    if (pressed != last_qwiic) // press or release
-    {
-      MagThrottle::centre();
-    }
-    last_qwiic = pressed;
 
-    MagThrottle::update();
+    nsPeripherals::Peripherals *res = mgPeripherals->peek<nsPeripherals::Peripherals>();
+    if (res != nullptr)
+    {
+      if (peripherals->primary_button != res->primary_button)
+      {
+        Serial.printf("primary button: %d\n", res->primary_button);
+      }
+      peripherals = new nsPeripherals::Peripherals(*res);
+      // peripherals.primary_button = res->primary_button;
+      //   peripherals.throttle = res->throttle;
+    }
+
+    // uint8_t pressed = peripherals.primary_button == 1; // qwiicButton.isPressed();
+    // if (pressed != last_primary_button)                // press or release
+    // {
+    //   MagThrottle::centre();
+    // }
+    // last_primary_button = pressed;
+
+    // MagThrottle::update();
   }
 #endif
 
@@ -403,7 +415,7 @@ void sendToBoard()
 
 #endif
 #if OPTION_USING_MAG_THROTTLE
-  primaryButtonPressed = qwiicButton.isPressed();
+  primaryButtonPressed = peripherals->primary_button == 1; // qwiicButton.isPressed();
   braking = MagThrottle::get() < 127;
 #else
 

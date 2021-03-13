@@ -111,6 +111,18 @@ namespace Comms
 
 //------------------------------------------------------------
 
+namespace nsPeripherals
+{
+  class Peripherals
+  {
+  public:
+    uint8_t primary_button = 0;
+    uint8_t throttle = 127;
+  };
+}
+
+//------------------------------------------------------------
+
 #define LCD_WIDTH 240
 #define LCD_HEIGHT 135
 
