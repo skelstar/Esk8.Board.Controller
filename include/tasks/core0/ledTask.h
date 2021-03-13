@@ -17,6 +17,8 @@ namespace Led
 
   const char *name[] = {"LedTask"};
 
+  BoardClass *myboard;
+
   void task(void *pvParameters)
   {
     Serial.printf(PRINT_TASK_STARTED_FORMAT, "Led", xPortGetCoreID());
@@ -31,10 +33,34 @@ namespace Led
       leds[i] = CRGB::Black;
     FastLED.show();
 
+    myboard = new BoardClass();
+
     ready = true;
+
+    elapsedMillis since_checked_queue;
 
     while (1)
     {
+      if (since_checked_queue > 150)
+      {
+        since_checked_queue = 0;
+
+        BoardClass *res = boardPacketQueue->peek<BoardClass>();
+        if (res != nullptr)
+        {
+          if (myboard->packet.moving != res->packet.moving)
+          {
+            for (int i = 0; i < FEATURE_LED_COUNT; i++)
+              leds[i] = CRGB::White;
+            FastLED.show();
+            vTaskDelay(100);
+            for (int i = 0; i < FEATURE_LED_COUNT; i++)
+              leds[i] = CRGB::Black;
+            FastLED.show();
+          }
+          myboard = new BoardClass(*res);
+        }
+      }
 
       vTaskDelay(10);
     }
