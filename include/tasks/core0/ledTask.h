@@ -1,21 +1,79 @@
 
 
-#if (FEATURE_LED_COUNT > 0)
 #include <FastLED.h>
 #include "FastLED_RGBW.h"
+#ifndef FSMMANAGER_H
+#include <FsmManager.h>
+#endif
 
 #define DATA_PIN 27
 
 CRGBW leds[FEATURE_LED_COUNT];
 CRGB *ledsRGB = (CRGB *)&leds[0];
 
-#endif
-
 namespace Led
 {
   bool ready = false;
 
   const char *name[] = {"LedTask"};
+
+  CRGB fill_col;
+
+  enum Trigger
+  {
+    IDLE,
+    FLASH,
+  };
+
+  const char *getTrigger(uint8_t tr)
+  {
+    switch (tr)
+    {
+    case IDLE:
+      return "IDLE";
+    case FLASH:
+      return "FLASH";
+    }
+    return "OUT OF RANGE: getTrigger()";
+  }
+
+  void ledsFill(CRGB col)
+  {
+    for (int i = 0; i < FEATURE_LED_COUNT; i++)
+      leds[i] = col;
+    FastLED.show();
+  }
+  FsmManager<Trigger> fsm;
+
+  State stIdle(
+      [] {
+        ledsFill(CRGB::Black);
+      },
+      NULL, NULL);
+
+  elapsedMillis since_started_flash;
+
+  State stFlashLed(
+      [] {
+        ledsFill(CRGB::White);
+        since_started_flash = 0;
+      },
+      [] {
+        if (since_started_flash > 200)
+        {
+          ledsFill(CRGB::Black);
+          fsm.trigger(IDLE);
+        }
+      },
+      NULL);
+
+  Fsm _fsm(&stIdle);
+
+  void add_transitions()
+  {
+    _fsm.add_transition(&stIdle, &stFlashLed, FLASH, NULL);
+    _fsm.add_transition(&stFlashLed, &stIdle, IDLE, NULL);
+  }
 
   BoardClass *myboard;
 
@@ -35,6 +93,9 @@ namespace Led
 
     myboard = new BoardClass();
 
+    fsm.begin(&_fsm);
+    add_transitions();
+
     ready = true;
 
     elapsedMillis since_checked_queue;
@@ -50,17 +111,13 @@ namespace Led
         {
           if (myboard->packet.moving != res->packet.moving)
           {
-            for (int i = 0; i < FEATURE_LED_COUNT; i++)
-              leds[i] = CRGB::White;
-            FastLED.show();
-            vTaskDelay(100);
-            for (int i = 0; i < FEATURE_LED_COUNT; i++)
-              leds[i] = CRGB::Black;
-            FastLED.show();
+            fsm.trigger(Trigger::FLASH);
           }
           myboard = new BoardClass(*res);
         }
       }
+
+      fsm.runMachine();
 
       vTaskDelay(10);
     }
