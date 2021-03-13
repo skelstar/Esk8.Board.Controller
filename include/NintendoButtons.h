@@ -1,4 +1,4 @@
-
+#pragma once
 
 #include <Wire.h>
 #include <NintendoController.h>

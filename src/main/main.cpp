@@ -14,6 +14,7 @@
 #include <types.h>
 #include <printFormatStrings.h>
 #include <Button2.h>
+#include <NintendoController.h>
 
 #include <constants.h>
 
@@ -370,13 +371,10 @@ void loop()
     since_update_throttle = 0;
 
     nsPeripherals::Peripherals *res = mgPeripherals->peek<nsPeripherals::Peripherals>();
-    if (res != nullptr)
+    if (res != nullptr && res->throttle != peripherals->throttle)
     {
-      if (peripherals->primary_button != res->primary_button)
-      {
-        Serial.printf("primary button: %d\n", res->primary_button);
-      }
       peripherals = new nsPeripherals::Peripherals(*res);
+      updateThrottle(peripherals);
     }
   }
 #endif

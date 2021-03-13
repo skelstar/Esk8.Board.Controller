@@ -1,3 +1,7 @@
+#pragma once
+
+#include <NintendoController.h>
+#include <NintendoButtons.h>
 
 namespace nsPeripherals
 {
@@ -32,18 +36,32 @@ namespace nsPeripherals
 
         bool changed = false;
         // primary button
-        bool pressed = qwiicButton.isPressed();
+        bool primary_pressed = qwiicButton.isPressed();
         // throttle
         MagThrottle::update();
+        // classic buttons
+        ClassicButtons::loop();
 
-        changed = myperipherals.primary_button != pressed ||
+        // uint8_t *btn = classic.get_buttons();
+        // for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
+        // {
+        //   changed == changed || myperipherals.classicButtons[i] != btn[i];
+        //   myperipherals.classicButtons[i] = btn[i];
+        // }
+
+        // if (changed)
+        //   DEBUG("changed");
+
+        changed = changed ||
+                  myperipherals.primary_button != primary_pressed ||
                   myperipherals.throttle != MagThrottle::get();
-        myperipherals.primary_button = qwiicButton.isPressed();
+        myperipherals.primary_button = primary_pressed;
         myperipherals.throttle = MagThrottle::get();
 
+        mgPeripherals->clear();
         if (changed)
         {
-          DEBUGVAL(myperipherals.primary_button, myperipherals.throttle);
+          // DEBUGVAL(myperipherals.primary_button, myperipherals.throttle);
           mgPeripherals->send(&myperipherals);
         }
       }
@@ -56,6 +74,8 @@ namespace nsPeripherals
 
   void init()
   {
+    ClassicButtons::init();
+
     if (OPTION_USING_MAG_THROTTLE)
     {
       if (!MagThrottle::connect())

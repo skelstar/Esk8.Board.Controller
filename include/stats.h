@@ -3,6 +3,8 @@
 #include <rom/rtc.h> // for reset reason
 #endif
 
+#pragma once
+
 class StatsClass
 {
   typedef void (*ResetsAcknowledgedCallback)();

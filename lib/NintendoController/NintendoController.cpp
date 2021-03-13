@@ -99,6 +99,14 @@ bool NintendoController::was_released(int button_index)
       this->old_buttons[button_index].pressed == 1);
 }
 
+uint8_t *NintendoController::get_buttons()
+{
+  uint8_t btns[BUTTON_COUNT];
+  for (int i = 0; i < BUTTON_COUNT; i++)
+    btns[i] = this->buttons[i].pressed;
+  return btns;
+}
+
 void NintendoController::setButtonPressedCb(ButtonEventCallback cb)
 {
   _buttonPressed_cb = cb;

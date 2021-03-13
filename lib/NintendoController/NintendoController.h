@@ -22,6 +22,8 @@ public:
   static const int BUTTON_SELECT = 11;
   static const int BUTTON_COUNT = 12;
 
+  // static const int NUM_CLASSIC_BUTTONS = 9;
+
   // NintendoController::NintendoController();
   typedef void (*ButtonEventCallback)(uint8_t button);
 
@@ -30,6 +32,7 @@ public:
   bool is_pressed(int button_index);
   bool was_pressed(int button_index);
   bool was_released(int button_index);
+  uint8_t *get_buttons();
   void debug();
   void setButtonPressedCb(ButtonEventCallback cb);
   void setButtonReleasedCb(ButtonEventCallback cb);
