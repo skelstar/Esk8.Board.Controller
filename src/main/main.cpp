@@ -35,14 +35,19 @@ Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 #include "rtosManager.h"
 
 xQueueHandle xDisplayEventQueue;
-xQueueHandle xButtonPushEventQueue;
-xQueueHandle xBoardPacketQueue;
-xQueueHandle xControllerPacketQueue;
-
 Queue::Manager *displayQueue;
+
+xQueueHandle xButtonPushEventQueue;
 Queue::Manager *buttonQueue;
-Queue::Manager *boardPacketQueue;
+
+xQueueHandle xControllerPacketQueue;
 Queue::Manager *controllerPacketQueue;
+
+xQueueHandle xBoardPacketQueue;
+Queue::Manager *boardPacketQueue;
+
+xQueueHandle xStatsQueue;
+Queue::Manager *statsQueue;
 
 //------------------------------------------------------------
 
@@ -215,6 +220,9 @@ QwiicButton qwiicButton;
 #include <displayState.h>
 #include <tasks/core0/displayTask.h>
 #endif
+#if (FEATURE_LED_COUNT > 0)
+#include <tasks/core0/ledTask.h>
+#endif
 #include <tasks/core0/commsStateTask.h>
 #include <nrf_comms.h>
 
@@ -302,17 +310,26 @@ void setup()
   Remote::createTask(BATTERY_TASK_CORE, TASK_PRIORITY_1);
   Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
 
+#if (FEATURE_LED_COUNT > 0)
+  Led::createTask(LED_TASK_CORE, TASK_PRIORITY_1);
+#endif
+
+  // have to have regardless of whether we have a display or not
+  // TODO fix this dependency
   xDisplayEventQueue = xQueueCreate(5, sizeof(uint8_t));
-  xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
-  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
-
-  boardPacketQueue = new Queue::Manager(xBoardPacketQueue, 5);
-
   displayQueue = new Queue::Manager(xDisplayEventQueue, 5);
 #if OPTION_USING_DISPLAY
   displayQueue->setReadEventCallback(Display::queueReadCb);
 #endif
+
+  xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
   buttonQueue = new Queue::Manager(xButtonPushEventQueue, 10);
+
+  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
+  boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);
+
+  xStatsQueue = xQueueCreate(3, sizeof(StatsClass *));
+  statsQueue = new Queue::Manager(xStatsQueue, (TickType_t)5);
 
   bool displayReady = false;
 

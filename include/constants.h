@@ -193,6 +193,10 @@ namespace Comms
 #define PRINT_COMMS_QUEUE_READ 0
 #endif
 
+#ifndef FEATURE_LED_COUNT
+#define FEATURE_LED_COUNT 0
+#endif
+
 #ifndef FEATURE_PUSH_TO_START
 #define FEATURE_PUSH_TO_START 0
 #endif
