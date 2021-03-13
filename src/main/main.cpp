@@ -181,7 +181,7 @@ AMS_5600 ams5600;
 
 namespace MagThrottle
 {
-  bool connected()
+  bool connect()
   {
     if (ams5600.detectMagnet() == 0)
     {
@@ -209,8 +209,6 @@ namespace MagThrottle
 #include <NintendoButtons.h>
 #include <SparkFun_Qwiic_Button.h>
 //https://www.sparkfun.com/products/15932
-
-QwiicButton qwiicButton;
 
 #endif
 
@@ -379,18 +377,7 @@ void loop()
         Serial.printf("primary button: %d\n", res->primary_button);
       }
       peripherals = new nsPeripherals::Peripherals(*res);
-      // peripherals.primary_button = res->primary_button;
-      //   peripherals.throttle = res->throttle;
     }
-
-    // uint8_t pressed = peripherals.primary_button == 1; // qwiicButton.isPressed();
-    // if (pressed != last_primary_button)                // press or release
-    // {
-    //   MagThrottle::centre();
-    // }
-    // last_primary_button = pressed;
-
-    // MagThrottle::update();
   }
 #endif
 

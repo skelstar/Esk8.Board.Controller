@@ -31,13 +31,19 @@ namespace nsPeripherals
         since_read_peripherals = 0;
 
         bool changed = false;
+        // primary button
         bool pressed = qwiicButton.isPressed();
-        changed = myperipherals.primary_button != pressed;
+        // throttle
+        MagThrottle::update();
+
+        changed = myperipherals.primary_button != pressed ||
+                  myperipherals.throttle != MagThrottle::get();
         myperipherals.primary_button = qwiicButton.isPressed();
+        myperipherals.throttle = MagThrottle::get();
 
         if (changed)
         {
-          DEBUG("sending myperipherals");
+          DEBUGVAL(myperipherals.primary_button, myperipherals.throttle);
           mgPeripherals->send(&myperipherals);
         }
       }
@@ -52,14 +58,14 @@ namespace nsPeripherals
   {
     if (OPTION_USING_MAG_THROTTLE)
     {
-      // if (!MagThrottle::connected())
-      //   Serial.printf("ERROR: Could not find mag throttle\n");
+      if (!MagThrottle::connect())
+        Serial.printf("ERROR: Could not find mag throttle\n");
       qwiicButton.begin();
 
-      // MagThrottle::init(SWEEP_ANGLE, LIMIT_DELTA, THROTTLE_DIRECTION);
-      // MagThrottle::setThrottleEnabledCb([] {
-      //   return qwiicButton.isPressed();
-      // });
+      MagThrottle::setThrottleEnabledCb([] {
+        return myperipherals.primary_button == 1; // qwiicButton.isPressed();
+      });
+      MagThrottle::init(SWEEP_ANGLE, LIMIT_DELTA, THROTTLE_DIRECTION);
     }
   }
 
