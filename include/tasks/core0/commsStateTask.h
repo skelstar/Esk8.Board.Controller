@@ -72,8 +72,6 @@ namespace Comms
   namespace
   {
     Fsm fsm(&stDisconnected);
-
-    StatsClass *_stats;
   }
   //-----------------------------------------------------
 
@@ -127,18 +125,12 @@ namespace Comms
       {
         since_peeked = 0;
 
-        StatsClass *stats_res = statsQueue->peek<StatsClass>();
-        if (stats_res != nullptr)
+        BoardClass *board = boardPacketQueue->peek<BoardClass>();
+        if (board != nullptr)
         {
-          _stats = new StatsClass(*stats_res);
-        }
-
-        BoardClass *brd_res = boardPacketQueue->peek<BoardClass>();
-        if (brd_res != nullptr)
-        {
-          if (false == brd_res->hasTimedout())
+          if (board->connected())
           {
-            if (brd_res->packet.reason == ReasonType::FIRST_PACKET)
+            if (board->packet.reason == ReasonType::FIRST_PACKET)
             {
               commsFsm.trigger(Event::BOARD_FIRST_PACKET);
             }
@@ -171,7 +163,6 @@ namespace Comms
 
   void init()
   {
-    _stats = new StatsClass();
   }
 
   //------------------------------------------------------------

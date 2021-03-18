@@ -5,11 +5,7 @@ Button2 primaryButton(PRIMARY_BUTTON_PIN);
 #endif
 
 #define BUTTON_RIGHT 35
-Button2 rightButton(BUTTON_RIGHT);
-
-void primaryButtonLoop()
-{
-}
+// Button2 rightButton(BUTTON_RIGHT);
 
 void primaryButtonInit()
 {

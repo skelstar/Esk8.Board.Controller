@@ -98,22 +98,25 @@ namespace Display
     _stats = new StatsClass(*res);
   }
 
-  void handle_board_packet(BoardClass *res)
+  void handle_board_packet(BoardClass *board)
   {
-    if (res->packet.version != (float)VERSION_BOARD_COMPAT &&
+    if (board->packet.version != (float)VERSION_BOARD_COMPAT &&
         !fsm_mgr.currentStateIs(BOARD_VERSION_DOESNT_MATCH_SCREEN))
     {
       fsm_mgr.trigger(DispState::VERSION_DOESNT_MATCH);
     }
-    else if (res->hasTimedout() == false)
+    else if (board->connected())
     {
-      fsm_mgr.trigger(res->isMoving() ? DispState::MOVING : DispState::STOPPED);
+      if (!fsm_mgr.currentStateIs(DispState::MOVING) && board->isMoving())
+        fsm_mgr.trigger(DispState::MOVING);
+      else if (!fsm_mgr.currentStateIs(DispState::STOPPED) && board->isStopped())
+        fsm_mgr.trigger(DispState::STOPPED);
     }
-    else if (res->hasTimedout())
+    else if (board->connected() == false)
     {
       fsm_mgr.trigger(DispState::DISCONNECTED);
     }
-    _board = new BoardClass(*res);
+    _board = new BoardClass(*board); // copy to local
   }
 
   void handle_peripherals_packet(nsPeripherals::Peripherals *res)

@@ -37,6 +37,7 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 
   board.save(packet);
 
+  // send to other tasks
   if (boardPacketQueue != NULL)
     boardPacketQueue->send(&board);
 
@@ -49,26 +50,6 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 
     sinceBoardConnected = 0;
   }
-
-  // else if (board.startedMoving())
-  // {
-  // TODO move this stuff to display
-  // displayQueue->send(DispState::MOVING);
-  // Stats::queue->send(Stats::MOVING);
-  // }
-  // else if (board.hasStopped())
-  // {
-  // displayQueue->send(DispState::STOPPED);
-  // Stats::queue->send(Stats::STOPPED);
-  // }
-  // else if (board.valuesChanged())
-  // displayQueue->send(DispState::UPDATE);
-
-  // else if (board.isStopped())
-  // displayQueue->send(DispState::STOPPED);
-
-  // else if (board.isMoving())
-  // displayQueue->send(DispState::MOVING);
 
   // this should only happen when using M5STACK
   if (DEBUG_BUILD && board.getCommand() == CommandType::RESET)

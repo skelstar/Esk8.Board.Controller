@@ -350,9 +350,6 @@ void loop()
   }
 #endif
 
-  primaryButtonLoop();
-  rightButton.loop();
-
   vTaskDelay(1);
 }
 
