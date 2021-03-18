@@ -150,9 +150,6 @@ namespace nsPeripherals
 #ifndef PRINT_DISP_STATE_EVENT
 #define PRINT_DISP_STATE_EVENT 0
 #endif
-#ifndef PRINT_DISP_QUEUE_READ
-#define PRINT_DISP_QUEUE_READ 0
-#endif
 #ifndef PRINT_IF_TOTAL_FAILED_SENDING
 #define PRINT_IF_TOTAL_FAILED_SENDING 0
 #endif

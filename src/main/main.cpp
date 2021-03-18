@@ -24,19 +24,12 @@ Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 #include <NRF24L01Lib.h>
 #include <GenericClient.h>
 
-#if OPTION_USING_DISPLAY
-#include <TFT_eSPI.h>
-#endif
-
 #include <Preferences.h>
 #include <BatteryLib.h>
 #include <QueueManager.h>
 
 //------------------------------------------------------------
 #include "rtosManager.h"
-
-xQueueHandle xDisplayEventQueue;
-Queue::Manager *displayQueue;
 
 xQueueHandle xButtonPushEventQueue;
 Queue::Manager *buttonQueue;
@@ -72,12 +65,8 @@ nsPeripherals::Peripherals *peripherals;
 
 namespace Board
 {
-  MyMutex mutex;
-
   void init()
   {
-    mutex.create("board", TICKS_2);
-    // mutex.enabled = false;
   }
 } // namespace Board
 
@@ -133,12 +122,6 @@ void m5AtomClientInit()
 #ifndef SEND_TO_BOARD_INTERVAL
 #define SEND_TO_BOARD_INTERVAL 200
 #endif
-//------------------------------------------------------------------
-
-#if OPTION_USING_DISPLAY
-TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
-#endif
-
 //------------------------------------------------------------------
 
 elapsedMillis
@@ -224,6 +207,7 @@ namespace MagThrottle
 #include <displayState.h>
 #include <tasks/core0/displayTask.h>
 #endif
+
 #if (FEATURE_LED_COUNT > 0)
 #include <tasks/core0/ledTask.h>
 #endif
@@ -305,14 +289,6 @@ void setup()
   Led::createTask(LED_TASK_CORE, TASK_PRIORITY_1);
 #endif
 
-  // have to have regardless of whether we have a display or not
-  // TODO fix this dependency
-  xDisplayEventQueue = xQueueCreate(5, sizeof(uint8_t));
-  displayQueue = new Queue::Manager(xDisplayEventQueue, 5);
-#if OPTION_USING_DISPLAY
-  displayQueue->setReadEventCallback(Display::queueReadCb);
-#endif
-
   xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
   buttonQueue = new Queue::Manager(xButtonPushEventQueue, 10);
 
@@ -325,7 +301,6 @@ void setup()
   xPerihperals = xQueueCreate(1, sizeof(nsPeripherals::Peripherals *));
   mgPeripherals = new Queue::Manager(xPerihperals, (TickType_t)5);
 
-  bool displayReady = false;
   peripherals = new nsPeripherals::Peripherals();
 
   while (

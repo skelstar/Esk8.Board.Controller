@@ -26,6 +26,7 @@ namespace Stats
     CONTROLLER_RESETS,
     BOARD_RESETS,
   };
+  //-----------------------------------------------------
 
   void task(void *pvParameters)
   {
@@ -33,8 +34,6 @@ namespace Stats
 
     taskReady = true;
     myboard = new BoardClass();
-
-    ulong queueReadPeriod = 100;
 
     while (true)
     {
@@ -87,9 +86,10 @@ namespace Stats
     stats.setResetsAcknowledgedCallback(resetsAcknowledged_callback);
   }
 
+  /* returns whether it updated stats */
   bool handleStartingStopping(BoardClass *brd)
   {
-    bool updated = false;
+    bool updated_stats = false;
     if (brd->packet.moving)
     {
       // start the clock
@@ -102,17 +102,11 @@ namespace Stats
         // store moving time in memory
         stats.addMovingTime(since_started_moving);
         storeInMemory<unsigned long>(STORE_STATS, STORE_STATS_TRIP_TIME, stats.timeMovingMS);
-        updated = true;
+        updated_stats = true;
       }
     }
-    return updated;
+    return updated_stats;
   }
-
-  void storeTimeMovingInMemory()
-  {
-    storeInMemory<ulong>(STORE_STATS, STORE_STATS_TRIP_TIME, stats.timeMovingMS);
-  }
-
 } // namespace Stats
 
 template <typename T>

@@ -48,28 +48,27 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
     sendConfigToBoard();
 
     sinceBoardConnected = 0;
-
-    // Stats::queue->send(Stats::BOARD_FIRST_PACKET);
   }
-  else if (board.startedMoving())
-  {
-    // TODO move this stuff to display
-    displayQueue->send(DispState::MOVING);
-    // Stats::queue->send(Stats::MOVING);
-  }
-  else if (board.hasStopped())
-  {
-    displayQueue->send(DispState::STOPPED);
-    // Stats::queue->send(Stats::STOPPED);
-  }
-  else if (board.valuesChanged())
-    displayQueue->send(DispState::UPDATE);
 
-  else if (board.isStopped())
-    displayQueue->send(DispState::STOPPED);
+  // else if (board.startedMoving())
+  // {
+  // TODO move this stuff to display
+  // displayQueue->send(DispState::MOVING);
+  // Stats::queue->send(Stats::MOVING);
+  // }
+  // else if (board.hasStopped())
+  // {
+  // displayQueue->send(DispState::STOPPED);
+  // Stats::queue->send(Stats::STOPPED);
+  // }
+  // else if (board.valuesChanged())
+  // displayQueue->send(DispState::UPDATE);
 
-  else if (board.isMoving())
-    displayQueue->send(DispState::MOVING);
+  // else if (board.isStopped())
+  // displayQueue->send(DispState::STOPPED);
+
+  // else if (board.isMoving())
+  // displayQueue->send(DispState::MOVING);
 
   // this should only happen when using M5STACK
   if (DEBUG_BUILD && board.getCommand() == CommandType::RESET)
@@ -81,6 +80,8 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 
 void sendConfigToBoard()
 {
+  if (PRINT_TX_TO_BOARD)
+    Serial.printf("Sending config to board\n");
   controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
   controller_config.id = controller_packet.id;
   boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);

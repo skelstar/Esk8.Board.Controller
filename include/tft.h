@@ -1,3 +1,4 @@
+#pragma once
 
 #ifndef TFT_eSPI
 #include <TFT_eSPI.h>
@@ -18,6 +19,8 @@
 #define LINE_2 2
 #define LINE_3 3
 #define MARGIN 5
+
+TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 
 enum FontSize
 {
@@ -48,7 +51,7 @@ uint16_t status_colours[3] = {TFT_BLUE, TFT_ORANGE, TFT_RED};
 uint16_t calulateX(uint16_t x, uint16_t width, uint8_t datum);
 uint16_t calculateY(uint16_t y, uint16_t height, uint8_t datum);
 
-TFT_eSprite _spr = TFT_eSprite(&tft);
+// TFT_eSprite _spr = TFT_eSprite(&tft);
 
 // https://github.com/skelstar/esk8Project/blob/master/Controller/Display.h
 
@@ -148,63 +151,63 @@ void drawGraphFullWidth(uint8_t y, uint8_t height, float pc, uint16_t colour = T
 void drawBattery(BatteryLib batt, uint8_t x1, uint8_t y1, uint8_t width, uint8_t height, uint32_t colour = TFT_WHITE)
 {
 
-#define BORDER_SIZE 2
+  // #define BORDER_SIZE 2
 
-  _spr.createSprite(/*width*/ width, /*height*/ height);
+  //   _spr.createSprite(/*width*/ width, /*height*/ height);
 
-  uint8_t
-      x = 0,
-      y = 0,
-      knobWidth = 4,
-      knobHeight = 10,
-      w = width - knobWidth,
-      h = height;
+  //   uint8_t
+  //       x = 0,
+  //       y = 0,
+  //       knobWidth = 4,
+  //       knobHeight = 10,
+  //       w = width - knobWidth,
+  //       h = height;
 
-  // knob
-  _spr.fillRect(x, y + ((h - knobHeight) / 2), knobWidth, knobHeight, colour);
+  //   // knob
+  //   _spr.fillRect(x, y + ((h - knobHeight) / 2), knobWidth, knobHeight, colour);
 
-  // body - outline
-  x += knobWidth;
-  _spr.fillRect(x, y, w, h, colour);
+  //   // body - outline
+  //   x += knobWidth;
+  //   _spr.fillRect(x, y, w, h, colour);
 
-  // body - empty inside
-  x += BORDER_SIZE;
-  y += BORDER_SIZE;
-  w -= BORDER_SIZE * 2;
-  h -= BORDER_SIZE * 2;
-  _spr.fillRect(x, y, w, h, TFT_BLACK);
+  //   // body - empty inside
+  //   x += BORDER_SIZE;
+  //   y += BORDER_SIZE;
+  //   w -= BORDER_SIZE * 2;
+  //   h -= BORDER_SIZE * 2;
+  //   _spr.fillRect(x, y, w, h, TFT_BLACK);
 
-  // capacity
-  w -= BORDER_SIZE * 2;
-  h -= BORDER_SIZE * 2;
+  //   // capacity
+  //   w -= BORDER_SIZE * 2;
+  //   h -= BORDER_SIZE * 2;
 
-  x += BORDER_SIZE;
-  y += BORDER_SIZE;
-  _spr.fillRect(x, y, w, h, colour); // solid
+  //   x += BORDER_SIZE;
+  //   y += BORDER_SIZE;
+  //   _spr.fillRect(x, y, w, h, colour); // solid
 
-  if (false == batt.isCharging)
-  {
-    // black rect for used part
-    w = w * (1 - (batt.chargePercent / 100.0));
-    _spr.fillRect(x, y, w, h, TFT_BLACK);
-    DEBUGVAL(batt.chargePercent);
-  }
-  else
-  {
-    // plus
-    const int plus = 4, edge = 3;
-    _spr.fillRect(x + (w / 2) - (edge + (plus / 2)),
-                  y + (h / 2) - (plus / 2),
-                  edge + plus + edge,
-                  plus,
-                  TFT_BLACK);
-    _spr.fillRect(x + (w / 2) - (plus / 2),
-                  y + (h / 2) - (edge + (plus / 2)),
-                  plus,
-                  edge + plus + edge,
-                  TFT_BLACK);
-  }
-  _spr.pushSprite(x1, y1);
+  //   if (false == batt.isCharging)
+  //   {
+  //     // black rect for used part
+  //     w = w * (1 - (batt.chargePercent / 100.0));
+  //     _spr.fillRect(x, y, w, h, TFT_BLACK);
+  //     DEBUGVAL(batt.chargePercent);
+  //   }
+  //   else
+  //   {
+  //     // plus
+  //     const int plus = 4, edge = 3;
+  //     _spr.fillRect(x + (w / 2) - (edge + (plus / 2)),
+  //                   y + (h / 2) - (plus / 2),
+  //                   edge + plus + edge,
+  //                   plus,
+  //                   TFT_BLACK);
+  //     _spr.fillRect(x + (w / 2) - (plus / 2),
+  //                   y + (h / 2) - (edge + (plus / 2)),
+  //                   plus,
+  //                   edge + plus + edge,
+  //                   TFT_BLACK);
+  //   }
+  //   _spr.pushSprite(x1, y1);
 }
 //--------------------------------------------------------------------------------
 

@@ -18,7 +18,7 @@ public:
   void display()
   {
     const char *value = _currVal == true ? "ON" : "OFF";
-    screenPropValue<bool>(_text, value);
+    Display::screenPropValue<bool>(_text, value);
   }
 
   void changeValue()

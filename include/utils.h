@@ -52,7 +52,15 @@ void print_build_status(String chipId)
     Serial.printf("%s DEBUG BUILD!! \n", spaces);
 
   Serial.printf("\n");
+  Serial.printf("%s MISO: %d\n", spaces, SOFT_SPI_MISO_PIN);
+  Serial.printf("%s MOSI: %d\n", spaces, SOFT_SPI_MOSI_PIN);
+  Serial.printf("%s SCK:  %d\n", spaces, SOFT_SPI_SCK_PIN);
+  Serial.printf("%s CS:   %d\n", spaces, NRF_CS);
+  Serial.printf("%s CE:   %d\n", spaces, NRF_CE);
+
+  Serial.printf("\n");
   Serial.printf("%s BRANCH: %s \n", spaces, GIT_BRANCH_NAME);
+
   Serial.printf("\n");
   Serial.printf("%s %s \n", spaces, __TIME__);
   Serial.printf("%s %s \n", spaces, __DATE__);

@@ -46,13 +46,3 @@ void primaryButtonInit()
   });
 #endif
 }
-
-void rightButtonInit()
-{
-  rightButton.setClickHandler([](Button2 &btn) {
-    if (PRINT_BUTTON_EVENTS)
-      DEBUG("Right Button click");
-    displayQueue->send(DispState::RIGHT_BUTTON_CLICKED);
-    buttonQueue->send(ButtonClickType::SINGLE);
-  });
-}

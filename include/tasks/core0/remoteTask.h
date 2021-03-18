@@ -42,7 +42,7 @@ namespace Remote
 
         if (battery.isCharging)
         {
-          displayQueue->send(DispState::UPDATE);
+          // displayQueue->send(DispState::UPDATE);
         }
         Remote::mutex.give(__func__);
       }
@@ -68,7 +68,7 @@ namespace Remote
   //--------------------------------------------------------
   void battVoltsChanged_cb()
   {
-    displayQueue->send(DispState::UPDATE);
+    // displayQueue->send(DispState::UPDATE);
   }
   //--------------------------------------------------------
 } // namespace Remote
