@@ -38,13 +38,11 @@ namespace Display
     _board = new BoardClass();
     _periphs = new nsPeripherals::Peripherals();
 
-#define READ_DISP_EVENT_QUEUE_PERIOD 100
-
     elapsedMillis sinceReadDispEventQueue, since_checked_queue;
 
     while (true)
     {
-      if (since_checked_queue > 500)
+      if (since_checked_queue > SEND_TO_BOARD_INTERVAL)
       {
         since_checked_queue = 0;
 
@@ -122,5 +120,6 @@ namespace Display
   void handle_peripherals_packet(nsPeripherals::Peripherals *res)
   {
     _periphs = new nsPeripherals::Peripherals(*res);
+    Serial.printf("DISP: peripherals changed: %d\n", _periphs->event);
   }
 } // namespace Display

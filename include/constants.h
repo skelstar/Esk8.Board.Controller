@@ -113,12 +113,38 @@ namespace Comms
 
 namespace nsPeripherals
 {
+  enum Event
+  {
+    NO_EVENT = 0,
+    EV_THROTTLE,
+    EV_PRIMARY_BUTTON,
+    EV_CLASSIC_BUTTON,
+  };
+
+  const char *getEvent(uint8_t ev)
+  {
+    switch (ev)
+    {
+
+    case NO_EVENT:
+      return "NO_EVENT";
+    case EV_THROTTLE:
+      return "EV_THROTTLE";
+    case EV_PRIMARY_BUTTON:
+      return "EV_PRIMARY_BUTTON";
+    case EV_CLASSIC_BUTTON:
+      return "EV_CLASSIC_BUTTON";
+    }
+    return "OUT OF RANGE getEvent()";
+  }
+
   class Peripherals
   {
   public:
     uint8_t primary_button = 0;
     uint8_t throttle = 127;
     uint8_t classicButtons[NintendoController::BUTTON_COUNT];
+    uint8_t event = Event::NO_EVENT;
   };
 }
 

@@ -46,6 +46,8 @@ Queue::Manager *statsQueue;
 xQueueHandle xPerihperals;
 Queue::Manager *mgPeripherals;
 
+MyMutex mutex_I2C;
+
 //------------------------------------------------------------
 
 ControllerData controller_packet;
@@ -181,9 +183,10 @@ namespace MagThrottle
         {
           Serial.println("Can not detect magnet");
         }
-        delay(1000);
+        vTaskDelay(1000);
       }
     }
+    return true;
   }
 } // namespace MagThrottle
 
@@ -303,6 +306,9 @@ void setup()
 
   peripherals = new nsPeripherals::Peripherals();
 
+  mutex_I2C.create("i2c", TICKS_5);
+  mutex_I2C.enabled = true;
+
   while (
 #if OPTION_USING_DISPLAY
       !Display::taskReady &&
@@ -319,6 +325,7 @@ void setup()
 //---------------------------------------------------------------
 
 elapsedMillis sinceNRFUpdate, since_update_throttle;
+uint8_t old_buttons[NintendoController::BUTTON_COUNT];
 
 void loop()
 {
@@ -342,10 +349,12 @@ void loop()
     since_update_throttle = 0;
 
     nsPeripherals::Peripherals *res = mgPeripherals->peek<nsPeripherals::Peripherals>();
-    if (res != nullptr && res->throttle != peripherals->throttle)
+    if (res != nullptr)
     {
-      peripherals = new nsPeripherals::Peripherals(*res);
-      updateThrottle(peripherals);
+      if (res->event == nsPeripherals::EV_THROTTLE)
+      {
+        updateThrottle(res->throttle, res->primary_button);
+      }
     }
   }
 #endif

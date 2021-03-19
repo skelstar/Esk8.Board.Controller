@@ -68,7 +68,13 @@ namespace MagThrottle
 
   void update(bool force_print = false)
   {
-    float deg = _convertRawAngleToDegrees(ams5600.getRawAngle());
+    float deg = _centre;
+    // TODO is this the bext way to handle this?
+    if (mutex_I2C.take(__func__, TICKS_50))
+    {
+      deg = _convertRawAngleToDegrees(ams5600.getRawAngle());
+      mutex_I2C.give(__func__);
+    }
     float adj = deg;
     float delta = getDelta(deg, _prev_deg);
     bool transition = abs(delta) > 180.0;
@@ -122,7 +128,11 @@ namespace MagThrottle
 
   void centre()
   {
-    _centre = _convertRawAngleToDegrees(ams5600.getRawAngle());
+    if (mutex_I2C.take(__func__, TICKS_50))
+    {
+      _centre = _convertRawAngleToDegrees(ams5600.getRawAngle());
+      mutex_I2C.give(__func__);
+    }
     _raw_throttle = _centre;
     _throttle = 127;
     _prev_deg = _centre;

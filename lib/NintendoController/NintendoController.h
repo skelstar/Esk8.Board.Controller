@@ -27,7 +27,7 @@ public:
   // NintendoController::NintendoController();
   typedef void (*ButtonEventCallback)(uint8_t button);
 
-  void init();
+  bool init();
   void update();
   bool is_pressed(int button_index);
   bool was_pressed(int button_index);

@@ -4,9 +4,6 @@
 #include <NintendoController.h>
 #include <QueueManager.h>
 
-xQueueHandle xClassicButtons;
-Queue::Manager *classicButtonsQueue;
-
 NintendoController classic;
 
 namespace ClassicButtons
@@ -37,26 +34,37 @@ namespace ClassicButtons
     return "OUT OF RANGE: getButtonName()";
   }
 
+  NintendoController::ButtonEventCallback _pressed_cb = nullptr, _released_cb = nullptr;
+
   void init()
   {
-    classic.init();
-    classic.setButtonPressedCb([](uint8_t button) {
-      // if (button == NintendoController::BUTTON_B)
-      //   MagThrottle::centre();
-      // Serial.printf("button %s was pressed\n", getButtonName(button));
-    });
-    classic.setButtonReleasedCb([](uint8_t button) {
-      // if (button == NintendoController::BUTTON_B)
-      //   MagThrottle::centre();
-      // Serial.printf("button %s was released\n", getButtonName(button));
-    });
+    if (mutex_I2C.take(__func__, TICKS_50))
+    {
+      if (!classic.init())
+      {
+        Serial.printf("ERROR: could not find Nintendo Buttons\n");
+      }
+      mutex_I2C.give(__func__);
+    }
+  }
 
-    classicButtonsQueue = new Queue::Manager(xClassicButtons, 5);
+  void setButtonReleasedCallback(NintendoController::ButtonEventCallback cb)
+  {
+    classic.setButtonReleasedCb(cb);
+  }
+
+  void setButtonPressedCallback(NintendoController::ButtonEventCallback cb)
+  {
+    classic.setButtonPressedCb(cb);
   }
 
   void loop()
   {
-    classic.update(); // Get new data from the controller
+    if (mutex_I2C.take(__func__, TICKS_50))
+    {
+      classic.update(); // Get new data from the controller}
+      mutex_I2C.give(__func__);
+    }
   }
 
   bool buttonPressed(uint8_t button)

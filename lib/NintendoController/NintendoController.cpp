@@ -7,7 +7,7 @@
 //   Wire.begin();
 // }
 
-void NintendoController::init()
+bool NintendoController::init()
 {
   // Not required for NES mini controller
   // See http://wiibrew.org/wiki/Wiimote/Extension_Controllers
@@ -23,10 +23,12 @@ void NintendoController::init()
   Wire.beginTransmission(this->address);
   Wire.write(0xFB);
   Wire.write(0x00);
-  Wire.endTransmission();
+  bool success = Wire.endTransmission() == 0;
   delay(10);
 
   reset_buttons();
+
+  return success;
 }
 
 void NintendoController::update()
@@ -101,7 +103,7 @@ bool NintendoController::was_released(int button_index)
 
 uint8_t *NintendoController::get_buttons()
 {
-  uint8_t btns[BUTTON_COUNT];
+  static uint8_t btns[BUTTON_COUNT];
   for (int i = 0; i < BUTTON_COUNT; i++)
     btns[i] = this->buttons[i].pressed;
   return btns;

@@ -87,20 +87,14 @@ void sendPacketToBoard()
 }
 //------------------------------------------------------------------
 
-void updateThrottle(nsPeripherals::Peripherals *periph)
+void updateThrottle(uint8_t throttle, uint8_t primary_button)
 {
-  if (periph == nullptr)
-  {
-    Serial.printf("ERROR: periph is null\n");
-    return;
-  }
-
-  if (periph->throttle > 127 && periph->primary_button == 1)
-    controller_packet.throttle = periph->throttle;
-  else if (periph->throttle > 127)
+  if (throttle > 127 && primary_button == 1)
+    controller_packet.throttle = throttle;
+  else if (throttle > 127)
     controller_packet.throttle = 127;
   else
-    controller_packet.throttle = periph->throttle;
+    controller_packet.throttle = throttle;
 
   if (PRINT_THROTTLE)
     DEBUGVAL(controller_packet.throttle);
