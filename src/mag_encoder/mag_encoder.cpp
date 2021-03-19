@@ -56,7 +56,7 @@ void setup()
 
   qwiicButton.begin();
 
-  MagThrottle::init(SWEEP_ANGLE, LIMIT_DELTA, MagThrottle::ANTI_CLOCKWISE);
+  MagThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, MagThrottle::ANTI_CLOCKWISE);
   MagThrottle::setThrottleEnabledCb([] {
     return qwiicButton.isPressed(); // ClassicButtons::buttonPressed(NintendoController::BUTTON_B);
   });

@@ -82,7 +82,6 @@ namespace Display
 
         fsm_mgr.printState(STOPPED_SCREEN);
 
-        const char *context = "disp: stStopped (onEnter)";
         if (stats.controllerResets > 0)
           screenNeedToAckResets(Stats::CONTROLLER_RESETS);
         else if (stats.boardResets > 0)

@@ -85,7 +85,7 @@ namespace nsPeripherals
       MagThrottle::setThrottleEnabledCb([] {
         return myperipherals.primary_button == 1; // qwiicButton.isPressed();
       });
-      MagThrottle::init(SWEEP_ANGLE, LIMIT_DELTA, THROTTLE_DIRECTION);
+      MagThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, THROTTLE_DIRECTION);
     }
   }
 
