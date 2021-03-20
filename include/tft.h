@@ -221,8 +221,6 @@ void drawSmallBattery(uint8_t percent, uint16_t x, uint16_t y, uint16_t width, u
   x = calulateX(x, width, datum);
   y = calculateY(y, height, datum);
 
-  DEBUGVAL(LCD_WIDTH, LCD_WIDTH / 2, x1, x, width, datum);
-
   // body
   tft.fillRect(x + knobWidth, y, width - knobWidth, height, colour);
   // knob

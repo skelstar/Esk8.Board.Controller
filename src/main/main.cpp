@@ -31,12 +31,6 @@ Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 //------------------------------------------------------------
 #include "rtosManager.h"
 
-xQueueHandle xButtonPushEventQueue;
-Queue::Manager *buttonQueue;
-
-xQueueHandle xControllerPacketQueue;
-Queue::Manager *controllerPacketQueue;
-
 xQueueHandle xBoardPacketQueue;
 Queue::Manager *boardPacketQueue;
 
@@ -44,7 +38,7 @@ xQueueHandle xStatsQueue;
 Queue::Manager *statsQueue;
 
 xQueueHandle xPerihperals;
-Queue::Manager *mgPeripherals;
+Queue::Manager *peripheralsQueue;
 
 MyMutex mutex_I2C;
 MyMutex mutex_SPI;
@@ -273,16 +267,15 @@ void setup()
   Display::createTask(DISPLAY_TASK_CORE, TASK_PRIORITY_3);
 #endif
   Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_2);
-  Remote::createTask(BATTERY_TASK_CORE, TASK_PRIORITY_1);
-  Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
+  if (REMOTE_TASK_CORE >= 0)
+    Remote::createTask(REMOTE_TASK_CORE, TASK_PRIORITY_1);
+  if (STATS_TASK_CORE >= 0)
+    Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
   nsPeripherals::createTask(PERIPHERALS_TASK_CORE, 3);
 
-#if (FEATURE_LED_COUNT > 0)
+#if (FEATURE_LED_COUNT > 0 && LED_TASK_CORE >= 0)
   Led::createTask(LED_TASK_CORE, TASK_PRIORITY_1);
 #endif
-
-  xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
-  buttonQueue = new Queue::Manager(xButtonPushEventQueue, 10);
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);
@@ -291,7 +284,7 @@ void setup()
   statsQueue = new Queue::Manager(xStatsQueue, (TickType_t)5);
 
   xPerihperals = xQueueCreate(1, sizeof(nsPeripherals::Peripherals *));
-  mgPeripherals = new Queue::Manager(xPerihperals, (TickType_t)5);
+  peripheralsQueue = new Queue::Manager(xPerihperals, (TickType_t)5);
 
   peripherals = new nsPeripherals::Peripherals();
 
@@ -307,7 +300,7 @@ void setup()
 #endif
       !Comms::taskReady &&
       !Stats::taskReady &&
-      !Remote::taskReady)
+      (REMOTE_TASK_CORE == -1 || !Remote::taskReady))
   {
     vTaskDelay(10);
   }
@@ -342,7 +335,7 @@ void loop()
   {
     since_update_throttle = 0;
 
-    nsPeripherals::Peripherals *res = mgPeripherals->peek<nsPeripherals::Peripherals>();
+    nsPeripherals::Peripherals *res = peripheralsQueue->peek<nsPeripherals::Peripherals>();
     if (res != nullptr)
     {
       if (res->event == nsPeripherals::EV_THROTTLE)

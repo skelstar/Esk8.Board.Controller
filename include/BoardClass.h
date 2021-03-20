@@ -27,11 +27,9 @@ public:
   bool connected()
   {
     unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
-    bool connected = _sinceLastPacket <= (timeout + 200);
-    if (!connected)
-      DEBUGVAL(_sinceLastPacket);
-    return connected;
-    // return _sinceLastPacket <= (timeout + 200);
+    // bool connected = _sinceLastPacket <= (timeout + 200);
+    // return connected;
+    return _sinceLastPacket <= (timeout + 200);
   }
 
   CommandType getCommand() { return packet.command; }

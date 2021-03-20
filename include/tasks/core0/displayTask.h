@@ -54,7 +54,7 @@ namespace Display
         if (_brd_res != nullptr)
           handle_board_packet(_brd_res);
 
-        nsPeripherals::Peripherals *_periph_res = mgPeripherals->peek<nsPeripherals::Peripherals>();
+        nsPeripherals::Peripherals *_periph_res = peripheralsQueue->peek<nsPeripherals::Peripherals>();
         if (_periph_res != nullptr)
           handle_peripherals_packet(_periph_res);
       }

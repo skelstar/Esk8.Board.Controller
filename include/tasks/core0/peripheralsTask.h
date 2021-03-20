@@ -34,7 +34,7 @@ namespace nsPeripherals
       {
         since_read_peripherals = 0;
 
-        mgPeripherals->clear();
+        peripheralsQueue->clear();
 
         bool changed = false;
         // primary button
@@ -54,13 +54,13 @@ namespace nsPeripherals
         {
           myperipherals.primary_button = primary_pressed;
           myperipherals.event = Event::EV_PRIMARY_BUTTON;
-          mgPeripherals->send(&myperipherals);
+          peripheralsQueue->send(&myperipherals);
         }
         else if (myperipherals.throttle != throttle)
         {
           myperipherals.throttle = throttle;
           myperipherals.event = Event::EV_THROTTLE;
-          mgPeripherals->send(&myperipherals);
+          peripheralsQueue->send(&myperipherals);
         }
       }
 
@@ -89,7 +89,7 @@ namespace nsPeripherals
     // print_buttons(buttons);
 
     myperipherals.event = EV_CLASSIC_BUTTON;
-    mgPeripherals->send(&myperipherals);
+    peripheralsQueue->send(&myperipherals);
   }
 
   void nintendoButtonReleased_cb(uint8_t button)
@@ -103,7 +103,7 @@ namespace nsPeripherals
     // print_buttons(buttons);
 
     myperipherals.event = EV_CLASSIC_BUTTON;
-    mgPeripherals->send(&myperipherals);
+    peripheralsQueue->send(&myperipherals);
   }
 
   void init()
