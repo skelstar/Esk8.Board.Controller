@@ -47,6 +47,7 @@ xQueueHandle xPerihperals;
 Queue::Manager *mgPeripherals;
 
 MyMutex mutex_I2C;
+MyMutex mutex_SPI;
 
 //------------------------------------------------------------
 
@@ -92,6 +93,7 @@ void printRecvFromBoard_cb(VescData data)
 }
 
 GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
+
 void boardClientInit()
 {
   boardClient.begin(&network, boardPacketAvailable_cb);
@@ -264,19 +266,6 @@ void setup()
 
   print_build_status(chipId);
 
-  // #if (OPTION_USING_MAG_THROTTLE == 0)
-  //   {
-  //     throttle.init(/*pin*/ THROTTLE_PIN, [](uint8_t throttle) {
-  //       Serial.printf("throttle changed: %d (cruise: %d)\n",
-  //                     throttle,
-  //                     controller_packet.cruise_control);
-  //     });
-
-  //     primaryButtonInit();
-  //     rightButtonInit();
-  //   }
-  // #endif
-
   vTaskDelay(100);
 
 // CORE_0
@@ -309,6 +298,9 @@ void setup()
   mutex_I2C.create("i2c", TICKS_5);
   mutex_I2C.enabled = true;
 
+  mutex_SPI.create("SPI", TICKS_5);
+  mutex_SPI.enabled = true;
+
   while (
 #if OPTION_USING_DISPLAY
       !Display::taskReady &&
@@ -337,7 +329,9 @@ void loop()
   if (sinceNRFUpdate > 20)
   {
     sinceNRFUpdate = 0;
-    boardClient.update();
+
+    boardClient.update(mutex_SPI.handle());
+    mutex_SPI.give(__func__);
 #ifdef COMMS_M5ATOM
     m5AtomClient.update();
 #endif

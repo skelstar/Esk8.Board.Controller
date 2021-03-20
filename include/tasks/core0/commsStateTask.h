@@ -149,18 +149,6 @@ namespace Comms
   }
   //------------------------------------------------------------
 
-  void queueSent_cb(uint16_t ev)
-  {
-    if (PRINT_COMMS_QUEUE_SENT)
-      Serial.printf(PRINT_QUEUE_SEND_FORMAT, getEventName(ev), "COMMS");
-  }
-
-  void queueRead_cb(uint16_t ev)
-  {
-    if (PRINT_COMMS_QUEUE_READ)
-      Serial.printf(PRINT_QUEUE_SEND_FORMAT, getEventName(ev), "COMMS");
-  }
-
   void init()
   {
   }

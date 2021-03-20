@@ -16,11 +16,31 @@ public:
 
   bool take(const char *funcname, TickType_t ticks)
   {
-    bool success = xSemaphoreTake(_mutex, ticks) == pdPASS || !enabled;
-    if (!success && PRINT_STATS_MUTEX_TAKE_STATE)
-      Serial.printf("Unable to take mutex: '%s' (%d ticks: %s)\n",
-                    _name, ticks, funcname);
-    return success;
+    if (_taken)
+    {
+      // already taken
+      Serial.printf("ERROR: %s tried taking %s but was already taken by %s\n",
+                    funcname, _name, _taken_by);
+      return false;
+    }
+    _taken = xSemaphoreTake(_mutex, ticks) == pdPASS || !enabled;
+
+    if (_taken)
+      _taken_by = funcname;
+
+    if (!enabled)
+      Serial.printf("WARNING: %s not enabled!\n", _name);
+    else if (!_taken && PRINT_STATS_MUTEX_TAKE_STATE)
+    {
+      TaskHandle_t holding_task = xSemaphoreGetMutexHolder(_mutex);
+      char *task_name = pcTaskGetTaskName(holding_task);
+      Serial.printf("Unable to take mutex: '%s' (%d ticks: %s task: %s)\n",
+                    _name,
+                    ticks,
+                    funcname,
+                    task_name);
+    }
+    return _taken;
   }
 
   bool take(const char *funcname)
@@ -35,12 +55,24 @@ public:
       Serial.printf("ERROR: mutex is nullptr");
       return;
     }
-    if (xSemaphoreGive(_mutex) != pdPASS && PRINT_STATS_MUTEX_GIVE_STATE)
+
+    if (xSemaphoreGive(_mutex) == pdPASS)
+    {
+      _taken = false;
+      _taken_by = nullptr;
+    }
+    else if (PRINT_STATS_MUTEX_GIVE_STATE)
       Serial.printf("WARNING: unable to give mutex: '%s' (%s)\n", _name, funcname);
   }
 
+  SemaphoreHandle_t handle()
+  {
+    return _mutex;
+  }
+
 private:
-  const char *_name;
+  bool _taken = false;
+  const char *_name, *_taken_by = nullptr;
   TickType_t _defaultticks;
   SemaphoreHandle_t _mutex = nullptr;
 };

@@ -214,21 +214,6 @@ namespace nsPeripherals
 #define PRINT_BOARD_CLIENT_CONNECTED_CHANGED 0
 #endif
 
-#ifndef PRINT_STATS_QUEUE_SEND
-#define PRINT_STATS_QUEUE_SEND 0
-#endif
-#ifndef PRINT_STATS_QUEUE_READ
-#define PRINT_STATS_QUEUE_READ 0
-#endif
-
-#ifndef PRINT_COMMS_QUEUE_SENT
-#define PRINT_COMMS_QUEUE_SENT 0
-#endif
-
-#ifndef PRINT_COMMS_QUEUE_READ
-#define PRINT_COMMS_QUEUE_READ 0
-#endif
-
 #ifndef FEATURE_LED_COUNT
 #define FEATURE_LED_COUNT 0
 #endif
