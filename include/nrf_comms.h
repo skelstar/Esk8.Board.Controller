@@ -33,14 +33,11 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 {
   sinceLastBoardPacketRx = 0;
 
-  if (mutex_SPI.take(__func__, TICKS_50))
-  {
-    VescData packet = boardClient.read();
+  // TODO read needs to send back a true/false
+  // maybe pass in reference to packet to be populated
+  VescData packet = boardClient.read();
 
-    board.save(packet);
-
-    mutex_SPI.give(__func__);
-  }
+  board.save(packet);
 
   // send to other tasks
   if (boardPacketQueue != NULL)
@@ -71,11 +68,7 @@ void sendConfigToBoard()
   controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
   controller_config.id = controller_packet.id;
 
-  if (mutex_SPI.take(__func__, TICKS_50))
-  {
-    boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);
-    mutex_SPI.give(__func__);
-  }
+  bool success = boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);
 }
 //------------------------------------------------------------------
 
@@ -91,11 +84,7 @@ void sendPacketToBoard()
       DEBUGVAL(board.packet.id, controller_packet.id);
   }
 
-  if (mutex_SPI.take(__func__, TICKS_50))
-  {
-    boardClient.sendTo(Packet::CONTROL, controller_packet);
-    mutex_SPI.give(__func__);
-  }
+  bool success = boardClient.sendTo(Packet::CONTROL, controller_packet);
 
   controller_packet.id++;
 }

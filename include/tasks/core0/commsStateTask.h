@@ -110,7 +110,7 @@ namespace Comms
 
     taskReady = true;
 
-#if OPTION_USING_DISPLAY
+#if DISPLAY_TASK_CORE >= 0
     // wait for display task to be ready
     // before checking for packets
     while (!Display::taskReady)

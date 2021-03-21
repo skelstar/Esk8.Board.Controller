@@ -46,10 +46,6 @@ namespace Display
       {
         since_checked_queue = 0;
 
-        StatsClass *_stats_res = statsQueue->peek<StatsClass>();
-        if (_stats_res != nullptr)
-          handle_stats_packet(_stats_res);
-
         BoardClass *_brd_res = boardPacketQueue->peek<BoardClass>();
         if (_brd_res != nullptr)
           handle_board_packet(_brd_res);
@@ -91,11 +87,6 @@ namespace Display
       Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "DISP", DispState::getTrigger(ev));
   }
 
-  void handle_stats_packet(StatsClass *res)
-  {
-    _stats = new StatsClass(*res);
-  }
-
   void handle_board_packet(BoardClass *board)
   {
     if (board->packet.version != (float)VERSION_BOARD_COMPAT &&
@@ -110,16 +101,14 @@ namespace Display
       else if (!fsm_mgr.currentStateIs(DispState::STOPPED) && board->isStopped())
         fsm_mgr.trigger(DispState::STOPPED);
     }
-    else if (board->connected() == false)
-    {
+    else
+      // offline
       fsm_mgr.trigger(DispState::DISCONNECTED);
-    }
-    _board = new BoardClass(*board); // copy to local
   }
 
   void handle_peripherals_packet(nsPeripherals::Peripherals *res)
   {
-    _periphs = new nsPeripherals::Peripherals(*res);
-    Serial.printf("DISP: peripherals changed: %d\n", _periphs->event);
+    // _periphs = new nsPeripherals::Peripherals(*res);
+    // Serial.printf("DISP: peripherals changed: %d\n", _periphs->event);
   }
 } // namespace Display

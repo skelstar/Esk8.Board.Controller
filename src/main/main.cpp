@@ -90,7 +90,7 @@ GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
 
 void boardClientInit()
 {
-  boardClient.begin(&network, boardPacketAvailable_cb);
+  boardClient.begin(&network, boardPacketAvailable_cb, mutex_SPI.handle());
   boardClient.setConnectedStateChangeCallback([] {
     if (PRINT_BOARD_CLIENT_CONNECTED_CHANGED)
       Serial.printf(BOARD_CLIENT_CONNECTED_FORMAT, boardClient.connected() ? "CONNECTED" : "DISCONNECTED");
@@ -201,7 +201,7 @@ namespace MagThrottle
 #include <tasks/core0/remoteTask.h>
 #include <utils.h>
 
-#if OPTION_USING_DISPLAY
+#if DISPLAY_TASK_CORE >= 0
 #include <screens.h>
 #include <displayState.h>
 #include <tasks/core0/displayTask.h>
@@ -262,10 +262,11 @@ void setup()
 
   vTaskDelay(100);
 
-// CORE_0
-#if OPTION_USING_DISPLAY
+  // CORE_0
+#if DISPLAY_TASK_CORE >= 0
   Display::createTask(DISPLAY_TASK_CORE, TASK_PRIORITY_3);
 #endif
+  // #endif
   Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_2);
   if (REMOTE_TASK_CORE >= 0)
     Remote::createTask(REMOTE_TASK_CORE, TASK_PRIORITY_1);
@@ -288,14 +289,14 @@ void setup()
 
   peripherals = new nsPeripherals::Peripherals();
 
-  mutex_I2C.create("i2c", TICKS_5);
+  mutex_I2C.create("i2c", /*default*/ TICKS_5);
   mutex_I2C.enabled = true;
 
-  mutex_SPI.create("SPI", TICKS_5);
+  mutex_SPI.create("SPI", /*default*/ TICKS_50);
   mutex_SPI.enabled = true;
 
   while (
-#if OPTION_USING_DISPLAY
+#if DISPLAY_TASK_CORE >= 0
       !Display::taskReady &&
 #endif
       !Comms::taskReady &&
@@ -323,8 +324,8 @@ void loop()
   {
     sinceNRFUpdate = 0;
 
-    boardClient.update(mutex_SPI.handle());
-    mutex_SPI.give(__func__);
+    boardClient.update();
+
 #ifdef COMMS_M5ATOM
     m5AtomClient.update();
 #endif
@@ -335,7 +336,7 @@ void loop()
   {
     since_update_throttle = 0;
 
-    nsPeripherals::Peripherals *res = peripheralsQueue->peek<nsPeripherals::Peripherals>();
+    nsPeripherals::Peripherals *res = peripheralsQueue->peek<nsPeripherals::Peripherals>(__func__);
     if (res != nullptr)
     {
       if (res->event == nsPeripherals::EV_THROTTLE)
@@ -361,7 +362,6 @@ void sendToBoard()
 #ifdef PRIMARY_BUTTON_PIN
   primaryButtonPressed = primaryButton.isPressedRaw();
   braking = throttle.get() < 127;
-
 #endif
 #if OPTION_USING_MAG_THROTTLE
   primaryButtonPressed = peripherals->primary_button == 1; // qwiicButton.isPressed();
@@ -389,6 +389,7 @@ void sendToBoard()
   // controller_packet.throttle = throttle.get(/*enabled*/ throttleEnabled);
   controller_packet.throttle = MagThrottle::get();
   controller_packet.cruise_control = cruiseControlActive;
+
   sendPacketToBoard();
 }
 //------------------------------------------------------------------
