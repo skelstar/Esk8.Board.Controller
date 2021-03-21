@@ -269,7 +269,7 @@ namespace Display
       tft.drawString(text, LCD_WIDTH / 2, y);
       y += tft.fontHeight();
 
-      if (REMOTE_TASK_CORE >= 0)
+      if (USING_REMOTE)
       { // remote battery
         const int batteryWidth = 50;
         if (Remote::mutex.take(__func__, TICKS_50))

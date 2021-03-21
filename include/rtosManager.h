@@ -56,13 +56,9 @@ public:
       return;
     }
 
-    if (xSemaphoreGive(_mutex) == pdPASS)
-    {
-      _taken = false;
-      _taken_by = nullptr;
-    }
-    else if (PRINT_STATS_MUTEX_GIVE_STATE)
-      Serial.printf("WARNING: unable to give mutex: '%s' (%s)\n", _name, funcname);
+    xSemaphoreGive(_mutex);
+    _taken = false;
+    _taken_by = nullptr;
   }
 
   SemaphoreHandle_t handle()

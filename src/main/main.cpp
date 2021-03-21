@@ -60,15 +60,9 @@ nsPeripherals::Peripherals *peripherals;
 
 //------------------------------------------------------------------
 
-namespace Board
-{
-  void init()
-  {
-  }
-} // namespace Board
-
 // prototypes
 void boardPacketAvailable_cb(uint16_t from_id, uint8_t t);
+void waitForTasksToBeReady();
 
 NRF24L01Lib nrf24;
 
@@ -201,13 +195,13 @@ namespace MagThrottle
 #include <tasks/core0/remoteTask.h>
 #include <utils.h>
 
-#if DISPLAY_TASK_CORE >= 0
+#if USING_DISPLAY
 #include <screens.h>
 #include <displayState.h>
 #include <tasks/core0/displayTask.h>
 #endif
 
-#if (FEATURE_LED_COUNT > 0)
+#if USING_LED
 #include <tasks/core0/ledTask.h>
 #endif
 #include <tasks/core0/commsStateTask.h>
@@ -232,7 +226,6 @@ void setup()
   String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
   chipId.toUpperCase();
 
-  Board::init();
   Stats::init();
 
   configStore.begin(STORE_CONFIG, false);
@@ -253,7 +246,6 @@ void setup()
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER);
 
-  boardClientInit();
 #ifdef COMMS_M5ATOM
   m5AtomClientInit();
 #endif
@@ -263,18 +255,18 @@ void setup()
   vTaskDelay(100);
 
   // CORE_0
-#if DISPLAY_TASK_CORE >= 0
+  Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_2);
+  nsPeripherals::createTask(PERIPHERALS_TASK_CORE, 3);
+#if USING_DISPLAY
   Display::createTask(DISPLAY_TASK_CORE, TASK_PRIORITY_3);
 #endif
-  // #endif
-  Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_2);
-  if (REMOTE_TASK_CORE >= 0)
-    Remote::createTask(REMOTE_TASK_CORE, TASK_PRIORITY_1);
-  if (STATS_TASK_CORE >= 0)
-    Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
-  nsPeripherals::createTask(PERIPHERALS_TASK_CORE, 3);
-
-#if (FEATURE_LED_COUNT > 0 && LED_TASK_CORE >= 0)
+#if USING_REMOTE
+  Remote::createTask(REMOTE_TASK_CORE, TASK_PRIORITY_1);
+#endif
+#if USING_STATS
+  Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
+#endif
+#if USING_LED
   Led::createTask(LED_TASK_CORE, TASK_PRIORITY_1);
 #endif
 
@@ -295,16 +287,9 @@ void setup()
   mutex_SPI.create("SPI", /*default*/ TICKS_50);
   mutex_SPI.enabled = true;
 
-  while (
-#if DISPLAY_TASK_CORE >= 0
-      !Display::taskReady &&
-#endif
-      !Comms::taskReady &&
-      !Stats::taskReady &&
-      (REMOTE_TASK_CORE == -1 || !Remote::taskReady))
-  {
-    vTaskDelay(10);
-  }
+  boardClientInit();
+
+  waitForTasksToBeReady();
 
   sendConfigToBoard();
 }
@@ -393,5 +378,19 @@ void sendToBoard()
   sendPacketToBoard();
 }
 //------------------------------------------------------------------
+
+void waitForTasksToBeReady()
+{
+  while (
+#if USING_DISPLAY
+      !Display::taskReady &&
+#endif
+      !Comms::taskReady &&
+      !Stats::taskReady &&
+      (REMOTE_TASK_CORE == -1 || !Remote::taskReady))
+  {
+    vTaskDelay(10);
+  }
+}
 
 #endif
