@@ -22,6 +22,9 @@ public:
   static const int BUTTON_SELECT = 11;
   static const int BUTTON_COUNT = 12;
 
+  static const int BUTTON_PRESSED = 1;
+  static const int BUTTON_RELEASED = 0;
+
   // static const int NUM_CLASSIC_BUTTONS = 9;
 
   // NintendoController::NintendoController();

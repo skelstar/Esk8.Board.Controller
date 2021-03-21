@@ -38,7 +38,7 @@ namespace Display
     _board = new BoardClass();
     _periphs = new nsPeripherals::Peripherals();
 
-    elapsedMillis sinceReadDispEventQueue, since_checked_queue;
+    elapsedMillis sinceReadDispEventQueue, since_checked_queue, since_fsm_update;
 
     while (true)
     {
@@ -53,6 +53,12 @@ namespace Display
         nsPeripherals::Peripherals *_periph_res = peripheralsQueue->peek<nsPeripherals::Peripherals>();
         if (_periph_res != nullptr)
           handle_peripherals_packet(_periph_res);
+      }
+
+      if (since_fsm_update > 50)
+      {
+        since_fsm_update = 0;
+        _fsm.run_machine();
       }
 
       vTaskDelay(10);
@@ -83,7 +89,8 @@ namespace Display
   {
     if (PRINT_DISP_STATE_EVENT &&
         !(_fsm.revisit() && ev == DispState::STOPPED) &&
-        !(_fsm.revisit() && ev == DispState::MOVING))
+        !(_fsm.revisit() && ev == DispState::MOVING) &&
+        !(_fsm.getCurrentStateId() == Display::OPTION_PUSH_TO_START && ev == DispState::STOPPED))
       Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "DISP", DispState::getTrigger(ev));
   }
 
@@ -106,9 +113,30 @@ namespace Display
       fsm_mgr.trigger(DispState::DISCONNECTED);
   }
 
+  DispState::Trigger mapToTrigger(uint8_t *buttons)
+  {
+    if (buttons[NintendoController::BUTTON_START] == NintendoController::BUTTON_PRESSED)
+      return DispState::MENU_BUTTON_CLICKED;
+    return DispState::NO_EVENT;
+  }
+
   void handle_peripherals_packet(nsPeripherals::Peripherals *res)
   {
-    // _periphs = new nsPeripherals::Peripherals(*res);
-    // Serial.printf("DISP: peripherals changed: %d\n", _periphs->event);
+    switch (res->event)
+    {
+    case nsPeripherals::EV_CLASSIC_BUTTON:
+    {
+      DispState::Trigger tr = mapToTrigger(res->classicButtons);
+      if (tr != DispState::NO_EVENT)
+        fsm_mgr.trigger(tr);
+      break;
+    }
+    case nsPeripherals::EV_PRIMARY_BUTTON:
+    {
+      if (res->primary_button == 1)
+        fsm_mgr.trigger(DispState::SELECT_BUTTON_CLICK);
+      break;
+    }
+    }
   }
 } // namespace Display

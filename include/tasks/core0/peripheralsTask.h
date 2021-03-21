@@ -80,13 +80,12 @@ namespace nsPeripherals
 
   void nintendoButtonPressed_cb(uint8_t button)
   {
-    Serial.printf("button %s pressed\n", ClassicButtons::getButtonName(button));
+    if (PRINT_NINTENDO_BUTTON)
+      Serial.printf("button %s pressed\n", ClassicButtons::getButtonName(button));
 
     uint8_t *buttons = classic.get_buttons();
     for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
       myperipherals.classicButtons[i] = buttons[i];
-
-    // print_buttons(buttons);
 
     myperipherals.event = EV_CLASSIC_BUTTON;
     peripheralsQueue->send(&myperipherals);
@@ -94,13 +93,12 @@ namespace nsPeripherals
 
   void nintendoButtonReleased_cb(uint8_t button)
   {
-    Serial.printf("button %s released\n", ClassicButtons::getButtonName(button));
+    if (PRINT_NINTENDO_BUTTON)
+      Serial.printf("button %s released\n", ClassicButtons::getButtonName(button));
 
     uint8_t *buttons = classic.get_buttons();
     for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
       myperipherals.classicButtons[i] = buttons[i];
-
-    // print_buttons(buttons);
 
     myperipherals.event = EV_CLASSIC_BUTTON;
     peripheralsQueue->send(&myperipherals);

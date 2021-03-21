@@ -36,12 +36,14 @@ namespace DispState
     MOVING,
     UPDATE,
     REMOTE_BATTERY_CHANGED,
-    PRIMARY_SINGLE_CLICK,
+    SELECT_BUTTON_CLICK,
     PRIMARY_DOUBLE_CLICK,
     PRIMARY_TRIPLE_CLICK,
     PRIMARY_LONG_PRESS,
     VERSION_DOESNT_MATCH,
     RIGHT_BUTTON_CLICKED,
+    MENU_BUTTON_CLICKED,
+    OPTION_TIMED_OUT,
   };
 
   const char *getTrigger(int ev)
@@ -62,8 +64,8 @@ namespace DispState
       return "UPDATE";
     case REMOTE_BATTERY_CHANGED:
       return "REMOTE_BATTERY_CHANGED";
-    case PRIMARY_SINGLE_CLICK:
-      return "PRIMARY_SINGLE_CLICK";
+    case SELECT_BUTTON_CLICK:
+      return "SELECT_BUTTON_CLICK";
     case PRIMARY_DOUBLE_CLICK:
       return "PRIMARY_DOUBLE_CLICK";
     case PRIMARY_TRIPLE_CLICK:
@@ -74,6 +76,10 @@ namespace DispState
       return "VERSION_DOESNT_MATCH";
     case RIGHT_BUTTON_CLICKED:
       return "RIGHT_BUTTON_CLICKED";
+    case MENU_BUTTON_CLICKED:
+      return "MENU_BUTTON_CLICKED";
+    case OPTION_TIMED_OUT:
+      return "OPTION_TIMED_OUT";
     }
     return OUT_OF_RANGE;
   }

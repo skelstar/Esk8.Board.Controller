@@ -9,7 +9,7 @@ namespace Display
 {
   DispState::Trigger lastDispEvent;
 
-  elapsedMillis sinceShowingToggleScreen;
+  elapsedMillis sinceShowingOptionScreen;
 
   enum StateId
   {
@@ -20,7 +20,7 @@ namespace Display
     STOPPED_SCREEN,
     MOVING_SCREEN,
     BOARD_VERSION_DOESNT_MATCH_SCREEN,
-    SHOW_PUSH_TO_START,
+    OPTION_PUSH_TO_START,
     SHOW_SETTINGS,
     TOGGLE_PUSH_TO_START,
   };
@@ -43,8 +43,8 @@ namespace Display
       return "MOVING_SCREEN";
     case BOARD_VERSION_DOESNT_MATCH_SCREEN:
       return "BOARD_VERSION_DOESNT_MATCH_SCREEN";
-    case SHOW_PUSH_TO_START:
-      return "SHOW_PUSH_TO_START";
+    case OPTION_PUSH_TO_START:
+      return "OPTION_PUSH_TO_START";
     case SHOW_SETTINGS:
       return "SHOW_SETTINGS";
     case TOGGLE_PUSH_TO_START:
@@ -123,37 +123,38 @@ namespace Display
       NULL);
   //---------------------------------------------------------------
 
-#include "OptionsClass.h"
+#define OPTION_SCREEN_TIMEOUT 2000
 
-  //---------------------------------------------------------------
-  State stShowSettings(
-      SHOW_SETTINGS,
+  State stOptionPushToStart(
+      OPTION_PUSH_TO_START,
       [] {
-        fsm_mgr.printState(SHOW_SETTINGS);
-        sinceShowingToggleScreen = 0;
-        switch (lastDispEvent)
+        fsm_mgr.printState(OPTION_PUSH_TO_START);
+        sinceShowingOptionScreen = 0;
+        switch (fsm_mgr.lastEvent())
         {
-        case DispState::PRIMARY_TRIPLE_CLICK:
+        case DispState::MENU_BUTTON_CLICKED:
         {
-          settingPtr = SettingOption::OPT_PUSH_TO_START;
-          optionHandlers[settingPtr]->display();
+          bool enabled = featureService.get<bool>(FeatureType::PUSH_TO_START);
+          screenPropValue<bool>("Push to start", enabled ? "ON" : "OFF");
           break;
         }
-        case DispState::PRIMARY_SINGLE_CLICK:
+        case DispState::SELECT_BUTTON_CLICK:
         {
-          nextSetting();
-          optionHandlers[settingPtr]->display();
+          sinceShowingOptionScreen = 0;
+          bool enabled = featureService.get<bool>(FeatureType::PUSH_TO_START);
+          featureService.set(PUSH_TO_START, !enabled);
+          screenPropValue<bool>("Push to start", !enabled ? "ON" : "OFF");
           break;
         }
-        case DispState::PRIMARY_LONG_PRESS:
-        {
-          optionHandlers[settingPtr]->changeValue();
-          optionHandlers[settingPtr]->display();
-          break;
-        }
+        default:
+          Serial.printf("Unhandled event: %s\n", DispState::getTrigger(fsm_mgr.lastEvent()));
         }
       },
-      NULL, NULL);
+      [] {
+        if (sinceShowingOptionScreen > OPTION_SCREEN_TIMEOUT)
+          fsm_mgr.trigger(DispState::OPTION_TIMED_OUT);
+      },
+      NULL);
   //---------------------------------------------------------------
 
   Fsm _fsm(&stateDisconnected);
@@ -168,42 +169,32 @@ namespace Display
 
   void addTransitions()
   {
-    // DispState::DISCONNECTED
+    // DISCONNECTED
     _fsm.add_transition(&stStopped, &stateDisconnected, DispState::DISCONNECTED, NULL);
     _fsm.add_transition(&stMoving, &stateDisconnected, DispState::DISCONNECTED, NULL);
 
-    // DispState::PRIMARY_DOUBLE_CLICK
-    _fsm.add_transition(&stStopped, &stStopped, DispState::PRIMARY_DOUBLE_CLICK, clearResetCounters);
-    _fsm.add_transition(&stMoving, &stMoving, DispState::PRIMARY_DOUBLE_CLICK, clearResetCounters);
+    // Options
+    _fsm.add_transition(&stStopped, &stOptionPushToStart, DispState::MENU_BUTTON_CLICKED, NULL);
+    _fsm.add_transition(&stOptionPushToStart, &stStopped, DispState::MENU_BUTTON_CLICKED, NULL);
+    _fsm.add_transition(&stOptionPushToStart, &stOptionPushToStart, DispState::SELECT_BUTTON_CLICK, NULL);
+    _fsm.add_transition(&stOptionPushToStart, &stStopped, DispState::OPTION_TIMED_OUT, NULL);
 
-    // DispState::MOVING
+    // MOVING
     _fsm.add_transition(&stateDisconnected, &stMoving, DispState::MOVING, NULL);
     _fsm.add_transition(&stStopped, &stMoving, DispState::MOVING, NULL);
 
-    // DispState::STOPPED
+    // STOPPED
     _fsm.add_transition(&stateDisconnected, &stStopped, DispState::STOPPED, NULL);
     _fsm.add_transition(&stMoving, &stStopped, DispState::STOPPED, NULL);
 
-    //DispState::REMOTE_BATTERY_CHANGED
+    // REMOTE_BATTERY_CHANGED
     _fsm.add_transition(&stStopped, &stStopped, DispState::REMOTE_BATTERY_CHANGED, NULL);
 
-    // settings
-    /*
-    - PRIMARY_TRIPLE_CLICK takes us to first settings screen
-    - will do back to Stopped screen after 3 seconds if nothing done
-    - PRIMARY_SINGLE_CLICK retriggers stShowSettings (navigate to next setting)
-    - PRIMARY_LONG_PRESS retriggers stShowSettings (toggle value)
-    */
-    _fsm.add_transition(&stStopped, &stShowSettings, DispState::PRIMARY_TRIPLE_CLICK, NULL);
-    _fsm.add_timed_transition(&stShowSettings, &stStopped, 3000, NULL);
-    _fsm.add_transition(&stShowSettings, &stShowSettings, DispState::PRIMARY_SINGLE_CLICK, NULL);
-    _fsm.add_transition(&stShowSettings, &stShowSettings, DispState::PRIMARY_LONG_PRESS, NULL);
-
-    // DispState::UPDATE
+    // UPDATE
     _fsm.add_transition(&stStopped, &stStopped, DispState::UPDATE, NULL);
     _fsm.add_transition(&stMoving, &stMoving, DispState::UPDATE, NULL);
 
-    // DispState::VERSION_DOESNT_MATCH
+    // VERSION_DOESNT_MATCH
     _fsm.add_transition(&stateDisconnected, &stBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
   }
 } // namespace Display
