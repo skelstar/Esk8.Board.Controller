@@ -204,6 +204,9 @@ namespace MagThrottle
 #if USING_LED
 #include <tasks/core0/ledTask.h>
 #endif
+#if USING_DEBUG_TASK == 1
+#include <tasks/core0/debugTask.h>
+#endif
 #include <tasks/core0/commsStateTask.h>
 #include <nrf_comms.h>
 
@@ -268,6 +271,9 @@ void setup()
 #endif
 #if USING_LED
   Led::createTask(LED_TASK_CORE, TASK_PRIORITY_1);
+#endif
+#if USING_DEBUG_TASK == 1
+  Debug::createTask(DEBUG_TASK_CORE, TASK_PRIORITY_1);
 #endif
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));

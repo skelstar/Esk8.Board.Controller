@@ -40,6 +40,7 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   board.save(packet);
 
   // send to other tasks
+  board.id++;
   if (boardPacketQueue != NULL)
     boardPacketQueue->send(&board);
 

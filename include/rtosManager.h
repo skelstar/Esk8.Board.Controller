@@ -19,8 +19,9 @@ public:
     if (_taken)
     {
       // already taken
-      Serial.printf("ERROR: %s tried taking %s but was already taken by %s\n",
-                    funcname, _name, _taken_by);
+      if (funcname != nullptr)
+        Serial.printf("ERROR: %s tried taking %s but was already taken by %s\n",
+                      funcname, _name, _taken_by != nullptr ? _taken_by : "anon");
       return false;
     }
     _taken = xSemaphoreTake(_mutex, ticks) == pdPASS || !enabled;
@@ -43,7 +44,7 @@ public:
     return _taken;
   }
 
-  bool take(const char *funcname)
+  bool take(const char *funcname = nullptr)
   {
     return take(funcname, _defaultticks);
   }
