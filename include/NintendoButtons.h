@@ -38,7 +38,7 @@ namespace ClassicButtons
 
   void init()
   {
-    if (mutex_I2C.take(__func__, TICKS_50))
+    if (mutex_I2C.take("NintendoButtons: init()", TICKS_50))
     {
       if (!classic.init())
       {
@@ -60,7 +60,7 @@ namespace ClassicButtons
 
   void loop()
   {
-    if (mutex_I2C.take(__func__, TICKS_50))
+    if (mutex_I2C.take("NintendoButtons: loop()", TICKS_50))
     {
       classic.update(); // Get new data from the controller}
       mutex_I2C.give(__func__);

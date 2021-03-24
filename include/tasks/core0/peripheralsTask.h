@@ -5,13 +5,11 @@
 
 namespace nsPeripherals
 {
-  Peripherals myperipherals;
+  Peripherals *myperipherals;
   namespace
   {
     const char *taskName = "Peripherals";
   }
-
-  QwiicButton qwiicButton;
 
   bool taskReady = false;
 
@@ -26,7 +24,10 @@ namespace nsPeripherals
 
     taskReady = true;
 
+    myperipherals = new Peripherals();
+
     elapsedMillis since_read_peripherals;
+    unsigned long last_id = -1;
 
     while (true)
     {
@@ -34,34 +35,41 @@ namespace nsPeripherals
       {
         since_read_peripherals = 0;
 
+        // check bus first
+        nsPeripherals::Peripherals *res = peripheralsQueue->peek<nsPeripherals::Peripherals>(__func__);
+        if (res != nullptr)
+        {
+          if (res->id > last_id + 1)
+            Serial.printf("[PERIPHERALS_TASK] missed at least one packet! (id: %lu, last: %lu)\n", res->id, last_id);
+
+          if (res->id != last_id)
+          {
+            myperipherals = new nsPeripherals::Peripherals(*res);
+
+            DEBUGVAL(myperipherals->primary_button);
+
+            last_id = myperipherals->id;
+          }
+        }
+
         peripheralsQueue->clear();
 
         bool changed = false;
-        // primary button
-        bool primary_pressed = qwiicButton.isPressed();
+
         // throttle
         MagThrottle::update();
         // classic buttons
         ClassicButtons::loop();
 
         changed = changed ||
-                  myperipherals.primary_button != primary_pressed ||
-                  myperipherals.throttle != MagThrottle::get();
+                  myperipherals->throttle != MagThrottle::get();
 
         uint8_t throttle = MagThrottle::get();
 
-        if (myperipherals.primary_button != primary_pressed)
-        {
-          myperipherals.primary_button = primary_pressed;
-          myperipherals.event = Event::EV_PRIMARY_BUTTON;
-          peripheralsQueue->send(&myperipherals);
-        }
-        else if (myperipherals.throttle != throttle)
-        {
-          myperipherals.throttle = throttle;
-          myperipherals.event = Event::EV_THROTTLE;
-          peripheralsQueue->send(&myperipherals);
-        }
+        myperipherals->throttle = throttle;
+        myperipherals->event = Event::EV_THROTTLE;
+        myperipherals->id++;
+        peripheralsQueue->send(myperipherals);
       }
 
       vTaskDelay(10);
@@ -85,9 +93,10 @@ namespace nsPeripherals
 
     uint8_t *buttons = classic.get_buttons();
     for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
-      myperipherals.classicButtons[i] = buttons[i];
+      myperipherals->classicButtons[i] = buttons[i];
 
-    myperipherals.event = EV_CLASSIC_BUTTON;
+    myperipherals->event = EV_CLASSIC_BUTTON;
+    myperipherals->id++;
     peripheralsQueue->send(&myperipherals);
   }
 
@@ -98,9 +107,10 @@ namespace nsPeripherals
 
     uint8_t *buttons = classic.get_buttons();
     for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
-      myperipherals.classicButtons[i] = buttons[i];
+      myperipherals->classicButtons[i] = buttons[i];
 
-    myperipherals.event = EV_CLASSIC_BUTTON;
+    myperipherals->event = EV_CLASSIC_BUTTON;
+    myperipherals->id++;
     peripheralsQueue->send(&myperipherals);
   }
 
@@ -120,11 +130,10 @@ namespace nsPeripherals
                                 : "ERROR: Could not find mag throttle");
 
       MagThrottle::setThrottleEnabledCb([] {
-        return myperipherals.primary_button == 1; // qwiicButton.isPressed();
+        return myperipherals->primary_button == 1; // qwiicButton.isPressed();
       });
       MagThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, THROTTLE_DIRECTION);
     }
-    qwiicButton.begin();
   }
 
   //--------------------------------------------------------

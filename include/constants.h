@@ -147,6 +147,7 @@ namespace nsPeripherals
   class Peripherals
   {
   public:
+    unsigned long id = 0;
     uint8_t primary_button = 0;
     uint8_t throttle = 127;
     uint8_t classicButtons[NintendoController::BUTTON_COUNT];
