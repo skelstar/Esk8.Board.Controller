@@ -36,7 +36,7 @@ namespace nsPeripherals
         since_read_peripherals = 0;
 
         // check bus first
-        nsPeripherals::Peripherals *res = peripheralsQueue->peek<nsPeripherals::Peripherals>(__func__);
+        QwiickButtonState *res = QwiicButtonTask::queue->peek<QwiickButtonState>(__func__);
         if (res != nullptr)
         {
           if (res->id > last_id + 1)
@@ -44,11 +44,10 @@ namespace nsPeripherals
 
           if (res->id != last_id)
           {
-            myperipherals = new nsPeripherals::Peripherals(*res);
+            myperipherals->primary_button = res->pressed;
+            last_id = res->id;
 
             DEBUGVAL(myperipherals->primary_button);
-
-            last_id = myperipherals->id;
           }
         }
 

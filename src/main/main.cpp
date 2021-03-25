@@ -210,11 +210,11 @@ namespace MagThrottle
 #include <tasks/core0/commsStateTask.h>
 #include <nrf_comms.h>
 
+#if USING_QWIIC_BUTTON_TASK == 1
+#include <tasks/core0/QwiicButtonTask.h>
+#endif
 #include <peripherals.h>
 #include <tasks/core0/peripheralsTask.h>
-#if USING_SPARKFUN_BUTTON_TASK == 1
-#include <tasks/core0/sparkFunButtonTask.h>
-#endif
 
 #include <assert.h>
 #define __ASSERT_USE_STDERR
@@ -278,8 +278,8 @@ void setup()
 #if USING_DEBUG_TASK == 1
   Debug::createTask(DEBUG_TASK_CORE, TASK_PRIORITY_1);
 #endif
-#if USING_SPARKFUN_BUTTON_TASK == 1
-  SparkFunButton::createTask(SPARKFUN_BUTTON_TASK_CORE, TASK_PRIORITY_1);
+#if USING_QWIIC_BUTTON_TASK == 1
+  QwiicButtonTask::createTask(SPARKFUN_BUTTON_TASK_CORE, TASK_PRIORITY_1);
 #endif
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
@@ -400,7 +400,7 @@ void waitForTasksToBeReady()
       !Comms::taskReady &&
       !Stats::taskReady &&
       (REMOTE_TASK_CORE == -1 || !Remote::taskReady) &&
-      (USING_SPARKFUN_BUTTON_TASK == 0 || !SparkFunButton::taskReady))
+      (USING_QWIIC_BUTTON_TASK == 0 || !QwiicButtonTask::taskReady))
   {
     vTaskDelay(10);
   }

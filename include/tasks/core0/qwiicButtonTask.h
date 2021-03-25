@@ -3,10 +3,18 @@
 /* prototypes */
 
 //------------------------------------------
+struct QwiickButtonState
+{
+  bool pressed;
+  unsigned long id;
+} state;
 
-namespace SparkFunButton
+namespace QwiicButtonTask
 {
   /* prototypes */
+
+  xQueueHandle queueHandle;
+  Queue::Manager *queue;
 
   bool taskReady = false;
 
@@ -15,7 +23,7 @@ namespace SparkFunButton
   bool board_connected = false;
   unsigned long last_id = 0;
 
-  nsPeripherals::Peripherals *peripherals;
+  // nsPeripherals::Peripherals *peripherals;
 
   QwiicButton qwiicButton;
 
@@ -28,24 +36,32 @@ namespace SparkFunButton
   {
     Serial.printf(PRINT_TASK_STARTED_FORMAT, "Spark Fun Button Task", xPortGetCoreID());
 
-    while (nsPeripherals::taskReady == false)
+    bool init_button = false;
+    do
     {
+      if (mutex_I2C.take("QwiicButtonTask: init", (TickType_t)500))
+      {
+        if (false == qwiicButton.begin())
+          DEBUG("Error initialising Qwiik button");
+        mutex_I2C.give(__func__);
+        init_button = true;
+      }
       vTaskDelay(10);
-    }
+    } while (!init_button);
+    DEBUG("Qwiic Button initialised");
 
-    if (mutex_I2C.take(__func__, portMAX_DELAY))
-    {
-      if (false == qwiicButton.begin())
-        DEBUG("Error initialising Qwiik button");
-      mutex_I2C.give(__func__);
-    }
+    queueHandle = xQueueCreate(/*len*/ 1, sizeof(QwiickButtonState *));
+    queue = new Queue::Manager(queueHandle, (TickType_t)5);
 
-    peripherals = new nsPeripherals::Peripherals();
-
-    // init();
+    state.pressed = qwiicButton.isPressed();
+    state.id = 0;
 
     taskReady = true;
-    unsigned long last_id = -1;
+
+    vTaskDelay(1000);
+
+    queue->send(&state);
+    state.id++;
 
     while (true)
     {
@@ -55,40 +71,20 @@ namespace SparkFunButton
 
         ulong now = millis();
 
-        bool pressed = peripherals->primary_button;
-        if (mutex_I2C.take(nullptr, TICKS_10))
+        bool pressed = state.pressed;
+
+        if (mutex_I2C.take("QwiicButtonTask: loop", TICKS_10))
         {
           pressed = qwiicButton.isPressed();
           mutex_I2C.give(nullptr);
         }
 
-        if (peripherals->primary_button != pressed)
+        if (state.pressed != pressed)
         {
-          peripherals->primary_button = pressed;
-          peripherals->id++;
-          peripherals->event = nsPeripherals::Event::EV_PRIMARY_BUTTON;
-          peripheralsQueue->send(peripherals);
-          last_id = peripherals->id;
-          DEBUGVAL("Qwiic button event", pressed, peripherals->primary_button);
-        }
-      }
-
-      if (since_peeked > CHECK_QUEUE_INTERVAL)
-      {
-        since_peeked = 0;
-
-        nsPeripherals::Peripherals *res = peripheralsQueue->peek<nsPeripherals::Peripherals>(__func__);
-
-        if (res != nullptr)
-        {
-          if (res->id > last_id + 1)
-            Serial.printf("[SPARKFUN_BUTTON_TASK] missed at least one packet! (id: %lu, last: %lu)\n", res->id, last_id);
-
-          if (res->id != last_id)
-          {
-            peripherals = new nsPeripherals::Peripherals(*res);
-            last_id = peripherals->id;
-          }
+          state.pressed = pressed;
+          queue->send(&state);
+          state.id++;
+          DEBUGVAL("Qwiic button event", pressed, state.pressed);
         }
       }
 
@@ -119,7 +115,7 @@ namespace SparkFunButton
   {
     xTaskCreatePinnedToCore(
         task,
-        "SparkFunButtonTask",
+        "QwiicButtonTask",
         10000,
         NULL,
         priority,
