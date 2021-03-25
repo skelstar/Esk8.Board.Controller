@@ -15,6 +15,7 @@ namespace Display
   void handle_stats_packet(StatsClass *res);
   void handle_board_packet(BoardClass *res);
   void handle_peripherals_packet(nsPeripherals::Peripherals *res);
+  void handle_nintendo_classic_event(NintendoButtonEvent *ev);
 
   bool taskReady = false;
 
@@ -39,6 +40,7 @@ namespace Display
     _periphs = new nsPeripherals::Peripherals();
 
     elapsedMillis sinceReadDispEventQueue, since_checked_queue, since_fsm_update;
+    unsigned long last_board_id = -1, last_periph_id = -1, last_classic_id = -1;
 
     while (true)
     {
@@ -47,12 +49,24 @@ namespace Display
         since_checked_queue = 0;
 
         BoardClass *_brd_res = boardPacketQueue->peek<BoardClass>();
-        if (_brd_res != nullptr)
+        if (_brd_res != nullptr && last_board_id != _brd_res->id)
+        {
           handle_board_packet(_brd_res);
+          last_board_id = _brd_res->id;
+        }
 
         nsPeripherals::Peripherals *_periph_res = peripheralsQueue->peek<nsPeripherals::Peripherals>();
-        if (_periph_res != nullptr)
+        if (_periph_res != nullptr && last_periph_id != _periph_res->id)
+        {
           handle_peripherals_packet(_periph_res);
+          last_periph_id = _periph_res->id;
+        }
+        NintendoButtonEvent *ev = ClassicButtonsTask::queue->peek<NintendoButtonEvent>(__func__);
+        if (ev != nullptr && ev->id != last_classic_id)
+        {
+          handle_nintendo_classic_event(ev);
+          last_classic_id = ev->id;
+        }
       }
 
       if (since_fsm_update > 50)
@@ -120,17 +134,20 @@ namespace Display
     return DispState::NO_EVENT;
   }
 
+  DispState::Trigger mapToTrigger(uint8_t button, uint8_t state)
+  {
+    switch (button)
+    {
+    case NintendoController::BUTTON_START:
+      return state == 1 ? DispState::MENU_BUTTON_CLICKED : DispState::NO_EVENT; // only on press
+    }
+    return DispState::NO_EVENT;
+  }
+
   void handle_peripherals_packet(nsPeripherals::Peripherals *res)
   {
     switch (res->event)
     {
-    case nsPeripherals::EV_CLASSIC_BUTTON:
-    {
-      DispState::Trigger tr = mapToTrigger(res->classicButtons);
-      if (tr != DispState::NO_EVENT)
-        fsm_mgr.trigger(tr);
-      break;
-    }
     case nsPeripherals::EV_PRIMARY_BUTTON:
     {
       if (res->primary_button == 1)
@@ -138,5 +155,12 @@ namespace Display
       break;
     }
     }
+  }
+
+  void handle_nintendo_classic_event(NintendoButtonEvent *ev)
+  {
+    DispState::Trigger tr = mapToTrigger(ev->button, ev->state);
+    if (tr != DispState::NO_EVENT)
+      fsm_mgr.trigger(tr);
   }
 } // namespace Display

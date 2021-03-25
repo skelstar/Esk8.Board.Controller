@@ -36,7 +36,6 @@ namespace ClassicButtonsTask
   {
     Serial.printf(PRINT_TASK_STARTED_FORMAT, "ClassicControllerTask", xPortGetCoreID());
 
-    bool init_classic = false;
     init();
 
     DEBUG("Classic Buttons initialised");
@@ -151,33 +150,4 @@ namespace ClassicButtonsTask
       vTaskDelay(10);
     } while (!initialised);
   }
-
-  // void setButtonReleasedCallback(NintendoController::ButtonEventCallback cb)
-  // {
-  //   classic.setButtonReleasedCb(cb);
-  // }
-
-  // void setButtonPressedCallback(NintendoController::ButtonEventCallback cb)
-  // {
-  //   classic.setButtonPressedCb(cb);
-  // }
-
-  // void loop()
-  // {
-  //   if (mutex_I2C.take("NintendoButtons: loop()", TICKS_50))
-  //   {
-  //     classic.update(); // Get new data from the controller}
-  //     mutex_I2C.give(__func__);
-  //   }
-  // }
-
-  // bool buttonPressed(uint8_t button)
-  // {
-  //   return classic.is_pressed(button);
-  // }
-
-  // bool throttle_enabled()
-  // {
-  //   return classic.is_pressed(NintendoController::BUTTON_B);
-  // }
 }
