@@ -27,7 +27,7 @@ namespace nsPeripherals
     myperipherals = new Peripherals();
 
     elapsedMillis since_read_peripherals;
-    unsigned long last_id = -1;
+    unsigned long last_qwiic_id = -1, last_classic_id = -1;
 
     while (true)
     {
@@ -35,20 +35,26 @@ namespace nsPeripherals
       {
         since_read_peripherals = 0;
 
-        // check bus first
         QwiickButtonState *res = QwiicButtonTask::queue->peek<QwiickButtonState>(__func__);
         if (res != nullptr)
         {
-          if (res->id > last_id + 1)
-            Serial.printf("[PERIPHERALS_TASK] missed at least one packet! (id: %lu, last: %lu)\n", res->id, last_id);
+          if (res->id > last_qwiic_id + 1)
+            Serial.printf("[PERIPHERALS_TASK] missed at least one packet! (id: %lu, last: %lu)\n", res->id, last_qwiic_id);
 
-          if (res->id != last_id)
+          if (res->id != last_qwiic_id)
           {
             myperipherals->primary_button = res->pressed;
-            last_id = res->id;
+            last_qwiic_id = res->id;
 
             DEBUGVAL(myperipherals->primary_button);
           }
+        }
+
+        NintendoButtonEvent *ev = ClassicButtonsTask::queue->peek<NintendoButtonEvent>(__func__);
+        if (ev != nullptr && ev->id != last_classic_id)
+        {
+          DEBUGVAL(ev->button, ev->state);
+          last_classic_id = ev->id;
         }
 
         peripheralsQueue->clear();
@@ -57,8 +63,6 @@ namespace nsPeripherals
 
         // throttle
         MagThrottle::update();
-        // classic buttons
-        ClassicButtons::loop();
 
         changed = changed ||
                   myperipherals->throttle != MagThrottle::get();
@@ -88,7 +92,7 @@ namespace nsPeripherals
   void nintendoButtonPressed_cb(uint8_t button)
   {
     if (PRINT_NINTENDO_BUTTON)
-      Serial.printf("button %s pressed\n", ClassicButtons::getButtonName(button));
+      Serial.printf("button %s pressed\n", ClassicButtonsTask::getButtonName(button));
 
     uint8_t *buttons = classic.get_buttons();
     for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
@@ -102,7 +106,7 @@ namespace nsPeripherals
   void nintendoButtonReleased_cb(uint8_t button)
   {
     if (PRINT_NINTENDO_BUTTON)
-      Serial.printf("button %s released\n", ClassicButtons::getButtonName(button));
+      Serial.printf("button %s released\n", ClassicButtonsTask::getButtonName(button));
 
     uint8_t *buttons = classic.get_buttons();
     for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
@@ -115,7 +119,7 @@ namespace nsPeripherals
 
   void init()
   {
-    ClassicButtons::init();
+    ClassicButtonsTask::init();
 
     classic.setButtonPressedCb(nintendoButtonPressed_cb);
     classic.setButtonReleasedCb(nintendoButtonReleased_cb);

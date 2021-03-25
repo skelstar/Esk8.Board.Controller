@@ -23,8 +23,6 @@ namespace QwiicButtonTask
   bool board_connected = false;
   unsigned long last_id = 0;
 
-  // nsPeripherals::Peripherals *peripherals;
-
   QwiicButton qwiicButton;
 
   const unsigned long CHECK_QUEUE_INTERVAL = 50;
@@ -34,7 +32,7 @@ namespace QwiicButtonTask
 
   void task(void *pvParameters)
   {
-    Serial.printf(PRINT_TASK_STARTED_FORMAT, "Spark Fun Button Task", xPortGetCoreID());
+    Serial.printf(PRINT_TASK_STARTED_FORMAT, "Qwiic Button Task", xPortGetCoreID());
 
     bool init_button = false;
     do
@@ -73,7 +71,7 @@ namespace QwiicButtonTask
 
         bool pressed = state.pressed;
 
-        if (mutex_I2C.take("QwiicButtonTask: loop", TICKS_10))
+        if (mutex_I2C.take(nullptr, TICKS_10))
         {
           pressed = qwiicButton.isPressed();
           mutex_I2C.give(nullptr);

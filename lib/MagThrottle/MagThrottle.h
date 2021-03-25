@@ -70,10 +70,10 @@ namespace MagThrottle
   {
     float deg = _centre;
     // TODO is this the bext way to handle this?
-    if (mutex_I2C.take(__func__, TICKS_50))
+    if (mutex_I2C.take("MagThrottle: update", TICKS_50))
     {
       deg = _convertRawAngleToDegrees(ams5600.getRawAngle());
-      mutex_I2C.give(__func__);
+      mutex_I2C.give("MagThrottle: update");
     }
     float adj = deg;
     float delta = getDelta(deg, _prev_deg);

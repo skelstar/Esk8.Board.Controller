@@ -281,6 +281,7 @@ void setup()
 #if USING_QWIIC_BUTTON_TASK == 1
   QwiicButtonTask::createTask(SPARKFUN_BUTTON_TASK_CORE, TASK_PRIORITY_1);
 #endif
+  ClassicButtonsTask::createTask(0, TASK_PRIORITY_1);
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);
@@ -400,7 +401,8 @@ void waitForTasksToBeReady()
       !Comms::taskReady &&
       !Stats::taskReady &&
       (REMOTE_TASK_CORE == -1 || !Remote::taskReady) &&
-      (USING_QWIIC_BUTTON_TASK == 0 || !QwiicButtonTask::taskReady))
+      (USING_QWIIC_BUTTON_TASK == 0 || !QwiicButtonTask::taskReady) &&
+      !ClassicButtonsTask::taskReady)
   {
     vTaskDelay(10);
   }
