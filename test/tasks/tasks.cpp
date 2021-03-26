@@ -45,44 +45,9 @@ void tearDown()
 
 void test_qwiic_queue_sent()
 {
-  QwiickButtonState *actual;
-
-  bool found = false;
-  while (found == false)
-  {
-    if (since_checked_queue > 1000)
-    {
-      since_checked_queue = 0;
-      actual = QwiicButtonTask::queue->peek<QwiickButtonState>(__func__);
-      if (actual != nullptr && actual->pressed)
-      {
-        found = true;
-        Serial.printf("Qwiic button pressed\n");
-      }
-      else if (actual != nullptr)
-        Serial.printf("Press Qwiic button: %d\n", actual->pressed);
-      else
-        Serial.printf("Press Qwiic button\n");
-    }
-    vTaskDelay(5);
-  }
-
-  TEST_ASSERT_TRUE(actual->pressed);
-}
-
-void test_qwiicButton()
-{
-  uint8_t actual = 1;
-  TEST_ASSERT_EQUAL(1, actual);
-}
-
-void setup()
-{
-  delay(2000);
-
   Wire.begin(); //Join I2C bus
 
-  Serial.begin(115200);
+  QwiickButtonState *actual;
 
   mutex_I2C.create("i2c", /*default*/ TICKS_5);
   mutex_I2C.enabled = true;
@@ -93,6 +58,41 @@ void setup()
   {
     vTaskDelay(5);
   }
+
+  Serial.printf("Press then release the Qwiic button to satify test\n");
+
+  bool was_pressed = false, was_released = false;
+  while (!(was_pressed && was_released))
+  {
+    if (since_checked_queue > 200)
+    {
+      since_checked_queue = 0;
+      actual = QwiicButtonTask::queue->peek<QwiickButtonState>(__func__);
+      if (!was_pressed && actual != nullptr && actual->pressed)
+      {
+        Serial.printf("Qwiic button pressed\n");
+        was_pressed = true;
+      }
+      else if (was_pressed && actual != nullptr && !actual->pressed)
+      {
+        Serial.printf("Qwiic button released\n");
+        was_released = true;
+      }
+    }
+    vTaskDelay(5);
+  }
+  TEST_ASSERT_TRUE(was_pressed && was_released);
+}
+
+void test_qwiicButton()
+{
+}
+
+void setup()
+{
+  delay(2000);
+
+  Serial.begin(115200);
 
   UNITY_BEGIN();
 

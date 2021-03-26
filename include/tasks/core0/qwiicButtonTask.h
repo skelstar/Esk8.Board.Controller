@@ -80,7 +80,6 @@ namespace QwiicButtonTask
           state.pressed = pressed;
           queue->send(&state);
           state.id++;
-          DEBUGVAL("Qwiic button event", pressed, state.pressed);
         }
       }
 
