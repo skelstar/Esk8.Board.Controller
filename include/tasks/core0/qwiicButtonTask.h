@@ -39,12 +39,12 @@ namespace QwiicButtonTask
     {
       if (mutex_I2C.take("QwiicButtonTask: init", (TickType_t)500))
       {
-        if (false == qwiicButton.begin())
+        init_button = qwiicButton.begin();
+        if (!init_button)
           DEBUG("Error initialising Qwiik button");
         mutex_I2C.give(__func__);
-        init_button = true;
       }
-      vTaskDelay(10);
+      vTaskDelay(200);
     } while (!init_button);
     DEBUG("Qwiic Button initialised");
 
@@ -66,8 +66,6 @@ namespace QwiicButtonTask
       if (since_checked_button > CHECK_BUTTON_INTERVAL)
       {
         since_checked_button = 0;
-
-        ulong now = millis();
 
         bool pressed = state.pressed;
 
