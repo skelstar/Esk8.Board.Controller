@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef Arduino
 #include <Arduino.h>
 #endif
@@ -7,7 +9,7 @@
 #include <FastMap.h>
 #include <Fsm.h>
 
-namespace MagThrottle
+namespace MagneticThrottle
 {
   // https://ams.com/documents/20143/36005/AS5600_DS000365_5-00.pdf
 
@@ -18,13 +20,11 @@ namespace MagThrottle
     uint8_t _accel_direction = DIR_CLOCKWISE;
     uint8_t _throttle = 127;
     float _raw_throttle = 0.0;
-    uint8_t _bar_len = 10;
     float _centre = 0.0,
           _prev_deg = 0.0,
           _sweep = 0.0,
           _max_delta_limit = 0.0,
           _min_delta_limit = 0.0;
-    FastMap _bar_map;
     ThrottleEnabled_Cb _throttleEnabled_cb = nullptr;
 
     uint8_t _getPowerString(int idx, float delta, char *buff)
@@ -70,10 +70,10 @@ namespace MagThrottle
   {
     float deg = _centre;
     // TODO is this the bext way to handle this?
-    if (mutex_I2C.take("MagThrottle: update", TICKS_50))
+    if (mutex_I2C.take("MagneticThrottle: update", TICKS_50))
     {
       deg = _convertRawAngleToDegrees(ams5600.getRawAngle());
-      mutex_I2C.give("MagThrottle: update");
+      mutex_I2C.give("MagneticThrottle: update");
     }
     float adj = deg;
     float delta = getDelta(deg, _prev_deg);
@@ -152,7 +152,32 @@ namespace MagThrottle
     _accel_direction = direction == DIR_CLOCKWISE || direction == DIR_ANIT_CLOCKWISE
                            ? direction
                            : DIR_CLOCKWISE;
-    _bar_map.init(0, 255, 0, _bar_len + 1 + _bar_len);
     centre();
+  }
+
+  bool connect()
+  {
+    if (mutex_I2C.take(__func__, TICKS_50))
+    {
+      if (ams5600.detectMagnet() == 0)
+      {
+        Serial.printf("searching....\n");
+        while (1)
+        {
+          if (ams5600.detectMagnet() == 1)
+          {
+            Serial.printf("Current Magnitude: %d\n", ams5600.getMagnitude());
+            break;
+          }
+          else
+          {
+            Serial.println("Can not detect magnet");
+          }
+          vTaskDelay(200);
+        }
+      }
+      mutex_I2C.give(__func__);
+    }
+    return true;
   }
 }

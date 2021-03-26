@@ -22,6 +22,7 @@ xQueueHandle queueHandle;
 Queue::Manager *queue;
 
 #define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
+#define PRINT_THROTTLE 0
 
 #define TICKS_5 5
 #define TICKS_10 10
@@ -29,6 +30,7 @@ Queue::Manager *queue;
 
 #include <tasks/core0/qwiicButtonTask.h>
 #include <tasks/core0/NintendoClassicTask.h>
+#include <tasks/core0/ThrottleTask.h>
 
 #define CORE_0 0
 #define PRIORITY_1 1
@@ -86,7 +88,7 @@ void test_qwiic_button_pressed_then_released_via_queue()
   TEST_ASSERT_TRUE(was_pressed && was_released);
 }
 
-void test_nintendo_button_task()
+void test_nintendo_button_is_pressed_then_released_task()
 {
   Wire.begin(); //Join I2C bus
 
@@ -125,7 +127,44 @@ void test_nintendo_button_task()
     }
     vTaskDelay(5);
   }
+
   TEST_ASSERT_TRUE(was_pressed && was_released);
+}
+
+void test_magnetic_throttle_is_moved_greater_than_220()
+{
+  Wire.begin(); //Join I2C bus
+
+  mutex_I2C.create("i2c", /*default*/ TICKS_5);
+  mutex_I2C.enabled = true;
+
+  ThrottleTask::createTask(CORE_0, PRIORITY_1);
+
+  while (!ThrottleTask::taskReady)
+  {
+    vTaskDelay(5);
+  }
+
+  Serial.printf("Move throttle to >220 degrees to satify test\n");
+
+  uint8_t throttle = 127;
+
+  while (throttle < 220)
+  {
+    if (since_checked_queue > 200)
+    {
+      since_checked_queue = 0;
+      ThrottleState *actual = ThrottleTask::queue->peek<ThrottleState>(__func__);
+      if (actual != nullptr && throttle != actual->throttle)
+      {
+        Serial.printf("Throttle changed %d\n", actual->throttle);
+        throttle = actual->throttle;
+      }
+    }
+    vTaskDelay(5);
+  }
+
+  TEST_ASSERT_TRUE(throttle > 220);
 }
 
 void setup()
@@ -136,8 +175,9 @@ void setup()
 
   UNITY_BEGIN();
 
-  RUN_TEST(test_qwiic_button_pressed_then_released_via_queue);
-  RUN_TEST(test_nintendo_button_task);
+  // RUN_TEST(test_qwiic_button_pressed_then_released_via_queue);
+  // RUN_TEST(test_nintendo_button_is_pressed_then_released_task);
+  RUN_TEST(test_magnetic_throttle_is_moved_greater_than_220);
 
   UNITY_END();
 }
