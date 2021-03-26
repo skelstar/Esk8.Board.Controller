@@ -61,7 +61,7 @@ namespace Display
           handle_peripherals_packet(_periph_res);
           last_periph_id = _periph_res->id;
         }
-        NintendoButtonEvent *ev = ClassicButtonsTask::queue->peek<NintendoButtonEvent>(__func__);
+        NintendoButtonEvent *ev = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
         if (ev != nullptr && ev->id != last_classic_id)
         {
           handle_nintendo_classic_event(ev);
