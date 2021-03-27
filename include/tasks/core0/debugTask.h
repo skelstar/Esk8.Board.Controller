@@ -10,7 +10,7 @@ namespace Debug
 
   bool taskReady = false;
 
-  elapsedMillis since_peeked;
+  elapsedMillis since_checked;
 
   bool board_connected = false;
   unsigned long last_id = 0;
@@ -25,28 +25,24 @@ namespace Debug
 
     taskReady = true;
 
+    DEBUG("DebugTask ready!");
+
     while (true)
     {
-      if (since_peeked > 50)
+      if (since_checked > 3000)
       {
-        since_peeked = 0;
+        since_checked = 0;
 
-        BoardClass *board = boardPacketQueue->peek<BoardClass>();
-        if (board != nullptr)
-        {
-          if (board->id != last_id)
-          {
-            if (!board_connected && board->connected())
-              DEBUG("DEBUG: board connected!");
-            else if (board_connected && !board->connected())
-              DEBUG("DEBUG: board disconnected!");
-            board_connected = board->connected();
+        Serial.printf("Debug h/w mark: %d (words)\n", uxTaskGetStackHighWaterMark(NULL));
+        Serial.printf("Qwiic h/w mark: %d (words)\n", uxTaskGetStackHighWaterMark(QwiicButtonTask::taskHandle));
+        Serial.printf("Qwiic stack: %.1f%% (of %d)\n",
+                      getStackCapacity(QwiicButtonTask::taskHandle, QwiicButtonTask::stackSize),
+                      QwiicButtonTask::stackSize);
+        Serial.printf("Nintendo stack: %.1f%% (of %d)\n",
+                      getStackCapacity(NintendoClassicTask::taskHandle, NintendoClassicTask::stackSize),
+                      NintendoClassicTask::stackSize);
 
-            if (board->id - last_id > 1)
-              Serial.printf("[DEBUG-TASK] missed at least one packet! (id: %lu, last: %lu)\n", board->id, last_id);
-            last_id = board->id;
-          }
-        }
+        Serial.printf("Qwiic heap: %d (bytes)\n", xPortGetFreeHeapSize());
       }
 
       vTaskDelay(10);

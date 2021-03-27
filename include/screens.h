@@ -272,7 +272,7 @@ namespace Display
       if (USING_REMOTE)
       { // remote battery
         const int batteryWidth = 50;
-        if (Remote::mutex.take(__func__, TICKS_50))
+        if (Remote::mutex.take(__func__, TICKS_50ms))
         {
           y += 15;
           uint8_t percent = Remote::battery.chargePercent;

@@ -70,10 +70,10 @@ namespace MagneticThrottle
   {
     float deg = _centre;
     // TODO is this the bext way to handle this?
-    if (mutex_I2C.take("MagneticThrottle: update", TICKS_50))
+    if (mutex_I2C.take("MagneticThrottle: update", TICKS_50ms))
     {
       deg = _convertRawAngleToDegrees(ams5600.getRawAngle());
-      mutex_I2C.give("MagneticThrottle: update");
+      mutex_I2C.give("MagneticThrottle: update"); // 1ms
     }
     float adj = deg;
     float delta = getDelta(deg, _prev_deg);
@@ -135,7 +135,7 @@ namespace MagneticThrottle
 
   void centre()
   {
-    if (mutex_I2C.take(__func__, TICKS_50))
+    if (mutex_I2C.take(__func__, TICKS_50ms))
     {
       _centre = _convertRawAngleToDegrees(ams5600.getRawAngle());
       mutex_I2C.give(__func__);
@@ -164,7 +164,7 @@ namespace MagneticThrottle
 
   bool connect()
   {
-    if (mutex_I2C.take(__func__, TICKS_50))
+    if (mutex_I2C.take(__func__, TICKS_50ms))
     {
       if (ams5600.detectMagnet() == 0)
       {

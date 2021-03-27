@@ -37,7 +37,7 @@ namespace Remote
       if (since_measure_battery > BATTERY_MEASURE_INTERVAL)
       {
         since_measure_battery = 0;
-        if (Remote::mutex.take(__func__, TICKS_50))
+        if (Remote::mutex.take(__func__, TICKS_50ms))
           battery.update();
 
         if (battery.isCharging)

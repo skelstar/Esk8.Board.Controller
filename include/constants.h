@@ -21,7 +21,7 @@ enum ButtonClickType
 #define TICKS_2 2
 #define TICKS_5 5
 #define TICKS_10 10
-#define TICKS_50 50
+#define TICKS_50ms 50
 #define TICKS_100 100
 
 //------------------------------------------------------------

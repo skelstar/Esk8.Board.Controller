@@ -22,6 +22,10 @@ namespace NintendoClassicTask
   xQueueHandle queueHandle;
   Queue::Manager *queue;
 
+  // task
+  TaskHandle_t taskHandle;
+  int stackSize = 3000;
+
   bool taskReady = false;
 
   elapsedMillis since_checked_buttons;
@@ -50,7 +54,7 @@ namespace NintendoClassicTask
       {
         since_checked_buttons = 0;
 
-        if (mutex_I2C.take(nullptr, TICKS_10))
+        if (mutex_I2C.take("NintendoClassic::loop", TICKS_10ms))
         {
           classic.update(); // Get new data from the controller}
           mutex_I2C.give(__func__);
@@ -86,10 +90,10 @@ namespace NintendoClassicTask
     xTaskCreatePinnedToCore(
         task,
         "ClassicControllerTask",
-        10000,
+        stackSize,
         NULL,
         priority,
-        NULL,
+        &taskHandle,
         core);
   }
 
@@ -138,7 +142,7 @@ namespace NintendoClassicTask
 
     do
     {
-      if (mutex_I2C.take("NintendoButtons: init()", TICKS_50))
+      if (mutex_I2C.take("NintendoButtons: init()", TICKS_50ms))
       {
         if (!classic.init())
           Serial.printf("ERROR: could not find Nintendo Buttons\n");

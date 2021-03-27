@@ -16,6 +16,10 @@ namespace QwiicButtonTask
   xQueueHandle queueHandle;
   Queue::Manager *queue;
 
+  // task
+  TaskHandle_t taskHandle;
+  int stackSize = 3000;
+
   bool taskReady = false;
 
   elapsedMillis since_peeked, since_checked_button;
@@ -69,10 +73,10 @@ namespace QwiicButtonTask
 
         bool pressed = state.pressed;
 
-        if (mutex_I2C.take("qwiicButtonTask: loop", TICKS_10))
+        if (mutex_I2C.take("qwiicButtonTask: loop", TICKS_10ms))
         {
           pressed = qwiicButton.isPressed();
-          mutex_I2C.give(nullptr);
+          mutex_I2C.give(nullptr); // 1ms
         }
 
         if (state.pressed != pressed)
@@ -111,10 +115,10 @@ namespace QwiicButtonTask
     xTaskCreatePinnedToCore(
         task,
         "QwiicButtonTask",
-        10000,
+        stackSize,
         NULL,
         priority,
-        NULL,
+        &taskHandle,
         core);
   }
 } // namespace Debug

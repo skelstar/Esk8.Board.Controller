@@ -1,4 +1,11 @@
 #include <Arduino.h>
+#include <elapsedMillis.h>
+
+#ifndef PRINT_MUTEX_TAKE_FAIL
+#define PRINT_MUTEX_TAKE_FAIL 0
+#endif
+
+#define REPORT_TAKEN_PERIOD true
 
 class QueueBase
 {
@@ -10,6 +17,12 @@ public:
     return id == prev_id;
   }
 };
+
+float getStackCapacity(TaskHandle_t taskHandle, int stackSize)
+{
+  int highWaterMark = uxTaskGetStackHighWaterMark(taskHandle);
+  return ((highWaterMark * 1.0) / stackSize) * 100.0;
+}
 
 class MyMutex
 {
@@ -24,21 +37,29 @@ public:
   }
 
   bool enabled = true;
+  elapsedMillis since_taken;
 
   bool take(const char *funcname, TickType_t ticks)
   {
     if (_taken)
     {
       // already taken
-      if (funcname != nullptr)
-        Serial.printf("ERROR: %s tried taking %s but was already taken by %s\n",
-                      funcname, _name, _taken_by != nullptr ? _taken_by : "anon");
+      if (PRINT_MUTEX_TAKE_FAIL && funcname != nullptr)
+        Serial.printf("ERROR: %s tried taking %s but was already taken by %s (ticks: %d)\n",
+                      funcname,
+                      _name,
+                      _taken_by != nullptr ? _taken_by : "anon",
+                      ticks);
       return false;
     }
+
     _taken = xSemaphoreTake(_mutex, ticks) == pdPASS || !enabled;
 
     if (_taken)
+    {
+      since_taken = 0;
       _taken_by = funcname;
+    }
 
     if (!enabled)
       Serial.printf("WARNING: %s not enabled!\n", _name);
@@ -60,7 +81,8 @@ public:
     return take(funcname, _defaultticks);
   }
 
-  void give(const char *funcname = "")
+  // report: how long the mutex was used for in ms
+  void give(const char *funcname = "", bool report = false)
   {
     if (_mutex == nullptr)
     {
@@ -69,6 +91,10 @@ public:
     }
 
     xSemaphoreGive(_mutex);
+
+    if (report)
+      Serial.printf("Given: taken %lums ago\n", (unsigned long)since_taken);
+
     _taken = false;
     _taken_by = nullptr;
   }

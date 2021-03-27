@@ -10,6 +10,7 @@
 #include "Debug.hpp"
 
 #define PRINT_STATS_MUTEX_TAKE_STATE 1
+#define PRINT_MUTEX_TAKE_FAIL 1
 
 #include <rtosManager.h>
 #include <QueueManager.h>
@@ -24,16 +25,21 @@ Queue::Manager *queue;
 #define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
 #define PRINT_THROTTLE 0
 
-#define TICKS_5 5
-#define TICKS_10 10
-#define TICKS_50 50
+#define TICKS_5ms 5 / portTICK_PERIOD_MS
+#define TICKS_10ms 10 / portTICK_PERIOD_MS
+#define TICKS_50ms 50 / portTICK_PERIOD_MS
 
 #include <tasks/core0/qwiicButtonTask.h>
 #include <tasks/core0/NintendoClassicTask.h>
 #include <tasks/core0/ThrottleTask.h>
+#include <tasks/core0/debugTask.h>
 
 #define CORE_0 0
+#define PRIORITY_0 0
 #define PRIORITY_1 1
+#define PRIORITY_2 2
+#define PRIORITY_3 3
+#define PRIORITY_4 4
 
 elapsedMillis since_checked_queue;
 
@@ -53,7 +59,7 @@ void test_qwiic_button_pressed_then_released_via_queue()
 
   QwiicButtonState *actual;
 
-  mutex_I2C.create("i2c", /*default*/ TICKS_5);
+  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
   mutex_I2C.enabled = true;
 
   QwiicButtonTask::createTask(CORE_0, PRIORITY_1);
@@ -94,7 +100,7 @@ void test_nintendo_button_is_pressed_then_released_task()
 
   NintendoButtonEvent *actual;
 
-  mutex_I2C.create("i2c", /*default*/ TICKS_5);
+  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
   mutex_I2C.enabled = true;
 
   NintendoClassicTask::createTask(CORE_0, PRIORITY_1);
@@ -135,11 +141,10 @@ void test_magnetic_throttle_is_moved_greater_than_220()
 {
   Wire.begin(); //Join I2C bus
 
-  mutex_I2C.create("i2c", /*default*/ TICKS_5);
+  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
   mutex_I2C.enabled = true;
 
   QwiicButtonTask::createTask(CORE_0, PRIORITY_1);
-
   ThrottleTask::createTask(CORE_0, PRIORITY_1);
 
   while (!ThrottleTask::taskReady)
@@ -174,6 +179,43 @@ void test_magnetic_throttle_is_moved_greater_than_220()
   TEST_ASSERT_TRUE(throttle > 220);
 }
 
+void test_run_debug_task()
+{
+  Wire.begin(); //Join I2C bus
+
+  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
+  mutex_I2C.enabled = true;
+
+  QwiicButtonTask::createTask(CORE_0, PRIORITY_3);
+  ThrottleTask::createTask(CORE_0, PRIORITY_2);
+  NintendoClassicTask::createTask(CORE_0, PRIORITY_2);
+  Debug::createTask(CORE_0, PRIORITY_0);
+
+  while (!ThrottleTask::taskReady || !Debug::taskReady)
+  {
+    vTaskDelay(5);
+  }
+
+  Serial.printf("Watch then click the button to end the test\n");
+
+  while (1)
+  {
+    if (since_checked_queue > 200)
+    {
+      since_checked_queue = 0;
+
+      QwiicButtonState *button = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
+
+      if (button != nullptr && button->pressed)
+      {
+        TEST_ASSERT_TRUE(button->pressed);
+      }
+    }
+
+    vTaskDelay(5);
+  }
+}
+
 void setup()
 {
   delay(2000);
@@ -184,7 +226,8 @@ void setup()
 
   // RUN_TEST(test_qwiic_button_pressed_then_released_via_queue);
   // RUN_TEST(test_nintendo_button_is_pressed_then_released_task);
-  RUN_TEST(test_magnetic_throttle_is_moved_greater_than_220);
+  // RUN_TEST(test_magnetic_throttle_is_moved_greater_than_220);
+  RUN_TEST(test_run_debug_task);
 
   UNITY_END();
 }
