@@ -88,6 +88,11 @@ namespace MagneticThrottle
       delta = getDelta(adj, _prev_deg);
     }
 
+    if (_throttle > 127 && !_throttleEnabled_cb())
+    {
+      _throttle = 127;
+    }
+
     // make sure not too radical
     // make sure is more than minimum (to eliminate drift/noise)
     if (_min_delta_limit <= abs(delta) && abs(delta) <= _max_delta_limit)
@@ -104,7 +109,9 @@ namespace MagneticThrottle
       }
 
       if (_throttle > 127 && _throttleEnabled_cb() == false)
+      {
         _throttle = 127;
+      }
 
       if (PRINT_THROTTLE || force_print)
       {

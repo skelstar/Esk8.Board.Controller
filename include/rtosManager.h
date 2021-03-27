@@ -1,5 +1,16 @@
 #include <Arduino.h>
 
+class QueueBase
+{
+public:
+  unsigned long id;
+
+  bool been_peeked(unsigned long prev_id)
+  {
+    return id == prev_id;
+  }
+};
+
 class MyMutex
 {
 public:

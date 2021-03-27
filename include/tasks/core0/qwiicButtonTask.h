@@ -1,12 +1,12 @@
 
-//=-----------------------------------------
+//------------------------------------------
 /* prototypes */
 
 //------------------------------------------
-struct QwiickButtonState
+class QwiicButtonState : public QueueBase
 {
-  bool pressed;
-  unsigned long id;
+public:
+  bool pressed = false;
 } state;
 
 namespace QwiicButtonTask
@@ -48,7 +48,7 @@ namespace QwiicButtonTask
     } while (!init_button);
     DEBUG("Qwiic Button initialised");
 
-    queueHandle = xQueueCreate(/*len*/ 1, sizeof(QwiickButtonState *));
+    queueHandle = xQueueCreate(/*len*/ 1, sizeof(QwiicButtonState *));
     queue = new Queue::Manager(queueHandle, (TickType_t)5);
 
     state.pressed = qwiicButton.isPressed();
@@ -69,7 +69,7 @@ namespace QwiicButtonTask
 
         bool pressed = state.pressed;
 
-        if (mutex_I2C.take(nullptr, TICKS_10))
+        if (mutex_I2C.take("qwiicButtonTask: loop", TICKS_10))
         {
           pressed = qwiicButton.isPressed();
           mutex_I2C.give(nullptr);

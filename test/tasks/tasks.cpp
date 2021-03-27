@@ -51,7 +51,7 @@ void test_qwiic_button_pressed_then_released_via_queue()
 {
   Wire.begin(); //Join I2C bus
 
-  QwiickButtonState *actual;
+  QwiicButtonState *actual;
 
   mutex_I2C.create("i2c", /*default*/ TICKS_5);
   mutex_I2C.enabled = true;
@@ -71,7 +71,7 @@ void test_qwiic_button_pressed_then_released_via_queue()
     if (since_checked_queue > 200)
     {
       since_checked_queue = 0;
-      actual = QwiicButtonTask::queue->peek<QwiickButtonState>(__func__);
+      actual = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
       if (!was_pressed && actual != nullptr && actual->pressed)
       {
         Serial.printf("Qwiic button pressed\n");
@@ -138,6 +138,8 @@ void test_magnetic_throttle_is_moved_greater_than_220()
   mutex_I2C.create("i2c", /*default*/ TICKS_5);
   mutex_I2C.enabled = true;
 
+  QwiicButtonTask::createTask(CORE_0, PRIORITY_1);
+
   ThrottleTask::createTask(CORE_0, PRIORITY_1);
 
   while (!ThrottleTask::taskReady)
@@ -148,19 +150,24 @@ void test_magnetic_throttle_is_moved_greater_than_220()
   Serial.printf("Move throttle to >220 degrees to satify test\n");
 
   uint8_t throttle = 127;
+  unsigned long last_id = 0;
 
   while (throttle < 220)
   {
     if (since_checked_queue > 200)
     {
       since_checked_queue = 0;
+
       ThrottleState *actual = ThrottleTask::queue->peek<ThrottleState>(__func__);
-      if (actual != nullptr && throttle != actual->throttle)
+
+      if (actual != nullptr && !actual->been_peeked(last_id) && throttle != actual->val)
       {
-        Serial.printf("Throttle changed %d\n", actual->throttle);
-        throttle = actual->throttle;
+        Serial.printf("Throttle changed %d\n", actual->val);
+        throttle = actual->val;
+        last_id = actual->id;
       }
     }
+
     vTaskDelay(5);
   }
 

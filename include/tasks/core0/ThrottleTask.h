@@ -3,11 +3,13 @@
 #include <QueueManager.h>
 #include <AS5600.h>
 
-struct ThrottleState
+//----------------------------------------
+class ThrottleState : public QueueBase
 {
-  unsigned long id;
-  uint8_t throttle;
+public:
+  uint8_t val = 127;
 };
+//----------------------------------------
 
 namespace ThrottleTask
 {
@@ -25,9 +27,10 @@ namespace ThrottleTask
 
   elapsedMillis since_checked_throttle;
 
-  const unsigned long CHECK_THROTTLE_INTERVAL = 100;
+  const unsigned long CHECK_THROTTLE_INTERVAL = 66;
 
   unsigned long event_id = 0;
+  QwiicButtonState primary_button;
 
   void task(void *pvParameters)
   {
@@ -35,12 +38,16 @@ namespace ThrottleTask
 
     init();
 
+    DEBUG("ThrottleTask waiting for QwiicButtonTask to be ready");
+    while (!QwiicButtonTask::taskReady)
+      vTaskDelay(100);
+
     taskReady = true;
     DEBUG("ThrottleTask ready");
 
     vTaskDelay(1000);
 
-    ThrottleState state = {event_id, 127};
+    ThrottleState throttle;
 
     while (true)
     {
@@ -48,14 +55,21 @@ namespace ThrottleTask
       {
         since_checked_throttle = 0;
 
+        QwiicButtonState *button = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
+        if (button != nullptr && primary_button.id != button->id)
+        {
+          primary_button.id = button->id;
+          primary_button.pressed = button->pressed;
+        }
+
         MagneticThrottle::update();
 
-        uint8_t throttle = MagneticThrottle::get();
-        if (throttle != state.throttle)
+        uint8_t raw_throttle = MagneticThrottle::get();
+        if (raw_throttle != throttle.val)
         {
-          state.id++;
-          state.throttle = throttle;
-          queue->send<ThrottleState>(&state);
+          throttle.id++;
+          throttle.val = raw_throttle;
+          queue->send<ThrottleState>(&throttle);
         }
       }
       vTaskDelay(10);
@@ -82,6 +96,8 @@ namespace ThrottleTask
     queueHandle = xQueueCreate(/*len*/ 1, sizeof(ThrottleState *));
     queue = new Queue::Manager(queueHandle, (TickType_t)5);
 
+    primary_button.pressed = false;
+
     bool initialised = false;
 
     do
@@ -94,7 +110,7 @@ namespace ThrottleTask
 
       MagneticThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, THROTTLE_DIRECTION);
       MagneticThrottle::setThrottleEnabledCb([] {
-        return true;
+        return primary_button.pressed;
       });
 
       initialised = true;
