@@ -10,7 +10,7 @@
 #include "Debug.hpp"
 
 #define PRINT_STATS_MUTEX_TAKE_STATE 1
-#define PRINT_MUTEX_TAKE_FAIL 0
+#define PRINT_MUTEX_TAKE_FAIL 1
 
 #include <rtosManager.h>
 #include <QueueManager.h>
@@ -28,6 +28,7 @@ Queue::Manager *queue;
 #define TICKS_5ms 5 / portTICK_PERIOD_MS
 #define TICKS_10ms 10 / portTICK_PERIOD_MS
 #define TICKS_50ms 50 / portTICK_PERIOD_MS
+#define TICKS_100ms 100 / portTICK_PERIOD_MS
 
 #include <tasks/core0/qwiicButtonTask.h>
 #include <tasks/core0/NintendoClassicTask.h>
@@ -227,7 +228,7 @@ void test_run_all_tasks()
 
   QwiicButtonTask::createTask(CORE_0, PRIORITY_3);
   ThrottleTask::createTask(CORE_0, PRIORITY_2);
-  NintendoClassicTask::createTask(CORE_0, PRIORITY_2);
+  NintendoClassicTask::createTask(CORE_0, PRIORITY_1);
   Debug::createTask(CORE_0, PRIORITY_0);
 
   while (!ThrottleTask::taskReady || !Debug::taskReady)
@@ -264,7 +265,7 @@ void setup()
   UNITY_BEGIN();
 
   // RUN_TEST(test_qwiic_button_pressed_then_released_via_queue);
-  // RUN_TEST(test_nintendo_button_is_pressed_then_released_task);
+  RUN_TEST(test_nintendo_button_is_pressed_then_released_task);
   // RUN_TEST(test_magnetic_throttle_is_moved_greater_than_220);
   // RUN_TEST(test_run_debug_task);
   RUN_TEST(test_run_all_tasks);

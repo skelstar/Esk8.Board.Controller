@@ -25,13 +25,10 @@ public:
   static const int BUTTON_PRESSED = 1;
   static const int BUTTON_RELEASED = 0;
 
-  // static const int NUM_CLASSIC_BUTTONS = 9;
-
-  // NintendoController::NintendoController();
   typedef void (*ButtonEventCallback)(uint8_t button);
 
   bool init();
-  void update();
+  bool update(xSemaphoreHandle mutex, TickType_t ticks);
   bool is_pressed(int button_index);
   bool was_pressed(int button_index);
   bool was_released(int button_index);

@@ -2,11 +2,6 @@
 #include "Arduino.h"
 #include "NintendoController.h"
 
-// NintendoController::NintendoController()
-// {
-//   Wire.begin();
-// }
-
 bool NintendoController::init()
 {
   // Not required for NES mini controller
@@ -31,38 +26,63 @@ bool NintendoController::init()
   return success;
 }
 
-void NintendoController::update()
+ulong since_started;
+
+bool NintendoController::update(xSemaphoreHandle mutex, TickType_t ticks)
 {
-  Wire.beginTransmission(this->address);
-  if (Wire.endTransmission() != 0)
+  if (xSemaphoreTake(mutex, ticks))
   {
-    // try to reconnect
-    this->init();
+    since_started = millis();
+    Wire.beginTransmission(this->address);
+    if (Wire.endTransmission() != 0)
+    {
+      // try to reconnect
+      this->init();
+    }
+    else
+    {
+      xSemaphoreGive(mutex);
+      vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
   }
   else
-    delay(10);
+  {
+    Serial.printf("NintendoController::update() Couldn't't take semaphore\n");
+    return false;
+  }
 
-  // send 0x00 to ask for buttons, then read the results
-  Wire.beginTransmission(this->address);
-  Wire.write(0x00);
-  Wire.endTransmission();
-  delay(10);
+  if (xSemaphoreTake(mutex, ticks))
+  {
+    since_started = millis();
+    // send 0x00 to ask for buttons, then read the results
+    Wire.beginTransmission(this->address);
+    Wire.write(0x00);
+    Wire.endTransmission();
+    xSemaphoreGive(mutex);
+  }
+  vTaskDelay(10 / portTICK_PERIOD_MS);
 
   int current_byte = 0;
   int button_bytes = 0;
-  Wire.requestFrom(this->address, 6);
-  while (Wire.available())
+
+  if (xSemaphoreTake(mutex, ticks))
   {
-    int byte_read = Wire.read();
-    if (current_byte == 4)
+    since_started = millis();
+    Wire.requestFrom(this->address, 6);
+    while (Wire.available())
     {
-      button_bytes |= (255 - byte_read) << 8;
+      int byte_read = Wire.read();
+      if (current_byte == 4)
+      {
+        button_bytes |= (255 - byte_read) << 8;
+      }
+      else if (current_byte == 5)
+      {
+        button_bytes |= (255 - byte_read);
+      }
+      current_byte++;
     }
-    else if (current_byte == 5)
-    {
-      button_bytes |= (255 - byte_read);
-    }
-    current_byte++;
+    xSemaphoreGive(mutex);
   }
 
   for (int i = 0; i < BUTTONS_NUMBER; i++)

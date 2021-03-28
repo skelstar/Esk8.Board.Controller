@@ -55,10 +55,9 @@ namespace NintendoClassicTask
       {
         since_checked_buttons = 0;
 
-        if (mutex_I2C.take("NintendoClassic::loop", TICKS_10ms))
+        bool updated = classic.update(mutex_I2C.handle(), TICKS_50ms);
+        if (updated)
         {
-          mutex_I2C.give(__func__, REPORT_TAKEN_PERIOD);
-
           uint8_t *new_buttons = classic.get_buttons();
           uint8_t button_that_changed = button_changed(new_buttons, last_buttons);
           if (button_that_changed != 99)
@@ -77,6 +76,30 @@ namespace NintendoClassicTask
             last_buttons[i] = new_buttons[i];
           }
         }
+
+        // if (mutex_I2C.take("NintendoClassic::loop", TICKS_10ms))
+        // {
+        //   classic.update(mutex_I2C.handle());
+        //   mutex_I2C.give(__func__);
+
+        //   uint8_t *new_buttons = classic.get_buttons();
+        //   uint8_t button_that_changed = button_changed(new_buttons, last_buttons);
+        //   if (button_that_changed != 99)
+        //   {
+        //     // send if something changed
+        //     event_id++;
+        //     NintendoButtonEvent ev = {
+        //         event_id,
+        //         button_that_changed,
+        //         new_buttons[button_that_changed]};
+        //     queue->send(&ev);
+        //   }
+        //   // save
+        //   for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
+        //   {
+        //     last_buttons[i] = new_buttons[i];
+        //   }
+        // }
       }
 
       vTaskDelay(10);
