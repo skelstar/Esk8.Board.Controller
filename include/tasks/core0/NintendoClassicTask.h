@@ -23,8 +23,8 @@ namespace NintendoClassicTask
   Queue::Manager *queue;
 
   // task
-  TaskHandle_t taskHandle;
   int stackSize = 3000;
+  TaskHandle_t taskHandle;
 
   bool taskReady = false;
 
@@ -36,6 +36,7 @@ namespace NintendoClassicTask
 
   uint8_t last_buttons[NintendoController::BUTTON_COUNT];
 
+  //=====================================================
   void task(void *pvParameters)
   {
     Serial.printf(PRINT_TASK_STARTED_FORMAT, "ClassicControllerTask", xPortGetCoreID());
@@ -56,8 +57,7 @@ namespace NintendoClassicTask
 
         if (mutex_I2C.take("NintendoClassic::loop", TICKS_10ms))
         {
-          classic.update(); // Get new data from the controller}
-          mutex_I2C.give(__func__);
+          mutex_I2C.give(__func__, REPORT_TAKEN_PERIOD);
 
           uint8_t *new_buttons = classic.get_buttons();
           uint8_t button_that_changed = button_changed(new_buttons, last_buttons);
@@ -84,6 +84,12 @@ namespace NintendoClassicTask
     vTaskDelete(NULL);
   }
   //------------------------------------------------------------
+
+  float getStackUsage()
+  {
+    int highWaterMark = uxTaskGetStackHighWaterMark(taskHandle);
+    return ((highWaterMark * 1.0) / stackSize) * 100.0;
+  }
 
   void createTask(uint8_t core, uint8_t priority)
   {

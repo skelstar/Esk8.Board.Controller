@@ -18,12 +18,6 @@ public:
   }
 };
 
-float getStackCapacity(TaskHandle_t taskHandle, int stackSize)
-{
-  int highWaterMark = uxTaskGetStackHighWaterMark(taskHandle);
-  return ((highWaterMark * 1.0) / stackSize) * 100.0;
-}
-
 class MyMutex
 {
 public:
@@ -93,7 +87,7 @@ public:
     xSemaphoreGive(_mutex);
 
     if (report)
-      Serial.printf("Given: taken %lums ago\n", (unsigned long)since_taken);
+      Serial.printf("Given: taken %lums ago (%s)\n", (unsigned long)since_taken, funcname);
 
     _taken = false;
     _taken_by = nullptr;

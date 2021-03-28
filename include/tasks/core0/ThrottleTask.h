@@ -23,6 +23,9 @@ namespace ThrottleTask
   xQueueHandle queueHandle;
   Queue::Manager *queue;
 
+  // task
+  int stackSize = 3000;
+  TaskHandle_t taskHandle;
   bool taskReady = false;
 
   elapsedMillis since_checked_throttle;
@@ -79,15 +82,21 @@ namespace ThrottleTask
   }
   //------------------------------------------------------------
 
+  float getStackUsage()
+  {
+    int highWaterMark = uxTaskGetStackHighWaterMark(taskHandle);
+    return ((highWaterMark * 1.0) / stackSize) * 100.0;
+  }
+
   void createTask(uint8_t core, uint8_t priority)
   {
     xTaskCreatePinnedToCore(
         task,
         "ThrottleTask",
-        10000,
+        stackSize,
         NULL,
         priority,
-        NULL,
+        &taskHandle,
         core);
   }
 

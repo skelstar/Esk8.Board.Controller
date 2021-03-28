@@ -10,7 +10,7 @@
 #include "Debug.hpp"
 
 #define PRINT_STATS_MUTEX_TAKE_STATE 1
-#define PRINT_MUTEX_TAKE_FAIL 1
+#define PRINT_MUTEX_TAKE_FAIL 0
 
 #include <rtosManager.h>
 #include <QueueManager.h>
@@ -97,6 +97,7 @@ void test_qwiic_button_pressed_then_released_via_queue()
 void test_nintendo_button_is_pressed_then_released_task()
 {
   Wire.begin(); //Join I2C bus
+  Wire.setClock(200000);
 
   NintendoButtonEvent *actual;
 
@@ -216,6 +217,44 @@ void test_run_debug_task()
   }
 }
 
+void test_run_all_tasks()
+{
+  Wire.begin(); //Join I2C bus
+  // Wire.begin(200000); //Join I2C bus
+
+  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
+  mutex_I2C.enabled = true;
+
+  QwiicButtonTask::createTask(CORE_0, PRIORITY_3);
+  ThrottleTask::createTask(CORE_0, PRIORITY_2);
+  NintendoClassicTask::createTask(CORE_0, PRIORITY_2);
+  Debug::createTask(CORE_0, PRIORITY_0);
+
+  while (!ThrottleTask::taskReady || !Debug::taskReady)
+  {
+    vTaskDelay(5);
+  }
+
+  Serial.printf("Watch then click the button to end the test\n");
+
+  while (1)
+  {
+    if (since_checked_queue > 200)
+    {
+      since_checked_queue = 0;
+
+      QwiicButtonState *button = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
+
+      if (button != nullptr && button->pressed)
+      {
+        TEST_ASSERT_TRUE(button->pressed);
+      }
+    }
+
+    vTaskDelay(5);
+  }
+}
+
 void setup()
 {
   delay(2000);
@@ -227,7 +266,8 @@ void setup()
   // RUN_TEST(test_qwiic_button_pressed_then_released_via_queue);
   // RUN_TEST(test_nintendo_button_is_pressed_then_released_task);
   // RUN_TEST(test_magnetic_throttle_is_moved_greater_than_220);
-  RUN_TEST(test_run_debug_task);
+  // RUN_TEST(test_run_debug_task);
+  RUN_TEST(test_run_all_tasks);
 
   UNITY_END();
 }

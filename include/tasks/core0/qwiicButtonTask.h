@@ -22,7 +22,7 @@ namespace QwiicButtonTask
 
   bool taskReady = false;
 
-  elapsedMillis since_peeked, since_checked_button;
+  elapsedMillis since_peeked, since_checked_button, since_malloc;
 
   bool board_connected = false;
   unsigned long last_id = 0;
@@ -109,6 +109,17 @@ namespace QwiicButtonTask
   }
 
   //------------------------------------------------------------
+
+  float getStackUsage()
+  {
+    int highWaterMark = uxTaskGetStackHighWaterMark(taskHandle);
+    return ((highWaterMark * 1.0) / stackSize) * 100.0;
+  }
+
+  int getHeapBytes()
+  {
+    return xPortGetFreeHeapSize();
+  }
 
   void createTask(uint8_t core, uint8_t priority)
   {

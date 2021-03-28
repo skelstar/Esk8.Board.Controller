@@ -3,6 +3,8 @@
 /* prototypes */
 
 //------------------------------------------
+// #define configGENERATE_RUN_TIME_STATS 1
+// #define configUSE_STATS_FORMATTING_FUNCTIONS 1
 
 namespace Debug
 {
@@ -33,16 +35,20 @@ namespace Debug
       {
         since_checked = 0;
 
-        Serial.printf("Debug h/w mark: %d (words)\n", uxTaskGetStackHighWaterMark(NULL));
-        Serial.printf("Qwiic h/w mark: %d (words)\n", uxTaskGetStackHighWaterMark(QwiicButtonTask::taskHandle));
-        Serial.printf("Qwiic stack: %.1f%% (of %d)\n",
-                      getStackCapacity(QwiicButtonTask::taskHandle, QwiicButtonTask::stackSize),
-                      QwiicButtonTask::stackSize);
+        Serial.printf("Qwiic stack: %.1f%% (of %d), heap: %d\n",
+                      QwiicButtonTask::getStackUsage(),
+                      QwiicButtonTask::stackSize,
+                      QwiicButtonTask::getHeapBytes());
         Serial.printf("Nintendo stack: %.1f%% (of %d)\n",
-                      getStackCapacity(NintendoClassicTask::taskHandle, NintendoClassicTask::stackSize),
+                      NintendoClassicTask::getStackUsage(),
                       NintendoClassicTask::stackSize);
+        Serial.printf("ThrottleTask stack: %.1f%% (of %d)\n",
+                      ThrottleTask::getStackUsage(),
+                      ThrottleTask::stackSize);
+        Serial.println("-------------------------------------");
 
-        Serial.printf("Qwiic heap: %d (bytes)\n", xPortGetFreeHeapSize());
+        // char buff[1024];
+        // vTaskGetRunTimeStats(buff);
       }
 
       vTaskDelay(10);
