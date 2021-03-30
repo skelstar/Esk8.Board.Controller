@@ -41,7 +41,7 @@ namespace Stats
       {
         sinceReadQueue = 0;
 
-        BoardClass *res = boardPacketQueue->peek<BoardClass>();
+        BoardClass *res = boardPacketQueue->peek<BoardClass>(__func__);
         if (res != nullptr)
         {
           if (myboard->packet.moving != res->packet.moving)

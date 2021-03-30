@@ -125,7 +125,7 @@ namespace Comms
       {
         since_peeked = 0;
 
-        BoardClass *board = boardPacketQueue->peek<BoardClass>();
+        BoardClass *board = boardPacketQueue->peek<BoardClass>(__func__);
         if (board != nullptr)
         {
           if (board->connected())

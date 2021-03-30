@@ -12,6 +12,7 @@
 namespace MagneticThrottle
 {
   // https://ams.com/documents/20143/36005/AS5600_DS000365_5-00.pdf
+  AMS_5600 ams5600;
 
   typedef bool (*ThrottleEnabled_Cb)();
 
@@ -70,7 +71,7 @@ namespace MagneticThrottle
   {
     float deg = _centre;
     // TODO is this the bext way to handle this?
-    if (mutex_I2C.take("MagneticThrottle: update", TICKS_50ms))
+    if (mutex_I2C.take("MagneticThrottle: update", TICKS_100ms))
     {
       deg = _convertRawAngleToDegrees(ams5600.getRawAngle());
       mutex_I2C.give("MagneticThrottle: update"); // 1ms

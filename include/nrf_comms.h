@@ -103,3 +103,24 @@ void updateThrottle(uint8_t throttle, uint8_t primary_button)
   if (PRINT_THROTTLE)
     DEBUGVAL(controller_packet.throttle);
 }
+//------------------------------------------------------------------
+
+// callbacks
+
+void boardConnectedState_cb()
+{
+  if (PRINT_BOARD_CLIENT_CONNECTED_CHANGED)
+    Serial.printf(BOARD_CLIENT_CONNECTED_FORMAT, boardClient.connected() ? "CONNECTED" : "DISCONNECTED");
+}
+
+void printSentToBoard_cb(ControllerData data)
+{
+  if (PRINT_TX_TO_BOARD)
+    Serial.printf(TX_TO_BOARD_FORMAT, (int)data.id);
+}
+
+void printRecvFromBoard_cb(VescData data)
+{
+  if (PRINT_RX_FROM_BOARD)
+    Serial.printf(RX_FROM_BOARD_FORMAT, data.id);
+}

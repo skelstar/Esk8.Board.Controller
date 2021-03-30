@@ -29,7 +29,7 @@ namespace Remote
 
     taskReady = true;
 
-    mutex.create("remote", TICKS_2);
+    mutex.create("remote", TICKS_2ms);
     mutex.enabled = true;
 
     while (true)
@@ -39,11 +39,6 @@ namespace Remote
         since_measure_battery = 0;
         if (Remote::mutex.take(__func__, TICKS_50ms))
           battery.update();
-
-        if (battery.isCharging)
-        {
-          // displayQueue->send(DispState::UPDATE);
-        }
         Remote::mutex.give(__func__);
       }
       vTaskDelay(10);

@@ -1,3 +1,4 @@
+#include <Wire.h>
 
 uint8_t printDot(uint8_t num_dots)
 {

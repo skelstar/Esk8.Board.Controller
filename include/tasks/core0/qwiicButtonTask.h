@@ -1,3 +1,6 @@
+#pragma once
+
+#include <SparkFun_Qwiic_Button.h>
 
 //------------------------------------------
 /* prototypes */
@@ -132,4 +135,4 @@ namespace QwiicButtonTask
         &taskHandle,
         core);
   }
-} // namespace Debug
+} // namespace

@@ -1,10 +1,3 @@
-#ifndef Fsm
-#include <Fsm.h>
-#endif
-#ifndef FSMMANAGER_H
-#include <FsmManager.h>
-#endif
-
 namespace Display
 {
   DispState::Trigger lastDispEvent;

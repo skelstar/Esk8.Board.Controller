@@ -2,6 +2,7 @@
 
 #include <QueueManager.h>
 #include <AS5600.h>
+#include "qwiicButtonTask.h"
 
 //----------------------------------------
 class ThrottleState : public QueueBase
@@ -13,8 +14,6 @@ public:
 
 namespace ThrottleTask
 {
-  AMS_5600 ams5600;
-
 #include <MagThrottle.h>
 
   // prototypes

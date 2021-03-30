@@ -9,7 +9,6 @@
 #define PRINTSTREAM_FALLBACK
 #include "Debug.hpp"
 
-#define PRINT_STATS_MUTEX_TAKE_STATE 1
 #define PRINT_MUTEX_TAKE_FAIL 1
 
 #include <rtosManager.h>

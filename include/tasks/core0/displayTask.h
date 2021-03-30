@@ -48,14 +48,14 @@ namespace Display
       {
         since_checked_queue = 0;
 
-        BoardClass *_brd_res = boardPacketQueue->peek<BoardClass>();
+        BoardClass *_brd_res = boardPacketQueue->peek<BoardClass>(__func__);
         if (_brd_res != nullptr && last_board_id != _brd_res->id)
         {
           handle_board_packet(_brd_res);
           last_board_id = _brd_res->id;
         }
 
-        nsPeripherals::Peripherals *_periph_res = peripheralsQueue->peek<nsPeripherals::Peripherals>();
+        nsPeripherals::Peripherals *_periph_res = peripheralsQueue->peek<nsPeripherals::Peripherals>(__func__);
         if (_periph_res != nullptr && last_periph_id != _periph_res->id)
         {
           handle_peripherals_packet(_periph_res);

@@ -16,13 +16,13 @@ enum ButtonClickType
 #define OUT_OF_RANGE "OUT OF RANGE"
 #define NO_MESSAGE_ON_QUEUE 0
 
-#define TICKS_0 0
-#define TICKS_1 1
-#define TICKS_2 2
-#define TICKS_5 5
-#define TICKS_10 10
-#define TICKS_50ms 50
-#define TICKS_100 100
+#define TICKS_0ms 0
+#define TICKS_1ms 1 / portTICK_PERIOD_MS
+#define TICKS_2ms 2 / portTICK_PERIOD_MS
+#define TICKS_5ms 5 / portTICK_PERIOD_MS
+#define TICKS_10ms 10 / portTICK_PERIOD_MS
+#define TICKS_50ms 50 / portTICK_PERIOD_MS
+#define TICKS_100ms 100 / portTICK_PERIOD_MS
 
 //------------------------------------------------------------
 namespace DispState
@@ -232,16 +232,34 @@ namespace nsPeripherals
 #define FEATURE_START_MOVING_BOOST 0
 #endif
 
-#ifndef PRINT_STATS_MUTEX_TAKE_STATE
-#define PRINT_STATS_MUTEX_TAKE_STATE 0
-#endif
-
-#ifndef PRINT_STATS_MUTEX_GIVE_STATE
-#define PRINT_STATS_MUTEX_GIVE_STATE 0
-#endif
-
 #ifndef OPTION_USING_MAG_THROTTLE
 #define OPTION_USING_MAG_THROTTLE 0
+#endif
+
+#ifndef PRINT_NINTENDO_BUTTON
+#define PRINT_NINTENDO_BUTTON 0
+#endif
+
+#ifndef USING_DISPLAY
+#define USING_DISPLAY 0
+#endif
+#ifndef USING_REMOTE
+#define USING_REMOTE 0
+#endif
+#ifndef USING_STATS
+#define USING_STATS 0
+#endif
+#ifndef USING_NINTENDO_BUTTONS
+#define USING_NINTENDO_BUTTONS 0
+#endif
+#ifndef USING_LED
+#define USING_LED 0
+#endif
+#ifndef USING_DEBUG_TASK
+#define USING_DEBUG_TASK 0
+#endif
+#ifndef USING_QWIIC_BUTTON_TASK
+#define USING_QWIIC_BUTTON_TASK 0
 #endif
 
 #define BOARD_COMMS_STATE_FORMAT_LONG "[BOARD: %s | %s ]\n"

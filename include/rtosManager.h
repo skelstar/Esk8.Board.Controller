@@ -59,16 +59,6 @@ public:
 
     if (!enabled)
       Serial.printf("WARNING: %s not enabled!\n", _name);
-    else if (!_taken && PRINT_STATS_MUTEX_TAKE_STATE)
-    {
-      TaskHandle_t holding_task = xSemaphoreGetMutexHolder(_mutex);
-      char *task_name = pcTaskGetTaskName(holding_task);
-      Serial.printf("Unable to take mutex: '%s' (%d ticks: %s task: %s)\n",
-                    _name,
-                    ticks,
-                    funcname,
-                    task_name);
-    }
     return _taken;
   }
 

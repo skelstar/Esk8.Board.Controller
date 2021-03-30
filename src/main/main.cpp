@@ -16,6 +16,9 @@
 #include <Button2.h>
 #include <NintendoController.h>
 
+#include <Fsm.h>
+#include <FsmManager.h>
+
 #include <constants.h>
 
 Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
@@ -69,26 +72,16 @@ NRF24L01Lib nrf24;
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
-void printSentToBoard_cb(ControllerData data)
-{
-  if (PRINT_TX_TO_BOARD)
-    Serial.printf(TX_TO_BOARD_FORMAT, (int)data.id);
-}
-void printRecvFromBoard_cb(VescData data)
-{
-  if (PRINT_RX_FROM_BOARD)
-    Serial.printf(RX_FROM_BOARD_FORMAT, data.id);
-}
-
 GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
+
+void boardConnectedState_cb();
+void printSentToBoard_cb(ControllerData data);
+void printRecvFromBoard_cb(VescData data);
 
 void boardClientInit()
 {
   boardClient.begin(&network, boardPacketAvailable_cb, mutex_SPI.handle());
-  boardClient.setConnectedStateChangeCallback([] {
-    if (PRINT_BOARD_CLIENT_CONNECTED_CHANGED)
-      Serial.printf(BOARD_CLIENT_CONNECTED_FORMAT, boardClient.connected() ? "CONNECTED" : "DISCONNECTED");
-  });
+  boardClient.setConnectedStateChangeCallback(boardConnectedState_cb);
   boardClient.setSentPacketCallback(printSentToBoard_cb);
   boardClient.setReadPacketCallback(printRecvFromBoard_cb);
 }
@@ -131,69 +124,15 @@ void sendToBoard();
 
 //------------------------------------------------------------------
 
-class Config
-{
-public:
-  uint8_t headlightMode;
-};
-
-Config config;
-
-#define STORE_CONFIG "config"
-#define STORE_CONFIG_ACCEL_COUNTS "accel counts"
-#define STORE_CONFIG_BRAKE_COUNTS "brake counts"
-Preferences configStore;
-
-// #include <throttle.h>
-
-//---------------------------------------------------------------
-// https://ams.com/documents/20143/36005/AS5600_DS000365_5-00.pdf
-
-#if OPTION_USING_MAG_THROTTLE
-
-#include <AS5600.h>
-
-AMS_5600 ams5600;
-
-namespace MagThrottle
-{
-  bool connect()
-  {
-    if (ams5600.detectMagnet() == 0)
-    {
-      Serial.printf("searching....\n");
-      while (1)
-      {
-        if (ams5600.detectMagnet() == 1)
-        {
-          Serial.printf("Current Magnitude: %d\n", ams5600.getMagnitude());
-          break;
-        }
-        else
-        {
-          Serial.println("Can not detect magnet");
-        }
-        vTaskDelay(1000);
-      }
-    }
-    return true;
-  }
-} // namespace MagThrottle
-
-#include <MagThrottle.h>
-
-#include <NintendoController.h>
-#include <NintendoButtons.h>
-#include <SparkFun_Qwiic_Button.h>
-//https://www.sparkfun.com/products/15932
-
-#endif
-
-//---------------------------------------------------------------
-
 #include <tasks/core0/statsTask.h>
 #include <tasks/core0/remoteTask.h>
 #include <utils.h>
+
+// #if USING_NINTENDO_BUTTONS == 1
+#include <tasks/core0/NintendoClassicTask.h>
+// #endif
+
+#include <tasks/core0/ThrottleTask.h>
 
 #if USING_DISPLAY
 #include <screens.h>
@@ -204,15 +143,18 @@ namespace MagThrottle
 #if USING_LED
 #include <tasks/core0/ledTask.h>
 #endif
+
 #if USING_DEBUG_TASK == 1
 #include <tasks/core0/debugTask.h>
 #endif
+
 #include <tasks/core0/commsStateTask.h>
 #include <nrf_comms.h>
 
 #if USING_QWIIC_BUTTON_TASK == 1
 #include <tasks/core0/QwiicButtonTask.h>
 #endif
+
 #include <peripherals.h>
 #include <tasks/core0/peripheralsTask.h>
 
@@ -233,8 +175,6 @@ void setup()
   chipId.toUpperCase();
 
   Stats::init();
-
-  configStore.begin(STORE_CONFIG, false);
 
   if (stats.wasWatchdogReset())
   {
@@ -281,7 +221,8 @@ void setup()
 #if USING_QWIIC_BUTTON_TASK == 1
   QwiicButtonTask::createTask(SPARKFUN_BUTTON_TASK_CORE, TASK_PRIORITY_1);
 #endif
-  ClassicButtonsTask::createTask(0, TASK_PRIORITY_1);
+  ThrottleTask::createTask(0, TASK_PRIORITY_1);
+  NintendoClassicTask::createTask(0, TASK_PRIORITY_1);
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);
@@ -294,10 +235,10 @@ void setup()
 
   peripherals = new nsPeripherals::Peripherals();
 
-  mutex_I2C.create("i2c", /*default*/ TICKS_5);
+  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
   mutex_I2C.enabled = true;
 
-  mutex_SPI.create("SPI", /*default*/ TICKS_50);
+  mutex_SPI.create("SPI", /*default*/ TICKS_50ms);
   mutex_SPI.enabled = true;
 
   boardClientInit();
@@ -329,7 +270,6 @@ void loop()
 #endif
   }
 
-#if OPTION_USING_MAG_THROTTLE
   if (since_update_throttle > SEND_TO_BOARD_INTERVAL)
   {
     since_update_throttle = 0;
@@ -343,7 +283,6 @@ void loop()
       }
     }
   }
-#endif
 
   vTaskDelay(1);
 }
@@ -363,7 +302,7 @@ void sendToBoard()
 #endif
 #if OPTION_USING_MAG_THROTTLE
   primaryButtonPressed = peripherals->primary_button == 1; // qwiicButton.isPressed();
-  braking = MagThrottle::get() < 127;
+  braking = controller_packet.throttle < 127;
 #else
 
 #endif
@@ -383,11 +322,9 @@ void sendToBoard()
       primaryButtonPressed;
 #endif
 
-  sinceSentToBoard = 0;
-  // controller_packet.throttle = throttle.get(/*enabled*/ throttleEnabled);
-  controller_packet.throttle = MagThrottle::get();
   controller_packet.cruise_control = cruiseControlActive;
 
+  sinceSentToBoard = 0;
   sendPacketToBoard();
 }
 //------------------------------------------------------------------
@@ -402,7 +339,7 @@ void waitForTasksToBeReady()
       !Stats::taskReady &&
       (REMOTE_TASK_CORE == -1 || !Remote::taskReady) &&
       (USING_QWIIC_BUTTON_TASK == 0 || !QwiicButtonTask::taskReady) &&
-      !ClassicButtonsTask::taskReady)
+      !NintendoClassicTask::taskReady)
   {
     vTaskDelay(10);
   }

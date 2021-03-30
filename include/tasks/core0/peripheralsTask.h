@@ -1,8 +1,5 @@
 #pragma once
 
-#include <NintendoController.h>
-#include <NintendoButtons.h>
-
 namespace nsPeripherals
 {
   Peripherals *myperipherals;
@@ -10,6 +7,8 @@ namespace nsPeripherals
   {
     const char *taskName = "Peripherals";
   }
+
+  uint8_t getThrottle(uint8_t raw_throttle, uint8_t primary);
 
   bool taskReady = false;
 
@@ -27,7 +26,8 @@ namespace nsPeripherals
     myperipherals = new Peripherals();
 
     elapsedMillis since_read_peripherals;
-    unsigned long last_qwiic_id = -1, last_classic_id = -1;
+    unsigned long last_qwiic_id = -1, last_throttle_id = -1;
+    Peripherals *last_peripheral = new Peripherals();
 
     while (true)
     {
@@ -35,9 +35,10 @@ namespace nsPeripherals
       {
         since_read_peripherals = 0;
 
-        QwiickButtonState *res = QwiicButtonTask::queue->peek<QwiickButtonState>(__func__);
-        if (res != nullptr)
+        QwiicButtonState *res = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
+        if (res != nullptr && res->id != last_qwiic_id)
         {
+          DEBUG("qwiic button res != NULL");
           if (res->id > last_qwiic_id + 1)
             Serial.printf("[PERIPHERALS_TASK] missed at least one packet! (id: %lu, last: %lu)\n", res->id, last_qwiic_id);
 
@@ -50,29 +51,25 @@ namespace nsPeripherals
           }
         }
 
-        NintendoButtonEvent *ev = ClassicButtonsTask::queue->peek<NintendoButtonEvent>(__func__);
-        if (ev != nullptr && ev->id != last_classic_id)
+        ThrottleState *throttle = ThrottleTask::queue->peek<ThrottleState>("PeripheralsTask loop");
+        if (throttle != nullptr && last_throttle_id != throttle->id)
         {
-          DEBUGVAL(ev->button, ev->state);
-          last_classic_id = ev->id;
+          DEBUG("throttle res != NULL");
+          myperipherals->throttle = getThrottle(throttle->val, myperipherals->primary_button);
+          last_throttle_id = throttle->id;
         }
 
-        peripheralsQueue->clear();
-
-        bool changed = false;
-
-        // throttle
-        MagThrottle::update();
-
-        changed = changed ||
-                  myperipherals->throttle != MagThrottle::get();
-
-        uint8_t throttle = MagThrottle::get();
-
-        myperipherals->throttle = throttle;
-        myperipherals->event = Event::EV_THROTTLE;
-        myperipherals->id++;
-        peripheralsQueue->send(myperipherals);
+        bool changed = last_peripheral->throttle != myperipherals->throttle ||
+                       last_peripheral->primary_button != myperipherals->primary_button;
+        if (changed)
+        {
+          myperipherals->throttle = throttle->val;
+          myperipherals->event = Event::EV_THROTTLE;
+          myperipherals->id++;
+          peripheralsQueue->send(myperipherals);
+          DEBUGVAL("sent:", myperipherals->throttle, myperipherals->primary_button);
+        }
+        last_peripheral = new Peripherals(*myperipherals);
       }
 
       vTaskDelay(10);
@@ -80,6 +77,15 @@ namespace nsPeripherals
     vTaskDelete(NULL);
   }
   //--------------------------------------------------------
+
+  uint8_t getThrottle(uint8_t raw_throttle, uint8_t deadman)
+  {
+    if (raw_throttle <= 127)
+      return raw_throttle;
+    else if (deadman == 1)
+      return raw_throttle;
+    return 127;
+  }
 
   void print_buttons(uint8_t *buttons)
   {
@@ -92,7 +98,7 @@ namespace nsPeripherals
   void nintendoButtonPressed_cb(uint8_t button)
   {
     if (PRINT_NINTENDO_BUTTON)
-      Serial.printf("button %s pressed\n", ClassicButtonsTask::getButtonName(button));
+      Serial.printf("button %s pressed\n", NintendoClassicTask::getButtonName(button));
 
     uint8_t *buttons = classic.get_buttons();
     for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
@@ -106,7 +112,7 @@ namespace nsPeripherals
   void nintendoButtonReleased_cb(uint8_t button)
   {
     if (PRINT_NINTENDO_BUTTON)
-      Serial.printf("button %s released\n", ClassicButtonsTask::getButtonName(button));
+      Serial.printf("button %s released\n", NintendoClassicTask::getButtonName(button));
 
     uint8_t *buttons = classic.get_buttons();
     for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
@@ -119,24 +125,26 @@ namespace nsPeripherals
 
   void init()
   {
-    ClassicButtonsTask::init();
+    // NintendoClassicTask::init();
 
-    classic.setButtonPressedCb(nintendoButtonPressed_cb);
-    classic.setButtonReleasedCb(nintendoButtonReleased_cb);
+    // MagneticThrottle::init();
 
-    if (OPTION_USING_MAG_THROTTLE)
-    {
-      bool connected = MagThrottle::connect();
+    // classic.setButtonPressedCb(nintendoButtonPressed_cb);
+    // classic.setButtonReleasedCb(nintendoButtonReleased_cb);
 
-      Serial.printf("%s\n", connected
-                                ? "INFO: mag-throttle connected OK"
-                                : "ERROR: Could not find mag throttle");
+    // if (OPTION_USING_MAG_THROTTLE)
+    // {
+    // bool connected = MagneticThrottle::connect();
 
-      MagThrottle::setThrottleEnabledCb([] {
-        return myperipherals->primary_button == 1; // qwiicButton.isPressed();
-      });
-      MagThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, THROTTLE_DIRECTION);
-    }
+    // Serial.printf("%s\n", connected
+    //                           ? "INFO: mag-throttle connected OK"
+    //                           : "ERROR: Could not find mag throttle");
+
+    // MagneticThrottle::setThrottleEnabledCb([] {
+    //   return myperipherals->primary_button == 1; // qwiicButton.isPressed();
+    // });
+    // MagneticThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, THROTTLE_DIRECTION);
+    // }
   }
 
   //--------------------------------------------------------
