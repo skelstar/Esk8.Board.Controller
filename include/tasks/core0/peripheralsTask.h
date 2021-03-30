@@ -11,8 +11,21 @@ namespace nsPeripherals
   uint8_t getThrottle(uint8_t raw_throttle, uint8_t primary);
 
   bool taskReady = false;
+  unsigned long last_qwiic_id = -1, last_throttle_id = -1;
 
   void init();
+
+  void handle_qwiic_packet(QwiicButtonState *qwiic)
+  {
+    if (qwiic != nullptr && !qwiic->been_peeked(last_qwiic_id))
+    {
+      if (qwiic->missed_packet(last_qwiic_id))
+        Serial.printf("[PERIPHERALS_TASK] missed at least one qwiic packet! (id: %lu, last: %lu)\n", qwiic->id, last_qwiic_id);
+
+      myperipherals->primary_button = qwiic->pressed;
+      last_qwiic_id = qwiic->id;
+    }
+  }
 
   //--------------------------------------------------------
   void task(void *pvParameters)
@@ -26,7 +39,6 @@ namespace nsPeripherals
     myperipherals = new Peripherals();
 
     elapsedMillis since_read_peripherals;
-    unsigned long last_qwiic_id = -1, last_throttle_id = -1;
     Peripherals *last_peripheral = new Peripherals();
 
     while (true)
@@ -35,41 +47,8 @@ namespace nsPeripherals
       {
         since_read_peripherals = 0;
 
-        QwiicButtonState *res = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
-        if (res != nullptr && res->id != last_qwiic_id)
-        {
-          DEBUG("qwiic button res != NULL");
-          if (res->id > last_qwiic_id + 1)
-            Serial.printf("[PERIPHERALS_TASK] missed at least one packet! (id: %lu, last: %lu)\n", res->id, last_qwiic_id);
-
-          if (res->id != last_qwiic_id)
-          {
-            myperipherals->primary_button = res->pressed;
-            last_qwiic_id = res->id;
-
-            DEBUGVAL(myperipherals->primary_button);
-          }
-        }
-
-        ThrottleState *throttle = ThrottleTask::queue->peek<ThrottleState>("PeripheralsTask loop");
-        if (throttle != nullptr && last_throttle_id != throttle->id)
-        {
-          DEBUG("throttle res != NULL");
-          myperipherals->throttle = getThrottle(throttle->val, myperipherals->primary_button);
-          last_throttle_id = throttle->id;
-        }
-
-        bool changed = last_peripheral->throttle != myperipherals->throttle ||
-                       last_peripheral->primary_button != myperipherals->primary_button;
-        if (changed)
-        {
-          myperipherals->throttle = throttle->val;
-          myperipherals->event = Event::EV_THROTTLE;
-          myperipherals->id++;
-          peripheralsQueue->send(myperipherals);
-          DEBUGVAL("sent:", myperipherals->throttle, myperipherals->primary_button);
-        }
-        last_peripheral = new Peripherals(*myperipherals);
+        QwiicButtonState *qwiic = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
+        handle_qwiic_packet(qwiic);
       }
 
       vTaskDelay(10);

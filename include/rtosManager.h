@@ -18,6 +18,11 @@ public:
   {
     return id == prev_id;
   }
+
+  bool missed_packet(unsigned long prev_id)
+  {
+    return prev_id == 0 && id - prev_id > 1;
+  }
 };
 
 class MyMutex

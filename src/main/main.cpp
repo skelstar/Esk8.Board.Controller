@@ -251,6 +251,7 @@ void setup()
 
 elapsedMillis sinceNRFUpdate, since_update_throttle;
 uint8_t old_buttons[NintendoController::BUTTON_COUNT];
+unsigned long last_throttle_id = 0;
 
 void loop()
 {
@@ -274,13 +275,14 @@ void loop()
   {
     since_update_throttle = 0;
 
-    nsPeripherals::Peripherals *res = peripheralsQueue->peek<nsPeripherals::Peripherals>(__func__);
-    if (res != nullptr)
+    ThrottleState *throttle = ThrottleTask::queue->peek<ThrottleState>("PeripheralsTask loop");
+    if (throttle != nullptr && !throttle->been_peeked(last_throttle_id))
     {
-      if (res->event == nsPeripherals::EV_THROTTLE)
-      {
-        updateThrottle(res->throttle, res->primary_button);
-      }
+      if (throttle->missed_packet(last_throttle_id))
+        Serial.printf("[MAIN_LOOP] missed at least one throttle packet! (id: %lu, last: %lu)\n", throttle->id, last_throttle_id);
+
+      controller_packet.throttle = throttle->val;
+      last_throttle_id = throttle->id;
     }
   }
 
