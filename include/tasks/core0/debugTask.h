@@ -35,17 +35,17 @@ namespace Debug
       {
         since_checked = 0;
 
-        Serial.printf("Qwiic stack: %.1f%% (of %d), heap: %d\n",
-                      QwiicButtonTask::getStackUsage(),
-                      QwiicButtonTask::stackSize,
-                      QwiicButtonTask::getHeapBytes());
-        Serial.printf("Nintendo stack: %.1f%% (of %d)\n",
-                      NintendoClassicTask::getStackUsage(),
-                      NintendoClassicTask::stackSize);
-        Serial.printf("ThrottleTask stack: %.1f%% (of %d)\n",
-                      ThrottleTask::getStackUsage(),
-                      ThrottleTask::stackSize);
-        Serial.println("-------------------------------------");
+        // Serial.printf("Qwiic stack: %.1f%% (of %d), heap: %d\n",
+        //               QwiicButtonTask::getStackUsage(),
+        //               QwiicButtonTask::stackSize,
+        //               QwiicButtonTask::getHeapBytes());
+        // Serial.printf("Nintendo stack: %.1f%% (of %d)\n",
+        //               NintendoClassicTask::getStackUsage(),
+        //               NintendoClassicTask::stackSize);
+        // Serial.printf("ThrottleTask stack: %.1f%% (of %d)\n",
+        //               ThrottleTask::getStackUsage(),
+        //               ThrottleTask::stackSize);
+        // Serial.println("-------------------------------------");
 
         // char buff[1024];
         // vTaskGetRunTimeStats(buff);
