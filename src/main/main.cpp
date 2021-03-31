@@ -128,30 +128,28 @@ void sendToBoard();
 #include <tasks/core0/remoteTask.h>
 #include <utils.h>
 
-// #if USING_NINTENDO_BUTTONS == 1
 #include <tasks/core0/NintendoClassicTask.h>
-// #endif
 
 #include <tasks/core0/ThrottleTask.h>
 
-#if USING_DISPLAY
+#if (USING_DISPLAY == 1)
 #include <screens.h>
 #include <displayState.h>
 #include <tasks/core0/displayTask.h>
 #endif
 
-#if USING_LED
+#if (USING_LED == 1)
 #include <tasks/core0/ledTask.h>
 #endif
 
-#if USING_DEBUG_TASK == 1
+#if (USING_DEBUG_TASK == 1)
 #include <tasks/core0/debugTask.h>
 #endif
 
 #include <tasks/core0/commsStateTask.h>
 #include <nrf_comms.h>
 
-#if USING_QWIIC_BUTTON_TASK == 1
+#if (USING_QWIIC_BUTTON_TASK == 1)
 #include <tasks/core0/QwiicButtonTask.h>
 #endif
 
@@ -202,27 +200,29 @@ void setup()
 
   // CORE_0
   Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_2);
-  nsPeripherals::createTask(PERIPHERALS_TASK_CORE, 3);
-#if USING_DISPLAY
+  // nsPeripherals::createTask(PERIPHERALS_TASK_CORE, 3);
+#if (USING_DISPLAY == 1)
   Display::createTask(DISPLAY_TASK_CORE, TASK_PRIORITY_3);
 #endif
-#if USING_REMOTE
+#if (USING_REMOTE == 1)
   Remote::createTask(REMOTE_TASK_CORE, TASK_PRIORITY_1);
 #endif
-#if USING_STATS
+#if (USING_STATS == 1)
   Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
 #endif
-#if USING_LED
+#if (USING_LED == 1)
   Led::createTask(LED_TASK_CORE, TASK_PRIORITY_1);
 #endif
-#if USING_DEBUG_TASK == 1
+#if (USING_DEBUG_TASK == 1)
   Debug::createTask(DEBUG_TASK_CORE, TASK_PRIORITY_1);
 #endif
-#if USING_QWIIC_BUTTON_TASK == 1
+#if (USING_QWIIC_BUTTON_TASK == 1)
   QwiicButtonTask::createTask(SPARKFUN_BUTTON_TASK_CORE, TASK_PRIORITY_1);
 #endif
   ThrottleTask::createTask(0, TASK_PRIORITY_1);
+#if (USING_NINTENDO_BUTTONS == 1)
   NintendoClassicTask::createTask(0, TASK_PRIORITY_1);
+#endif
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);
@@ -337,11 +337,11 @@ void waitForTasksToBeReady()
 #if USING_DISPLAY
       !Display::taskReady &&
 #endif
+      (USING_NINTENDO_BUTTONS == 0 || !NintendoClassicTask::taskReady) &&
       !Comms::taskReady &&
       !Stats::taskReady &&
       (REMOTE_TASK_CORE == -1 || !Remote::taskReady) &&
-      (USING_QWIIC_BUTTON_TASK == 0 || !QwiicButtonTask::taskReady) &&
-      !NintendoClassicTask::taskReady)
+      (USING_QWIIC_BUTTON_TASK == 0 || !QwiicButtonTask::taskReady))
   {
     vTaskDelay(10);
   }
