@@ -17,18 +17,14 @@ namespace QwiicButtonTask
   /* prototypes */
 
   xQueueHandle queueHandle;
-  Queue::Manager *queue;
+  Queue::Manager *queue = nullptr;
 
   // task
-  TaskHandle_t taskHandle;
-  int stackSize = 3000;
-
-  bool taskReady = false;
+  TaskConfig config{/*stack*/ 3000, taskHandle, /*ready*/ false};
 
   elapsedMillis since_peeked, since_checked_button, since_malloc;
 
   bool board_connected = false;
-  unsigned long last_id = 0;
 
   QwiicButton qwiicButton;
 
@@ -61,7 +57,7 @@ namespace QwiicButtonTask
     state.pressed = qwiicButton.isPressed();
     state.id = 0;
 
-    taskReady = true;
+    config.taskReady = true;
 
     vTaskDelay(1000);
 
@@ -116,7 +112,7 @@ namespace QwiicButtonTask
   float getStackUsage()
   {
     int highWaterMark = uxTaskGetStackHighWaterMark(taskHandle);
-    return ((highWaterMark * 1.0) / stackSize) * 100.0;
+    return ((highWaterMark * 1.0) / config.stackSize) * 100.0;
   }
 
   int getHeapBytes()
@@ -129,10 +125,10 @@ namespace QwiicButtonTask
     xTaskCreatePinnedToCore(
         task,
         "QwiicButtonTask",
-        stackSize,
+        config.stackSize,
         NULL,
         priority,
-        &taskHandle,
+        &config.taskHandle,
         core);
   }
 } // namespace

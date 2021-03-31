@@ -23,9 +23,7 @@ namespace ThrottleTask
   Queue::Manager *queue;
 
   // task
-  int stackSize = 3000;
-  TaskHandle_t taskHandle;
-  bool taskReady = false;
+  TaskConfig config{/*size*/ 3000, taskHandle, /*ready*/ false};
 
   elapsedMillis since_checked_throttle;
 
@@ -40,14 +38,12 @@ namespace ThrottleTask
 
     init();
 
-    DEBUG("ThrottleTask waiting for QwiicButtonTask to be ready");
-    while (!QwiicButtonTask::taskReady)
+    DEBUG("ThrottleTask waiting for QwiicButtonTask queue to be ready");
+    while (QwiicButtonTask::queue == nullptr)
       vTaskDelay(100);
 
-    taskReady = true;
+    config.taskReady = true;
     DEBUG("ThrottleTask ready");
-
-    vTaskDelay(1000);
 
     ThrottleState throttle;
 
@@ -58,7 +54,7 @@ namespace ThrottleTask
         since_checked_throttle = 0;
 
         QwiicButtonState *button = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
-        if (button != nullptr && primary_button.id != button->id)
+        if (button != nullptr && !button->been_peeked(primary_button.id))
         {
           primary_button.id = button->id;
           primary_button.pressed = button->pressed;
@@ -84,7 +80,7 @@ namespace ThrottleTask
   float getStackUsage()
   {
     int highWaterMark = uxTaskGetStackHighWaterMark(taskHandle);
-    return ((highWaterMark * 1.0) / stackSize) * 100.0;
+    return ((highWaterMark * 1.0) / config.stackSize) * 100.0;
   }
 
   void createTask(uint8_t core, uint8_t priority)
@@ -92,10 +88,10 @@ namespace ThrottleTask
     xTaskCreatePinnedToCore(
         task,
         "ThrottleTask",
-        stackSize,
+        config.stackSize,
         NULL,
         priority,
-        &taskHandle,
+        &config.taskHandle,
         core);
   }
 

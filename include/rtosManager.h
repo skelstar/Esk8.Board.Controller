@@ -9,6 +9,13 @@
 
 #define REPORT_TAKEN_PERIOD true
 
+struct TaskConfig
+{
+  int stackSize;
+  TaskHandle_t taskHandle;
+  bool taskReady;
+};
+
 class QueueBase
 {
 public:
