@@ -54,7 +54,7 @@ namespace Debug
           }
           else if (ev->button == NintendoController::BUTTON_UP && ev->state == NintendoController::BUTTON_PRESSED)
           {
-            NintendoClassicTask::deleteTask(true);
+            NintendoClassicTask::mgr.deleteTask(true);
           }
         }
 
@@ -64,9 +64,7 @@ namespace Debug
           qwiic_id = qwiic->id;
           if (qwiic->pressed == true)
           {
-            NintendoClassicTask::since_task_created = 0;
-
-            NintendoClassicTask::createTask(CORE_0, TASK_PRIORITY_1);
+            NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0);
           }
         }
 

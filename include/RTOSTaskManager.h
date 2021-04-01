@@ -23,7 +23,7 @@ public:
   void printReady()
   {
     Serial.printf("%s ready\n", _task_name);
-    Serial.printf("Ready after %lums of being created\n", (unsigned long)_since_created);
+    Serial.printf("%s ready after %lums of being created\n", _task_name, (unsigned long)_since_created);
   }
 
   void healthCheck(unsigned long period)

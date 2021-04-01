@@ -233,7 +233,7 @@ void setup()
   // ThrottleTask::createTask(0, TASK_PRIORITY_1);
   ThrottleTask::mgr.create(ThrottleTask::task, CORE_0); //(0, TASK_PRIORITY_1);
 #if (USING_NINTENDO_BUTTONS == 1)
-  NintendoClassicTask::createTask(0, TASK_PRIORITY_1);
+  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0);
 #endif
   ShortLivedTask::mgr.create(ShortLivedTask::task, CORE_0); // createTask(CORE_0, TASK_PRIORITY_0);
 
@@ -350,7 +350,7 @@ void waitForTasksToBeReady()
 #if USING_DISPLAY
       !Display::taskReady &&
 #endif
-      (USING_NINTENDO_BUTTONS == 0 || !NintendoClassicTask::taskReady) &&
+      (USING_NINTENDO_BUTTONS == 0 || !NintendoClassicTask::mgr.ready) &&
       !Comms::taskReady &&
       !Stats::taskReady &&
       (REMOTE_TASK_CORE == -1 || !Remote::taskReady) &&

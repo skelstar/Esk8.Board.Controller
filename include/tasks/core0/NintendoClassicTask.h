@@ -15,18 +15,14 @@ public:
 
 namespace NintendoClassicTask
 {
+  RTOSTaskManager mgr("NintendoClassicTask", 3000, TASK_PRIORITY_0);
+
   // prototypes
   uint8_t button_changed(uint8_t *new_buttons, uint8_t *old_buttons);
   void init();
 
   xQueueHandle queueHandle;
   Queue::Manager *queue;
-
-  // task
-  TaskHandle_t taskHandle;
-  TaskConfig config = {"NintendoClassicTask", 3000, taskHandle, /*taskReady*/ true};
-
-  bool taskReady = false;
 
   elapsedMillis since_checked_buttons, since_health_check, since_task_created;
 
@@ -41,14 +37,14 @@ namespace NintendoClassicTask
   {
     NintendoButtonEvent ev;
 
-    Serial.printf(PRINT_TASK_STARTED_FORMAT, config.name, xPortGetCoreID());
+    mgr.printStarted();
 
     init();
 
     DEBUG("Classic Buttons initialised");
 
-    taskReady = true;
-    Serial.printf("Ready after %lums of being created\n", (unsigned long)since_task_created);
+    mgr.ready = true;
+    mgr.printReady();
 
     while (true)
     {
@@ -69,7 +65,6 @@ namespace NintendoClassicTask
             ev.id = event_id;
             ev.button = button_that_changed;
             ev.state = new_buttons[button_that_changed];
-            // Serial.printf("Something changed: button %d state: %d id: %lu\n", ev.button, ev.state, ev.id);
 
             queue->send(&ev);
           }
@@ -81,47 +76,13 @@ namespace NintendoClassicTask
         }
       }
 
-      // if (since_health_check > 3000)
-      // {
-      //   since_health_check = 0;
-      //   Serial.printf("HEALTHCHECK: NintendoClassicTask\n");
-      // }
+      mgr.healthCheck(10000);
 
       vTaskDelay(10);
     }
     vTaskDelete(NULL);
   }
   //------------------------------------------------------------
-
-  float getStackUsage()
-  {
-    int highWaterMark = uxTaskGetStackHighWaterMark(taskHandle);
-    return ((highWaterMark * 1.0) / config.stackSize) * 100.0;
-  }
-
-  void createTask(uint8_t core, uint8_t priority)
-  {
-    since_task_created = 0;
-    xTaskCreatePinnedToCore(
-        task,
-        config.name,
-        config.stackSize,
-        NULL,
-        priority,
-        &config.taskHandle,
-        core);
-  }
-
-  void deleteTask(bool print = false)
-  {
-    if (print)
-    {
-      Serial.printf("-----------------------------\n");
-      Serial.printf("DELETING %s!\n", config.name);
-      Serial.printf("-----------------------------\n");
-    }
-    vTaskDelete(config.taskHandle);
-  }
 
   const char *getButtonName(uint8_t button)
   {
