@@ -272,20 +272,16 @@ namespace Display
       if (USING_REMOTE)
       { // remote battery
         const int batteryWidth = 50;
-        if (Remote::mutex.take(__func__, TICKS_50ms))
-        {
-          y += 15;
-          uint8_t percent = Remote::battery.chargePercent;
-          Remote::mutex.give(__func__);
-          drawSmallBattery(percent, LCD_WIDTH / 2 - 5, y, batteryWidth, TR_DATUM, Remote::battery.isCharging);
+        y += 15;
+        uint8_t percent = Remote::battery.chargePercent;
+        drawSmallBattery(percent, LCD_WIDTH / 2 - 5, y, batteryWidth, TR_DATUM, Remote::battery.isCharging);
 
-          char buff[10];
-          sprintf(buff, "%0.1fv", Remote::battery.getVolts());
-          tft.setTextDatum(TL_DATUM);
-          tft.setFreeFont(FONT_LG);
-          tft.setTextColor(TFT_DARKGREY);
-          tft.drawString(buff, LCD_WIDTH / 2 + 5, y - 4);
-        }
+        char buff[10];
+        sprintf(buff, "%0.1fv", Remote::battery.getVolts());
+        tft.setTextDatum(TL_DATUM);
+        tft.setFreeFont(FONT_LG);
+        tft.setTextColor(TFT_DARKGREY);
+        tft.drawString(buff, LCD_WIDTH / 2 + 5, y - 4);
       }
 
       y += 30;

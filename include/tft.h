@@ -133,8 +133,7 @@ void lcd_messageBase(const char *message, int y, Aligned aligned, FontSize size,
 void lcd_message(const char *message, uint8_t line, Aligned aligned, FontSize size = FontSize::MED, MessageStatus status = OKAY)
 {
   uint8_t line_height = (LCD_HEIGHT - TOP_BAR) / 4;
-  uint8_t x = MARGIN,
-          y = TOP_BAR + ((line - 1) * line_height);
+  uint8_t y = TOP_BAR + ((line - 1) * line_height);
 
   uint32_t colour = TFT_WHITE;
 
@@ -217,7 +216,6 @@ void drawSmallBattery(uint8_t percent, uint16_t x, uint16_t y, uint16_t width, u
   uint32_t colour = TFT_WHITE;
   uint16_t height = (0.45) * width,
            knobWidth = (0.1) * width;
-  uint16_t x1 = x;
   x = calulateX(x, width, datum);
   y = calculateY(y, height, datum);
 

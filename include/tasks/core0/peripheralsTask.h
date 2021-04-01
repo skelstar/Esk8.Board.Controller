@@ -39,7 +39,6 @@ namespace nsPeripherals
     myperipherals = new Peripherals();
 
     elapsedMillis since_read_peripherals;
-    Peripherals *last_peripheral = new Peripherals();
 
     while (true)
     {

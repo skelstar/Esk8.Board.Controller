@@ -57,9 +57,9 @@ namespace Debug
             NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0);
           }
         }
-
-        mgr.healthCheck(10000);
       }
+
+      mgr.healthCheck(10000);
 
       vTaskDelay(10);
     }
