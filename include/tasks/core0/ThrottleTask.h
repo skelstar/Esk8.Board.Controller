@@ -23,6 +23,7 @@ namespace ThrottleTask
   Queue::Manager *queue;
 
   // task
+  TaskHandle_t taskHandle;
   TaskConfig config{/*size*/ 3000, taskHandle, /*ready*/ false};
 
   elapsedMillis since_checked_throttle;
@@ -79,7 +80,7 @@ namespace ThrottleTask
 
   float getStackUsage()
   {
-    int highWaterMark = uxTaskGetStackHighWaterMark(taskHandle);
+    int highWaterMark = uxTaskGetStackHighWaterMark(config.taskHandle);
     return ((highWaterMark * 1.0) / config.stackSize) * 100.0;
   }
 

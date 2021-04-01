@@ -20,6 +20,7 @@ namespace QwiicButtonTask
   Queue::Manager *queue = nullptr;
 
   // task
+  TaskHandle_t taskHandle;
   TaskConfig config{/*stack*/ 3000, taskHandle, /*ready*/ false};
 
   elapsedMillis since_peeked, since_checked_button, since_malloc;
@@ -111,7 +112,7 @@ namespace QwiicButtonTask
 
   float getStackUsage()
   {
-    int highWaterMark = uxTaskGetStackHighWaterMark(taskHandle);
+    int highWaterMark = uxTaskGetStackHighWaterMark(config.taskHandle);
     return ((highWaterMark * 1.0) / config.stackSize) * 100.0;
   }
 

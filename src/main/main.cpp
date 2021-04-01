@@ -341,7 +341,7 @@ void waitForTasksToBeReady()
       !Comms::taskReady &&
       !Stats::taskReady &&
       (REMOTE_TASK_CORE == -1 || !Remote::taskReady) &&
-      (USING_QWIIC_BUTTON_TASK == 0 || !QwiicButtonTask::taskReady))
+      (USING_QWIIC_BUTTON_TASK == 0 || !QwiicButtonTask::config.taskReady))
   {
     vTaskDelay(10);
   }
