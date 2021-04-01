@@ -1,3 +1,5 @@
+#pragma once
+
 enum FeatureType
 {
   CRUISE_CONTROL,

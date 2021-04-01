@@ -101,10 +101,6 @@ void m5AtomClientInit()
 
 //------------------------------------------------------------------
 
-#define BATTERY_MEASURE_PIN 34
-
-//------------------------------------------------------------------
-
 #ifndef SEND_TO_BOARD_INTERVAL
 #define SEND_TO_BOARD_INTERVAL 200
 #endif
@@ -210,12 +206,12 @@ void setup()
   vTaskDelay(100);
 
   // CORE_0
-  Comms::mgr.create(Comms::task, CORE_0);
+  Comms::mgr.create(Comms::task, CORE_0, TASK_PRIORITY_2);
 #if (USING_DISPLAY == 1)
-  Display::mgr.create(Display::task, CORE_0);
+  Display::mgr.create(Display::task, CORE_0, TASK_PRIORITY_1);
 #endif
 #if (USING_REMOTE == 1)
-  Remote::mgr.create(Remote::task, CORE_0);
+  Remote::mgr.create(Remote::task, CORE_0, TASK_PRIORITY_1);
 #endif
 #if (USING_STATS == 1)
   Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
@@ -224,17 +220,17 @@ void setup()
   Led::createTask(LED_TASK_CORE, TASK_PRIORITY_1);
 #endif
 #if (USING_DEBUG_TASK == 1)
-  Debug::mgr.create(Debug::task, CORE_0);
+  Debug::mgr.create(Debug::task, CORE_0, TASK_PRIORITY_0);
 #endif
 #if (USING_QWIIC_BUTTON_TASK == 1)
-  QwiicButtonTask::mgr.create(QwiicButtonTask::task, CORE_0);
+  QwiicButtonTask::mgr.create(QwiicButtonTask::task, CORE_0, TASK_PRIORITY_2);
 #endif
   // ThrottleTask::createTask(0, TASK_PRIORITY_1);
-  ThrottleTask::mgr.create(ThrottleTask::task, CORE_0); //(0, TASK_PRIORITY_1);
+  ThrottleTask::mgr.create(ThrottleTask::task, CORE_0, TASK_PRIORITY_1); //(0, TASK_PRIORITY_1);
 #if (USING_NINTENDO_BUTTONS == 1)
-  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0);
+  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, TASK_PRIORITY_0);
 #endif
-  ShortLivedTask::mgr.create(ShortLivedTask::task, CORE_0); // createTask(CORE_0, TASK_PRIORITY_0);
+  ShortLivedTask::mgr.create(ShortLivedTask::task, CORE_0, TASK_PRIORITY_0);
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);

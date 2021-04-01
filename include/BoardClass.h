@@ -1,3 +1,5 @@
+#include <VescData.h>
+
 class BoardClass
 {
 public:

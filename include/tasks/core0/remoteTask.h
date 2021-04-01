@@ -1,3 +1,4 @@
+#include <BatteryLib.h>
 
 #define BATTERY_MEASURE_INTERVAL 5000
 
@@ -7,7 +8,7 @@ elapsedMillis since_measure_battery;
 
 namespace Remote
 {
-  RTOSTaskManager mgr("RemoteTask", 3000, TASK_PRIORITY_1);
+  RTOSTaskManager mgr("RemoteTask", 3000);
 
   xQueueHandle queueHandle;
   Queue::Manager *queue = nullptr;

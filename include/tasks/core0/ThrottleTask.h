@@ -16,7 +16,7 @@ namespace ThrottleTask
 {
 #include <MagThrottle.h>
 
-  RTOSTaskManager mgr("ThrottleTask", 3000, TASK_PRIORITY_1);
+  RTOSTaskManager mgr("ThrottleTask", 3000);
 
   // prototypes
   void init();

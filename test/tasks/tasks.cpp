@@ -11,15 +11,25 @@
 
 #define PRINT_MUTEX_TAKE_FAIL 1
 
+#include <types.h>
 #include <rtosManager.h>
 #include <QueueManager.h>
 #include <SparkFun_Qwiic_Button.h>
 #include <elapsedMillis.h>
+#include <RTOSTaskManager.h>
+#include <BoardClass.h>
 
 MyMutex mutex_I2C;
+MyMutex mutex_SPI;
+
+xQueueHandle xBoardPacketQueue;
+Queue::Manager *boardPacketQueue;
 
 xQueueHandle queueHandle;
 Queue::Manager *queue;
+
+xQueueHandle xStatsQueue;
+Queue::Manager *statsQueue;
 
 #define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
 #define PRINT_THROTTLE 0
@@ -29,10 +39,15 @@ Queue::Manager *queue;
 #define TICKS_50ms 50 / portTICK_PERIOD_MS
 #define TICKS_100ms 100 / portTICK_PERIOD_MS
 
+#include <tasks/core0/remoteTask.h>
+
+#include <displayState.h>
+
 #include <tasks/core0/qwiicButtonTask.h>
 #include <tasks/core0/NintendoClassicTask.h>
 #include <tasks/core0/ThrottleTask.h>
 #include <tasks/core0/debugTask.h>
+#include <tasks/core0/displayTask.h>
 
 #define CORE_0 0
 #define PRIORITY_0 0
@@ -46,6 +61,9 @@ elapsedMillis since_checked_queue;
 // runs every test
 void setUp()
 {
+  mutex_SPI.create("SPI", /*default*/ TICKS_50ms);
+  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
+  mutex_I2C.enabled = true;
 }
 
 // runs every test
@@ -59,12 +77,9 @@ void test_qwiic_button_pressed_then_released_via_queue()
 
   QwiicButtonState *actual;
 
-  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
-  mutex_I2C.enabled = true;
+  QwiicButtonTask::mgr.create(QwiicButtonTask::task, CORE_0, PRIORITY_1);
 
-  QwiicButtonTask::createTask(CORE_0, PRIORITY_1);
-
-  while (!QwiicButtonTask::taskReady)
+  while (!QwiicButtonTask::mgr.ready)
   {
     vTaskDelay(5);
   }
@@ -101,12 +116,9 @@ void test_nintendo_button_is_pressed_then_released_task()
 
   NintendoButtonEvent *actual;
 
-  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
-  mutex_I2C.enabled = true;
+  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, PRIORITY_1);
 
-  NintendoClassicTask::createTask(CORE_0, PRIORITY_1);
-
-  while (!NintendoClassicTask::taskReady)
+  while (!NintendoClassicTask::mgr.ready)
   {
     vTaskDelay(5);
   }
@@ -123,7 +135,7 @@ void test_nintendo_button_is_pressed_then_released_task()
       actual = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
       if (!was_pressed && actual != nullptr && actual->state == 1)
       {
-        Serial.printf("Nintendo button pressed %d %d\n");
+        Serial.printf("Nintendo button pressed %d %d\n", actual->button, actual->state);
         was_pressed = true;
       }
       else if (was_pressed && actual != nullptr && actual->state == 0)
@@ -142,13 +154,10 @@ void test_magnetic_throttle_is_moved_greater_than_220()
 {
   Wire.begin(); //Join I2C bus
 
-  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
-  mutex_I2C.enabled = true;
+  QwiicButtonTask::mgr.create(QwiicButtonTask::task, CORE_0, PRIORITY_1);
+  ThrottleTask::mgr.create(ThrottleTask::task, CORE_0, PRIORITY_1);
 
-  QwiicButtonTask::createTask(CORE_0, PRIORITY_1);
-  ThrottleTask::createTask(CORE_0, PRIORITY_1);
-
-  while (!ThrottleTask::taskReady)
+  while (!ThrottleTask::mgr.ready)
   {
     vTaskDelay(5);
   }
@@ -184,15 +193,12 @@ void test_run_debug_task()
 {
   Wire.begin(); //Join I2C bus
 
-  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
-  mutex_I2C.enabled = true;
+  QwiicButtonTask::mgr.create(QwiicButtonTask::task, CORE_0, PRIORITY_1);
+  ThrottleTask::mgr.create(ThrottleTask::task, CORE_0, PRIORITY_1);
+  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, PRIORITY_1);
+  Debug::mgr.create(Debug::task, CORE_0, PRIORITY_1);
 
-  QwiicButtonTask::createTask(CORE_0, PRIORITY_3);
-  ThrottleTask::createTask(CORE_0, PRIORITY_2);
-  NintendoClassicTask::createTask(CORE_0, PRIORITY_2);
-  Debug::createTask(CORE_0, PRIORITY_0);
-
-  while (!ThrottleTask::taskReady || !Debug::taskReady)
+  while (!ThrottleTask::mgr.ready || !Debug::mgr.ready)
   {
     vTaskDelay(5);
   }
@@ -222,15 +228,12 @@ void test_run_all_tasks()
   Wire.begin(); //Join I2C bus
   // Wire.begin(200000); //Join I2C bus
 
-  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
-  mutex_I2C.enabled = true;
+  QwiicButtonTask::mgr.create(QwiicButtonTask::task, CORE_0, PRIORITY_1);
+  ThrottleTask::mgr.create(ThrottleTask::task, CORE_0, PRIORITY_1);
+  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, PRIORITY_1);
+  Debug::mgr.create(Debug::task, CORE_0, PRIORITY_1);
 
-  QwiicButtonTask::createTask(CORE_0, PRIORITY_3);
-  ThrottleTask::createTask(CORE_0, PRIORITY_2);
-  NintendoClassicTask::createTask(CORE_0, PRIORITY_1);
-  Debug::createTask(CORE_0, PRIORITY_0);
-
-  while (!ThrottleTask::taskReady || !Debug::taskReady)
+  while (!ThrottleTask::mgr.ready || !Debug::mgr.ready)
   {
     vTaskDelay(5);
   }
@@ -255,6 +258,59 @@ void test_run_all_tasks()
   }
 }
 
+void test_display_remote_battery()
+{
+  Wire.begin(); //Join I2C bus
+  Wire.setClock(200000);
+
+  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
+  boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);
+
+  xStatsQueue = xQueueCreate(1, sizeof(StatsClass *));
+  statsQueue = new Queue::Manager(xStatsQueue, (TickType_t)5);
+
+  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, PRIORITY_1, WITH_HEALTHCHECK);
+  Display::mgr.create(Display::task, CORE_0, PRIORITY_1, WITH_HEALTHCHECK);
+  Remote::mgr.create(Remote::task, CORE_0, PRIORITY_1, WITH_HEALTHCHECK);
+
+  Serial.printf("Waiting for tasks to start\n");
+  while (!Display::mgr.ready || !NintendoClassicTask::mgr.ready || !Remote::mgr.ready)
+  {
+    vTaskDelay(5);
+  }
+  Serial.printf("Tasks ready\n");
+
+  Serial.printf("Watch then click the button to end the test\n");
+
+  unsigned long last_id = -1;
+
+  while (1)
+  {
+    if (since_checked_queue > 200)
+    {
+      since_checked_queue = 0;
+
+      NintendoButtonEvent *btn = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
+
+      if (btn != nullptr && !btn->been_peeked(last_id))
+      {
+        last_id = btn->id;
+        if (btn->button == NintendoController::BUTTON_RIGHT && btn->state == NintendoController::BUTTON_PRESSED)
+        {
+          vTaskDelay(100);
+        }
+      }
+
+      if (btn != nullptr && btn->button == NintendoController::BUTTON_START)
+      {
+        TEST_ASSERT_TRUE(btn->state == NintendoController::BUTTON_PRESSED);
+      }
+    }
+
+    vTaskDelay(5);
+  }
+}
+
 void setup()
 {
   delay(2000);
@@ -264,10 +320,11 @@ void setup()
   UNITY_BEGIN();
 
   // RUN_TEST(test_qwiic_button_pressed_then_released_via_queue);
-  RUN_TEST(test_nintendo_button_is_pressed_then_released_task);
+  // RUN_TEST(test_nintendo_button_is_pressed_then_released_task);
   // RUN_TEST(test_magnetic_throttle_is_moved_greater_than_220);
   // RUN_TEST(test_run_debug_task);
-  RUN_TEST(test_run_all_tasks);
+  // RUN_TEST(test_run_all_tasks);
+  RUN_TEST(test_display_remote_battery);
 
   UNITY_END();
 }

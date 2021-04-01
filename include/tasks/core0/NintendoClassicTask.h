@@ -15,7 +15,7 @@ public:
 
 namespace NintendoClassicTask
 {
-  RTOSTaskManager mgr("NintendoClassicTask", 3000, TASK_PRIORITY_0);
+  RTOSTaskManager mgr("NintendoClassicTask", 3000);
 
   // prototypes
   uint8_t button_changed(uint8_t *new_buttons, uint8_t *old_buttons);

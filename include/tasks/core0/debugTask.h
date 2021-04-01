@@ -1,7 +1,7 @@
 
 namespace Debug
 {
-  RTOSTaskManager mgr("DebugTask", 3000, TASK_PRIORITY_0);
+  RTOSTaskManager mgr("DebugTask", 3000);
 
   elapsedMillis since_checked,
       since_ping;
@@ -38,7 +38,7 @@ namespace Debug
           last_id = ev->id;
           if (ev->button == NintendoController::BUTTON_RIGHT && ev->state == NintendoController::BUTTON_PRESSED)
           {
-            ShortLivedTask::mgr.create(ShortLivedTask::task, CORE_0);
+            // ShortLivedTask::mgr.create(ShortLivedTask::task, CORE_0);
 
             vTaskDelay(100);
           }
@@ -54,7 +54,7 @@ namespace Debug
           qwiic_id = qwiic->id;
           if (qwiic->pressed == true)
           {
-            NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0);
+            NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, TASK_PRIORITY_1);
           }
         }
       }

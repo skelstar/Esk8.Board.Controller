@@ -2,6 +2,13 @@
 #include "Arduino.h"
 #include "NintendoController.h"
 
+#ifndef PRINT_MUTEX_TAKE_SUCCESS
+#define PRINT_MUTEX_TAKE_SUCCESS 0
+#endif
+#ifndef PRINT_MUTEX_GIVE_SUCCESS
+#define PRINT_MUTEX_GIVE_SUCCESS 0
+#endif
+
 bool NintendoController::init()
 {
   // Not required for NES mini controller
@@ -28,9 +35,25 @@ bool NintendoController::init()
 
 ulong since_started;
 
+bool takeMutex(xSemaphoreHandle mutex, TickType_t ticks)
+{
+  bool taken = xSemaphoreTake(mutex, ticks);
+  if (PRINT_MUTEX_TAKE_SUCCESS)
+    Serial.printf("MUTEX: taken %s\n", taken ? "OK" : "FAIL");
+  return taken;
+}
+
+bool giveMutex(xSemaphoreHandle mutex)
+{
+  bool given = xSemaphoreGive(mutex);
+  if (PRINT_MUTEX_GIVE_SUCCESS)
+    Serial.printf("MUTEX: given %s\n", given ? "OK" : "FAIL");
+  return given;
+}
+
 bool NintendoController::update(xSemaphoreHandle mutex, TickType_t ticks)
 {
-  if (xSemaphoreTake(mutex, ticks))
+  if (takeMutex(mutex, ticks))
   {
     since_started = millis();
     Wire.beginTransmission(this->address);
@@ -41,31 +64,32 @@ bool NintendoController::update(xSemaphoreHandle mutex, TickType_t ticks)
     }
     else
     {
-      xSemaphoreGive(mutex);
+      giveMutex(mutex);
       vTaskDelay(10 / portTICK_PERIOD_MS);
     }
   }
   else
   {
-    Serial.printf("NintendoController::update() Couldn't't take semaphore\n");
+    TaskHandle_t owner = xSemaphoreGetMutexHolder(mutex);
+    Serial.printf("NintendoController::update() Couldn't take semaphore, held by %s\n", pcTaskGetTaskName(owner));
     return false;
   }
 
-  if (xSemaphoreTake(mutex, ticks))
+  if (takeMutex(mutex, ticks))
   {
     since_started = millis();
     // send 0x00 to ask for buttons, then read the results
     Wire.beginTransmission(this->address);
     Wire.write(0x00);
     Wire.endTransmission();
-    xSemaphoreGive(mutex);
+    giveMutex(mutex);
   }
   vTaskDelay(10 / portTICK_PERIOD_MS);
 
   int current_byte = 0;
   int button_bytes = 0;
 
-  if (xSemaphoreTake(mutex, ticks))
+  if (takeMutex(mutex, ticks))
   {
     since_started = millis();
     Wire.requestFrom(this->address, 6);
@@ -82,7 +106,7 @@ bool NintendoController::update(xSemaphoreHandle mutex, TickType_t ticks)
       }
       current_byte++;
     }
-    xSemaphoreGive(mutex);
+    giveMutex(mutex);
   }
 
   for (int i = 0; i < BUTTONS_NUMBER; i++)
@@ -94,6 +118,7 @@ bool NintendoController::update(xSemaphoreHandle mutex, TickType_t ticks)
     if (this->was_released(i) && _buttonReleased_cb != nullptr)
       _buttonReleased_cb(i);
   }
+  return true;
 }
 
 bool NintendoController::is_pressed(int button_index)

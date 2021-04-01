@@ -1,5 +1,17 @@
+#pragma once
 
 #include <statsClass.h>
+#include <Preferences.h>
+
+#ifndef STORE_STATS
+#define STORE_STATS "stats"
+#endif
+#ifndef STORE_STATS_SOFT_RSTS
+#define STORE_STATS_SOFT_RSTS "soft resets"
+#endif
+#ifndef STORE_STATS_TRIP_TIME
+#define STORE_STATS_TRIP_TIME "trip time"
+#endif
 
 //------------------------------------------------------------------
 

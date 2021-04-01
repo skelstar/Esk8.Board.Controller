@@ -3,16 +3,19 @@
 #include <Arduino.h>
 #include <elapsedMillis.h>
 
+#define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
+#define WITH_HEALTHCHECK 1
+
 class RTOSTaskManager
 {
 public:
   bool ready = false;
 
-  RTOSTaskManager(const char *name, int stackSize, int priority)
+  RTOSTaskManager(const char *name,
+                  int stackSize)
   {
     _task_name = name;
     _stackSize = stackSize;
-    _priority = priority;
   }
 
   void printStarted()
@@ -22,8 +25,7 @@ public:
 
   void printReady()
   {
-    Serial.printf("%s ready\n", _task_name);
-    Serial.printf("%s ready after %lums of being created\n", _task_name, (unsigned long)_since_created);
+    Serial.printf("%s ready - after %lums of being created\n", _task_name, (unsigned long)_since_created);
   }
 
   void healthCheck(unsigned long period)
@@ -31,7 +33,8 @@ public:
     if (_since_health_check > period)
     {
       _since_health_check = 0;
-      Serial.printf("%s ping\n", _task_name);
+      if (_health_check)
+        Serial.printf("%s ping\n", _task_name);
     }
   }
 
@@ -53,25 +56,31 @@ public:
     vTaskDelete(_taskHandle);
   }
 
-  void create(TaskFunction_t func, int core)
+  void create(
+      TaskFunction_t func,
+      int core,
+      int priority,
+      bool health_check = false)
   {
     _core = core;
     _since_created = 0;
+    _priority = priority;
+    _health_check = health_check;
+
     xTaskCreatePinnedToCore(
         func,
         _task_name,
         _stackSize,
         NULL,
-        _priority,
+        priority,
         &_taskHandle,
         _core);
   }
 
 private:
   const char *_task_name;
-  int _stackSize;
-  int _priority;
-  int _core;
+  int _stackSize, _priority, _core;
+  bool _health_check;
   TaskHandle_t _taskHandle;
   elapsedMillis
       _since_health_check,

@@ -1,10 +1,9 @@
 #include <Arduino.h>
-#include <RTOSTaskManager.h>
 
 namespace ShortLivedTask
 {
 
-  RTOSTaskManager mgr("ShortLivedTask", 3000, TASK_PRIORITY_0);
+  RTOSTaskManager mgr("ShortLivedTask", 3000);
 
   elapsedMillis since_checked, since_pinged;
 

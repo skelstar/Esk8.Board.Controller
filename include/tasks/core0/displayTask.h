@@ -1,22 +1,27 @@
 #include <statsClass.h>
 #include <TFT_eSPI.h>
 #include <tft.h>
+#include <printFormatStrings.h>
+
+#ifndef PRINT_DISP_STATE
+#define PRINT_DISP_STATE 0
+#define PRINT_DISP_STATE_EVENT 0
+#endif
 
 namespace Display
 {
-  RTOSTaskManager mgr("DisplayTask", 3000, TASK_PRIORITY_1);
+  RTOSTaskManager mgr("DisplayTask", 3000);
 
   void printState(uint16_t id);
   void printTrigger(uint16_t ev);
 
   StatsClass *_stats;
   BoardClass *_board;
-  nsPeripherals::Peripherals *_periphs;
+  // nsPeripherals::Peripherals *_periphs;
 
   // prototypes
   void handle_stats_packet(StatsClass *res);
   void handle_board_packet(BoardClass *res);
-  void handle_peripherals_packet(nsPeripherals::Peripherals *res);
   void handle_nintendo_classic_event(NintendoButtonEvent *ev);
 
   void task(void *pvParameters)
@@ -35,10 +40,9 @@ namespace Display
 
     _stats = new StatsClass();
     _board = new BoardClass();
-    _periphs = new nsPeripherals::Peripherals();
 
     elapsedMillis sinceReadDispEventQueue, since_checked_queue, since_fsm_update;
-    unsigned long last_board_id = -1, last_periph_id = -1, last_classic_id = -1;
+    unsigned long last_board_id = -1, last_classic_id = -1;
 
     mgr.ready = true;
     mgr.printReady();
@@ -56,12 +60,6 @@ namespace Display
           last_board_id = _brd_res->id;
         }
 
-        nsPeripherals::Peripherals *_periph_res = peripheralsQueue->peek<nsPeripherals::Peripherals>(__func__);
-        if (_periph_res != nullptr && last_periph_id != _periph_res->id)
-        {
-          handle_peripherals_packet(_periph_res);
-          last_periph_id = _periph_res->id;
-        }
         NintendoButtonEvent *ev = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
         if (ev != nullptr && ev->id != last_classic_id)
         {
@@ -135,18 +133,18 @@ namespace Display
     return DispState::NO_EVENT;
   }
 
-  void handle_peripherals_packet(nsPeripherals::Peripherals *res)
-  {
-    switch (res->event)
-    {
-    case nsPeripherals::EV_PRIMARY_BUTTON:
-    {
-      if (res->primary_button == 1)
-        fsm_mgr.trigger(DispState::SELECT_BUTTON_CLICK);
-      break;
-    }
-    }
-  }
+  // void handle_peripherals_packet(nsPeripherals::Peripherals *res)
+  // {
+  //   switch (res->event)
+  //   {
+  //   case nsPeripherals::EV_PRIMARY_BUTTON:
+  //   {
+  //     if (res->primary_button == 1)
+  //       fsm_mgr.trigger(DispState::SELECT_BUTTON_CLICK);
+  //     break;
+  //   }
+  //   }
+  // }
 
   void handle_nintendo_classic_event(NintendoButtonEvent *ev)
   {

@@ -1,7 +1,23 @@
+#pragma once
+
+#ifndef FEATURE_CRUISE_CONTROL
+#define FEATURE_CRUISE_CONTROL 0
+#endif
+#ifndef FEATURE_PUSH_TO_START
+#define FEATURE_PUSH_TO_START 0
+#endif
+#ifndef LCD_WIDTH
+#define LCD_WIDTH 240
+#define LCD_HEIGHT 135
+#define TFT_DEFAULT_BG TFT_BLACK
+#endif
+
 #include <ChunkyDigit.h>
 #include <SlantyDigit.h>
 #include <math.h>
 #include <string.h>
+
+#include <tasks/core0/statsTask.h>
 
 #ifndef TFT_H
 #include <tft.h>
@@ -49,16 +65,16 @@ namespace Display
 
       // draw remote battery
 
-      BatteryLib remote_batt(BATTERY_MEASURE_PIN);
+      // BatteryLib remote_batt(BATTERY_MEASURE_PIN);
 
       uint8_t w = 40,
               h = 20,
               x1 = LCD_WIDTH - w - 5, /*margin*/
           y1 = 5;                     /*margin*/
-      remote_batt.setup(NULL);
-      remote_batt.update();
+      // remote_batt.setup(NULL);
+      // remote_batt.update();
 
-      drawBattery(remote_batt, x1, y1, w, h, TFT_DARKGREY);
+      // drawBattery(remote_batt, x1, y1, w, h, TFT_DARKGREY);
 
       if (FEATURE_CRUISE_CONTROL)
       {
@@ -81,31 +97,31 @@ namespace Display
   {
     if (mutex_SPI.take(__func__))
     {
-      tft.setFreeFont(FONT_LG);
-      tft.setTextSize(1);
+      // tft.setFreeFont(FONT_LG);
+      // tft.setTextSize(1);
 
-      drawStatusStripe(/*bg*/ TFT_DEFAULT_BG, /*fg*/ TFT_WHITE, TFT_RED);
+      // drawStatusStripe(/*bg*/ TFT_DEFAULT_BG, /*fg*/ TFT_WHITE, TFT_RED);
 
-      // line 1
-      char buff1[20];
-      sprintf(buff1, "board resets: %d", stats.boardResets);
-      lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, FontSize::LG);
+      // // line 1
+      // char buff1[20];
+      // sprintf(buff1, "board resets: %d", stats.boardResets);
+      // lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, FontSize::LG);
 
-      // line 2
-      char buff2[20];
-      sprintf(buff2, "failed tx: %d", stats.total_failed_sending);
-      lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, FontSize::LG);
+      // // line 2
+      // char buff2[20];
+      // sprintf(buff2, "failed tx: %d", stats.total_failed_sending);
+      // lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, FontSize::LG);
 
-      // line 3
-      char buff3[20];
-      sprintf(buff3, "trip Ah: %.1f", board.packet.ampHours);
-      lcd_message(buff3, LINE_3, Aligned::ALIGNED_LEFT, FontSize::LG);
+      // // line 3
+      // char buff3[20];
+      // sprintf(buff3, "trip Ah: %.1f", board.packet.ampHours);
+      // lcd_message(buff3, LINE_3, Aligned::ALIGNED_LEFT, FontSize::LG);
 
-      // line 4
-      char buff4[20];
-      int timeMins = (sinceBoardConnected / 1000) / 60;
-      sprintf(buff4, "time (mins): %d", timeMins);
-      lcd_message(buff4, LINE_4, Aligned::ALIGNED_LEFT, FontSize::LG);
+      // // line 4
+      // char buff4[20];
+      // int timeMins = (sinceBoardConnected / 1000) / 60;
+      // sprintf(buff4, "time (mins): %d", timeMins);
+      // lcd_message(buff4, LINE_4, Aligned::ALIGNED_LEFT, FontSize::LG);
 
       mutex_SPI.give(__func__);
     }
@@ -116,24 +132,24 @@ namespace Display
   {
     if (mutex_SPI.take(__func__))
     {
-      tft.fillScreen(TFT_DEFAULT_BG);
-      tft.setFreeFont(FONT_LG);
-      tft.setTextSize(1);
-      tft.setTextDatum(TL_DATUM);
-      const int lineHeight = tft.fontHeight() + 3;
-      int line1 = MARGIN, line2 = line1 + lineHeight, xmargin = 15;
+      // tft.fillScreen(TFT_DEFAULT_BG);
+      // tft.setFreeFont(FONT_LG);
+      // tft.setTextSize(1);
+      // tft.setTextDatum(TL_DATUM);
+      // const int lineHeight = tft.fontHeight() + 3;
+      // int line1 = MARGIN, line2 = line1 + lineHeight, xmargin = 15;
 
-      char branch[30];
-      sprintf(branch, "%s", GIT_BRANCH_NAME);
-      char build[30];
-      sprintf(build, "%s", DEBUG_BUILD ? "DEBUG" : "RELEASE");
+      // char branch[30];
+      // sprintf(branch, "%s", GIT_BRANCH_NAME);
+      // char build[30];
+      // sprintf(build, "%s", DEBUG_BUILD ? "DEBUG" : "RELEASE");
 
-      tft.setTextColor(TFT_DARKGREY);
-      tft.drawString("br: ", MARGIN, line1);
-      tft.drawString("bld: ", MARGIN, line2);
-      tft.setTextColor(TFT_WHITE);
-      tft.drawString(branch, MARGIN + tft.textWidth("br: ") + xmargin, line1);
-      tft.drawString(build, MARGIN + tft.textWidth("bld: ") + xmargin, line2);
+      // tft.setTextColor(TFT_DARKGREY);
+      // tft.drawString("br: ", MARGIN, line1);
+      // tft.drawString("bld: ", MARGIN, line2);
+      // tft.setTextColor(TFT_WHITE);
+      // tft.drawString(branch, MARGIN + tft.textWidth("br: ") + xmargin, line1);
+      // tft.drawString(build, MARGIN + tft.textWidth("bld: ") + xmargin, line2);
 
       mutex_SPI.give(__func__);
     }
@@ -148,38 +164,38 @@ namespace Display
   {
     if (mutex_SPI.take(__func__))
     {
-      uint8_t percent = getBatteryPercentage(batteryVolts);
-      tft.fillScreen(TFT_DEFAULT_BG);
-      int outsideX = (LCD_WIDTH - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
-      int outsideY = (LCD_HEIGHT - BATTERY_HEIGHT) / 2;
-      // body
-      tft.fillRect(outsideX, outsideY, BATTERY_WIDTH, BATTERY_HEIGHT, TFT_WHITE);
-      // knob
-      tft.fillRect(
-          outsideX + BATTERY_WIDTH,
-          outsideY + (BATTERY_HEIGHT - KNOB_HEIGHT) / 2,
-          BORDER_SIZE,
-          KNOB_HEIGHT,
-          TFT_WHITE);
-      // inside
-      tft.fillRect(
-          outsideX + BORDER_SIZE,
-          outsideY + BORDER_SIZE,
-          BATTERY_WIDTH - BORDER_SIZE * 2,
-          BATTERY_HEIGHT - BORDER_SIZE * 2,
-          TFT_DEFAULT_BG);
-      // capacity
-      uint32_t colour = percent > 50
-                            ? TFT_WHITE
-                        : percent > 20
-                            ? TFT_ORANGE
-                            : TFT_RED;
-      tft.fillRect(
-          outsideX + BORDER_SIZE * 2,
-          outsideY + BORDER_SIZE * 2,
-          (BATTERY_WIDTH - BORDER_SIZE * 4) * percent / 100,
-          BATTERY_HEIGHT - BORDER_SIZE * 4,
-          colour);
+      // uint8_t percent = getBatteryPercentage(batteryVolts);
+      // tft.fillScreen(TFT_DEFAULT_BG);
+      // int outsideX = (LCD_WIDTH - (BATTERY_WIDTH + BORDER_SIZE)) / 2; // includes batt knob
+      // int outsideY = (LCD_HEIGHT - BATTERY_HEIGHT) / 2;
+      // // body
+      // tft.fillRect(outsideX, outsideY, BATTERY_WIDTH, BATTERY_HEIGHT, TFT_WHITE);
+      // // knob
+      // tft.fillRect(
+      //     outsideX + BATTERY_WIDTH,
+      //     outsideY + (BATTERY_HEIGHT - KNOB_HEIGHT) / 2,
+      //     BORDER_SIZE,
+      //     KNOB_HEIGHT,
+      //     TFT_WHITE);
+      // // inside
+      // tft.fillRect(
+      //     outsideX + BORDER_SIZE,
+      //     outsideY + BORDER_SIZE,
+      //     BATTERY_WIDTH - BORDER_SIZE * 2,
+      //     BATTERY_HEIGHT - BORDER_SIZE * 2,
+      //     TFT_DEFAULT_BG);
+      // // capacity
+      // uint32_t colour = percent > 50
+      //                       ? TFT_WHITE
+      //                   : percent > 20
+      //                       ? TFT_ORANGE
+      //                       : TFT_RED;
+      // tft.fillRect(
+      //     outsideX + BORDER_SIZE * 2,
+      //     outsideY + BORDER_SIZE * 2,
+      //     (BATTERY_WIDTH - BORDER_SIZE * 4) * percent / 100,
+      //     BATTERY_HEIGHT - BORDER_SIZE * 4,
+      //     colour);
 
       mutex_SPI.give(__func__);
     }
@@ -322,12 +338,12 @@ namespace Display
   {
     if (mutex_SPI.take(__func__))
     {
-      screenOneMetricWithStripe(
-          board.packet.motorCurrent,
-          "MOTOR AMPS",
-          /*stripe*/ TFT_DARKGREEN,
-          init,
-          TFT_DEFAULT_BG);
+      // screenOneMetricWithStripe(
+      //     board.packet.motorCurrent,
+      //     "MOTOR AMPS",
+      //     /*stripe*/ TFT_DARKGREEN,
+      //     init,
+      //     TFT_DEFAULT_BG);
 
       mutex_SPI.give(__func__);
     }

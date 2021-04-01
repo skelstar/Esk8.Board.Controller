@@ -6,6 +6,12 @@
 #ifndef PRINT_MUTEX_TAKE_FAIL
 #define PRINT_MUTEX_TAKE_FAIL 0
 #endif
+#ifndef PRINT_MUTEX_TAKE_SUCCESS
+#define PRINT_MUTEX_TAKE_SUCCESS 0
+#endif
+#ifndef PRINT_MUTEX_GIVE_SUCCESS
+#define PRINT_MUTEX_GIVE_SUCCESS 0
+#endif
 
 #define REPORT_TAKEN_PERIOD true
 
@@ -59,6 +65,10 @@ public:
                       _name,
                       _taken_by != nullptr ? _taken_by : "anon",
                       ticks);
+      else if (PRINT_MUTEX_TAKE_SUCCESS && funcname != nullptr)
+        Serial.printf("MUTEX: %s took %s OK\n",
+                      funcname,
+                      _name);
       return false;
     }
 

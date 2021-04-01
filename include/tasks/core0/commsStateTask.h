@@ -14,7 +14,7 @@ bool skipOnEnter = false;
 
 namespace Comms
 {
-  RTOSTaskManager mgr("CommsTask", 3000, TASK_PRIORITY_2);
+  RTOSTaskManager mgr("CommsTask", 3000);
 
   /* prototypes */
   void print(const char *stateName);

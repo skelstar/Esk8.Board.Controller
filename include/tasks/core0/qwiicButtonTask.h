@@ -14,7 +14,7 @@ public:
 
 namespace QwiicButtonTask
 {
-  RTOSTaskManager mgr("QwiicButtonTask", 3000, TASK_PRIORITY_2);
+  RTOSTaskManager mgr("QwiicButtonTask", 3000);
 
   xQueueHandle queueHandle;
   Queue::Manager *queue = nullptr;
