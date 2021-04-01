@@ -6,9 +6,6 @@
 #endif
 
 //------------------------------------------
-/* prototypes */
-bool boardVersionCompatible(float version);
-//------------------------------------------
 
 bool comms_session_started = false;
 bool commsStateTask_initialised = false;
@@ -17,11 +14,11 @@ bool skipOnEnter = false;
 
 namespace Comms
 {
+  RTOSTaskManager mgr("CommsTask", 3000, TASK_PRIORITY_2);
+
   /* prototypes */
   void print(const char *stateName);
   void init();
-
-  bool taskReady = false;
 
   enum StateId
   {
@@ -88,7 +85,7 @@ namespace Comms
 
   void task(void *pvParameters)
   {
-    Serial.printf(PRINT_TASK_STARTED_FORMAT, "Comms State", xPortGetCoreID());
+    mgr.printStarted();
 
     commsStateTask_initialised = true;
 
@@ -108,16 +105,18 @@ namespace Comms
 
     init();
 
-    taskReady = true;
+    mgr.ready = true;
 
 #if USING_DISPLAY
     // wait for display task to be ready
     // before checking for packets
-    while (!Display::taskReady)
+    while (!Display::mgr.ready)
     {
       vTaskDelay(1);
     }
 #endif
+
+    mgr.printReady();
 
     while (true)
     {
@@ -143,6 +142,8 @@ namespace Comms
         commsFsm.runMachine();
       }
 
+      mgr.healthCheck(10000);
+
       vTaskDelay(10);
     }
     vTaskDelete(NULL);
@@ -152,29 +153,9 @@ namespace Comms
   void init()
   {
   }
-
-  //------------------------------------------------------------
-
-  void createTask(uint8_t core, uint8_t priority)
-  {
-    xTaskCreatePinnedToCore(
-        task,
-        "commsStateTask",
-        10000,
-        NULL,
-        priority,
-        NULL,
-        core);
-  }
 } // namespace Comms
 
 //------------------------------------------------------------
-
-// check version
-bool boardVersionCompatible(float version)
-{
-  return version == (float)VERSION_BOARD_COMPAT;
-}
 
 void print(const char *stateName)
 {

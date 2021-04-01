@@ -4,6 +4,8 @@
 
 namespace Display
 {
+  RTOSTaskManager mgr("DisplayTask", 3000, TASK_PRIORITY_1);
+
   void printState(uint16_t id);
   void printTrigger(uint16_t ev);
 
@@ -17,11 +19,9 @@ namespace Display
   void handle_peripherals_packet(nsPeripherals::Peripherals *res);
   void handle_nintendo_classic_event(NintendoButtonEvent *ev);
 
-  bool taskReady = false;
-
   void task(void *pvParameters)
   {
-    Serial.printf(PRINT_TASK_STARTED_FORMAT, "Display", xPortGetCoreID());
+    mgr.printStarted();
 
     setupLCD();
 
@@ -33,14 +33,15 @@ namespace Display
 
     _fsm.run_machine();
 
-    taskReady = true;
-
     _stats = new StatsClass();
     _board = new BoardClass();
     _periphs = new nsPeripherals::Peripherals();
 
     elapsedMillis sinceReadDispEventQueue, since_checked_queue, since_fsm_update;
     unsigned long last_board_id = -1, last_periph_id = -1, last_classic_id = -1;
+
+    mgr.ready = true;
+    mgr.printReady();
 
     while (true)
     {
@@ -75,23 +76,13 @@ namespace Display
         _fsm.run_machine();
       }
 
+      mgr.healthCheck(10000);
+
       vTaskDelay(10);
     }
     vTaskDelete(NULL);
   }
   //-----------------------------------------------------
-
-  void createTask(uint8_t core, uint8_t priority)
-  {
-    xTaskCreatePinnedToCore(
-        task,
-        "displayTask",
-        10000,
-        NULL,
-        priority,
-        NULL,
-        core);
-  }
 
   void printState(uint16_t id)
   {

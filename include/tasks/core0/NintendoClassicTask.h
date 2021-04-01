@@ -35,9 +35,9 @@ namespace NintendoClassicTask
   //=====================================================
   void task(void *pvParameters)
   {
-    NintendoButtonEvent ev;
-
     mgr.printStarted();
+
+    NintendoButtonEvent ev;
 
     init();
 

@@ -1,16 +1,7 @@
 
-//=-----------------------------------------
-/* prototypes */
-
-//------------------------------------------
-// #define configGENERATE_RUN_TIME_STATS 1
-// #define configUSE_STATS_FORMATTING_FUNCTIONS 1
-
 namespace Debug
 {
-  /* prototypes */
-
-  bool taskReady = false;
+  RTOSTaskManager mgr("DebugTask", 3000, TASK_PRIORITY_0);
 
   elapsedMillis since_checked,
       since_ping;
@@ -22,11 +13,9 @@ namespace Debug
 
   void task(void *pvParameters)
   {
-    Serial.printf(PRINT_TASK_STARTED_FORMAT, "Debug Task", xPortGetCoreID());
+    mgr.printStarted();
 
     init();
-
-    taskReady = true;
 
     while (NintendoClassicTask::queue == nullptr &&
            QwiicButtonTask::queue == nullptr)
@@ -34,7 +23,8 @@ namespace Debug
       vTaskDelay(500);
     }
 
-    DEBUG("DebugTask ready!");
+    mgr.ready = true;
+    mgr.printReady();
 
     while (true)
     {
@@ -68,26 +58,7 @@ namespace Debug
           }
         }
 
-        if (since_ping > 3000)
-        {
-          since_ping = 0;
-          Serial.printf("DebugTask ping\n");
-        }
-
-        // Serial.printf("Qwiic stack: %.1f%% (of %d), heap: %d\n",
-        //               QwiicButtonTask::getStackUsage(),
-        //               QwiicButtonTask::stackSize,
-        //               QwiicButtonTask::getHeapBytes());
-        // Serial.printf("Nintendo stack: %.1f%% (of %d)\n",
-        //               NintendoClassicTask::getStackUsage(),
-        //               NintendoClassicTask::stackSize);
-        // Serial.printf("ThrottleTask stack: %.1f%% (of %d)\n",
-        //               ThrottleTask::getStackUsage(),
-        //               ThrottleTask::stackSize);
-        // Serial.println("-------------------------------------");
-
-        // char buff[1024];
-        // vTaskGetRunTimeStats(buff);
+        mgr.healthCheck(10000);
       }
 
       vTaskDelay(10);
@@ -99,19 +70,5 @@ namespace Debug
 
   void init()
   {
-  }
-
-  //------------------------------------------------------------
-
-  void createTask(uint8_t core, uint8_t priority)
-  {
-    xTaskCreatePinnedToCore(
-        task,
-        "debugTask",
-        10000,
-        NULL,
-        priority,
-        NULL,
-        core);
   }
 } // namespace Debug

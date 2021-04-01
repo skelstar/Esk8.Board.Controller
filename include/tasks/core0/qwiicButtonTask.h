@@ -14,18 +14,12 @@ public:
 
 namespace QwiicButtonTask
 {
-  /* prototypes */
+  RTOSTaskManager mgr("QwiicButtonTask", 3000, TASK_PRIORITY_2);
 
   xQueueHandle queueHandle;
   Queue::Manager *queue = nullptr;
 
-  // task
-  TaskHandle_t taskHandle;
-  TaskConfig config{"QwiicButtonTask", /*stack*/ 3000, taskHandle, /*ready*/ false};
-
   elapsedMillis since_peeked, since_checked_button, since_malloc;
-
-  bool board_connected = false;
 
   QwiicButton qwiicButton;
 
@@ -36,7 +30,7 @@ namespace QwiicButtonTask
 
   void task(void *pvParameters)
   {
-    Serial.printf(PRINT_TASK_STARTED_FORMAT, "Qwiic Button Task", xPortGetCoreID());
+    mgr.printStarted();
 
     bool init_button = false;
     do
@@ -58,8 +52,10 @@ namespace QwiicButtonTask
     state.pressed = qwiicButton.isPressed();
     state.id = 0;
 
-    config.taskReady = true;
+    mgr.ready = true;
+    mgr.printReady();
 
+    // TODO remove this? Wait for queues?
     vTaskDelay(1000);
 
     queue->send(&state);
@@ -87,6 +83,8 @@ namespace QwiicButtonTask
         }
       }
 
+      mgr.healthCheck(10000);
+
       vTaskDelay(10);
     }
     vTaskDelete(NULL);
@@ -96,40 +94,5 @@ namespace QwiicButtonTask
 
   void init()
   {
-    // DEBUG("qwiic init()");
-    // vTaskDelay(100);
-    // bool success = qwiicButton.begin();
-    // if (mutex_I2C.take(__func__, portMAX_DELAY))
-    // {
-    //   DEBUG("took mutex (init)");
-    // if (false == qwiicButton.begin())
-    //   DEBUG("Error initialising Qwiik button");
-    // mutex_I2C.give(__func__);
-    // }
-  }
-
-  //------------------------------------------------------------
-
-  float getStackUsage()
-  {
-    int highWaterMark = uxTaskGetStackHighWaterMark(config.taskHandle);
-    return ((highWaterMark * 1.0) / config.stackSize) * 100.0;
-  }
-
-  int getHeapBytes()
-  {
-    return xPortGetFreeHeapSize();
-  }
-
-  void createTask(uint8_t core, uint8_t priority)
-  {
-    xTaskCreatePinnedToCore(
-        task,
-        "QwiicButtonTask",
-        config.stackSize,
-        NULL,
-        priority,
-        &config.taskHandle,
-        core);
   }
 } // namespace

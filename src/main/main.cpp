@@ -210,10 +210,9 @@ void setup()
   vTaskDelay(100);
 
   // CORE_0
-  Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_2);
-  // nsPeripherals::createTask(PERIPHERALS_TASK_CORE, 3);
+  Comms::mgr.create(Comms::task, CORE_0);
 #if (USING_DISPLAY == 1)
-  Display::createTask(DISPLAY_TASK_CORE, TASK_PRIORITY_3);
+  Display::mgr.create(Display::task, CORE_0);
 #endif
 #if (USING_REMOTE == 1)
   Remote::createTask(REMOTE_TASK_CORE, TASK_PRIORITY_1);
@@ -225,10 +224,10 @@ void setup()
   Led::createTask(LED_TASK_CORE, TASK_PRIORITY_1);
 #endif
 #if (USING_DEBUG_TASK == 1)
-  Debug::createTask(DEBUG_TASK_CORE, TASK_PRIORITY_1);
+  Debug::mgr.create(Debug::task, CORE_0);
 #endif
 #if (USING_QWIIC_BUTTON_TASK == 1)
-  QwiicButtonTask::createTask(SPARKFUN_BUTTON_TASK_CORE, TASK_PRIORITY_1);
+  QwiicButtonTask::mgr.create(QwiicButtonTask::task, CORE_0);
 #endif
   // ThrottleTask::createTask(0, TASK_PRIORITY_1);
   ThrottleTask::mgr.create(ThrottleTask::task, CORE_0); //(0, TASK_PRIORITY_1);
@@ -347,14 +346,12 @@ void sendToBoard()
 void waitForTasksToBeReady()
 {
   while (
-#if USING_DISPLAY
-      !Display::taskReady &&
-#endif
+      (USING_DISPLAY == 0 || !Display::mgr.ready) &&
       (USING_NINTENDO_BUTTONS == 0 || !NintendoClassicTask::mgr.ready) &&
-      !Comms::taskReady &&
+      !Comms::mgr.ready &&
       !Stats::taskReady &&
       (REMOTE_TASK_CORE == -1 || !Remote::taskReady) &&
-      (USING_QWIIC_BUTTON_TASK == 0 || !QwiicButtonTask::config.taskReady))
+      (USING_QWIIC_BUTTON_TASK == 0 || !QwiicButtonTask::mgr.ready))
   {
     vTaskDelay(10);
   }
