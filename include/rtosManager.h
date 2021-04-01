@@ -11,6 +11,7 @@
 
 struct TaskConfig
 {
+  const char *name;
   int stackSize;
   TaskHandle_t taskHandle;
   bool taskReady;

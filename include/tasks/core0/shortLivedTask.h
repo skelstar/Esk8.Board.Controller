@@ -11,34 +11,58 @@ namespace ShortLivedTask
 {
   /* prototypes */
 
-  const char *taskName = "ShortLivedTask";
-
-  elapsedMillis since_checked;
+  elapsedMillis since_checked, since_pinged;
 
   bool board_connected = false;
   unsigned long last_id = 0;
 
   // task
   TaskHandle_t taskHandle;
-  TaskConfig config{/*size*/ 3000, taskHandle, /*ready*/ false};
+  TaskConfig config{
+      "ShortLivedTask",
+      /*size*/ 3000,
+      taskHandle,
+      /*ready*/ false};
 
   //=====================================================
 
   void task(void *pvParameters)
   {
-    Serial.printf(PRINT_TASK_STARTED_FORMAT, taskName, xPortGetCoreID());
+    Serial.printf(PRINT_TASK_STARTED_FORMAT, config.name, xPortGetCoreID());
 
     init();
 
     config.taskReady = true;
 
-    Serial.printf("%s ready\n", taskName);
+    Serial.printf("%s ready\n", config.name);
+    Serial.printf("Ready after %lums of being created\n", (unsigned long)since_task_created);
 
     while (true)
     {
-      if (since_checked > 3000)
+      if (since_checked > 100)
       {
         since_checked = 0;
+
+        NintendoButtonEvent *ev = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
+        if (ev != nullptr && !ev->been_peeked(last_id))
+        {
+          last_id = ev->id;
+          if (ev->button == NintendoController::BUTTON_LEFT && ev->state == NintendoController::BUTTON_PRESSED)
+          {
+            // delete task
+            Serial.printf("------------------------\n");
+            Serial.printf("DELETING ShortLivedTask!\n");
+            Serial.printf("------------------------\n");
+            vTaskDelay(100);
+            vTaskDelete(NULL);
+          }
+        }
+      }
+
+      if (since_pinged > 3000)
+      {
+        since_pinged = 0;
+        Serial.printf("%s ping!\n", config.name);
       }
 
       vTaskDelay(10);
@@ -58,7 +82,7 @@ namespace ShortLivedTask
   {
     xTaskCreatePinnedToCore(
         task,
-        taskName,
+        config.name,
         config.stackSize,
         NULL,
         priority,

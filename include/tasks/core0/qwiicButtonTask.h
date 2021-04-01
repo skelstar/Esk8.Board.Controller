@@ -21,7 +21,7 @@ namespace QwiicButtonTask
 
   // task
   TaskHandle_t taskHandle;
-  TaskConfig config{/*stack*/ 3000, taskHandle, /*ready*/ false};
+  TaskConfig config{"QwiicButtonTask", /*stack*/ 3000, taskHandle, /*ready*/ false};
 
   elapsedMillis since_peeked, since_checked_button, since_malloc;
 

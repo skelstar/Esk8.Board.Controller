@@ -24,7 +24,7 @@ namespace ThrottleTask
 
   // task
   TaskHandle_t taskHandle;
-  TaskConfig config{/*size*/ 3000, taskHandle, /*ready*/ false};
+  TaskConfig config{"ThrottleTask", /*size*/ 3000, taskHandle, /*ready*/ false};
 
   elapsedMillis since_checked_throttle;
 

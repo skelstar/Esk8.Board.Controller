@@ -6,9 +6,9 @@
 
 NintendoController classic;
 
-struct NintendoButtonEvent
+class NintendoButtonEvent : public QueueBase
 {
-  unsigned long id;
+public:
   uint8_t button;
   uint8_t state;
 };
@@ -23,12 +23,12 @@ namespace NintendoClassicTask
   Queue::Manager *queue;
 
   // task
-  int stackSize = 3000;
   TaskHandle_t taskHandle;
+  TaskConfig config = {"NintendoClassicTask", 3000, taskHandle, /*taskReady*/ true};
 
   bool taskReady = false;
 
-  elapsedMillis since_checked_buttons;
+  elapsedMillis since_checked_buttons, since_health_check, since_task_created;
 
   const unsigned long CHECK_BUTTONS_INTERVAL = 100;
 
@@ -39,15 +39,16 @@ namespace NintendoClassicTask
   //=====================================================
   void task(void *pvParameters)
   {
-    Serial.printf(PRINT_TASK_STARTED_FORMAT, "ClassicControllerTask", xPortGetCoreID());
+    NintendoButtonEvent ev;
+
+    Serial.printf(PRINT_TASK_STARTED_FORMAT, config.name, xPortGetCoreID());
 
     init();
 
     DEBUG("Classic Buttons initialised");
 
     taskReady = true;
-
-    vTaskDelay(1000);
+    Serial.printf("Ready after %lums of being created\n", (unsigned long)since_task_created);
 
     while (true)
     {
@@ -62,12 +63,14 @@ namespace NintendoClassicTask
           uint8_t button_that_changed = button_changed(new_buttons, last_buttons);
           if (button_that_changed != 99)
           {
-            // send if something changed
+            // something changed, send
             event_id++;
-            NintendoButtonEvent ev = {
-                event_id,
-                button_that_changed,
-                new_buttons[button_that_changed]};
+
+            ev.id = event_id;
+            ev.button = button_that_changed;
+            ev.state = new_buttons[button_that_changed];
+            // Serial.printf("Something changed: button %d state: %d id: %lu\n", ev.button, ev.state, ev.id);
+
             queue->send(&ev);
           }
           // save
@@ -76,31 +79,13 @@ namespace NintendoClassicTask
             last_buttons[i] = new_buttons[i];
           }
         }
-
-        // if (mutex_I2C.take("NintendoClassic::loop", TICKS_10ms))
-        // {
-        //   classic.update(mutex_I2C.handle());
-        //   mutex_I2C.give(__func__);
-
-        //   uint8_t *new_buttons = classic.get_buttons();
-        //   uint8_t button_that_changed = button_changed(new_buttons, last_buttons);
-        //   if (button_that_changed != 99)
-        //   {
-        //     // send if something changed
-        //     event_id++;
-        //     NintendoButtonEvent ev = {
-        //         event_id,
-        //         button_that_changed,
-        //         new_buttons[button_that_changed]};
-        //     queue->send(&ev);
-        //   }
-        //   // save
-        //   for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
-        //   {
-        //     last_buttons[i] = new_buttons[i];
-        //   }
-        // }
       }
+
+      // if (since_health_check > 3000)
+      // {
+      //   since_health_check = 0;
+      //   Serial.printf("HEALTHCHECK: NintendoClassicTask\n");
+      // }
 
       vTaskDelay(10);
     }
@@ -111,19 +96,31 @@ namespace NintendoClassicTask
   float getStackUsage()
   {
     int highWaterMark = uxTaskGetStackHighWaterMark(taskHandle);
-    return ((highWaterMark * 1.0) / stackSize) * 100.0;
+    return ((highWaterMark * 1.0) / config.stackSize) * 100.0;
   }
 
   void createTask(uint8_t core, uint8_t priority)
   {
+    since_task_created = 0;
     xTaskCreatePinnedToCore(
         task,
-        "ClassicControllerTask",
-        stackSize,
+        config.name,
+        config.stackSize,
         NULL,
         priority,
-        &taskHandle,
+        &config.taskHandle,
         core);
+  }
+
+  void deleteTask(bool print = false)
+  {
+    if (print)
+    {
+      Serial.printf("-----------------------------\n");
+      Serial.printf("DELETING %s!\n", config.name);
+      Serial.printf("-----------------------------\n");
+    }
+    vTaskDelete(config.taskHandle);
   }
 
   const char *getButtonName(uint8_t button)

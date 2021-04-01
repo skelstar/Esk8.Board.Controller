@@ -142,6 +142,12 @@ void sendToBoard();
 #include <tasks/core0/ledTask.h>
 #endif
 
+namespace ShortLivedTask
+{
+  elapsedMillis since_task_created;
+  void createTask(uint8_t core, uint8_t priority);
+}
+
 #if (USING_DEBUG_TASK == 1)
 #include <tasks/core0/debugTask.h>
 #endif
