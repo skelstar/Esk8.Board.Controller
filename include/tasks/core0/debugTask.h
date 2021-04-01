@@ -48,9 +48,7 @@ namespace Debug
           last_id = ev->id;
           if (ev->button == NintendoController::BUTTON_RIGHT && ev->state == NintendoController::BUTTON_PRESSED)
           {
-            ShortLivedTask::since_task_created = 0;
-
-            ShortLivedTask::createTask(CORE_0, TASK_PRIORITY_0);
+            ShortLivedTask::mgr.create(ShortLivedTask::task, CORE_0);
 
             vTaskDelay(100);
           }

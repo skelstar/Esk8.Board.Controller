@@ -16,15 +16,13 @@ namespace ThrottleTask
 {
 #include <MagThrottle.h>
 
+  RTOSTaskManager mgr("ThrottleTask", 3000, TASK_PRIORITY_1);
+
   // prototypes
   void init();
 
   xQueueHandle queueHandle;
   Queue::Manager *queue;
-
-  // task
-  TaskHandle_t taskHandle;
-  TaskConfig config{"ThrottleTask", /*size*/ 3000, taskHandle, /*ready*/ false};
 
   elapsedMillis since_checked_throttle;
 
@@ -33,9 +31,10 @@ namespace ThrottleTask
   unsigned long event_id = 0;
   QwiicButtonState primary_button;
 
+  //================================================
   void task(void *pvParameters)
   {
-    Serial.printf(PRINT_TASK_STARTED_FORMAT, "ThrottleTask", xPortGetCoreID());
+    mgr.printStarted();
 
     init();
 
@@ -43,10 +42,10 @@ namespace ThrottleTask
     while (QwiicButtonTask::queue == nullptr)
       vTaskDelay(100);
 
-    config.taskReady = true;
-    DEBUG("ThrottleTask ready");
-
     ThrottleState throttle;
+
+    mgr.ready = true;
+    mgr.printReady();
 
     while (true)
     {
@@ -71,29 +70,13 @@ namespace ThrottleTask
           queue->send<ThrottleState>(&throttle);
         }
       }
+
+      mgr.healthCheck(5000);
+
       vTaskDelay(10);
     }
 
     vTaskDelete(NULL);
-  }
-  //------------------------------------------------------------
-
-  float getStackUsage()
-  {
-    int highWaterMark = uxTaskGetStackHighWaterMark(config.taskHandle);
-    return ((highWaterMark * 1.0) / config.stackSize) * 100.0;
-  }
-
-  void createTask(uint8_t core, uint8_t priority)
-  {
-    xTaskCreatePinnedToCore(
-        task,
-        "ThrottleTask",
-        config.stackSize,
-        NULL,
-        priority,
-        &config.taskHandle,
-        core);
   }
 
   void init()

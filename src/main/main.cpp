@@ -30,6 +30,7 @@ Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 #include <Preferences.h>
 #include <BatteryLib.h>
 #include <QueueManager.h>
+#include <RTOSTaskManager.h>
 
 //------------------------------------------------------------
 #include "rtosManager.h"
@@ -142,16 +143,19 @@ void sendToBoard();
 #include <tasks/core0/ledTask.h>
 #endif
 
-namespace ShortLivedTask
-{
-  elapsedMillis since_task_created;
-  void createTask(uint8_t core, uint8_t priority);
-}
+// namespace ShortLivedTask
+// {
+//   // elapsedMillis since_task_created;
+//   RTOSTaskManager mgr("ShortLivedTask", 3000, TASK_PRIORITY_0);
+//   void task(void *pvParameters);
 
+//   void createTask(uint8_t core, uint8_t priority);
+// }
+
+#include <tasks/core0/shortLivedTask.h>
 #if (USING_DEBUG_TASK == 1)
 #include <tasks/core0/debugTask.h>
 #endif
-#include <tasks/core0/shortLivedTask.h>
 
 #include <tasks/core0/commsStateTask.h>
 #include <nrf_comms.h>
@@ -226,11 +230,12 @@ void setup()
 #if (USING_QWIIC_BUTTON_TASK == 1)
   QwiicButtonTask::createTask(SPARKFUN_BUTTON_TASK_CORE, TASK_PRIORITY_1);
 #endif
-  ThrottleTask::createTask(0, TASK_PRIORITY_1);
+  // ThrottleTask::createTask(0, TASK_PRIORITY_1);
+  ThrottleTask::mgr.create(ThrottleTask::task, CORE_0); //(0, TASK_PRIORITY_1);
 #if (USING_NINTENDO_BUTTONS == 1)
   NintendoClassicTask::createTask(0, TASK_PRIORITY_1);
 #endif
-  ShortLivedTask::createTask(CORE_0, TASK_PRIORITY_0);
+  ShortLivedTask::mgr.create(ShortLivedTask::task, CORE_0); // createTask(CORE_0, TASK_PRIORITY_0);
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);
