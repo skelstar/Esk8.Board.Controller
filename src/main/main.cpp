@@ -215,7 +215,7 @@ void setup()
   Display::mgr.create(Display::task, CORE_0);
 #endif
 #if (USING_REMOTE == 1)
-  Remote::createTask(REMOTE_TASK_CORE, TASK_PRIORITY_1);
+  Remote::mgr.create(Remote::task, CORE_0);
 #endif
 #if (USING_STATS == 1)
   Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
@@ -350,7 +350,7 @@ void waitForTasksToBeReady()
       (USING_NINTENDO_BUTTONS == 0 || !NintendoClassicTask::mgr.ready) &&
       !Comms::mgr.ready &&
       !Stats::taskReady &&
-      (REMOTE_TASK_CORE == -1 || !Remote::taskReady) &&
+      (REMOTE_TASK_CORE == -1 || !Remote::mgr.ready) &&
       (USING_QWIIC_BUTTON_TASK == 0 || !QwiicButtonTask::mgr.ready))
   {
     vTaskDelay(10);

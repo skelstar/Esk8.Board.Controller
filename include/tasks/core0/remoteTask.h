@@ -7,63 +7,53 @@ elapsedMillis since_measure_battery;
 
 namespace Remote
 {
-  void battVoltsChanged_cb();
+  RTOSTaskManager mgr("RemoteTask", 3000, TASK_PRIORITY_1);
 
-  MyMutex mutex;
+  xQueueHandle queueHandle;
+  Queue::Manager *queue = nullptr;
 
   BatteryLib battery(BATTERY_MEASURE_PIN);
 
-  namespace
+  struct BatteryInfo
   {
-    const char *taskName = "";
-  }
-
-  bool taskReady = false;
+    bool charging;
+    float percent;
+    float volts;
+  } remote;
 
   //--------------------------------------------------------
   void task(void *pvParameters)
   {
-    Remote::battery.setup(battVoltsChanged_cb);
+    mgr.printStarted();
 
-    Serial.printf(PRINT_TASK_STARTED_FORMAT, taskName, xPortGetCoreID());
+    Remote::battery.setup(nullptr);
 
-    taskReady = true;
+    queueHandle = xQueueCreate(/*len*/ 1, sizeof(BatteryInfo));
+    queue = new Queue::Manager(queueHandle, (TickType_t)5);
 
-    mutex.create("remote", TICKS_2ms);
-    mutex.enabled = true;
+    mgr.ready = true;
+    mgr.printReady();
 
     while (true)
     {
       if (since_measure_battery > BATTERY_MEASURE_INTERVAL)
       {
         since_measure_battery = 0;
-        if (Remote::mutex.take(__func__, TICKS_50ms))
-          battery.update();
-        Remote::mutex.give(__func__);
+
+        battery.update();
+
+        remote.charging = battery.isCharging;
+        remote.percent = battery.chargePercent;
+        remote.volts = battery.getVolts();
+
+        queue->send(&remote);
       }
+
+      mgr.healthCheck(10000);
+
       vTaskDelay(10);
     }
     vTaskDelete(NULL);
-  }
-
-  //--------------------------------------------------------
-  void createTask(uint8_t core, uint8_t priority)
-  {
-    taskName = "Battery Measure";
-    xTaskCreatePinnedToCore(
-        task,
-        taskName,
-        10000,
-        NULL,
-        priority,
-        NULL,
-        core);
-  }
-
-  //--------------------------------------------------------
-  void battVoltsChanged_cb()
-  {
-    // displayQueue->send(DispState::UPDATE);
   }
   //--------------------------------------------------------
 } // namespace Remote
