@@ -145,6 +145,7 @@ void sendToBoard();
 #if (USING_DEBUG_TASK == 1)
 #include <tasks/core0/debugTask.h>
 #endif
+#include <tasks/core0/shortLivedTask.h>
 
 #include <tasks/core0/commsStateTask.h>
 #include <nrf_comms.h>
@@ -223,6 +224,7 @@ void setup()
 #if (USING_NINTENDO_BUTTONS == 1)
   NintendoClassicTask::createTask(0, TASK_PRIORITY_1);
 #endif
+  ShortLivedTask::createTask(CORE_0, TASK_PRIORITY_0);
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);
