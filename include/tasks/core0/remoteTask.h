@@ -2,9 +2,13 @@
 
 #define BATTERY_MEASURE_INTERVAL 5000
 
-elapsedMillis since_measure_battery;
-
-// prototypes
+class BatteryInfo : public QueueBase
+{
+public:
+  bool charging;
+  float percent;
+  float volts;
+};
 
 namespace Remote
 {
@@ -15,12 +19,9 @@ namespace Remote
 
   BatteryLib battery(BATTERY_MEASURE_PIN);
 
-  struct BatteryInfo
-  {
-    bool charging;
-    float percent;
-    float volts;
-  } remote;
+  elapsedMillis since_measure_battery;
+
+  BatteryInfo remote;
 
   //--------------------------------------------------------
   void task(void *pvParameters)
@@ -47,7 +48,7 @@ namespace Remote
         remote.percent = battery.chargePercent;
         remote.volts = battery.getVolts();
 
-        queue->send(&remote);
+        queue->sendLegacy(&remote);
       }
 
       mgr.healthCheck(10000);

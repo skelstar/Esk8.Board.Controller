@@ -10,6 +10,7 @@ class RTOSTaskManager
 {
 public:
   bool ready = false;
+  bool running = false;
 
   RTOSTaskManager(const char *name,
                   int stackSize)
@@ -66,6 +67,7 @@ public:
     _since_created = 0;
     _priority = priority;
     _health_check = health_check;
+    running = true;
 
     xTaskCreatePinnedToCore(
         func,

@@ -58,7 +58,7 @@ namespace QwiicButtonTask
     // TODO remove this? Wait for queues?
     vTaskDelay(1000);
 
-    queue->send(&state);
+    queue->sendLegacy(&state);
     state.id++;
 
     while (true)
@@ -78,7 +78,7 @@ namespace QwiicButtonTask
         if (state.pressed != pressed)
         {
           state.pressed = pressed;
-          queue->send(&state);
+          queue->sendLegacy(&state);
           state.id++;
         }
       }

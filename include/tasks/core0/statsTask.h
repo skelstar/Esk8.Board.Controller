@@ -59,7 +59,7 @@ namespace Stats
           if (myboard->packet.moving != res->packet.moving)
             if (handleStartingStopping(res))
               // stats changed
-              statsQueue->send(&stats);
+              statsQueue->sendLegacy(&stats);
           myboard = new BoardClass(*res);
         }
       }

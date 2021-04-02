@@ -1,6 +1,6 @@
 #include <VescData.h>
 
-class BoardClass
+class BoardClass : public QueueBase
 {
 public:
   void save(VescData latest)

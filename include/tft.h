@@ -212,7 +212,6 @@ void drawBattery(BatteryLib batt, uint8_t x1, uint8_t y1, uint8_t width, uint8_t
 
 void drawSmallBattery(uint8_t percent, uint16_t x, uint16_t y, uint16_t width, uint8_t datum, bool charging, uint32_t bgColour = TFT_BLACK)
 {
-  DEBUGVAL(datum);
   uint32_t colour = TFT_WHITE;
   uint16_t height = (0.45) * width,
            knobWidth = (0.1) * width;

@@ -39,7 +39,7 @@ namespace Display
 {
 
   // prototypes
-  void drawStatusStripe(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour);
+  void drawStatusStripe(uint32_t bgColour, uint32_t stripeColour);
 
   ChunkyDigit *chunkyDigit;
   SlantyDigit *slantyDigit;
@@ -97,63 +97,80 @@ namespace Display
   {
     if (mutex_SPI.take(__func__))
     {
-      // tft.setFreeFont(FONT_LG);
-      // tft.setTextSize(1);
+      uint8_t y = 0;
+      tft.fillScreen(TFT_BLACK);
+      tft.setFreeFont(FONT_LG);
+      tft.setTextSize(1);
 
-      // drawStatusStripe(/*bg*/ TFT_DEFAULT_BG, /*fg*/ TFT_WHITE, TFT_RED);
+      // drawStatusStripe(/*bg*/ TFT_DEFAULT_BG, TFT_RED);
 
-      // // line 1
-      // char buff1[20];
-      // sprintf(buff1, "board resets: %d", stats.boardResets);
-      // lcd_message(buff1, LINE_1, Aligned::ALIGNED_LEFT, FontSize::LG);
+      tft.setFreeFont(FONT_LG);
+      tft.setTextDatum(TC_DATUM);
+      int text_height = tft.fontHeight(),
+          box_height = text_height + 8;
+      y = (LCD_HEIGHT / 2) - tft.fontHeight() - 15;
+      tft.fillRect(0, y, LCD_WIDTH, box_height, TFT_RED);
 
-      // // line 2
-      // char buff2[20];
-      // sprintf(buff2, "failed tx: %d", stats.total_failed_sending);
-      // lcd_message(buff2, LINE_2, Aligned::ALIGNED_LEFT, FontSize::LG);
+      tft.setTextColor(TFT_WHITE);
+      tft.drawString("OFFLINE", LCD_WIDTH / 2, y);
+      y += tft.fontHeight() + 10;
 
-      // // line 3
-      // char buff3[20];
-      // sprintf(buff3, "trip Ah: %.1f", board.packet.ampHours);
-      // lcd_message(buff3, LINE_3, Aligned::ALIGNED_LEFT, FontSize::LG);
+      if (Remote::mgr.running && remote != nullptr)
+      {
+        // remote battery
+        const int batteryWidth = 50;
+        y += 15;
+        drawSmallBattery(remote->percent, LCD_WIDTH / 2 - 5, y, batteryWidth, TR_DATUM, remote->charging);
 
-      // // line 4
-      // char buff4[20];
-      // int timeMins = (sinceBoardConnected / 1000) / 60;
-      // sprintf(buff4, "time (mins): %d", timeMins);
-      // lcd_message(buff4, LINE_4, Aligned::ALIGNED_LEFT, FontSize::LG);
+        char buff[10];
+        sprintf(buff, "%0.1fv", remote->volts);
+        tft.setTextDatum(TL_DATUM);
+        tft.setFreeFont(FONT_LG);
+        tft.setTextColor(TFT_DARKGREY);
+        tft.drawString(buff, LCD_WIDTH / 2 + 5, y - 4);
+      }
+
+      y += 30;
+      tft.setTextColor(TFT_DARKGREY);
+
+      tft.setFreeFont(FONT_MED);
+      tft.setTextDatum(TC_DATUM);
+      std::string s(GIT_BRANCH_NAME);
+      if (s.length() > 20)
+        s = s.substr(0, 20) + "..."; // truncate and add "..."
+      tft.drawString(s.c_str(), LCD_WIDTH / 2, y);
 
       mutex_SPI.give(__func__);
     }
   }
   //-----------------------------------------------------
 
-  void screenSoftwareStats()
-  {
-    if (mutex_SPI.take(__func__))
-    {
-      // tft.fillScreen(TFT_DEFAULT_BG);
-      // tft.setFreeFont(FONT_LG);
-      // tft.setTextSize(1);
-      // tft.setTextDatum(TL_DATUM);
-      // const int lineHeight = tft.fontHeight() + 3;
-      // int line1 = MARGIN, line2 = line1 + lineHeight, xmargin = 15;
+  // void screenSoftwareStats()
+  // {
+  //   if (mutex_SPI.take(__func__))
+  //   {
+  //     // tft.fillScreen(TFT_DEFAULT_BG);
+  //     // tft.setFreeFont(FONT_LG);
+  //     // tft.setTextSize(1);
+  //     // tft.setTextDatum(TL_DATUM);
+  //     // const int lineHeight = tft.fontHeight() + 3;
+  //     // int line1 = MARGIN, line2 = line1 + lineHeight, xmargin = 15;
 
-      // char branch[30];
-      // sprintf(branch, "%s", GIT_BRANCH_NAME);
-      // char build[30];
-      // sprintf(build, "%s", DEBUG_BUILD ? "DEBUG" : "RELEASE");
+  //     // char branch[30];
+  //     // sprintf(branch, "%s", GIT_BRANCH_NAME);
+  //     // char build[30];
+  //     // sprintf(build, "%s", DEBUG_BUILD ? "DEBUG" : "RELEASE");
 
-      // tft.setTextColor(TFT_DARKGREY);
-      // tft.drawString("br: ", MARGIN, line1);
-      // tft.drawString("bld: ", MARGIN, line2);
-      // tft.setTextColor(TFT_WHITE);
-      // tft.drawString(branch, MARGIN + tft.textWidth("br: ") + xmargin, line1);
-      // tft.drawString(build, MARGIN + tft.textWidth("bld: ") + xmargin, line2);
+  //     // tft.setTextColor(TFT_DARKGREY);
+  //     // tft.drawString("br: ", MARGIN, line1);
+  //     // tft.drawString("bld: ", MARGIN, line2);
+  //     // tft.setTextColor(TFT_WHITE);
+  //     // tft.drawString(branch, MARGIN + tft.textWidth("br: ") + xmargin, line1);
+  //     // tft.drawString(build, MARGIN + tft.textWidth("bld: ") + xmargin, line2);
 
-      mutex_SPI.give(__func__);
-    }
-  }
+  //     mutex_SPI.give(__func__);
+  //   }
+  // }
 
 #define BATTERY_WIDTH (LCD_WIDTH / 8) * 6
 #define BATTERY_HEIGHT (LCD_HEIGHT / 8) * 6
@@ -246,7 +263,7 @@ namespace Display
       // setup
       if (init || chunkyDigit == NULL)
       {
-        drawStatusStripe(/*bg*/ bgColour, /*fg*/ TFT_WHITE, stripeColour);
+        drawStatusStripe(/*bg*/ bgColour, stripeColour);
 
         tft.setFreeFont(FONT_MED);
         tft.setTextColor(TFT_DARKGREY);
@@ -411,7 +428,7 @@ namespace Display
 
   //-----------------------------------------------------
 
-  void drawStatusStripe(uint32_t bgColour, uint32_t fgColour, uint32_t stripeColour)
+  void drawStatusStripe(uint32_t bgColour, uint32_t stripeColour)
   {
     // assume already wrapped in a mutex
     tft.fillScreen(bgColour);

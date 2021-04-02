@@ -15,10 +15,6 @@ namespace Display
   void printState(uint16_t id);
   void printTrigger(uint16_t ev);
 
-  StatsClass *_stats;
-  BoardClass *_board;
-  // nsPeripherals::Peripherals *_periphs;
-
   // prototypes
   void handle_stats_packet(StatsClass *res);
   void handle_board_packet(BoardClass *res);
@@ -38,26 +34,31 @@ namespace Display
 
     _fsm.run_machine();
 
-    _stats = new StatsClass();
-    _board = new BoardClass();
+    remote = new BatteryInfo();
 
     elapsedMillis sinceReadDispEventQueue, since_checked_queue, since_fsm_update;
-    unsigned long last_board_id = -1, last_classic_id = -1;
+    unsigned long last_board_id = -1, last_classic_id = -1, last_batt_id = -1;
 
     mgr.ready = true;
     mgr.printReady();
 
     while (true)
     {
-      if (since_checked_queue > SEND_TO_BOARD_INTERVAL)
+      if (since_checked_queue > 100)
       {
         since_checked_queue = 0;
 
-        BoardClass *_brd_res = boardPacketQueue->peek<BoardClass>(__func__);
-        if (_brd_res != nullptr && last_board_id != _brd_res->id)
+        BoardClass *board = boardPacketQueue->peek<BoardClass>(__func__);
+        if (board != nullptr)
         {
-          handle_board_packet(_brd_res);
-          last_board_id = _brd_res->id;
+          if (board->id != last_board_id)
+          {
+            last_board_id = board->id;
+            handle_board_packet(board);
+          }
+          else
+          {
+          }
         }
 
         NintendoButtonEvent *ev = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
@@ -65,6 +66,14 @@ namespace Display
         {
           handle_nintendo_classic_event(ev);
           last_classic_id = ev->id;
+        }
+
+        BatteryInfo *batt = Remote::queue->peek<BatteryInfo>(__func__);
+        if (batt != nullptr && !batt->been_peeked(last_batt_id))
+        {
+          last_batt_id = batt->id;
+          remote = new BatteryInfo(*batt);
+          fsm_mgr.trigger(DispState::REMOTE_BATTERY_CHANGED);
         }
       }
 
@@ -99,6 +108,10 @@ namespace Display
 
   void handle_board_packet(BoardClass *board)
   {
+    // Serial.printf("Rx packet from board:");
+    // Serial.printf("moving=%d:", board->packet.moving);
+    // Serial.println();
+
     if (board->packet.version != (float)VERSION_BOARD_COMPAT &&
         !fsm_mgr.currentStateIs(BOARD_VERSION_DOESNT_MATCH_SCREEN))
     {
@@ -106,10 +119,10 @@ namespace Display
     }
     else if (board->connected())
     {
-      if (!fsm_mgr.currentStateIs(DispState::MOVING) && board->isMoving())
-        fsm_mgr.trigger(DispState::MOVING);
-      else if (!fsm_mgr.currentStateIs(DispState::STOPPED) && board->isStopped())
-        fsm_mgr.trigger(DispState::STOPPED);
+      if (board->isMoving())
+        fsm_mgr.trigger(DispState::Trigger::MOVING);
+      else if (board->isStopped())
+        fsm_mgr.trigger(DispState::Trigger::STOPPED);
     }
     else
       // offline
@@ -132,19 +145,6 @@ namespace Display
     }
     return DispState::NO_EVENT;
   }
-
-  // void handle_peripherals_packet(nsPeripherals::Peripherals *res)
-  // {
-  //   switch (res->event)
-  //   {
-  //   case nsPeripherals::EV_PRIMARY_BUTTON:
-  //   {
-  //     if (res->primary_button == 1)
-  //       fsm_mgr.trigger(DispState::SELECT_BUTTON_CLICK);
-  //     break;
-  //   }
-  //   }
-  // }
 
   void handle_nintendo_classic_event(NintendoButtonEvent *ev)
   {

@@ -42,7 +42,7 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   // send to other tasks
   board.id++;
   if (boardPacketQueue != NULL)
-    boardPacketQueue->send(&board);
+    boardPacketQueue->sendLegacy(&board);
 
   if (board.packet.reason == FIRST_PACKET)
   {

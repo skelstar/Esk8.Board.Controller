@@ -66,7 +66,7 @@ namespace NintendoClassicTask
             ev.button = button_that_changed;
             ev.state = new_buttons[button_that_changed];
 
-            queue->send(&ev);
+            queue->sendLegacy(&ev);
           }
           // save
           for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)

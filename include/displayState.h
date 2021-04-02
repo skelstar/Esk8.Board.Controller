@@ -5,6 +5,8 @@
 #define TFT_DEFAULT_BG TFT_BLACK
 //------------------------------------------------------------
 
+BatteryInfo *remote;
+
 #include <FsmManager.h>
 #include <screens.h>
 #include <FeatureService.h>
@@ -141,7 +143,7 @@ namespace Display
       NULL, NULL);
   //---------------------------------------------------------------
   State stStopped(
-      DispState::STOPPED,
+      STOPPED_SCREEN,
       [] {
         // don't need UPDATE at this stage
         if (fsm_mgr.lastEvent() == DispState::UPDATE)
@@ -161,7 +163,7 @@ namespace Display
       NULL);
   //---------------------------------------------------------------
   State stMoving(
-      DispState::MOVING,
+      MOVING_SCREEN,
       [] {
         // don't need UPDATE at this stage
         if (fsm_mgr.lastEvent() == DispState::UPDATE)
@@ -255,6 +257,7 @@ namespace Display
 
     // REMOTE_BATTERY_CHANGED
     _fsm.add_transition(&stStopped, &stStopped, DispState::REMOTE_BATTERY_CHANGED, NULL);
+    _fsm.add_transition(&stateDisconnected, &stateDisconnected, DispState::REMOTE_BATTERY_CHANGED, NULL);
 
     // UPDATE
     _fsm.add_transition(&stStopped, &stStopped, DispState::UPDATE, NULL);

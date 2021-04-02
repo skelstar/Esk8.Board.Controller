@@ -64,6 +64,15 @@ void setUp()
   mutex_SPI.create("SPI", /*default*/ TICKS_50ms);
   mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
   mutex_I2C.enabled = true;
+
+  Wire.begin(); //Join I2C bus
+  // Wire.setClock(200000);
+
+  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
+  boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);
+
+  xStatsQueue = xQueueCreate(1, sizeof(StatsClass *));
+  statsQueue = new Queue::Manager(xStatsQueue, (TickType_t)5);
 }
 
 // runs every test
@@ -225,9 +234,6 @@ void test_run_debug_task()
 
 void test_run_all_tasks()
 {
-  Wire.begin(); //Join I2C bus
-  // Wire.begin(200000); //Join I2C bus
-
   QwiicButtonTask::mgr.create(QwiicButtonTask::task, CORE_0, PRIORITY_1);
   ThrottleTask::mgr.create(ThrottleTask::task, CORE_0, PRIORITY_1);
   NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, PRIORITY_1);
@@ -260,18 +266,9 @@ void test_run_all_tasks()
 
 void test_display_remote_battery()
 {
-  Wire.begin(); //Join I2C bus
-  Wire.setClock(200000);
-
-  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
-  boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);
-
-  xStatsQueue = xQueueCreate(1, sizeof(StatsClass *));
-  statsQueue = new Queue::Manager(xStatsQueue, (TickType_t)5);
-
-  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, PRIORITY_1, WITH_HEALTHCHECK);
-  Display::mgr.create(Display::task, CORE_0, PRIORITY_1, WITH_HEALTHCHECK);
-  Remote::mgr.create(Remote::task, CORE_0, PRIORITY_1, WITH_HEALTHCHECK);
+  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, PRIORITY_1);
+  Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
+  Remote::mgr.create(Remote::task, CORE_0, PRIORITY_1);
 
   Serial.printf("Waiting for tasks to start\n");
   while (!Display::mgr.ready || !NintendoClassicTask::mgr.ready || !Remote::mgr.ready)
@@ -283,10 +280,11 @@ void test_display_remote_battery()
   Serial.printf("Watch then click the button to end the test\n");
 
   unsigned long last_id = -1;
+  BoardClass board;
 
   while (1)
   {
-    if (since_checked_queue > 200)
+    if (since_checked_queue > 100)
     {
       since_checked_queue = 0;
 
@@ -295,8 +293,116 @@ void test_display_remote_battery()
       if (btn != nullptr && !btn->been_peeked(last_id))
       {
         last_id = btn->id;
-        if (btn->button == NintendoController::BUTTON_RIGHT && btn->state == NintendoController::BUTTON_PRESSED)
+        if ((btn->button == NintendoController::BUTTON_RIGHT ||
+             btn->button == NintendoController::BUTTON_UP ||
+             btn->button == NintendoController::BUTTON_DOWN) &&
+            btn->state == NintendoController::BUTTON_PRESSED)
         {
+          Serial.printf("Sending to boardPacketQueue\n");
+          VescData data;
+          if (btn->button == NintendoController::BUTTON_DOWN)
+          {
+            board.packet.moving = false;
+          }
+          else
+          {
+            data.moving = btn->button == NintendoController::BUTTON_UP;
+            data.id = last_id;
+            data.version = VERSION_BOARD_COMPAT;
+            board.save(data);
+          }
+          board.id++;
+          boardPacketQueue->sendLegacy(&board);
+          vTaskDelay(100);
+        }
+      }
+
+      if (btn != nullptr && btn->button == NintendoController::BUTTON_START)
+      {
+        TEST_ASSERT_TRUE(btn->state == NintendoController::BUTTON_PRESSED);
+      }
+    }
+
+    vTaskDelay(5);
+  }
+}
+
+void test_motor_current()
+{
+  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, PRIORITY_1);
+  Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
+  Remote::mgr.create(Remote::task, CORE_0, PRIORITY_1);
+
+  Serial.printf("Waiting for tasks to start\n");
+  while (!Display::mgr.ready || !NintendoClassicTask::mgr.ready || !Remote::mgr.ready)
+  {
+    vTaskDelay(5);
+  }
+
+  Serial.printf("Tasks ready\n");
+
+  Serial.printf("Watch then click the button to end the test\n");
+
+  VescData data;
+
+  BoardClass board;
+  data.moving = true;
+  data.version = VERSION_BOARD_COMPAT;
+  board.save(data);
+  board.id = 1;
+  boardPacketQueue->send(&board);
+
+  elapsedMillis since_sent_packet = 0;
+
+  while (since_sent_packet < 1000)
+  {
+    vTaskDelay(10);
+  }
+  since_sent_packet = 0;
+
+  data.moving = false;
+  board.save(data);
+  board.id++;
+  boardPacketQueue->send(&board);
+
+  unsigned long last_id = -1;
+
+  while (1)
+  {
+    if (since_sent_packet > 1000)
+    {
+      TEST_ASSERT_TRUE(Display::fsm_mgr.currentStateIs(Display::StateId::STOPPED_SCREEN));
+    }
+
+    if (since_checked_queue > 100)
+    {
+      since_checked_queue = 0;
+
+      NintendoButtonEvent *btn = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
+
+      if (btn != nullptr && !btn->been_peeked(last_id))
+      {
+        last_id = btn->id;
+        if ((btn->button == NintendoController::BUTTON_RIGHT ||
+             btn->button == NintendoController::BUTTON_UP ||
+             btn->button == NintendoController::BUTTON_DOWN) &&
+            btn->state == NintendoController::BUTTON_PRESSED)
+        {
+          Serial.printf("Sending to boardPacketQueue\n");
+          VescData data;
+          if (btn->button == NintendoController::BUTTON_DOWN)
+          {
+            board.packet.moving = false;
+          }
+          else
+          {
+            data.moving = btn->button == NintendoController::BUTTON_UP;
+            data.id = last_id;
+            data.version = VERSION_BOARD_COMPAT;
+            board.save(data);
+          }
+          board.id++;
+          boardPacketQueue->send(&board);
           vTaskDelay(100);
         }
       }
@@ -324,7 +430,8 @@ void setup()
   // RUN_TEST(test_magnetic_throttle_is_moved_greater_than_220);
   // RUN_TEST(test_run_debug_task);
   // RUN_TEST(test_run_all_tasks);
-  RUN_TEST(test_display_remote_battery);
+  // RUN_TEST(test_display_remote_battery);
+  RUN_TEST(test_motor_current);
 
   UNITY_END();
 }
