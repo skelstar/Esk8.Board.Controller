@@ -130,7 +130,6 @@ void sendToBoard();
 #include <tasks/core0/ThrottleTask.h>
 
 #if (USING_DISPLAY == 1)
-#include <screens.h>
 #include <displayState.h>
 #include <tasks/core0/displayTask.h>
 #endif
@@ -139,16 +138,6 @@ void sendToBoard();
 #include <tasks/core0/ledTask.h>
 #endif
 
-// namespace ShortLivedTask
-// {
-//   // elapsedMillis since_task_created;
-//   RTOSTaskManager mgr("ShortLivedTask", 3000, TASK_PRIORITY_0);
-//   void task(void *pvParameters);
-
-//   void createTask(uint8_t core, uint8_t priority);
-// }
-
-#include <tasks/core0/shortLivedTask.h>
 #if (USING_DEBUG_TASK == 1)
 #include <tasks/core0/debugTask.h>
 #endif
@@ -230,7 +219,6 @@ void setup()
 #if (USING_NINTENDO_BUTTONS == 1)
   NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, TASK_PRIORITY_0);
 #endif
-  ShortLivedTask::mgr.create(ShortLivedTask::task, CORE_0, TASK_PRIORITY_0);
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);

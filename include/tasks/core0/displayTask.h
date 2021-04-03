@@ -39,6 +39,11 @@ namespace Display
     elapsedMillis sinceReadDispEventQueue, since_checked_queue, since_fsm_update;
     unsigned long last_board_id = -1, last_classic_id = -1, last_batt_id = -1;
 
+    while (boardPacketQueue == nullptr)
+    {
+      vTaskDelay(10);
+    }
+
     mgr.ready = true;
     mgr.printReady();
 
@@ -61,19 +66,25 @@ namespace Display
           }
         }
 
-        NintendoButtonEvent *ev = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
-        if (ev != nullptr && ev->id != last_classic_id)
+        if (NintendoClassicTask::queue != nullptr)
         {
-          handle_nintendo_classic_event(ev);
-          last_classic_id = ev->id;
+          NintendoButtonEvent *ev = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
+          if (ev != nullptr && ev->id != last_classic_id)
+          {
+            handle_nintendo_classic_event(ev);
+            last_classic_id = ev->id;
+          }
         }
 
-        BatteryInfo *batt = Remote::queue->peek<BatteryInfo>(__func__);
-        if (batt != nullptr && !batt->been_peeked(last_batt_id))
+        if (Remote::queue != nullptr)
         {
-          last_batt_id = batt->id;
-          remote = new BatteryInfo(*batt);
-          fsm_mgr.trigger(DispState::REMOTE_BATTERY_CHANGED);
+          BatteryInfo *batt = Remote::queue->peek<BatteryInfo>(__func__);
+          if (batt != nullptr && !batt->been_peeked(last_batt_id))
+          {
+            last_batt_id = batt->id;
+            remote = new BatteryInfo(*batt);
+            fsm_mgr.trigger(DispState::REMOTE_BATTERY_CHANGED);
+          }
         }
       }
 

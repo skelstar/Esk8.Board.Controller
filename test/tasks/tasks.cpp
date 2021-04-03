@@ -25,12 +25,25 @@ MyMutex mutex_SPI;
 xQueueHandle xBoardPacketQueue;
 Queue::Manager *boardPacketQueue;
 
-xQueueHandle queueHandle;
-Queue::Manager *queue;
+// xQueueHandle queueHandle;
+// Queue::Manager *queue;
 
 xQueueHandle xStatsQueue;
 Queue::Manager *statsQueue;
 
+//----------------------------------
+#include <RF24Network.h>
+#include <NRF24L01Lib.h>
+#include <GenericClient.h>
+
+NRF24L01Lib nrf24;
+
+RF24 radio(NRF_CE, NRF_CS);
+RF24Network network(radio);
+
+#include <tasks/core0/BoardCommsTask.h>
+
+//----------------------------------
 #define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
 #define PRINT_THROTTLE 0
 
@@ -61,6 +74,8 @@ elapsedMillis since_checked_queue;
 // runs every test
 void setUp()
 {
+  nrf24.begin(&radio, &network, COMMS_CONTROLLER);
+
   mutex_SPI.create("SPI", /*default*/ TICKS_50ms);
   mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
   mutex_I2C.enabled = true;
@@ -417,6 +432,155 @@ void test_motor_current()
   }
 }
 
+void test_board_comms()
+{
+  Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
+  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4, WITH_HEALTHCHECK);
+
+  Serial.printf("Waiting for tasks to start\n");
+  while (!Display::mgr.ready || !BoardCommsTask::mgr.ready)
+  {
+    vTaskDelay(5);
+  }
+
+  Serial.printf("Tasks ready\n");
+
+  elapsedMillis since_mocked_board;
+
+  while (1)
+  {
+    if (since_checked_queue > 100)
+    {
+      since_checked_queue = 0;
+    }
+
+    if (since_mocked_board > 3000)
+    {
+      since_mocked_board = 0;
+    }
+
+    vTaskDelay(5);
+  }
+}
+
+void test_board_replies_with_same_id()
+{
+  Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
+  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4, WITH_HEALTHCHECK);
+
+  Serial.printf("Waiting for tasks to start\n");
+  while (!Display::mgr.ready || !BoardCommsTask::mgr.ready)
+  {
+    vTaskDelay(5);
+  }
+
+  Serial.printf("Tasks ready\n");
+
+  Serial.printf("----------------------------------\n");
+  Serial.printf("TEST: checking ids for 10 seconds \n");
+  Serial.printf("----------------------------------\n");
+
+  elapsedMillis since_test_started, since_checked_queue;
+  ulong last_id;
+
+  const unsigned long TEST_DURATION_IN_SECONDS = 20;
+  const unsigned long TEST_DURATION = 1000 * TEST_DURATION_IN_SECONDS;
+
+  while (since_test_started < TEST_DURATION)
+  {
+    if (since_checked_queue > 100)
+    {
+      since_checked_queue = 0;
+      BoardClass *response = boardPacketQueue->peek<BoardClass>(__func__);
+      if (response != nullptr)
+      {
+        Serial.printf("controller.id: %d response.id: %d\n",
+                      BoardCommsTask::controller_packet.id,
+                      response->packet.id);
+        //  && last_id != response->id
+        // TEST_ASSERT_EQUAL(BoardCommsTask::controller_packet.id, response->packet.id);
+        // TEST_ASSERT_TRUE(response->connected());
+      }
+    }
+
+    vTaskDelay(5);
+  }
+}
+
+void test_board_with_pings()
+{
+  Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
+
+  Serial.printf("Waiting for tasks to start\n");
+  while (!Display::mgr.ready)
+  {
+    vTaskDelay(5);
+  }
+
+  Serial.printf("Tasks ready\n");
+
+  elapsedMillis
+      since_sent_to_board,
+      since_check_board_queue;
+
+  ulong last_board_id = -1;
+
+  enum Stage
+  {
+    WAITING_FOR_FIRST_PACKET,
+    WAIT_FOR_CONFIG_RESP,
+    PACKET_AFTER_CONFIG_RESP,
+  } stage;
+
+  stage = WAITING_FOR_FIRST_PACKET;
+
+  Serial.printf("TEST: waiting for board to reset and send first packet\n");
+
+  since_check_board_queue = 200;
+
+  // start this late as poss
+  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4, WITH_HEALTHCHECK);
+
+  while (1)
+  {
+    if (since_check_board_queue > 100)
+    {
+      since_check_board_queue = 0;
+
+      BoardClass *board = boardPacketQueue->peek<BoardClass>(__func__);
+      if (board != nullptr && board->id != last_board_id)
+      {
+        last_board_id = board->id;
+
+        switch (stage)
+        {
+        case WAITING_FOR_FIRST_PACKET:
+          if (board->packet.reason == CONFIG_RESPONSE)
+          {
+            stage = WAIT_FOR_CONFIG_RESP;
+            DEBUG("TEST: Got first packet, waiting for config response");
+          }
+          break;
+        case WAIT_FOR_CONFIG_RESP:
+          if (board->packet.reason == CONFIG_RESPONSE)
+          {
+            stage = PACKET_AFTER_CONFIG_RESP;
+            DEBUG("TEST: Got config response, running tests");
+          }
+          break;
+        case PACKET_AFTER_CONFIG_RESP:
+          // this packet will be normal, check id
+          TEST_ASSERT_EQUAL(ReasonType::RESPONSE, board->packet.reason);
+          TEST_ASSERT_EQUAL(BoardCommsTask::controller_packet.id, board->packet.id);
+          break;
+        }
+      }
+    }
+
+    vTaskDelay(5);
+  }
+}
+
 void setup()
 {
   delay(2000);
@@ -431,7 +595,10 @@ void setup()
   // RUN_TEST(test_run_debug_task);
   // RUN_TEST(test_run_all_tasks);
   // RUN_TEST(test_display_remote_battery);
-  RUN_TEST(test_motor_current);
+  // RUN_TEST(test_motor_current);
+  // RUN_TEST(test_board_comms);
+  RUN_TEST(test_board_replies_with_same_id);
+  // RUN_TEST(test_board_with_pings);
 
   UNITY_END();
 }
