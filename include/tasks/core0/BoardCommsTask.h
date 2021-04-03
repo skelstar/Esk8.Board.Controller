@@ -15,7 +15,11 @@ namespace BoardCommsTask
 
   BoardClass board;
 
-  elapsedMillis sinceBoardConnected;
+  const unsigned long CHECK_COMMS_RX_INTERVAL = 50;
+
+  elapsedMillis
+      since_sent_to_board = SEND_TO_BOARD_INTERVAL - 500,
+      since_checked_comms = 0;
 
   //----------------------------------------------------------
   void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
@@ -28,48 +32,37 @@ namespace BoardCommsTask
       DEBUG("*** board's first packet!! ***");
 
       sendConfigToBoard();
-
-      sinceBoardConnected = 0;
     }
     else if (packet.reason == CONFIG_RESPONSE)
     {
       Serial.printf("CONFIG_RESPONSE id: %lu\n", packet.id);
     }
-
     boardPacketQueue->send(&board);
   }
   //----------------------------------------------------------
   void sendConfigToBoard()
   {
     controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
+    controller_packet.id++;
+    controller_packet.acknowledged = false;
     controller_config.id = controller_packet.id;
 
     bool success = boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);
     if (success == false)
       Serial.printf("Unable to send CONFIG packet to board id: %lu\n", controller_packet.id);
-    controller_packet.id++;
   }
   //----------------------------------------------------------
   void sendPacketToBoard()
   {
+    controller_packet.id++;
+    controller_packet.acknowledged = false;
     bool success = boardClient.sendTo(Packet::CONTROL, controller_packet);
     if (success == false)
       Serial.printf("Unable to send CONTROL packet to board id: %lu\n", controller_packet.id);
-    controller_packet.id++;
   }
   //----------------------------------------------------------
 
   RTOSTaskManager mgr("BoardCommsTask", 10000);
-
-  xQueueHandle queueHandle;
-  Queue::Manager *queue = nullptr;
-
-  const unsigned long CHECK_BOARD_CLIENT_INTERVAL = 100;
-  const unsigned long CHECK_BOARD_CLIENT_DELAY = 50;
-
-  elapsedMillis
-      since_checked_comms,
-      since_sent_to_board = 0 + CHECK_BOARD_CLIENT_DELAY; // 50ms ahead of sending
 
   //--------------------------------------------------------
   void task(void *pvParameters)
@@ -88,15 +81,20 @@ namespace BoardCommsTask
       if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
       {
         since_sent_to_board = 0;
+
         sendPacketToBoard();
       }
 
-      if (since_checked_comms > SEND_TO_BOARD_INTERVAL)
+      if (since_checked_comms > CHECK_COMMS_RX_INTERVAL)
       {
         since_checked_comms = 0;
 
         bool new_packet = boardClient.update();
 
+        if (!controller_packet.acknowledged && board.packet.id == controller_packet.id)
+        {
+          controller_packet.acknowledged = true;
+        }
         boardPacketQueue->send(&board);
 
         if (!board.connected())
@@ -105,7 +103,7 @@ namespace BoardCommsTask
         }
       }
 
-      // mgr.healthCheck(10000);
+      mgr.healthCheck(10000);
 
       vTaskDelay(10);
     }

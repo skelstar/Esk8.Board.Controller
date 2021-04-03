@@ -33,6 +33,8 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 {
   sinceLastBoardPacketRx = 0;
 
+  Serial.printf("nrf_comms\n");
+
   // TODO read needs to send back a true/false
   // maybe pass in reference to packet to be populated
   VescData packet = boardClient.read();
@@ -40,7 +42,6 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   board.save(packet);
 
   // send to other tasks
-  board.id++;
   if (boardPacketQueue != NULL)
     boardPacketQueue->send(&board);
 

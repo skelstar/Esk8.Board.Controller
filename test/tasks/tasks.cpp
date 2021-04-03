@@ -377,7 +377,6 @@ void test_motor_current()
 
   data.moving = false;
   board.save(data);
-  board.id++;
   boardPacketQueue->send(&board);
 
   unsigned long last_id = -1;
@@ -416,7 +415,6 @@ void test_motor_current()
             data.version = VERSION_BOARD_COMPAT;
             board.save(data);
           }
-          board.id++;
           boardPacketQueue->send(&board);
           vTaskDelay(100);
         }
@@ -466,7 +464,7 @@ void test_board_comms()
 void test_board_replies_with_same_id()
 {
   Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
-  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4, WITH_HEALTHCHECK);
+  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4);
 
   Serial.printf("Waiting for tasks to start\n");
   while (!Display::mgr.ready || !BoardCommsTask::mgr.ready)
@@ -476,30 +474,36 @@ void test_board_replies_with_same_id()
 
   Serial.printf("Tasks ready\n");
 
-  Serial.printf("----------------------------------\n");
-  Serial.printf("TEST: checking ids for 10 seconds \n");
-  Serial.printf("----------------------------------\n");
-
-  elapsedMillis since_test_started, since_checked_queue;
-  ulong last_id;
-
-  const unsigned long TEST_DURATION_IN_SECONDS = 20;
+  const unsigned long TEST_DURATION_IN_SECONDS = 60;
   const unsigned long TEST_DURATION = 1000 * TEST_DURATION_IN_SECONDS;
+
+  Serial.printf("----------------------------------\n");
+  Serial.printf("TEST: checking response id matches sent id for %d seconds \n", TEST_DURATION_IN_SECONDS);
+  Serial.printf("----------------------------------\n");
+
+  elapsedMillis since_test_started, since_checked_queue, since_last_id_change;
+
+  unsigned long last_packet_id = -1;
 
   while (since_test_started < TEST_DURATION)
   {
-    if (since_checked_queue > 100)
+    if (since_checked_queue > SEND_TO_BOARD_INTERVAL)
     {
       since_checked_queue = 0;
       BoardClass *response = boardPacketQueue->peek<BoardClass>(__func__);
       if (response != nullptr)
       {
-        Serial.printf("controller.id: %d response.id: %d\n",
-                      BoardCommsTask::controller_packet.id,
-                      response->packet.id);
-        //  && last_id != response->id
-        // TEST_ASSERT_EQUAL(BoardCommsTask::controller_packet.id, response->packet.id);
-        // TEST_ASSERT_TRUE(response->connected());
+        if (last_packet_id != response->packet.id)
+        {
+          since_last_id_change = 0;
+          Serial.printf("Packet %lu acknowledged: %s\n",
+                        response->packet.id,
+                        BoardCommsTask::controller_packet.acknowledged ? "TRUE" : "FALSE");
+          // check previous packet acknowledged
+          TEST_ASSERT_TRUE(BoardCommsTask::controller_packet.acknowledged);
+
+          last_packet_id = response->packet.id;
+        }
       }
     }
 
