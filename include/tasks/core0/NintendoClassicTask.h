@@ -62,7 +62,7 @@ namespace NintendoClassicTask
             // something changed, send
             event_id++;
 
-            ev.id = event_id;
+            ev.event_id = event_id;
             ev.button = button_that_changed;
             ev.state = new_buttons[button_that_changed];
 

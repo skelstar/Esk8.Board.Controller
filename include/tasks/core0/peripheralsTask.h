@@ -20,10 +20,10 @@ namespace nsPeripherals
     if (qwiic != nullptr && !qwiic->been_peeked(last_qwiic_id))
     {
       if (qwiic->missed_packet(last_qwiic_id))
-        Serial.printf("[PERIPHERALS_TASK] missed at least one qwiic packet! (id: %lu, last: %lu)\n", qwiic->id, last_qwiic_id);
+        Serial.printf("[PERIPHERALS_TASK] missed at least one qwiic packet! (id: %lu, last: %lu)\n", qwiic->event_id, last_qwiic_id);
 
       myperipherals->primary_button = qwiic->pressed;
-      last_qwiic_id = qwiic->id;
+      last_qwiic_id = qwiic->event_id;
     }
   }
 

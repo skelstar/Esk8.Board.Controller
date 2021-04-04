@@ -54,9 +54,9 @@ namespace ThrottleTask
         since_checked_throttle = 0;
 
         QwiicButtonState *button = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
-        if (button != nullptr && !button->been_peeked(primary_button.id))
+        if (button != nullptr && !button->been_peeked(primary_button.event_id))
         {
-          primary_button.id = button->id;
+          primary_button.event_id = button->event_id;
           primary_button.pressed = button->pressed;
         }
 
@@ -65,7 +65,7 @@ namespace ThrottleTask
         uint8_t raw_throttle = MagneticThrottle::get();
         if (raw_throttle != throttle.val)
         {
-          throttle.id++;
+          throttle.event_id++;
           throttle.val = raw_throttle;
           queue->send<ThrottleState>(&throttle);
         }

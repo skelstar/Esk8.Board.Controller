@@ -69,10 +69,10 @@ namespace Display
         if (NintendoClassicTask::queue != nullptr)
         {
           NintendoButtonEvent *ev = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
-          if (ev != nullptr && ev->id != last_classic_id)
+          if (ev != nullptr && ev->event_id != last_classic_id)
           {
             handle_nintendo_classic_event(ev);
-            last_classic_id = ev->id;
+            last_classic_id = ev->event_id;
           }
         }
 
@@ -81,9 +81,9 @@ namespace Display
           BatteryInfo *batt = Remote::queue->peek<BatteryInfo>(__func__);
           if (batt != nullptr && !batt->been_peeked(last_batt_id))
           {
-            last_batt_id = batt->id;
+            last_batt_id = batt->event_id;
             remote = new BatteryInfo(*batt);
-            fsm_mgr.trigger(DispState::REMOTE_BATTERY_CHANGED);
+            fsm_mgr.trigger(DispState::TR_REMOTE_BATTERY_CHANGED);
           }
         }
       }
@@ -111,9 +111,9 @@ namespace Display
   void printTrigger(uint16_t ev)
   {
     if (PRINT_DISP_STATE_EVENT &&
-        !(_fsm.revisit() && ev == DispState::STOPPED) &&
-        !(_fsm.revisit() && ev == DispState::MOVING) &&
-        !(_fsm.getCurrentStateId() == Display::OPTION_PUSH_TO_START && ev == DispState::STOPPED))
+        !(_fsm.revisit() && ev == DispState::TR_STOPPED) &&
+        !(_fsm.revisit() && ev == DispState::TR_MOVING) &&
+        !(_fsm.getCurrentStateId() == Display::ST_OPTION_PUSH_TO_START && ev == DispState::TR_STOPPED))
       Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "DISP", DispState::getTrigger(ev));
   }
 
@@ -124,27 +124,28 @@ namespace Display
     // Serial.println();
 
     if (board->packet.version != (float)VERSION_BOARD_COMPAT &&
-        !fsm_mgr.currentStateIs(BOARD_VERSION_DOESNT_MATCH_SCREEN))
+        !fsm_mgr.currentStateIs(ST_BOARD_VERSION_DOESNT_MATCH_SCREEN))
     {
-      fsm_mgr.trigger(DispState::VERSION_DOESNT_MATCH);
+      Serial.printf("%.1f %.1f\n", board->packet.version, (float)VERSION_BOARD_COMPAT);
+      fsm_mgr.trigger(DispState::TR_VERSION_DOESNT_MATCH);
     }
     else if (board->connected())
     {
       if (board->isMoving())
-        fsm_mgr.trigger(DispState::Trigger::MOVING);
+        fsm_mgr.trigger(DispState::Trigger::TR_MOVING);
       else if (board->isStopped())
-        fsm_mgr.trigger(DispState::Trigger::STOPPED);
+        fsm_mgr.trigger(DispState::Trigger::TR_STOPPED);
     }
     else
       // offline
-      fsm_mgr.trigger(DispState::DISCONNECTED);
+      fsm_mgr.trigger(DispState::TR_DISCONNECTED);
   }
 
   DispState::Trigger mapToTrigger(uint8_t *buttons)
   {
     if (buttons[NintendoController::BUTTON_START] == NintendoController::BUTTON_PRESSED)
-      return DispState::MENU_BUTTON_CLICKED;
-    return DispState::NO_EVENT;
+      return DispState::TR_MENU_BUTTON_CLICKED;
+    return DispState::TR_NO_EVENT;
   }
 
   DispState::Trigger mapToTrigger(uint8_t button, uint8_t state)
@@ -152,15 +153,15 @@ namespace Display
     switch (button)
     {
     case NintendoController::BUTTON_START:
-      return state == 1 ? DispState::MENU_BUTTON_CLICKED : DispState::NO_EVENT; // only on press
+      return state == 1 ? DispState::TR_MENU_BUTTON_CLICKED : DispState::TR_NO_EVENT; // only on press
     }
-    return DispState::NO_EVENT;
+    return DispState::TR_NO_EVENT;
   }
 
   void handle_nintendo_classic_event(NintendoButtonEvent *ev)
   {
     DispState::Trigger tr = mapToTrigger(ev->button, ev->state);
-    if (tr != DispState::NO_EVENT)
+    if (tr != DispState::TR_NO_EVENT)
       fsm_mgr.trigger(tr);
   }
 } // namespace Display

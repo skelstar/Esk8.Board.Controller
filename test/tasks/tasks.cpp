@@ -25,8 +25,17 @@ MyMutex mutex_SPI;
 xQueueHandle xBoardPacketQueue;
 Queue::Manager *boardPacketQueue;
 
-// xQueueHandle queueHandle;
-// Queue::Manager *queue;
+xQueueHandle xSendToBoardQueueHandle;
+Queue::Manager *sendToBoardQueue;
+
+xQueueHandle xBoardStateQueueHandle;
+Queue::Manager *packetStateQueue;
+
+class SendToBoardNotf : public QueueBase
+{
+public:
+  const char *name;
+};
 
 xQueueHandle xStatsQueue;
 Queue::Manager *statsQueue;
@@ -42,6 +51,7 @@ RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
 #include <tasks/core0/BoardCommsTask.h>
+#include <tasks/core0/SendToBoardTimerTask.h>
 
 //----------------------------------
 #define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
@@ -88,6 +98,12 @@ void setUp()
 
   xStatsQueue = xQueueCreate(1, sizeof(StatsClass *));
   statsQueue = new Queue::Manager(xStatsQueue, (TickType_t)5);
+
+  xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf *));
+  sendToBoardQueue = new Queue::Manager(xSendToBoardQueueHandle, (TickType_t)5);
+
+  xBoardStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
+  packetStateQueue = new Queue::Manager(xBoardStateQueueHandle, (TickType_t)5);
 }
 
 // runs every test
@@ -203,7 +219,7 @@ void test_magnetic_throttle_is_moved_greater_than_220()
       {
         Serial.printf("Throttle changed %d\n", actual->val);
         throttle = actual->val;
-        last_id = actual->id;
+        last_id = actual->event_id;
       }
     }
 
@@ -307,7 +323,7 @@ void test_display_remote_battery()
 
       if (btn != nullptr && !btn->been_peeked(last_id))
       {
-        last_id = btn->id;
+        last_id = btn->event_id;
         if ((btn->button == NintendoController::BUTTON_RIGHT ||
              btn->button == NintendoController::BUTTON_UP ||
              btn->button == NintendoController::BUTTON_DOWN) &&
@@ -385,7 +401,7 @@ void test_motor_current()
   {
     if (since_sent_packet > 1000)
     {
-      TEST_ASSERT_TRUE(Display::fsm_mgr.currentStateIs(Display::StateId::STOPPED_SCREEN));
+      TEST_ASSERT_TRUE(Display::fsm_mgr.currentStateIs(Display::StateId::ST_STOPPED_SCREEN));
     }
 
     if (since_checked_queue > 100)
@@ -396,7 +412,7 @@ void test_motor_current()
 
       if (btn != nullptr && !btn->been_peeked(last_id))
       {
-        last_id = btn->id;
+        last_id = btn->event_id;
         if ((btn->button == NintendoController::BUTTON_RIGHT ||
              btn->button == NintendoController::BUTTON_UP ||
              btn->button == NintendoController::BUTTON_DOWN) &&
@@ -463,11 +479,16 @@ void test_board_comms()
 
 void test_board_replies_with_same_id()
 {
-  Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
+  // Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
   BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4);
+  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, CORE_1, PRIORITY_3);
 
   Serial.printf("Waiting for tasks to start\n");
-  while (!Display::mgr.ready || !BoardCommsTask::mgr.ready)
+
+  while (
+      // !Display::mgr.ready ||
+      !BoardCommsTask::mgr.ready ||
+      !SendToBoardTimerTask::mgr.ready)
   {
     vTaskDelay(5);
   }
@@ -478,105 +499,81 @@ void test_board_replies_with_same_id()
   const unsigned long TEST_DURATION = 1000 * TEST_DURATION_IN_SECONDS;
 
   Serial.printf("----------------------------------\n");
-  Serial.printf("TEST: checking response id matches sent id for %d seconds \n", TEST_DURATION_IN_SECONDS);
+  Serial.printf("TEST: checking response id matches\n");
+  Serial.printf("sent id for %d seconds \n", TEST_DURATION_IN_SECONDS);
   Serial.printf("----------------------------------\n");
 
-  elapsedMillis since_test_started, since_checked_queue, since_last_id_change;
+  elapsedMillis since_test_started;
 
-  unsigned long last_packet_id = -1;
+  unsigned long last_pkt_id = -1;
 
   while (since_test_started < TEST_DURATION)
   {
-    if (since_checked_queue > SEND_TO_BOARD_INTERVAL)
+    PacketState *packet = packetStateQueue->peek<PacketState>(__func__);
+    if (packet != nullptr && packet->event_id != last_pkt_id)
     {
-      since_checked_queue = 0;
-      BoardClass *response = boardPacketQueue->peek<BoardClass>(__func__);
-      if (response != nullptr)
-      {
-        if (last_packet_id != response->packet.id)
-        {
-          since_last_id_change = 0;
-          Serial.printf("Packet %lu acknowledged: %s\n",
-                        response->packet.id,
-                        BoardCommsTask::controller_packet.acknowledged ? "TRUE" : "FALSE");
-          // check previous packet acknowledged
-          TEST_ASSERT_TRUE(BoardCommsTask::controller_packet.acknowledged);
+      last_pkt_id = packet->event_id;
 
-          last_packet_id = response->packet.id;
-        }
-      }
+      TEST_ASSERT_TRUE_MESSAGE(packet->connected(), "Either ids don't match or reply has timed out");
     }
 
-    vTaskDelay(5);
+    vTaskDelay(10);
   }
 }
 
-void test_board_with_pings()
+void test_disp_showing_stopped_when_board_responding()
 {
   Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
+  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4);
+  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, CORE_1, PRIORITY_3);
 
   Serial.printf("Waiting for tasks to start\n");
-  while (!Display::mgr.ready)
+  while (!Display::mgr.ready ||
+         !BoardCommsTask::mgr.ready ||
+         !SendToBoardTimerTask::mgr.ready)
   {
     vTaskDelay(5);
   }
-
   Serial.printf("Tasks ready\n");
 
   elapsedMillis
       since_sent_to_board,
       since_check_board_queue;
 
-  ulong last_board_id = -1;
+  ulong last_board_id = -1, last_pkt_id = -1;
 
-  enum Stage
-  {
-    WAITING_FOR_FIRST_PACKET,
-    WAIT_FOR_CONFIG_RESP,
-    PACKET_AFTER_CONFIG_RESP,
-  } stage;
-
-  stage = WAITING_FOR_FIRST_PACKET;
-
-  Serial.printf("TEST: waiting for board to reset and send first packet\n");
-
-  since_check_board_queue = 200;
-
-  // start this late as poss
-  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4, WITH_HEALTHCHECK);
+  Serial.printf("----------------------------------------------------------------\n");
+  Serial.printf("TEST: checking display showing 'Stopped' when  board responding \n");
+  Serial.printf("----------------------------------------------------------------\n");
 
   while (1)
   {
-    if (since_check_board_queue > 100)
+    if (since_check_board_queue > PERIOD_50MS)
     {
       since_check_board_queue = 0;
+
+      PacketState *packet = packetStateQueue->peek<PacketState>(__func__);
+      if (packet != nullptr && packet->event_id != last_pkt_id)
+      {
+        last_pkt_id = packet->event_id;
+      }
 
       BoardClass *board = boardPacketQueue->peek<BoardClass>(__func__);
       if (board != nullptr && board->id != last_board_id)
       {
         last_board_id = board->id;
-
-        switch (stage)
+        if (board->packet.id == board->sent_id && board->packet.id == 4)
         {
-        case WAITING_FOR_FIRST_PACKET:
-          if (board->packet.reason == CONFIG_RESPONSE)
-          {
-            stage = WAIT_FOR_CONFIG_RESP;
-            DEBUG("TEST: Got first packet, waiting for config response");
-          }
-          break;
-        case WAIT_FOR_CONFIG_RESP:
-          if (board->packet.reason == CONFIG_RESPONSE)
-          {
-            stage = PACKET_AFTER_CONFIG_RESP;
-            DEBUG("TEST: Got config response, running tests");
-          }
-          break;
-        case PACKET_AFTER_CONFIG_RESP:
-          // this packet will be normal, check id
-          TEST_ASSERT_EQUAL(ReasonType::RESPONSE, board->packet.reason);
-          TEST_ASSERT_EQUAL(BoardCommsTask::controller_packet.id, board->packet.id);
-          break;
+          // responding
+          Serial.printf("Tested state: %s\n", Display::stateID(Display::_fsm.getCurrentStateId()));
+          TEST_ASSERT_TRUE_MESSAGE(
+              Display::_fsm.getCurrentStateId() == Display::ST_STOPPED_SCREEN,
+              "Display not showing STOPPED_SCREEN");
+        }
+        else if (board->sent_id > 1)
+        {
+          TEST_ASSERT_TRUE_MESSAGE(board->packet.id == board->sent_id,
+                                   "board->packet.id <> board->sent_id");
         }
       }
     }
@@ -602,7 +599,7 @@ void setup()
   // RUN_TEST(test_motor_current);
   // RUN_TEST(test_board_comms);
   RUN_TEST(test_board_replies_with_same_id);
-  // RUN_TEST(test_board_with_pings);
+  // RUN_TEST(test_disp_showing_stopped_when_board_responding);
 
   UNITY_END();
 }

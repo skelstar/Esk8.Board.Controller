@@ -25,67 +25,6 @@ enum ButtonClickType
 #define TICKS_100ms 100 / portTICK_PERIOD_MS
 
 //------------------------------------------------------------
-// namespace DispState
-// {
-//   enum Trigger
-//   {
-//     NO_EVENT = 0,
-//     CONNECTED,
-//     DISCONNECTED,
-//     STOPPED,
-//     MOVING,
-//     UPDATE,
-//     REMOTE_BATTERY_CHANGED,
-//     SELECT_BUTTON_CLICK,
-//     PRIMARY_DOUBLE_CLICK,
-//     PRIMARY_TRIPLE_CLICK,
-//     PRIMARY_LONG_PRESS,
-//     VERSION_DOESNT_MATCH,
-//     RIGHT_BUTTON_CLICKED,
-//     MENU_BUTTON_CLICKED,
-//     OPTION_TIMED_OUT,
-//   };
-
-//   const char *getTrigger(int ev)
-//   {
-//     switch (ev)
-//     {
-//     case NO_EVENT:
-//       return "NO_EVENT";
-//     case CONNECTED:
-//       return "CONNECTED";
-//     case DISCONNECTED:
-//       return "DISCONNECTED";
-//     case STOPPED:
-//       return "STOPPED";
-//     case MOVING:
-//       return "MOVING";
-//     case UPDATE:
-//       return "UPDATE";
-//     case REMOTE_BATTERY_CHANGED:
-//       return "REMOTE_BATTERY_CHANGED";
-//     case SELECT_BUTTON_CLICK:
-//       return "SELECT_BUTTON_CLICK";
-//     case PRIMARY_DOUBLE_CLICK:
-//       return "PRIMARY_DOUBLE_CLICK";
-//     case PRIMARY_TRIPLE_CLICK:
-//       return "PRIMARY_TRIPLE_CLICK";
-//     case PRIMARY_LONG_PRESS:
-//       return "PRIMARY_LONG_PRESS";
-//     case VERSION_DOESNT_MATCH:
-//       return "VERSION_DOESNT_MATCH";
-//     case RIGHT_BUTTON_CLICKED:
-//       return "RIGHT_BUTTON_CLICKED";
-//     case MENU_BUTTON_CLICKED:
-//       return "MENU_BUTTON_CLICKED";
-//     case OPTION_TIMED_OUT:
-//       return "OPTION_TIMED_OUT";
-//     }
-//     return OUT_OF_RANGE;
-//   }
-// } // namespace DispState
-
-//------------------------------------------------------------
 
 namespace Comms
 {

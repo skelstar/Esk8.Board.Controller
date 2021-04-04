@@ -2,24 +2,34 @@
 
 GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
 
+#define PERIOD_10MS 10
+#define PERIOD_20MS 20
+#define PERIOD_30MS 30
+#define PERIOD_40MS 40
+#define PERIOD_50MS 50
+#define PERIOD_100MS 100
+#define PERIOD_200MS 200
+
 namespace BoardCommsTask
 {
   // prototypes
   void boardPacketAvailable_cb(uint16_t from_id, uint8_t t);
   void boardClientInit();
-  void sendConfigToBoard();
-  void sendPacketToBoard();
+  void sendConfigToBoard(bool print = false);
+  void sendPacketToBoard(bool print = false);
 
   ControllerConfig controller_config;
   ControllerData controller_packet;
 
   BoardClass board;
+  PacketState packetState;
 
   const unsigned long CHECK_COMMS_RX_INTERVAL = 50;
 
   elapsedMillis
-      since_sent_to_board = SEND_TO_BOARD_INTERVAL - 500,
-      since_checked_comms = 0;
+      // since_sent_to_board = SEND_TO_BOARD_INTERVAL - 500,
+      since_checked_comms = 0,
+      since_check_send_notf_queue;
 
   //----------------------------------------------------------
   void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
@@ -27,36 +37,49 @@ namespace BoardCommsTask
     VescData packet = boardClient.read();
     board.save(packet);
 
-    if (packet.reason == FIRST_PACKET)
-    {
-      DEBUG("*** board's first packet!! ***");
-
-      sendConfigToBoard();
-    }
-    else if (packet.reason == CONFIG_RESPONSE)
+    if (packet.reason == CONFIG_RESPONSE)
     {
       Serial.printf("CONFIG_RESPONSE id: %lu\n", packet.id);
     }
     boardPacketQueue->send(&board);
+
+    packetState.received(packet);
+    packetStateQueue->send(&packetState);
   }
   //----------------------------------------------------------
-  void sendConfigToBoard()
+  void sendConfigToBoard(bool print)
   {
     controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
     controller_packet.id++;
     controller_packet.acknowledged = false;
     controller_config.id = controller_packet.id;
 
+    if (print)
+      Serial.printf("Sending CONFIG id: %lu\n", controller_config.id);
+
     bool success = boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);
+
+    packetState.sent(controller_config);
+    packetStateQueue->send(&packetState, "sendConfigToBoard");
+
     if (success == false)
       Serial.printf("Unable to send CONFIG packet to board id: %lu\n", controller_packet.id);
   }
   //----------------------------------------------------------
-  void sendPacketToBoard()
+  void sendPacketToBoard(bool print)
   {
     controller_packet.id++;
     controller_packet.acknowledged = false;
+
+    if (print)
+      Serial.printf("Sending CONTROL id: %lu\n", controller_packet.id);
+
     bool success = boardClient.sendTo(Packet::CONTROL, controller_packet);
+
+    packetState.sent(controller_packet);
+
+    packetStateQueue->send(&packetState, "sendPacketToBoard");
+
     if (success == false)
       Serial.printf("Unable to send CONTROL packet to board id: %lu\n", controller_packet.id);
   }
@@ -64,7 +87,8 @@ namespace BoardCommsTask
 
   RTOSTaskManager mgr("BoardCommsTask", 10000);
 
-  //--------------------------------------------------------
+  //==========================================================
+
   void task(void *pvParameters)
   {
     mgr.printStarted();
@@ -76,31 +100,30 @@ namespace BoardCommsTask
     mgr.ready = true;
     mgr.printReady();
 
+    unsigned long notf_id = -1;
+
     while (true)
     {
-      if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
+      // check sendToBoardQueue for when to send packet to board
+      if (since_check_send_notf_queue > PERIOD_10MS)
       {
-        since_sent_to_board = 0;
+        SendToBoardNotf *notf = sendToBoardQueue->peek<SendToBoardNotf>(__func__);
+        if (notf != nullptr && !notf->been_peeked(notf_id))
+        {
+          notf_id = notf->event_id;
 
-        sendPacketToBoard();
+          sendPacketToBoard();
+        }
       }
 
-      if (since_checked_comms > CHECK_COMMS_RX_INTERVAL)
+      // check for incoming packets
+      if (since_checked_comms > PERIOD_100MS)
       {
         since_checked_comms = 0;
 
         bool new_packet = boardClient.update();
 
-        if (!controller_packet.acknowledged && board.packet.id == controller_packet.id)
-        {
-          controller_packet.acknowledged = true;
-        }
-        boardPacketQueue->send(&board);
-
-        if (!board.connected())
-        {
-          Serial.printf("Board might be offline\n");
-        }
+        packetStateQueue->send(&packetState);
       }
 
       mgr.healthCheck(10000);

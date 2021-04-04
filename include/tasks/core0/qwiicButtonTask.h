@@ -50,7 +50,7 @@ namespace QwiicButtonTask
     queue = new Queue::Manager(queueHandle, (TickType_t)5);
 
     state.pressed = qwiicButton.isPressed();
-    state.id = 0;
+    state.event_id = 0;
 
     mgr.ready = true;
     mgr.printReady();
@@ -59,7 +59,7 @@ namespace QwiicButtonTask
     vTaskDelay(1000);
 
     queue->sendLegacy(&state);
-    state.id++;
+    state.event_id++;
 
     while (true)
     {
@@ -79,7 +79,7 @@ namespace QwiicButtonTask
         {
           state.pressed = pressed;
           queue->sendLegacy(&state);
-          state.id++;
+          state.event_id++;
         }
       }
 

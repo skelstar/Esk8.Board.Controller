@@ -35,7 +35,7 @@ namespace Debug
         NintendoButtonEvent *ev = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
         if (ev != nullptr && !ev->been_peeked(last_id))
         {
-          last_id = ev->id;
+          last_id = ev->event_id;
           if (ev->button == NintendoController::BUTTON_RIGHT && ev->state == NintendoController::BUTTON_PRESSED)
           {
             // ShortLivedTask::mgr.create(ShortLivedTask::task, CORE_0);
@@ -51,7 +51,7 @@ namespace Debug
         QwiicButtonState *qwiic = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
         if (qwiic != nullptr && !qwiic->been_peeked(qwiic_id))
         {
-          qwiic_id = qwiic->id;
+          qwiic_id = qwiic->event_id;
           if (qwiic->pressed == true)
           {
             NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, TASK_PRIORITY_1);

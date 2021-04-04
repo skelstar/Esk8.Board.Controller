@@ -275,10 +275,10 @@ void loop()
     if (throttle != nullptr && !throttle->been_peeked(last_throttle_id))
     {
       if (throttle->missed_packet(last_throttle_id))
-        Serial.printf("[MAIN_LOOP] missed at least one throttle packet! (id: %lu, last: %lu)\n", throttle->id, last_throttle_id);
+        Serial.printf("[MAIN_LOOP] missed at least one throttle packet! (id: %lu, last: %lu)\n", throttle->event_id, last_throttle_id);
 
       controller_packet.throttle = throttle->val;
-      last_throttle_id = throttle->id;
+      last_throttle_id = throttle->event_id;
     }
   }
 
