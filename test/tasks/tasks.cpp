@@ -43,7 +43,7 @@ Queue::Manager *statsQueue;
 //----------------------------------
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
-#include <GenericClient.h>
+#include <MockGenericClient.h>
 
 NRF24L01Lib nrf24;
 
@@ -582,6 +582,54 @@ void test_disp_showing_stopped_when_board_responding()
   }
 }
 
+void test_mocked_board()
+{
+  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4);
+  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, CORE_1, PRIORITY_3);
+
+  // pass in controller_packet
+  BoardCommsTask::boardClient.mockResponseCallback([](ControllerData out) {
+    VescData mockresp;
+    mockresp.id = out.id;
+    return mockresp;
+  });
+
+  Serial.printf("Waiting for tasks to start\n");
+
+  while (
+      // !Display::mgr.ready ||
+      !BoardCommsTask::mgr.ready ||
+      !SendToBoardTimerTask::mgr.ready)
+  {
+    vTaskDelay(5);
+  }
+
+  Serial.printf("Tasks ready\n");
+
+  const unsigned long TEST_DURATION_IN_SECONDS = 60;
+  const unsigned long TEST_DURATION = 1000 * TEST_DURATION_IN_SECONDS;
+
+  Serial.printf("----------------------------------\n");
+  Serial.printf("TEST: mock response received\n");
+  Serial.printf("----------------------------------\n");
+
+  elapsedMillis since_test_started;
+
+  unsigned long last_pkt_id = -1;
+
+  while (since_test_started < TEST_DURATION)
+  {
+    PacketState *packet = packetStateQueue->peek<PacketState>(__func__);
+    if (packet != nullptr && packet->event_id != last_pkt_id)
+    {
+      last_pkt_id = packet->event_id;
+
+      TEST_ASSERT_TRUE_MESSAGE(packet->connected(), "Either ids don't match or reply has timed out");
+    }
+
+    vTaskDelay(10);
+  }
+}
 void setup()
 {
   delay(2000);
@@ -598,8 +646,9 @@ void setup()
   // RUN_TEST(test_display_remote_battery);
   // RUN_TEST(test_motor_current);
   // RUN_TEST(test_board_comms);
-  RUN_TEST(test_board_replies_with_same_id);
+  // RUN_TEST(test_board_replies_with_same_id);
   // RUN_TEST(test_disp_showing_stopped_when_board_responding);
+  RUN_TEST(test_mocked_board);
 
   UNITY_END();
 }

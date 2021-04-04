@@ -1,7 +1,5 @@
 
 
-GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
-
 #define PERIOD_10MS 10
 #define PERIOD_20MS 20
 #define PERIOD_30MS 30
@@ -12,6 +10,8 @@ GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
 
 namespace BoardCommsTask
 {
+  GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
+
   // prototypes
   void boardPacketAvailable_cb(uint16_t from_id, uint8_t t);
   void boardClientInit();
