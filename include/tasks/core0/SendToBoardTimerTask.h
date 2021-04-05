@@ -1,12 +1,32 @@
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 
+/************************************
+ * Once enabled, this will send out a
+ * "notification" on it's queue once
+ * every SEND_TO_BOARD_INTERVAL
+ * **********************************/
+
 namespace SendToBoardTimerTask
 {
   elapsedMillis
       since_sent_to_board = 0;
 
+  namespace
+  {
+    unsigned long sendInterval = SEND_TO_BOARD_INTERVAL;
+  }
+
   RTOSTaskManager mgr("SendToBoardTimerTask", 3000);
+
+  //----------------------------------------------
+  void setInterval(unsigned long interval, bool print = false)
+  {
+    sendInterval = interval;
+    if (print)
+      Serial.printf("SendToBoardTimerTask: Send interval has been set to %lums\n",
+                    sendInterval);
+  }
 
   //==============================================
   void task(void *pvParameters)
@@ -22,7 +42,7 @@ namespace SendToBoardTimerTask
 
     while (true)
     {
-      if (since_sent_to_board > SEND_TO_BOARD_INTERVAL && mgr.enabled())
+      if (since_sent_to_board > sendInterval && mgr.enabled())
       {
         since_sent_to_board = 0;
 

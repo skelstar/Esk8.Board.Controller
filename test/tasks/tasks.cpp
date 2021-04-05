@@ -322,6 +322,8 @@ void test_mocked_client_responds_to_controller_packets_correctly()
     vTaskDelay(5);
   }
 
+  SendToBoardTimerTask::setInterval(1000);
+
   BoardCommsTask::mgr.enable();
   SendToBoardTimerTask::mgr.enable();
 
@@ -331,7 +333,7 @@ void test_mocked_client_responds_to_controller_packets_correctly()
 
   elapsedMillis since_test_started;
 
-  unsigned long last_pkt_id = -1;
+  unsigned long last_ev_id = -1, last_pkt_id = -1;
 
   char instructions[60];
   sprintf(instructions, "Testing mocked board connected for %lu seconds", TEST_DURATION / SECONDS);
@@ -340,9 +342,14 @@ void test_mocked_client_responds_to_controller_packets_correctly()
   while (since_test_started < TEST_DURATION)
   {
     PacketState *packet = packetStateQueue->peek<PacketState>(__func__);
-    if (packet != nullptr && packet->event_id != last_pkt_id)
+    if (packet != nullptr && packet->event_id != last_ev_id)
     {
-      last_pkt_id = packet->event_id;
+      last_ev_id = packet->event_id;
+      if (packet->packet_id != last_pkt_id)
+      {
+        last_pkt_id = packet->packet_id;
+        Serial.printf("Mocked board responded: %lu\n", packet->packet_id);
+      }
 
       TEST_ASSERT_TRUE_MESSAGE(packet->connected(), "Either ids don't match or reply has timed out");
     }
