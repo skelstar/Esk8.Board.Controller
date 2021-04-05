@@ -81,7 +81,29 @@ RF24Network network(radio);
 
 elapsedMillis since_checked_queue;
 
-// runs every test
+const unsigned long SECONDS = 1000;
+
+void printTestTitle(const char *name)
+{
+  Serial.printf("-------------------------------------------\n");
+  Serial.printf("  TEST: %s\n", name);
+  Serial.printf("-------------------------------------------\n");
+}
+
+void printTestInstructions(const char *instructions)
+{
+  Serial.printf("*** INSTR: %s\n", instructions);
+}
+
+VescData mockStoppedResponse(ControllerData out)
+{
+  VescData mockresp;
+  mockresp.id = out.id;
+  mockresp.version = VERSION_BOARD_COMPAT;
+  mockresp.moving = false;
+  return mockresp;
+}
+
 void setUp()
 {
   nrf24.begin(&radio, &network, COMMS_CONTROLLER);
@@ -106,7 +128,6 @@ void setUp()
   packetStateQueue = new Queue::Manager(xBoardStateQueueHandle, (TickType_t)5);
 }
 
-// runs every test
 void tearDown()
 {
 }
@@ -229,300 +250,59 @@ void test_magnetic_throttle_is_moved_greater_than_220()
   TEST_ASSERT_TRUE(throttle > 220);
 }
 
-void test_run_debug_task()
-{
-  Wire.begin(); //Join I2C bus
-
-  QwiicButtonTask::mgr.create(QwiicButtonTask::task, CORE_0, PRIORITY_1);
-  ThrottleTask::mgr.create(ThrottleTask::task, CORE_0, PRIORITY_1);
-  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, PRIORITY_1);
-  Debug::mgr.create(Debug::task, CORE_0, PRIORITY_1);
-
-  while (!ThrottleTask::mgr.ready || !Debug::mgr.ready)
-  {
-    vTaskDelay(5);
-  }
-
-  Serial.printf("Watch then click the button to end the test\n");
-
-  while (1)
-  {
-    if (since_checked_queue > 200)
-    {
-      since_checked_queue = 0;
-
-      QwiicButtonState *button = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
-
-      if (button != nullptr && button->pressed)
-      {
-        TEST_ASSERT_TRUE(button->pressed);
-      }
-    }
-
-    vTaskDelay(5);
-  }
-}
-
-void test_run_all_tasks()
-{
-  QwiicButtonTask::mgr.create(QwiicButtonTask::task, CORE_0, PRIORITY_1);
-  ThrottleTask::mgr.create(ThrottleTask::task, CORE_0, PRIORITY_1);
-  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, PRIORITY_1);
-  Debug::mgr.create(Debug::task, CORE_0, PRIORITY_1);
-
-  while (!ThrottleTask::mgr.ready || !Debug::mgr.ready)
-  {
-    vTaskDelay(5);
-  }
-
-  Serial.printf("Watch then click the button to end the test\n");
-
-  while (1)
-  {
-    if (since_checked_queue > 200)
-    {
-      since_checked_queue = 0;
-
-      QwiicButtonState *button = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
-
-      if (button != nullptr && button->pressed)
-      {
-        TEST_ASSERT_TRUE(button->pressed);
-      }
-    }
-
-    vTaskDelay(5);
-  }
-}
-
 void test_display_remote_battery()
 {
+  printTestTitle(__func__);
+
   NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, PRIORITY_1);
   Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
   Remote::mgr.create(Remote::task, CORE_0, PRIORITY_1);
-
-  Serial.printf("Waiting for tasks to start\n");
-  while (!Display::mgr.ready || !NintendoClassicTask::mgr.ready || !Remote::mgr.ready)
-  {
-    vTaskDelay(5);
-  }
-  Serial.printf("Tasks ready\n");
-
-  Serial.printf("Watch then click the button to end the test\n");
-
-  unsigned long last_id = -1;
-  BoardClass board;
-
-  while (1)
-  {
-    if (since_checked_queue > 100)
-    {
-      since_checked_queue = 0;
-
-      NintendoButtonEvent *btn = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
-
-      if (btn != nullptr && !btn->been_peeked(last_id))
-      {
-        last_id = btn->event_id;
-        if ((btn->button == NintendoController::BUTTON_RIGHT ||
-             btn->button == NintendoController::BUTTON_UP ||
-             btn->button == NintendoController::BUTTON_DOWN) &&
-            btn->state == NintendoController::BUTTON_PRESSED)
-        {
-          Serial.printf("Sending to boardPacketQueue\n");
-          VescData data;
-          if (btn->button == NintendoController::BUTTON_DOWN)
-          {
-            board.packet.moving = false;
-          }
-          else
-          {
-            data.moving = btn->button == NintendoController::BUTTON_UP;
-            data.id = last_id;
-            data.version = VERSION_BOARD_COMPAT;
-            board.save(data);
-          }
-          board.id++;
-          boardPacketQueue->sendLegacy(&board);
-          vTaskDelay(100);
-        }
-      }
-
-      if (btn != nullptr && btn->button == NintendoController::BUTTON_START)
-      {
-        TEST_ASSERT_TRUE(btn->state == NintendoController::BUTTON_PRESSED);
-      }
-    }
-
-    vTaskDelay(5);
-  }
-}
-
-void test_motor_current()
-{
-  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, PRIORITY_1);
-  Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
-  Remote::mgr.create(Remote::task, CORE_0, PRIORITY_1);
-
-  Serial.printf("Waiting for tasks to start\n");
-  while (!Display::mgr.ready || !NintendoClassicTask::mgr.ready || !Remote::mgr.ready)
-  {
-    vTaskDelay(5);
-  }
-
-  Serial.printf("Tasks ready\n");
-
-  Serial.printf("Watch then click the button to end the test\n");
-
-  VescData data;
-
-  BoardClass board;
-  data.moving = true;
-  data.version = VERSION_BOARD_COMPAT;
-  board.save(data);
-  board.id = 1;
-  boardPacketQueue->send(&board);
-
-  elapsedMillis since_sent_packet = 0;
-
-  while (since_sent_packet < 1000)
-  {
-    vTaskDelay(10);
-  }
-  since_sent_packet = 0;
-
-  data.moving = false;
-  board.save(data);
-  boardPacketQueue->send(&board);
-
-  unsigned long last_id = -1;
-
-  while (1)
-  {
-    if (since_sent_packet > 1000)
-    {
-      TEST_ASSERT_TRUE(Display::fsm_mgr.currentStateIs(Display::StateId::ST_STOPPED_SCREEN));
-    }
-
-    if (since_checked_queue > 100)
-    {
-      since_checked_queue = 0;
-
-      NintendoButtonEvent *btn = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
-
-      if (btn != nullptr && !btn->been_peeked(last_id))
-      {
-        last_id = btn->event_id;
-        if ((btn->button == NintendoController::BUTTON_RIGHT ||
-             btn->button == NintendoController::BUTTON_UP ||
-             btn->button == NintendoController::BUTTON_DOWN) &&
-            btn->state == NintendoController::BUTTON_PRESSED)
-        {
-          Serial.printf("Sending to boardPacketQueue\n");
-          VescData data;
-          if (btn->button == NintendoController::BUTTON_DOWN)
-          {
-            board.packet.moving = false;
-          }
-          else
-          {
-            data.moving = btn->button == NintendoController::BUTTON_UP;
-            data.id = last_id;
-            data.version = VERSION_BOARD_COMPAT;
-            board.save(data);
-          }
-          boardPacketQueue->send(&board);
-          vTaskDelay(100);
-        }
-      }
-
-      if (btn != nullptr && btn->button == NintendoController::BUTTON_START)
-      {
-        TEST_ASSERT_TRUE(btn->state == NintendoController::BUTTON_PRESSED);
-      }
-    }
-
-    vTaskDelay(5);
-  }
-}
-
-void test_board_comms()
-{
-  Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
-  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4, WITH_HEALTHCHECK);
-
-  Serial.printf("Waiting for tasks to start\n");
-  while (!Display::mgr.ready || !BoardCommsTask::mgr.ready)
-  {
-    vTaskDelay(5);
-  }
-
-  Serial.printf("Tasks ready\n");
-
-  elapsedMillis since_mocked_board;
-
-  while (1)
-  {
-    if (since_checked_queue > 100)
-    {
-      since_checked_queue = 0;
-    }
-
-    if (since_mocked_board > 3000)
-    {
-      since_mocked_board = 0;
-    }
-
-    vTaskDelay(5);
-  }
-}
-
-void test_board_replies_with_same_id()
-{
-  // Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
-  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4);
+  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_3);
   SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, CORE_1, PRIORITY_3);
 
-  Serial.printf("Waiting for tasks to start\n");
+  BoardCommsTask::boardClient.mockResponseCallback(mockStoppedResponse);
+  BoardCommsTask::mgr.enable();
 
-  while (
-      // !Display::mgr.ready ||
-      !BoardCommsTask::mgr.ready ||
-      !SendToBoardTimerTask::mgr.ready)
+  Serial.printf("Waiting for tasks to start\n");
+  while (!Display::mgr.ready || !NintendoClassicTask::mgr.ready || !Remote::mgr.ready)
   {
     vTaskDelay(5);
   }
-
   Serial.printf("Tasks ready\n");
 
-  const unsigned long TEST_DURATION_IN_SECONDS = 60;
-  const unsigned long TEST_DURATION = 1000 * TEST_DURATION_IN_SECONDS;
+  printTestInstructions("Watch then pressed START to end the test\n");
 
-  Serial.printf("----------------------------------\n");
-  Serial.printf("TEST: checking response id matches\n");
-  Serial.printf("sent id for %d seconds \n", TEST_DURATION_IN_SECONDS);
-  Serial.printf("----------------------------------\n");
+  unsigned long last_id = -1;
+  BoardClass board;
 
-  elapsedMillis since_test_started;
+  SendToBoardTimerTask::mgr.enable();
 
-  unsigned long last_pkt_id = -1;
-
-  while (since_test_started < TEST_DURATION)
+  while (1)
   {
-    PacketState *packet = packetStateQueue->peek<PacketState>(__func__);
-    if (packet != nullptr && packet->event_id != last_pkt_id)
+    if (since_checked_queue > 100)
     {
-      last_pkt_id = packet->event_id;
+      since_checked_queue = 0;
 
-      TEST_ASSERT_TRUE_MESSAGE(packet->connected(), "Either ids don't match or reply has timed out");
+      NintendoButtonEvent *btn = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
+
+      if (btn != nullptr && !btn->been_peeked(last_id))
+      {
+        last_id = btn->event_id;
+        if (btn != nullptr && btn->button == NintendoController::BUTTON_START)
+        {
+          TEST_ASSERT_TRUE(true);
+        }
+      }
     }
 
-    vTaskDelay(10);
+    vTaskDelay(5);
   }
 }
 
 void test_mocked_client_responds_to_controller_packets_correctly()
 {
+  printTestTitle(__func__);
+
   BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4);
   SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, CORE_1, PRIORITY_3);
 
@@ -542,18 +322,20 @@ void test_mocked_client_responds_to_controller_packets_correctly()
     vTaskDelay(5);
   }
 
+  BoardCommsTask::mgr.enable();
+  SendToBoardTimerTask::mgr.enable();
+
   Serial.printf("Tasks ready\n");
 
-  const unsigned long TEST_DURATION_IN_SECONDS = 60;
-  const unsigned long TEST_DURATION = 1000 * TEST_DURATION_IN_SECONDS;
-
-  Serial.printf("----------------------------------\n");
-  Serial.printf("TEST: mock response received\n");
-  Serial.printf("----------------------------------\n");
+  const unsigned long TEST_DURATION = 60 * SECONDS;
 
   elapsedMillis since_test_started;
 
   unsigned long last_pkt_id = -1;
+
+  char instructions[60];
+  sprintf(instructions, "Testing mocked board connected for %lu seconds", TEST_DURATION / SECONDS);
+  printTestInstructions(instructions);
 
   while (since_test_started < TEST_DURATION)
   {
@@ -567,75 +349,6 @@ void test_mocked_client_responds_to_controller_packets_correctly()
 
     vTaskDelay(10);
   }
-}
-
-void test_disp_showing_stopped_when_mocked_board_is_responding_correctly()
-{
-  Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
-  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4);
-  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, CORE_1, PRIORITY_3);
-
-  // pass in controller_packet
-  BoardCommsTask::boardClient.mockResponseCallback([](ControllerData out) {
-    VescData mockresp;
-    mockresp.id = out.id;
-    mockresp.moving = false;
-    mockresp.version = VERSION_BOARD_COMPAT;
-    return mockresp;
-  });
-
-  Serial.printf("Waiting for tasks to start\n");
-  while (!Display::mgr.ready ||
-         !BoardCommsTask::mgr.ready ||
-         !SendToBoardTimerTask::mgr.ready)
-  {
-    vTaskDelay(5);
-  }
-  Serial.printf("Tasks ready\n");
-
-  SendToBoardTimerTask::mgr.enable();
-  BoardCommsTask::mgr.enable();
-
-  elapsedMillis
-      since_sent_to_board,
-      since_check_board_queue;
-
-  unsigned long last_pkt_ev_id = -1;
-
-  Serial.printf("----------------------------------------------------------------\n");
-  Serial.printf("TEST: checking display showing 'Stopped' when  board responding \n");
-  Serial.printf("----------------------------------------------------------------\n");
-
-  while (1)
-  {
-    if (since_check_board_queue > PERIOD_50MS)
-    {
-      since_check_board_queue = 0;
-
-      PacketState *packet = packetStateQueue->peek<PacketState>(__func__);
-      if (packet != nullptr && packet->event_id != last_pkt_ev_id)
-      {
-        last_pkt_ev_id = packet->event_id;
-
-        if (packet->connected())
-        {
-          if (packet->acknowledged())
-          {
-            Serial.printf("Acknowledged packet_id %lu\n", packet->packet_id);
-            if (packet->packet_id == 4)
-            {
-              bool stopped_screen = Display::_fsm.getCurrentStateId() == Display::ST_STOPPED_SCREEN;
-              TEST_ASSERT_TRUE_MESSAGE(stopped_screen, "Display not showing STOPPED_SCREEN");
-              break;
-            }
-          }
-          bool connected = packet->packet_id > 0 && packet->connected();
-          TEST_ASSERT_TRUE_MESSAGE(connected, "(Mock)Board not connected");
-        }
-      }
-    }
-    vTaskDelay(5);
-  } //end while
 }
 
 void setup()
@@ -649,15 +362,8 @@ void setup()
   // RUN_TEST(test_qwiic_button_pressed_then_released_via_queue);
   // RUN_TEST(test_nintendo_button_is_pressed_then_released_task);
   // RUN_TEST(test_magnetic_throttle_is_moved_greater_than_220);
-  // RUN_TEST(test_run_debug_task);
-  // RUN_TEST(test_run_all_tasks);
   // RUN_TEST(test_display_remote_battery);
-  // RUN_TEST(test_motor_current);
-  // RUN_TEST(test_board_comms);
-  // RUN_TEST(test_board_replies_with_same_id);
-  // RUN_TEST(test_disp_showing_stopped_when_board_responding);
-  // RUN_TEST(test_mocked_client_responds_to_controller_packets_correctly);
-  RUN_TEST(test_disp_showing_stopped_when_mocked_board_is_responding_correctly);
+  RUN_TEST(test_mocked_client_responds_to_controller_packets_correctly);
 
   UNITY_END();
 }
