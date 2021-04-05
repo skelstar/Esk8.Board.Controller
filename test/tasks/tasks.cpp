@@ -521,68 +521,7 @@ void test_board_replies_with_same_id()
   }
 }
 
-void test_disp_showing_stopped_when_board_responding()
-{
-  Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
-  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4);
-  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, CORE_1, PRIORITY_3);
-
-  Serial.printf("Waiting for tasks to start\n");
-  while (!Display::mgr.ready ||
-         !BoardCommsTask::mgr.ready ||
-         !SendToBoardTimerTask::mgr.ready)
-  {
-    vTaskDelay(5);
-  }
-  Serial.printf("Tasks ready\n");
-
-  elapsedMillis
-      since_sent_to_board,
-      since_check_board_queue;
-
-  ulong last_board_id = -1, last_pkt_id = -1;
-
-  Serial.printf("----------------------------------------------------------------\n");
-  Serial.printf("TEST: checking display showing 'Stopped' when  board responding \n");
-  Serial.printf("----------------------------------------------------------------\n");
-
-  while (1)
-  {
-    if (since_check_board_queue > PERIOD_50MS)
-    {
-      since_check_board_queue = 0;
-
-      PacketState *packet = packetStateQueue->peek<PacketState>(__func__);
-      if (packet != nullptr && packet->event_id != last_pkt_id)
-      {
-        last_pkt_id = packet->event_id;
-      }
-
-      BoardClass *board = boardPacketQueue->peek<BoardClass>(__func__);
-      if (board != nullptr && board->id != last_board_id)
-      {
-        last_board_id = board->id;
-        if (board->packet.id == board->sent_id && board->packet.id == 4)
-        {
-          // responding
-          Serial.printf("Tested state: %s\n", Display::stateID(Display::_fsm.getCurrentStateId()));
-          TEST_ASSERT_TRUE_MESSAGE(
-              Display::_fsm.getCurrentStateId() == Display::ST_STOPPED_SCREEN,
-              "Display not showing STOPPED_SCREEN");
-        }
-        else if (board->sent_id > 1)
-        {
-          TEST_ASSERT_TRUE_MESSAGE(board->packet.id == board->sent_id,
-                                   "board->packet.id <> board->sent_id");
-        }
-      }
-    }
-
-    vTaskDelay(5);
-  }
-}
-
-void test_mocked_board()
+void test_mocked_client_responds_to_controller_packets_correctly()
 {
   BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4);
   SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, CORE_1, PRIORITY_3);
@@ -597,7 +536,6 @@ void test_mocked_board()
   Serial.printf("Waiting for tasks to start\n");
 
   while (
-      // !Display::mgr.ready ||
       !BoardCommsTask::mgr.ready ||
       !SendToBoardTimerTask::mgr.ready)
   {
@@ -630,6 +568,76 @@ void test_mocked_board()
     vTaskDelay(10);
   }
 }
+
+void test_disp_showing_stopped_when_mocked_board_is_responding_correctly()
+{
+  Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
+  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4);
+  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, CORE_1, PRIORITY_3);
+
+  // pass in controller_packet
+  BoardCommsTask::boardClient.mockResponseCallback([](ControllerData out) {
+    VescData mockresp;
+    mockresp.id = out.id;
+    mockresp.moving = false;
+    mockresp.version = VERSION_BOARD_COMPAT;
+    return mockresp;
+  });
+
+  Serial.printf("Waiting for tasks to start\n");
+  while (!Display::mgr.ready ||
+         !BoardCommsTask::mgr.ready ||
+         !SendToBoardTimerTask::mgr.ready)
+  {
+    vTaskDelay(5);
+  }
+  Serial.printf("Tasks ready\n");
+
+  SendToBoardTimerTask::mgr.enable();
+  BoardCommsTask::mgr.enable();
+
+  elapsedMillis
+      since_sent_to_board,
+      since_check_board_queue;
+
+  unsigned long last_pkt_ev_id = -1;
+
+  Serial.printf("----------------------------------------------------------------\n");
+  Serial.printf("TEST: checking display showing 'Stopped' when  board responding \n");
+  Serial.printf("----------------------------------------------------------------\n");
+
+  while (1)
+  {
+    if (since_check_board_queue > PERIOD_50MS)
+    {
+      since_check_board_queue = 0;
+
+      PacketState *packet = packetStateQueue->peek<PacketState>(__func__);
+      if (packet != nullptr && packet->event_id != last_pkt_ev_id)
+      {
+        last_pkt_ev_id = packet->event_id;
+
+        if (packet->connected())
+        {
+          if (packet->acknowledged())
+          {
+            Serial.printf("Acknowledged packet_id %lu\n", packet->packet_id);
+            if (packet->packet_id == 4)
+            {
+              bool stopped_screen = Display::_fsm.getCurrentStateId() == Display::ST_STOPPED_SCREEN;
+              TEST_ASSERT_TRUE_MESSAGE(stopped_screen, "Display not showing STOPPED_SCREEN");
+              break;
+            }
+          }
+          bool connected = packet->packet_id > 0 && packet->connected();
+          TEST_ASSERT_TRUE_MESSAGE(connected, "(Mock)Board not connected");
+        }
+      }
+    }
+    vTaskDelay(5);
+  } //end while
+}
+
 void setup()
 {
   delay(2000);
@@ -648,7 +656,8 @@ void setup()
   // RUN_TEST(test_board_comms);
   // RUN_TEST(test_board_replies_with_same_id);
   // RUN_TEST(test_disp_showing_stopped_when_board_responding);
-  RUN_TEST(test_mocked_board);
+  // RUN_TEST(test_mocked_client_responds_to_controller_packets_correctly);
+  RUN_TEST(test_disp_showing_stopped_when_mocked_board_is_responding_correctly);
 
   UNITY_END();
 }

@@ -100,6 +100,11 @@ namespace BoardCommsTask
     mgr.ready = true;
     mgr.printReady();
 
+    while (mgr.enabled() == false)
+    {
+      vTaskDelay(500);
+    }
+
     unsigned long notf_id = -1;
 
     while (true)

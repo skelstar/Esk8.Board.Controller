@@ -17,7 +17,7 @@ namespace Display
 
   // prototypes
   void handle_stats_packet(StatsClass *res);
-  void handle_board_packet(BoardClass *res);
+  void handle_packetState_packet(PacketState *res);
   void handle_nintendo_classic_event(NintendoButtonEvent *ev);
 
   void task(void *pvParameters)
@@ -39,7 +39,7 @@ namespace Display
     elapsedMillis sinceReadDispEventQueue, since_checked_queue, since_fsm_update;
     unsigned long last_board_id = -1, last_classic_id = -1, last_batt_id = -1;
 
-    while (boardPacketQueue == nullptr)
+    while (packetStateQueue == nullptr)
     {
       vTaskDelay(10);
     }
@@ -47,23 +47,20 @@ namespace Display
     mgr.ready = true;
     mgr.printReady();
 
+    unsigned long last_packet_id = -1;
+
     while (true)
     {
       if (since_checked_queue > 100)
       {
         since_checked_queue = 0;
 
-        BoardClass *board = boardPacketQueue->peek<BoardClass>(__func__);
-        if (board != nullptr)
+        PacketState *packet = packetStateQueue->peek<PacketState>(__func__);
+        if (packet != nullptr && packet->event_id != last_packet_id)
         {
-          if (board->id != last_board_id)
-          {
-            last_board_id = board->id;
-            handle_board_packet(board);
-          }
-          else
-          {
-          }
+          last_packet_id = packet->event_id;
+          if (packet->connected() && packet->acknowledged())
+            handle_packetState_packet(packet);
         }
 
         if (NintendoClassicTask::queue != nullptr)
@@ -117,23 +114,23 @@ namespace Display
       Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "DISP", DispState::getTrigger(ev));
   }
 
-  void handle_board_packet(BoardClass *board)
+  void handle_packetState_packet(PacketState *board)
   {
     // Serial.printf("Rx packet from board:");
     // Serial.printf("moving=%d:", board->packet.moving);
     // Serial.println();
 
-    if (board->packet.version != (float)VERSION_BOARD_COMPAT &&
-        !fsm_mgr.currentStateIs(ST_BOARD_VERSION_DOESNT_MATCH_SCREEN))
+    if (board->version != (float)VERSION_BOARD_COMPAT &&
+        !fsm_mgr.currentStateIs(Display::ST_BOARD_VERSION_DOESNT_MATCH_SCREEN))
     {
-      Serial.printf("%.1f %.1f\n", board->packet.version, (float)VERSION_BOARD_COMPAT);
+      Serial.printf("%.1f %.1f\n", board->version, (float)VERSION_BOARD_COMPAT);
       fsm_mgr.trigger(DispState::TR_VERSION_DOESNT_MATCH);
     }
     else if (board->connected())
     {
-      if (board->isMoving())
+      if (!fsm_mgr.currentStateIs(Display::ST_MOVING_SCREEN) && board->isMoving())
         fsm_mgr.trigger(DispState::Trigger::TR_MOVING);
-      else if (board->isStopped())
+      else if (!fsm_mgr.currentStateIs(Display::ST_STOPPED_SCREEN) && !board->isMoving())
         fsm_mgr.trigger(DispState::Trigger::TR_STOPPED);
     }
     else

@@ -22,7 +22,7 @@ namespace SendToBoardTimerTask
 
     while (true)
     {
-      if (since_sent_to_board > SEND_TO_BOARD_INTERVAL)
+      if (since_sent_to_board > SEND_TO_BOARD_INTERVAL && mgr.enabled())
       {
         since_sent_to_board = 0;
 

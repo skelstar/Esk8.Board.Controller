@@ -79,10 +79,18 @@ public:
         _core);
   }
 
+  bool enabled()
+  {
+    if (!_enabled)
+      Serial.printf("[TASK] %s not enabled!\n", _task_name);
+    return _enabled;
+  }
+  void enable(bool e = true) { _enabled = e; }
+
 private:
   const char *_task_name;
   int _stackSize, _priority, _core;
-  bool _health_check;
+  bool _health_check, _enabled = false;
   TaskHandle_t _taskHandle;
   elapsedMillis
       _since_health_check,
