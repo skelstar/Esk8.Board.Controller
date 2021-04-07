@@ -1,12 +1,8 @@
 #pragma once
 
-#include <SparkFun_Qwiic_Button.h>
-
 //------------------------------------------
-/* prototypes */
-
 //------------------------------------------
-class QwiicButtonState : public QueueBase
+class PrimaryButtonState : public QueueBase
 {
 public:
   bool pressed = false;
@@ -16,15 +12,12 @@ namespace QwiicButtonTask
 {
   RTOSTaskManager mgr("QwiicButtonTask", 3000);
 
-  xQueueHandle queueHandle;
-  Queue::Manager *queue = nullptr;
-
   elapsedMillis since_peeked, since_checked_button, since_malloc;
 
   QwiicButton qwiicButton;
 
   const unsigned long CHECK_QUEUE_INTERVAL = 50;
-  const unsigned long CHECK_BUTTON_INTERVAL = 100;
+  const unsigned long CHECK_BUTTON_INTERVAL = 500;
 
   //=====================================================
 
@@ -46,20 +39,14 @@ namespace QwiicButtonTask
     } while (!init_button);
     DEBUG("Qwiic Button initialised");
 
-    queueHandle = xQueueCreate(/*len*/ 1, sizeof(QwiicButtonState *));
-    queue = new Queue::Manager(queueHandle, (TickType_t)5);
-
-    state.pressed = qwiicButton.isPressed();
-    state.event_id = 0;
-
     mgr.ready = true;
     mgr.printReady();
 
     // TODO remove this? Wait for queues?
     vTaskDelay(1000);
 
-    queue->sendLegacy(&state);
-    state.event_id++;
+    state.pressed = qwiicButton.isPressed();
+    primaryButtonQueue->send(&state);
 
     while (true)
     {
@@ -78,8 +65,7 @@ namespace QwiicButtonTask
         if (state.pressed != pressed)
         {
           state.pressed = pressed;
-          queue->sendLegacy(&state);
-          state.event_id++;
+          primaryButtonQueue->send(&state);
         }
       }
 
@@ -91,8 +77,4 @@ namespace QwiicButtonTask
   }
 
   //============================================================
-
-  void init()
-  {
-  }
 } // namespace

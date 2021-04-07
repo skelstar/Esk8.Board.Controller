@@ -31,6 +31,9 @@ Queue::Manager *sendToBoardQueue;
 xQueueHandle xBoardStateQueueHandle;
 Queue::Manager *packetStateQueue;
 
+xQueueHandle xPrimaryButtonQueue;
+Queue::Manager *primaryButtonQueue = nullptr;
+
 class SendToBoardNotf : public QueueBase
 {
 public:
@@ -126,6 +129,9 @@ void setUp()
 
   xBoardStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
   packetStateQueue = new Queue::Manager(xBoardStateQueueHandle, (TickType_t)5);
+
+  xPrimaryButtonQueue = xQueueCreate(1, sizeof(PrimaryButtonState));
+  primaryButtonQueue = new Queue::Manager(xPrimaryButtonQueue, (TickType_t)5);
 }
 
 void tearDown()
@@ -136,7 +142,7 @@ void test_qwiic_button_pressed_then_released_via_queue()
 {
   Wire.begin(); //Join I2C bus
 
-  QwiicButtonState *actual;
+  PrimaryButtonState *actual;
 
   QwiicButtonTask::mgr.create(QwiicButtonTask::task, CORE_0, PRIORITY_1);
 
@@ -153,7 +159,7 @@ void test_qwiic_button_pressed_then_released_via_queue()
     if (since_checked_queue > 200)
     {
       since_checked_queue = 0;
-      actual = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
+      actual = primaryButtonQueue->peek<PrimaryButtonState>(__func__);
       if (!was_pressed && actual != nullptr && actual->pressed)
       {
         Serial.printf("Qwiic button pressed\n");

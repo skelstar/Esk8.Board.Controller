@@ -15,7 +15,7 @@ namespace nsPeripherals
 
   void init();
 
-  void handle_qwiic_packet(QwiicButtonState *qwiic)
+  void handle_qwiic_packet(PrimaryButtonState *qwiic)
   {
     if (qwiic != nullptr && !qwiic->been_peeked(last_qwiic_id))
     {
@@ -46,7 +46,7 @@ namespace nsPeripherals
       {
         since_read_peripherals = 0;
 
-        QwiicButtonState *qwiic = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
+        PrimaryButtonState *qwiic = primaryButtonQueue->peek<PrimaryButtonState>(__func__);
         handle_qwiic_packet(qwiic);
       }
 

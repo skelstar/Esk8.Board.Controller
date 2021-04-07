@@ -29,7 +29,7 @@ namespace ThrottleTask
   const unsigned long CHECK_THROTTLE_INTERVAL = 66;
 
   unsigned long event_id = 0;
-  QwiicButtonState primary_button;
+  PrimaryButtonState primary_button;
 
   //================================================
   void task(void *pvParameters)
@@ -39,7 +39,7 @@ namespace ThrottleTask
     init();
 
     DEBUG("ThrottleTask waiting for QwiicButtonTask queue to be ready");
-    while (QwiicButtonTask::queue == nullptr)
+    while (primaryButtonQueue == nullptr)
       vTaskDelay(100);
 
     ThrottleState throttle;
@@ -53,7 +53,7 @@ namespace ThrottleTask
       {
         since_checked_throttle = 0;
 
-        QwiicButtonState *button = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
+        PrimaryButtonState *button = QwiicButtonTask::queue->peek<PrimaryButtonState>(__func__);
         if (button != nullptr && !button->been_peeked(primary_button.event_id))
         {
           primary_button.event_id = button->event_id;

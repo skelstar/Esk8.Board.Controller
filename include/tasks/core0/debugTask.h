@@ -18,7 +18,7 @@ namespace Debug
     init();
 
     while (NintendoClassicTask::queue == nullptr &&
-           QwiicButtonTask::queue == nullptr)
+           primaryButtonQueue == nullptr)
     {
       vTaskDelay(500);
     }
@@ -48,7 +48,7 @@ namespace Debug
           }
         }
 
-        QwiicButtonState *qwiic = QwiicButtonTask::queue->peek<QwiicButtonState>(__func__);
+        PrimaryButtonState *qwiic = QwiicButtonTask::queue->peek<PrimaryButtonState>(__func__);
         if (qwiic != nullptr && !qwiic->been_peeked(qwiic_id))
         {
           qwiic_id = qwiic->event_id;
