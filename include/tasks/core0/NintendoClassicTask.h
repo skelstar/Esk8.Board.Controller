@@ -17,8 +17,6 @@ namespace NintendoClassicTask
 
   const unsigned long CHECK_BUTTONS_INTERVAL = 100;
 
-  unsigned long event_id = 0;
-
   uint8_t last_buttons[NintendoController::BUTTON_COUNT];
 
   //=====================================================
@@ -49,9 +47,6 @@ namespace NintendoClassicTask
           if (button_that_changed != 99)
           {
             // something changed, send
-            event_id++;
-
-            ev.event_id = event_id;
             ev.button = button_that_changed;
             ev.state = new_buttons[button_that_changed];
 

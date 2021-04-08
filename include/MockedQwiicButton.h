@@ -1,6 +1,8 @@
 #include <Wire.h>
 #include <Arduino.h>
 
+#define __SparkFun_Qwiic_Button_H__
+
 #define DEFAULT_ADDRESS 0x6F //default I2C address of the button
 
 typedef bool (*MockIsPressedCallback)();

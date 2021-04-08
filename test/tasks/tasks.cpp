@@ -37,6 +37,9 @@ Queue::Manager *primaryButtonQueue = nullptr;
 xQueueHandle xNintendoControllerQueue;
 Queue::Manager *nintendoControllerQueue = nullptr;
 
+xQueueHandle xThrottleQueue;
+Queue::Manager *throttleQueue = nullptr;
+
 class SendToBoardNotf : public QueueBase
 {
 public:
@@ -139,6 +142,9 @@ void setUp()
 
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
   nintendoControllerQueue = new Queue::Manager(xNintendoControllerQueue, (TickType_t)5);
+
+  xThrottleQueue = xQueueCreate(1, sizeof(ThrottleState));
+  throttleQueue = new Queue::Manager(xThrottleQueue, (TickType_t)5);
 }
 
 void tearDown()
@@ -247,7 +253,7 @@ void test_magnetic_throttle_is_moved_greater_than_220()
     {
       since_checked_queue = 0;
 
-      ThrottleState *actual = ThrottleTask::queue->peek<ThrottleState>(__func__);
+      ThrottleState *actual = throttleQueue->peek<ThrottleState>(__func__);
 
       if (actual != nullptr && !actual->been_peeked(last_id) && throttle != actual->val)
       {

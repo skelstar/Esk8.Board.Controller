@@ -1,12 +1,12 @@
 #pragma once
 
+#ifndef __SparkFun_Qwiic_Button_H__
+#include <SparkFun_Qwiic_Button.h>
+#endif
+
+#include <types/PrimaryButton.h>
+
 //------------------------------------------
-//------------------------------------------
-class PrimaryButtonState : public QueueBase
-{
-public:
-  bool pressed = false;
-} state;
 
 namespace QwiicButtonTask
 {
@@ -15,6 +15,8 @@ namespace QwiicButtonTask
   elapsedMillis since_peeked, since_checked_button, since_malloc;
 
   QwiicButton qwiicButton;
+
+  PrimaryButtonState state;
 
   const unsigned long CHECK_QUEUE_INTERVAL = 50;
   const unsigned long CHECK_BUTTON_INTERVAL = 500;

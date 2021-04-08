@@ -1,8 +1,7 @@
 #pragma once
 
 #include <QueueManager.h>
-#include <AS5600.h>
-#include "qwiicButtonTask.h"
+#include <types/PrimaryButton.h>
 
 //----------------------------------------
 class ThrottleState : public QueueBase
@@ -14,21 +13,15 @@ public:
 
 namespace ThrottleTask
 {
-#include <MagThrottle.h>
-
   RTOSTaskManager mgr("ThrottleTask", 3000);
 
   // prototypes
   void init();
 
-  xQueueHandle queueHandle;
-  Queue::Manager *queue;
-
   elapsedMillis since_checked_throttle;
 
   const unsigned long CHECK_THROTTLE_INTERVAL = 66;
 
-  unsigned long event_id = 0;
   PrimaryButtonState primary_button;
 
   //================================================
@@ -53,7 +46,7 @@ namespace ThrottleTask
       {
         since_checked_throttle = 0;
 
-        PrimaryButtonState *button = QwiicButtonTask::queue->peek<PrimaryButtonState>(__func__);
+        PrimaryButtonState *button = primaryButtonQueue->peek<PrimaryButtonState>(__func__);
         if (button != nullptr && !button->been_peeked(primary_button.event_id))
         {
           primary_button.event_id = button->event_id;
@@ -65,9 +58,8 @@ namespace ThrottleTask
         uint8_t raw_throttle = MagneticThrottle::get();
         if (raw_throttle != throttle.val)
         {
-          throttle.event_id++;
           throttle.val = raw_throttle;
-          queue->send<ThrottleState>(&throttle);
+          throttleQueue->send<ThrottleState>(&throttle);
         }
       }
 
@@ -81,9 +73,6 @@ namespace ThrottleTask
 
   void init()
   {
-    queueHandle = xQueueCreate(/*len*/ 1, sizeof(ThrottleState *));
-    queue = new Queue::Manager(queueHandle, (TickType_t)5);
-
     primary_button.pressed = false;
 
     bool initialised = false;

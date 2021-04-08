@@ -14,7 +14,7 @@ namespace MagneticThrottle
   // https://ams.com/documents/20143/36005/AS5600_DS000365_5-00.pdf
   AMS_5600 ams5600;
 
-  typedef bool (*ThrottleEnabled_Cb)();
+  typedef bool (*GetBoolean_Cb)();
 
   namespace // private
   {
@@ -26,7 +26,7 @@ namespace MagneticThrottle
           _sweep = 0.0,
           _max_delta_limit = 0.0,
           _min_delta_limit = 0.0;
-    ThrottleEnabled_Cb _throttleEnabled_cb = nullptr;
+    GetBoolean_Cb _throttleEnabled_cb = nullptr;
 
     uint8_t _getPowerString(int idx, float delta, char *buff)
     {
@@ -147,7 +147,7 @@ namespace MagneticThrottle
     update(/*force*/ true);
   }
 
-  void setThrottleEnabledCb(ThrottleEnabled_Cb cb)
+  void setThrottleEnabledCb(GetBoolean_Cb cb)
   {
     _throttleEnabled_cb = cb;
   }
