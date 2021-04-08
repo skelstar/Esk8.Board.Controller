@@ -1,12 +1,13 @@
 #ifndef NintendoController_h
 #define NintendoController_h
 
+// #include <types/NintendoController.h>
+
 #define BUTTONS_NUMBER 12
 #define I2C_ADDR 0x52
 
 class NintendoController
 {
-
 public:
   static const int BUTTON_UP = 0;
   static const int BUTTON_RIGHT = 1;

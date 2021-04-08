@@ -1,28 +1,17 @@
 #pragma once
 
 #include <Wire.h>
-#include <NintendoController.h>
-#include <QueueManager.h>
-
-NintendoController classic;
-
-class NintendoButtonEvent : public QueueBase
-{
-public:
-  uint8_t button;
-  uint8_t state;
-};
+#include <types/NintendoController.h>
 
 namespace NintendoClassicTask
 {
+  NintendoController classic;
+
   RTOSTaskManager mgr("NintendoClassicTask", 3000);
 
   // prototypes
   uint8_t button_changed(uint8_t *new_buttons, uint8_t *old_buttons);
   void init();
-
-  xQueueHandle queueHandle;
-  Queue::Manager *queue;
 
   elapsedMillis since_checked_buttons, since_health_check, since_task_created;
 
@@ -52,8 +41,8 @@ namespace NintendoClassicTask
       {
         since_checked_buttons = 0;
 
-        bool updated = classic.update(mutex_I2C.handle(), TICKS_50ms);
-        if (updated)
+        bool changed = classic.update(mutex_I2C.handle(), TICKS_50ms);
+        if (changed)
         {
           uint8_t *new_buttons = classic.get_buttons();
           uint8_t button_that_changed = button_changed(new_buttons, last_buttons);
@@ -66,7 +55,7 @@ namespace NintendoClassicTask
             ev.button = button_that_changed;
             ev.state = new_buttons[button_that_changed];
 
-            queue->sendLegacy(&ev);
+            nintendoControllerQueue->send(&ev);
           }
           // save
           for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
@@ -122,8 +111,8 @@ namespace NintendoClassicTask
 
   void init()
   {
-    queueHandle = xQueueCreate(/*len*/ 1, sizeof(NintendoController *));
-    queue = new Queue::Manager(queueHandle, (TickType_t)5);
+    // xNintendoControllerQueue = xQueueCreate(/*len*/ 1, sizeof(NintendoController *));
+    // nintendoControllerQueue = new Queue::Manager(xNintendoControllerQueue, (TickType_t)5);
 
     bool initialised = false;
 

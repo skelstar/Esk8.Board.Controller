@@ -34,6 +34,9 @@ Queue::Manager *packetStateQueue;
 xQueueHandle xPrimaryButtonQueue;
 Queue::Manager *primaryButtonQueue = nullptr;
 
+xQueueHandle xNintendoControllerQueue;
+Queue::Manager *nintendoControllerQueue = nullptr;
+
 class SendToBoardNotf : public QueueBase
 {
 public:
@@ -68,6 +71,7 @@ RF24Network network(radio);
 #include <tasks/core0/remoteTask.h>
 
 #include <displayState.h>
+#include <NintendoController.h>
 
 #include <tasks/core0/qwiicButtonTask.h>
 #include <tasks/core0/NintendoClassicTask.h>
@@ -132,6 +136,9 @@ void setUp()
 
   xPrimaryButtonQueue = xQueueCreate(1, sizeof(PrimaryButtonState));
   primaryButtonQueue = new Queue::Manager(xPrimaryButtonQueue, (TickType_t)5);
+
+  xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
+  nintendoControllerQueue = new Queue::Manager(xNintendoControllerQueue, (TickType_t)5);
 }
 
 void tearDown()
@@ -199,7 +206,7 @@ void test_nintendo_button_is_pressed_then_released_task()
     if (since_checked_queue > 200)
     {
       since_checked_queue = 0;
-      actual = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
+      actual = nintendoControllerQueue->peek<NintendoButtonEvent>(__func__);
       if (!was_pressed && actual != nullptr && actual->state == 1)
       {
         Serial.printf("Nintendo button pressed %d %d\n", actual->button, actual->state);
@@ -289,7 +296,7 @@ void test_display_remote_battery()
     {
       since_checked_queue = 0;
 
-      NintendoButtonEvent *btn = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
+      NintendoButtonEvent *btn = nintendoControllerQueue->peek<NintendoButtonEvent>(__func__);
 
       if (btn != nullptr && !btn->been_peeked(last_id))
       {
