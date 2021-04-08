@@ -6,6 +6,15 @@
 #define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
 #define WITH_HEALTHCHECK 1
 
+#define CORE_0 0
+#define CORE_1 1
+
+#define PRIORITY_0 0
+#define PRIORITY_1 1
+#define PRIORITY_2 2
+#define PRIORITY_3 3
+#define PRIORITY_4 4
+
 class RTOSTaskManager
 {
 public:

@@ -76,13 +76,6 @@ RF24Network network(radio);
 // #include <tasks/core0/debugTask.h>
 // #include <tasks/core0/displayTask.h>
 
-#define CORE_0 0
-#define PRIORITY_0 0
-#define PRIORITY_1 1
-#define PRIORITY_2 2
-#define PRIORITY_3 3
-#define PRIORITY_4 4
-
 elapsedMillis since_checked_queue;
 
 const unsigned long SECONDS = 1000;
