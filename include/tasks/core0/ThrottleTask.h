@@ -31,6 +31,10 @@ namespace ThrottleTask
 
     Queue1::Manager<PrimaryButtonState> primaryBtnQueue(xPrimaryButtonQueue, (TickType_t)5);
 
+    primaryBtnQueue.setMissedEventCallback([](uint16_t num_events) {
+      Serial.printf("WARNING: missed %d events in primaryBtnQueue (ThrottleTask)\n", num_events);
+    });
+
     init();
 
     vTaskDelay(100);

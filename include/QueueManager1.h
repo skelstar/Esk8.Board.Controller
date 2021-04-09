@@ -29,7 +29,6 @@ public:
 namespace Queue1
 {
   template <typename T>
-  // typename std::enable_if<std::is_base_of<QueueBase, T>::value, void>::type
   class Manager
   {
     typedef void (*QueueEventCallback)(uint16_t ev);
@@ -59,9 +58,6 @@ namespace Queue1
       }
     }
 
-    // template <typename T>
-    // typename std::enable_if<std::is_base_of<QueueBase, T>::value, void>::type
-    // increments the T->id
     void send(T *payload, const char *message = nullptr)
     {
       if (_queue != NULL)
@@ -93,13 +89,7 @@ namespace Queue1
       }
     }
 
-    bool messageAvailable()
-    {
-      uint16_t *peeked_val;
-      return _queue != NULL && xQueuePeek(_queue, &peeked_val, _ticks) == pdTRUE;
-    }
-
-    // template <typename T>
+    // this will clear the queue
     T read()
     {
       uint16_t e = _noMessageValue;
@@ -112,12 +102,12 @@ namespace Queue1
       return (T)e;
     }
 
-    // template <typename T>
     bool hasValue(const char *name = nullptr)
     {
       T *result = this->peek(name);
       if (result != nullptr && result->event_id != _last_event_id)
       {
+        _checkForMissedEvents(result->event_id);
         _last_event_id = result->event_id;
         value = *result;
         return true;
@@ -125,7 +115,6 @@ namespace Queue1
       return false;
     }
 
-    // template <typename T>
     T *peek(const char *name)
     {
       T *new_pkt = nullptr;
@@ -137,10 +126,14 @@ namespace Queue1
       return new_pkt;
     }
 
-    // template <typename T>
-    T getLastEvent()
+    bool missedPacket()
     {
-      return (T)_lastEvent;
+      return QueueBase::missed_packet(_last_event_id);
+    }
+
+    void setMissedEventCallback(QueueEventCallback cb)
+    {
+      _missedCallback = cb;
     }
 
     void setSentEventCallback(QueueEventCallback cb)
@@ -154,12 +147,22 @@ namespace Queue1
     }
 
   private:
-    // const char *_queueName = nullptr;
+    void _checkForMissedEvents(unsigned long event_id)
+    {
+      uint16_t missed_packet_count = event_id - _last_event_id - 1;
+      if (_missedCallback != nullptr &&
+          missed_packet_count > 0 &&
+          _last_event_id > 0)
+        _missedCallback(missed_packet_count);
+    }
+
+  private:
     uint16_t _lastEvent = 0, _noMessageValue;
-    unsigned long _last_event_id = -1;
+    long _last_event_id = -1;
     QueueHandle_t _queue = NULL;
     TickType_t _ticks = 10;
     QueueEventCallback
+        _missedCallback = nullptr,
         _sentCallback = nullptr,
         _readCallback = nullptr;
   };
