@@ -20,6 +20,7 @@ static int counter = 0;
 #include <BoardClass.h>
 
 #include <MockMagThrottle.h>
+#include <MockedQwiicButton.h>
 
 MyMutex mutex_I2C;
 MyMutex mutex_SPI;
@@ -66,7 +67,7 @@ public:
 
 #include <displayState.h>
 
-// #include <tasks/core0/qwiicButtonTask.h>
+#include <tasks/core0/qwiicButtonTask.h>
 // #include <tasks/core0/NintendoClassicTask.h>
 #include <tasks/core0/ThrottleTask.h>
 // #include <tasks/core0/debugTask.h>
@@ -104,7 +105,10 @@ void tearDown()
 {
 }
 
-void test_qwiic_button_pressed_then_released_via_queue()
+#define CORE_0 0
+#define PRIORITY_1 1
+
+void test_throttle_state_queue()
 {
   namespace throttle_ = ThrottleTask;
 
@@ -126,7 +130,7 @@ void test_qwiic_button_pressed_then_released_via_queue()
     vTaskDelay(5);
   }
 
-  printTestInstructions("Will test the throttle limiting");
+  printTestInstructions("Will test the throttle state queue");
 
   elapsedMillis since_checked_queue;
 
@@ -164,6 +168,79 @@ void test_qwiic_button_pressed_then_released_via_queue()
   }
 }
 
+void test_throttle_limting_with_primary_button()
+{
+  namespace throttle_ = ThrottleTask;
+  namespace qwiic_ = QwiicButtonTask;
+
+  unsigned long _last_throttle_queue_id = 0;
+
+  Wire.begin(); //Join I2C bus
+
+  throttle_::mgr.create(throttle_::task, CORE_0, PRIORITY_1);
+  qwiic_::mgr.create(QwiicButtonTask::task, CORE_0, PRIORITY_1);
+
+  static uint8_t _s_Throttle = 127;
+  static uint8_t _s_Qwiic_pressed = 0;
+
+  qwiic_::qwiicButton.setMockIsPressedCallback([] {
+    _s_Qwiic_pressed = counter >= 3;
+    return _s_Qwiic_pressed == 1;
+  });
+
+  static uint8_t _s_Steps[] = {127, 140, 130, 127, 140, 130};
+
+  MagneticThrottle::setGetThrottleCb([] {
+    _s_Throttle = _s_Steps[counter];
+    return _s_Throttle;
+  });
+
+  while (!throttle_::mgr.ready && !qwiic_::mgr.ready)
+  {
+    vTaskDelay(5);
+  }
+
+  printTestInstructions("Will test the throttle limiting (by primaryButton)");
+
+  elapsedMillis since_checked_queue;
+
+  PrimaryButtonState state;
+
+  counter = 0;
+  char message[40];
+
+  while (counter < 6)
+  {
+    if (since_checked_queue > 1000)
+    {
+      since_checked_queue = 0;
+
+      state.pressed = _s_Qwiic_pressed;
+
+      primaryButtonQueue->send(&state);
+
+      vTaskDelay(50);
+
+      ThrottleState *throttle = throttleQueue->peek<ThrottleState>(__func__);
+      if (throttle != nullptr && !throttle->been_peeked(_last_throttle_queue_id))
+      {
+        _last_throttle_queue_id = throttle->event_id;
+        Serial.printf("Got %d from ThrottleTask\n", throttle->val);
+        if (_s_Qwiic_pressed == 0)
+          TEST_ASSERT_EQUAL(throttle->val, 127);
+        else
+          TEST_ASSERT_EQUAL(throttle->val, _s_Steps[counter]);
+      }
+      else
+      {
+        Serial.printf("ThrottleTask queue was empty\n");
+      }
+      counter++;
+    }
+    vTaskDelay(5);
+  }
+}
+
 void setup()
 {
   delay(2000);
@@ -172,7 +249,8 @@ void setup()
 
   UNITY_BEGIN();
 
-  RUN_TEST(test_qwiic_button_pressed_then_released_via_queue);
+  // RUN_TEST(test_throttle_state_queue);
+  RUN_TEST(test_throttle_limting_with_primary_button);
 
   UNITY_END();
 }

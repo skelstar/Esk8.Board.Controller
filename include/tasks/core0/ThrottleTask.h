@@ -20,7 +20,7 @@ namespace ThrottleTask
 
   elapsedMillis since_checked_throttle;
 
-  const unsigned long CHECK_THROTTLE_INTERVAL = 66;
+  const unsigned long CHECK_THROTTLE_INTERVAL = 200;
 
   PrimaryButtonState primary_button;
 
@@ -51,6 +51,7 @@ namespace ThrottleTask
         {
           primary_button.event_id = button->event_id;
           primary_button.pressed = button->pressed;
+          Serial.printf("buttonQueue: pressed=%d\n", primary_button.pressed);
         }
 
         MagneticThrottle::update();

@@ -112,6 +112,9 @@ void tearDown()
 {
 }
 
+#define CORE_0 0
+#define PRIORITY_1 1
+
 void test_qwiic_button_pressed_then_released_via_queue()
 {
   namespace qwiic_ = QwiicButtonTask;
