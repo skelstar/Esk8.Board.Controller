@@ -29,11 +29,11 @@ namespace ThrottleTask
   {
     mgr.printStarted();
 
+    Queue::Manager primaryBtnQueue(xPrimaryButtonQueue, (TickType_t)5);
+
     init();
 
-    DEBUG("ThrottleTask waiting for QwiicButtonTask queue to be ready");
-    while (primaryButtonQueue == nullptr)
-      vTaskDelay(100);
+    vTaskDelay(100);
 
     ThrottleState throttle;
 
@@ -46,7 +46,7 @@ namespace ThrottleTask
       {
         since_checked_throttle = 0;
 
-        PrimaryButtonState *button = primaryButtonQueue->peek<PrimaryButtonState>(__func__);
+        PrimaryButtonState *button = primaryBtnQueue.peek<PrimaryButtonState>(__func__);
         if (button != nullptr && !button->been_peeked(primary_button.event_id))
         {
           primary_button.event_id = button->event_id;
