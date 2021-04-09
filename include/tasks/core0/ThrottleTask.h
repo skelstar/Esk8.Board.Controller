@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QueueManager.h>
+#include <QueueManager1.h>
 #include <types/PrimaryButton.h>
 
 //----------------------------------------
@@ -29,7 +29,7 @@ namespace ThrottleTask
   {
     mgr.printStarted();
 
-    Queue::Manager primaryBtnQueue(xPrimaryButtonQueue, (TickType_t)5);
+    Queue1::Manager<PrimaryButtonState> primaryBtnQueue(xPrimaryButtonQueue, (TickType_t)5);
 
     init();
 
@@ -46,11 +46,9 @@ namespace ThrottleTask
       {
         since_checked_throttle = 0;
 
-        PrimaryButtonState *button = primaryBtnQueue.peek<PrimaryButtonState>(__func__);
-        if (button != nullptr && !button->been_peeked(primary_button.event_id))
+        if (primaryBtnQueue.hasValue(__func__))
         {
-          primary_button.event_id = button->event_id;
-          primary_button.pressed = button->pressed;
+          primary_button = primaryBtnQueue.value;
           Serial.printf("buttonQueue: pressed=%d\n", primary_button.pressed);
         }
 
