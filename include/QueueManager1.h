@@ -26,12 +26,15 @@ public:
 };
 #endif
 
+#include <types/Throttle.h>
+
 namespace Queue1
 {
   template <typename T>
   class Manager
   {
     typedef void (*QueueEventCallback)(uint16_t ev);
+    typedef void (*VoidCallback)(T packet);
 
   public:
     elapsedMillis since_last_queue_send;
@@ -40,53 +43,54 @@ namespace Queue1
   public:
     Manager(QueueHandle_t queue, TickType_t ticks, uint16_t noMessageValue = 0)
     {
+      if (queue == nullptr)
+      {
+        Serial.printf("ERROR: queue is null (Queue::Manager constr)\n");
+        return;
+      }
       _queue = queue;
       _ticks = ticks;
       _noMessageValue = noMessageValue;
     }
 
+    // Manager(QueueHandle_t queue, const char *queueName, TickType_t ticks, uint16_t noMessageValue = 0)
+    // {
+    //   if (queue == nullptr)
+    //   {
+    //     Serial.printf("ERROR: queue is null (Queue::Manager constr)\n");
+    //     return;
+    //   }
+    //   _queue = queue;
+    //   _queue_name = queueName;
+    //   _ticks = ticks;
+    //   _noMessageValue = noMessageValue;
+    // }
+
+    // Manager(QueueHandle_t queue, TickType_t ticks, uint16_t noMessageValue = 0)
+    // {
+    //   Manager(queue, nullptr, ticks, noMessageValue);
+    // }
+
     void sendLegacy(T *payload)
     {
-      if (_queue != NULL)
-      {
-        xQueueSendToFront(_queue, (void *)&payload, _ticks);
-        since_last_queue_send = 0;
-      }
-      else
-      {
-        Serial.printf("WARNING: Queue == NULL\n");
-      }
+      xQueueSendToFront(_queue, (void *)&payload, _ticks);
+      since_last_queue_send = 0;
     }
 
-    void send(T *payload, const char *message = nullptr)
+    void send(T *payload, VoidCallback sent_cb = nullptr)
     {
-      if (_queue != NULL)
-      {
-        xQueueSendToFront(_queue, (void *)&payload, _ticks);
-        since_last_queue_send = 0;
-        if (message != nullptr)
-          Serial.printf("%s | event_id:%lu\n", message, payload->event_id);
-        payload->event_id++;
-      }
-      else
-      {
-        Serial.printf("WARNING: Queue == NULL\n");
-      }
-    }
+      xQueueSendToFront(_queue, (void *)&payload, _ticks);
+      since_last_queue_send = 0;
 
-    void sendEvent(uint16_t ev)
-    {
-      if (_queue != NULL)
+      if (sent_cb != nullptr)
       {
-        xQueueSendToBack(_queue, &ev, _ticks);
-        since_last_queue_send = 0;
-        if (_sentCallback != nullptr)
-          _sentCallback(ev);
+        sent_cb(*payload);
       }
-      else
-      {
-        Serial.printf("WARNING: Queue == NULL\n");
-      }
+
+      // if (_sentCallback != nullptr)
+      //   _sentCallback(payload->event_id);
+
+      payload->event_id++;
     }
 
     // this will clear the queue
@@ -115,13 +119,13 @@ namespace Queue1
       return false;
     }
 
-    T *peek(const char *name)
+    T *peek(const char *name = nullptr)
     {
       T *new_pkt = nullptr;
 
-      if (xQueuePeek(_queue, &(new_pkt), (TickType_t)5))
+      if (xQueuePeek(_queue, &(new_pkt), (TickType_t)5) && name != nullptr)
       {
-        // Serial.printf("%s: peeked, new packet (id: %d)\n", name, new_pkt->id);
+        Serial.printf("%s: peeked, new packet (id: %d)\n", name, new_pkt->event_id);
       }
       return new_pkt;
     }
@@ -160,6 +164,7 @@ namespace Queue1
     uint16_t _lastEvent = 0, _noMessageValue;
     long _last_event_id = -1;
     QueueHandle_t _queue = NULL;
+    const char *_queue_name = nullptr;
     TickType_t _ticks = 10;
     QueueEventCallback
         _missedCallback = nullptr,

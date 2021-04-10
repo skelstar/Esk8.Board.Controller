@@ -2,13 +2,13 @@
 
 #include <QueueManager1.h>
 #include <types/PrimaryButton.h>
+#include <utils.h>
+#include <types/Throttle.h>
 
-//----------------------------------------
-class ThrottleState : public QueueBase
-{
-public:
-  uint8_t val = 127;
-};
+#ifndef MAGNETIC_THROTTLE_H
+#include <MagThrottle.h>>
+#endif
+
 //----------------------------------------
 
 namespace ThrottleTask
@@ -24,16 +24,27 @@ namespace ThrottleTask
 
   PrimaryButtonState primary_button;
 
+  bool throttleEnabled_cb()
+  {
+    return primary_button.pressed;
+  }
+
   //================================================
   void task(void *pvParameters)
   {
     mgr.printStarted();
 
     Queue1::Manager<PrimaryButtonState> primaryBtnQueue(xPrimaryButtonQueue, (TickType_t)5);
-
     primaryBtnQueue.setMissedEventCallback([](uint16_t num_events) {
       Serial.printf("WARNING: missed %d events in primaryBtnQueue (ThrottleTask)\n", num_events);
     });
+
+    Queue1::Manager<SendToBoardNotf> sendToBoardNotf(xSendToBoardQueueHandle, (TickType_t)5);
+
+    Queue1::Manager<ThrottleState> throttleQueue1(xThrottleQueue, (TickType_t)5);
+
+    MagneticThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, THROTTLE_DIRECTION);
+    MagneticThrottle::setThrottleEnabledCb(throttleEnabled_cb);
 
     init();
 
@@ -46,24 +57,23 @@ namespace ThrottleTask
 
     while (true)
     {
-      if (since_checked_throttle > CHECK_THROTTLE_INTERVAL)
+
+      if (sendToBoardNotf.hasValue())
       {
         since_checked_throttle = 0;
 
-        if (primaryBtnQueue.hasValue(__func__))
+        if (primaryBtnQueue.hasValue("ThrottleTask"))
         {
           primary_button = primaryBtnQueue.value;
-          Serial.printf("buttonQueue: pressed=%d\n", primary_button.pressed);
         }
 
         MagneticThrottle::update();
 
         uint8_t raw_throttle = MagneticThrottle::get();
-        if (raw_throttle != throttle.val)
-        {
-          throttle.val = raw_throttle;
-          throttleQueue->send<ThrottleState>(&throttle);
-        }
+        throttle.val = raw_throttle;
+        throttleQueue1.send(&throttle, [](ThrottleState t) {
+          // Serial.printf("sending throttle to queue t: %d\n", t.val);
+        });
       }
 
       mgr.healthCheck(5000);
@@ -87,11 +97,6 @@ namespace ThrottleTask
       Serial.printf("%s\n", connected
                                 ? "INFO: mag-throttle connected OK"
                                 : "ERROR: Could not find mag throttle");
-
-      MagneticThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, THROTTLE_DIRECTION);
-      MagneticThrottle::setThrottleEnabledCb([] {
-        return primary_button.pressed;
-      });
 
       initialised = true;
       vTaskDelay(10);

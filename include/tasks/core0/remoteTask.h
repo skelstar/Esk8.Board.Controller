@@ -14,8 +14,8 @@ namespace Remote
 {
   RTOSTaskManager mgr("RemoteTask", 3000);
 
-  xQueueHandle queueHandle;
-  Queue::Manager *queue = nullptr;
+  // xQueueHandle queueHandle;
+  // Queue::Manager *queue = nullptr;
 
   BatteryLib battery(BATTERY_MEASURE_PIN);
 
@@ -30,8 +30,8 @@ namespace Remote
 
     Remote::battery.setup(nullptr);
 
-    queueHandle = xQueueCreate(/*len*/ 1, sizeof(BatteryInfo));
-    queue = new Queue::Manager(queueHandle, (TickType_t)5);
+    // queueHandle = xQueueCreate(/*len*/ 1, sizeof(BatteryInfo));
+    // queue = new Queue::Manager(queueHandle, (TickType_t)5);
 
     mgr.ready = true;
     mgr.printReady();
@@ -48,7 +48,7 @@ namespace Remote
         remote.percent = battery.chargePercent;
         remote.volts = battery.getVolts();
 
-        queue->sendLegacy(&remote);
+        // queue->sendLegacy(&remote);
       }
 
       mgr.healthCheck(10000);

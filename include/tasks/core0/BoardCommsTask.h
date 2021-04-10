@@ -95,6 +95,8 @@ namespace BoardCommsTask
 
     controller_packet.id = 0;
 
+    Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, (TickType_t)5);
+
     boardClientInit();
 
     mgr.ready = true;
@@ -112,11 +114,8 @@ namespace BoardCommsTask
       // check sendToBoardQueue for when to send packet to board
       if (since_check_send_notf_queue > PERIOD_10MS)
       {
-        SendToBoardNotf *notf = sendToBoardQueue->peek<SendToBoardNotf>(__func__);
-        if (notf != nullptr && !notf->been_peeked(notf_id))
+        if (sendToBoardQueue.hasValue(__func__))
         {
-          notf_id = notf->event_id;
-
           sendPacketToBoard();
         }
       }

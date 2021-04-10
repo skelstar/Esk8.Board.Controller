@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QueueManager1.h>
+
 #ifndef __SparkFun_Qwiic_Button_H__
 #include <SparkFun_Qwiic_Button.h>
 #endif
@@ -17,6 +19,8 @@ namespace QwiicButtonTask
   QwiicButton qwiicButton;
 
   PrimaryButtonState state;
+
+  Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xSendToBoardQueueHandle, (TickType_t)5);
 
   const unsigned long CHECK_QUEUE_INTERVAL = 50;
   const unsigned long CHECK_BUTTON_INTERVAL = 500;
@@ -48,7 +52,7 @@ namespace QwiicButtonTask
     vTaskDelay(1000);
 
     state.pressed = qwiicButton.isPressed();
-    primaryButtonQueue->send(&state);
+    primaryButtonQueue.send(&state);
 
     while (true)
     {
@@ -67,7 +71,7 @@ namespace QwiicButtonTask
         if (state.pressed != pressed)
         {
           state.pressed = pressed;
-          primaryButtonQueue->send(&state);
+          primaryButtonQueue.send(&state);
         }
       }
 

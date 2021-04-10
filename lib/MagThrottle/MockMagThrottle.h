@@ -1,5 +1,7 @@
 #pragma once
 
+#define MAGNETIC_THROTTLE_H
+
 #ifndef Arduino
 #include <Arduino.h>
 #endif

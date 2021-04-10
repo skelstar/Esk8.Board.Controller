@@ -53,15 +53,15 @@ namespace Stats
       {
         sinceReadQueue = 0;
 
-        BoardClass *res = boardPacketQueue->peek<BoardClass>(__func__);
-        if (res != nullptr)
-        {
-          if (myboard->packet.moving != res->packet.moving)
-            if (handleStartingStopping(res))
-              // stats changed
-              statsQueue->sendLegacy(&stats);
-          myboard = new BoardClass(*res);
-        }
+        // BoardClass *res = boardPacketQueue->peek<BoardClass>(__func__);
+        // if (res != nullptr)
+        // {
+        //   if (myboard->packet.moving != res->packet.moving)
+        //     if (handleStartingStopping(res))
+        //       // stats changed
+        //       statsQueue->sendLegacy(&stats);
+        //   myboard = new BoardClass(*res);
+        // }
       }
 
       vTaskDelay(10);

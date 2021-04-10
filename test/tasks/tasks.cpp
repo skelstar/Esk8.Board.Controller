@@ -26,7 +26,7 @@ xQueueHandle xBoardPacketQueue;
 Queue::Manager *boardPacketQueue;
 
 xQueueHandle xSendToBoardQueueHandle;
-Queue::Manager *sendToBoardQueue;
+// Queue::Manager *sendToBoardQueue;
 
 xQueueHandle xBoardStateQueueHandle;
 Queue::Manager *packetStateQueue;
@@ -125,7 +125,7 @@ void setUp()
   statsQueue = new Queue::Manager(xStatsQueue, (TickType_t)5);
 
   xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf *));
-  sendToBoardQueue = new Queue::Manager(xSendToBoardQueueHandle, (TickType_t)5);
+  Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, (TickType_t)5);
 
   xBoardStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
   packetStateQueue = new Queue::Manager(xBoardStateQueueHandle, (TickType_t)5);

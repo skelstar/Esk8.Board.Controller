@@ -14,10 +14,13 @@ static int counter = 0;
 
 #include <types.h>
 #include <rtosManager.h>
-#include <QueueManager.h>
+// #include <QueueManager.h>
+#include <QueueManager1.h>
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
+
+#include <types/SendToBoardNotf.h>
 
 #include <MockMagThrottle.h>
 #include <MockedQwiicButton.h>
@@ -26,33 +29,12 @@ MyMutex mutex_I2C;
 MyMutex mutex_SPI;
 
 xQueueHandle xBoardPacketQueue;
-Queue::Manager *boardPacketQueue = nullptr;
-
 xQueueHandle xSendToBoardQueueHandle;
-Queue::Manager *sendToBoardQueue = nullptr;
-
 xQueueHandle xBoardStateQueueHandle;
-Queue::Manager *packetStateQueue = nullptr;
-
 xQueueHandle xPrimaryButtonQueue;
-Queue::Manager *primaryButtonQueue = nullptr;
-
 xQueueHandle xStatsQueue;
-Queue::Manager *statsQueue = nullptr;
-
 xQueueHandle xNintendoControllerQueue;
-Queue::Manager *nintendoControllerQueue = nullptr;
-
 xQueueHandle xThrottleQueue;
-Queue::Manager *throttleQueue = nullptr;
-
-class SendToBoardNotf : public QueueBase
-{
-public:
-  const char *name;
-};
-
-#include <tasks/core0/SendToBoardTimerTask.h>
 
 //----------------------------------
 #define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
@@ -63,15 +45,9 @@ public:
 #define TICKS_50ms 50 / portTICK_PERIOD_MS
 #define TICKS_100ms 100 / portTICK_PERIOD_MS
 
-#include <tasks/core0/remoteTask.h>
-
-#include <displayState.h>
-
 #include <tasks/core0/qwiicButtonTask.h>
-// #include <tasks/core0/NintendoClassicTask.h>
 #include <tasks/core0/ThrottleTask.h>
-// #include <tasks/core0/debugTask.h>
-// #include <tasks/core0/displayTask.h>
+#include <tasks/core0/SendToBoardTimerTask.h>
 
 elapsedMillis since_checked_queue;
 
@@ -94,11 +70,9 @@ void setUp()
   mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
   mutex_I2C.enabled = true;
 
+  xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf));
   xPrimaryButtonQueue = xQueueCreate(1, sizeof(PrimaryButtonState));
-  primaryButtonQueue = new Queue::Manager(xPrimaryButtonQueue, (TickType_t)5);
-
   xThrottleQueue = xQueueCreate(1, sizeof(ThrottleState));
-  throttleQueue = new Queue::Manager(xThrottleQueue, (TickType_t)5);
 }
 
 void tearDown()
@@ -111,12 +85,18 @@ void tearDown()
 void test_throttle_state_queue()
 {
   namespace throttle_ = ThrottleTask;
-
-  unsigned long _last_throttle_queue_id = 0;
+  namespace sendNotf_ = SendToBoardTimerTask;
 
   Wire.begin(); //Join I2C bus
 
   throttle_::mgr.create(throttle_::task, CORE_0, PRIORITY_1);
+  sendNotf_::mgr.create(sendNotf_::task, CORE_0, TASK_PRIORITY_2);
+
+  Queue1::Manager<SendToBoardNotf> sendToBoardNotf(xSendToBoardQueueHandle, (TickType_t)5);
+  sendNotf_::mgr.enable();
+
+  Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueue, (TickType_t)5);
+  Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueue, (TickType_t)5);
 
   static uint8_t _throttle = 127;
 
@@ -137,34 +117,31 @@ void test_throttle_state_queue()
   PrimaryButtonState state;
 
   counter = 0;
-  char message[40];
 
   while (counter < 6)
   {
-    if (since_checked_queue > 1000)
+    if (since_checked_queue > 10)
     {
       since_checked_queue = 0;
-
-      state.pressed = false;
-
-      primaryButtonQueue->send(&state);
-
-      vTaskDelay(50);
-
-      ThrottleState *throttle = throttleQueue->peek<ThrottleState>(__func__);
-      if (throttle != nullptr && !throttle->been_peeked(_last_throttle_queue_id))
+      if (sendToBoardNotf.hasValue())
       {
-        _last_throttle_queue_id = throttle->event_id;
-        Serial.printf("Got %d from ThrottleTask\n", throttle->val);
-        TEST_ASSERT_EQUAL(_throttle, throttle->val);
+        state.pressed = false;
+        primaryButtonQueue.send(&state, [](PrimaryButtonState state) {
+          // Serial.printf("sending primary button: %d\n", state.pressed);
+        });
+
+        vTaskDelay(50);
+
+        if (throttleQueue.hasValue("throttleQueue (hasValue) in test"))
+        {
+          // Serial.printf("Got %d from ThrottleTask\n", throttleQueue.value.val);
+          TEST_ASSERT_EQUAL(_throttle, throttleQueue.value.val);
+        }
+
+        counter++;
       }
-      else
-      {
-        Serial.printf("ThrottleTask didn't respond\n");
-      }
-      counter++;
     }
-    vTaskDelay(5);
+    vTaskDelay(100);
   }
 }
 
@@ -173,12 +150,13 @@ void test_throttle_limting_with_primary_button()
   namespace throttle_ = ThrottleTask;
   namespace qwiic_ = QwiicButtonTask;
 
-  unsigned long _last_throttle_queue_id = 0;
-
   Wire.begin(); //Join I2C bus
 
   throttle_::mgr.create(throttle_::task, CORE_0, PRIORITY_1);
   qwiic_::mgr.create(QwiicButtonTask::task, CORE_0, PRIORITY_1);
+
+  Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueue, (TickType_t)5);
+  Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueue, (TickType_t)5);
 
   static uint8_t _s_Throttle = 127;
   static uint8_t _s_Qwiic_pressed = 0;
@@ -207,7 +185,6 @@ void test_throttle_limting_with_primary_button()
   PrimaryButtonState state;
 
   counter = 0;
-  char message[40];
 
   while (counter < 6)
   {
@@ -217,28 +194,35 @@ void test_throttle_limting_with_primary_button()
 
       state.pressed = _s_Qwiic_pressed;
 
-      primaryButtonQueue->send(&state);
+      // primaryButtonQueue.send(&state, [](PrimaryButtonState state) {
+      //   Serial.printf("Sending to PrimaryButtonQueue: %d\n", state.pressed);
+      // });
 
       vTaskDelay(50);
 
-      ThrottleState *throttle = throttleQueue->peek<ThrottleState>(__func__);
-      if (throttle != nullptr && !throttle->been_peeked(_last_throttle_queue_id))
-      {
-        _last_throttle_queue_id = throttle->event_id;
-        Serial.printf("Got %d from ThrottleTask\n", throttle->val);
-        if (_s_Qwiic_pressed == 0)
-          TEST_ASSERT_EQUAL(throttle->val, 127);
-        else
-          TEST_ASSERT_EQUAL(throttle->val, _s_Steps[counter]);
-      }
-      else
-      {
-        Serial.printf("ThrottleTask queue was empty\n");
-      }
+      // if (throttleQueue.hasValue(__func__))
+      // {
+      //   Serial.printf("Got %d from ThrottleTask\n", throttleQueue.value.val);
+      //   // if (_s_Qwiic_pressed == 0)
+      //   // {
+      //   //   TEST_ASSERT_TRUE(true);
+      //   // }
+      //   // else
+      //   // {
+      //   //   TEST_ASSERT_TRUE(false);
+      //   // }
+      //   // TEST_ASSERT_EQUAL(127, throttleQueue.value.val);
+      //   // TEST_ASSERT_EQUAL(_s_Steps[counter], throttleQueue.value.val);
+      // }
+      Serial.printf("test 1\n");
       counter++;
+      Serial.printf("test 2\n");
+      vTaskDelay(5);
     }
-    vTaskDelay(5);
+    vTaskDelay(100);
   }
+
+  vTaskDelete(NULL);
 }
 
 void setup()
@@ -249,8 +233,8 @@ void setup()
 
   UNITY_BEGIN();
 
-  // RUN_TEST(test_throttle_state_queue);
-  RUN_TEST(test_throttle_limting_with_primary_button);
+  RUN_TEST(test_throttle_state_queue);
+  // RUN_TEST(test_throttle_limting_with_primary_button);
 
   UNITY_END();
 }

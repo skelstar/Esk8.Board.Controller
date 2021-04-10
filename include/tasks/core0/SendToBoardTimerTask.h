@@ -35,6 +35,8 @@ namespace SendToBoardTimerTask
 
     SendToBoardNotf notification;
 
+    Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, (TickType_t)5);
+
     notification.event_id = 0;
 
     mgr.ready = true;
@@ -46,7 +48,7 @@ namespace SendToBoardTimerTask
       {
         since_sent_to_board = 0;
 
-        sendToBoardQueue->send(&notification);
+        sendToBoardQueue.send(&notification);
       }
 
       mgr.healthCheck(10000);

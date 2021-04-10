@@ -26,8 +26,7 @@ MyMutex mutex_SPI;
 xQueueHandle xBoardPacketQueue;
 Queue::Manager *boardPacketQueue = nullptr;
 
-xQueueHandle xSendToBoardQueueHandle;
-Queue::Manager *sendToBoardQueue = nullptr;
+// xQueueHandle xSendToBoardQueueHandle;
 
 xQueueHandle xBoardStateQueueHandle;
 Queue::Manager *packetStateQueue = nullptr;
@@ -106,6 +105,7 @@ void setUp()
 
   xPrimaryButtonQueue = xQueueCreate(1, sizeof(PrimaryButtonState *));
   primaryButtonQueue = new Queue::Manager(xPrimaryButtonQueue, (TickType_t)5);
+  // Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, (TickType_t)5);
 }
 
 void tearDown()
