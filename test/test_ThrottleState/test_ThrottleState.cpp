@@ -45,7 +45,7 @@ xQueueHandle xThrottleQueue;
 #define TICKS_50ms 50 / portTICK_PERIOD_MS
 #define TICKS_100ms 100 / portTICK_PERIOD_MS
 
-#include <tasks/core0/qwiicButtonTask.h>
+#include <tasks/core0/QwiicButtonTask.h>
 #include <tasks/core0/ThrottleTask.h>
 #include <tasks/core0/SendToBoardTimerTask.h>
 
@@ -132,7 +132,7 @@ void test_throttle_state_queue()
 
         vTaskDelay(50);
 
-        if (throttleQueue.hasValue("throttleQueue (hasValue) in test"))
+        if (throttleQueue.hasValue("test::throttleQueue (hasValue)"))
         {
           // Serial.printf("Got %d from ThrottleTask\n", throttleQueue.value.val);
           TEST_ASSERT_EQUAL(_throttle, throttleQueue.value.val);

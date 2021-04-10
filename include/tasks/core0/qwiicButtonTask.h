@@ -62,7 +62,7 @@ namespace QwiicButtonTask
 
         bool pressed = state.pressed;
 
-        if (mutex_I2C.take("qwiicButtonTask: loop", TICKS_10ms))
+        if (mutex_I2C.take("QwiicButtonTask: loop", TICKS_10ms))
         {
           pressed = qwiicButton.isPressed();
           mutex_I2C.give(nullptr); // 1ms

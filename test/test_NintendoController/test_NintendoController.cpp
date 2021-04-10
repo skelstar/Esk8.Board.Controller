@@ -62,7 +62,7 @@ public:
 
 #include <displayState.h>
 
-// #include <tasks/core0/qwiicButtonTask.h>
+// #include <tasks/core0/QwiicButtonTask.h>
 #include <tasks/core0/NintendoClassicTask.h>
 // #include <tasks/core0/ThrottleTask.h>
 // #include <tasks/core0/debugTask.h>
