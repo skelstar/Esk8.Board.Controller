@@ -1,9 +1,10 @@
 #pragma once
 
-#define TICKS_5ms 5 / portTICK_PERIOD_MS
-#define TICKS_10ms 10 / portTICK_PERIOD_MS
-#define TICKS_50ms 50 / portTICK_PERIOD_MS
-#define TICKS_100ms 100 / portTICK_PERIOD_MS
+const TickType_t TICKS_5ms = 5 / portTICK_PERIOD_MS;
+const TickType_t TICKS_10ms = 10 / portTICK_PERIOD_MS;
+const TickType_t TICKS_50ms = 50 / portTICK_PERIOD_MS;
+const TickType_t TICKS_100ms = 100 / portTICK_PERIOD_MS;
+const TickType_t TICKS_500ms = 500 / portTICK_PERIOD_MS;
 
 class QueueBase
 {

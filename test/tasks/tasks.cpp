@@ -31,13 +31,13 @@ xQueueHandle xSendToBoardQueueHandle;
 xQueueHandle xBoardStateQueueHandle;
 Queue::Manager *packetStateQueue;
 
-xQueueHandle xPrimaryButtonQueue;
+xQueueHandle xPrimaryButtonQueueHandle;
 Queue::Manager *primaryButtonQueue = nullptr;
 
 xQueueHandle xNintendoControllerQueue;
 Queue::Manager *nintendoControllerQueue = nullptr;
 
-xQueueHandle xThrottleQueue;
+xQueueHandle xThrottleQueueHandle;
 Queue::Manager *throttleQueue = nullptr;
 
 class SendToBoardNotf : public QueueBase
@@ -119,25 +119,25 @@ void setUp()
   // Wire.setClock(200000);
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
-  boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);
+  boardPacketQueue = new Queue::Manager(xBoardPacketQueue, TICKS_5ms);
 
   xStatsQueue = xQueueCreate(1, sizeof(StatsClass *));
-  statsQueue = new Queue::Manager(xStatsQueue, (TickType_t)5);
+  statsQueue = new Queue::Manager(xStatsQueue, TICKS_5ms);
 
   xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf *));
-  Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, (TickType_t)5);
+  Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, TICKS_5ms);
 
   xBoardStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
-  packetStateQueue = new Queue::Manager(xBoardStateQueueHandle, (TickType_t)5);
+  packetStateQueue = new Queue::Manager(xBoardStateQueueHandle, TICKS_5ms);
 
-  xPrimaryButtonQueue = xQueueCreate(1, sizeof(PrimaryButtonState));
-  primaryButtonQueue = new Queue::Manager(xPrimaryButtonQueue, (TickType_t)5);
+  xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState));
+  primaryButtonQueue = new Queue::Manager(xPrimaryButtonQueueHandle, TICKS_5ms);
 
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
-  nintendoControllerQueue = new Queue::Manager(xNintendoControllerQueue, (TickType_t)5);
+  nintendoControllerQueue = new Queue::Manager(xNintendoControllerQueue, TICKS_5ms);
 
-  xThrottleQueue = xQueueCreate(1, sizeof(ThrottleState));
-  throttleQueue = new Queue::Manager(xThrottleQueue, (TickType_t)5);
+  xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState));
+  throttleQueue = new Queue::Manager(xThrottleQueueHandle, TICKS_5ms);
 }
 
 void tearDown()
@@ -334,7 +334,7 @@ void test_mocked_client_responds_to_controller_packets_correctly()
     vTaskDelay(5);
   }
 
-  SendToBoardTimerTask::setInterval(1000);
+  SendToBoardTimerTask::setSendInterval(1000);
 
   BoardCommsTask::mgr.enable();
   SendToBoardTimerTask::mgr.enable();

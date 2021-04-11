@@ -32,7 +32,7 @@ Queue::Manager *sendToBoardQueue = nullptr;
 xQueueHandle xBoardStateQueueHandle;
 Queue::Manager *packetStateQueue = nullptr;
 
-xQueueHandle xPrimaryButtonQueue;
+xQueueHandle xPrimaryButtonQueueHandle;
 Queue::Manager *primaryButtonQueue = nullptr;
 
 xQueueHandle xStatsQueue;
@@ -90,7 +90,7 @@ void setUp()
   mutex_I2C.enabled = true;
 
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
-  nintendoControllerQueue = new Queue::Manager(xNintendoControllerQueue, (TickType_t)5);
+  nintendoControllerQueue = new Queue::Manager(xNintendoControllerQueue, TICKS_5ms);
 }
 
 void tearDown()

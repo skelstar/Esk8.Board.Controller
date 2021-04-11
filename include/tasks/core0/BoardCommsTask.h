@@ -95,7 +95,7 @@ namespace BoardCommsTask
 
     controller_packet.id = 0;
 
-    Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, (TickType_t)5);
+    Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, TICKS_5ms);
 
     boardClientInit();
 

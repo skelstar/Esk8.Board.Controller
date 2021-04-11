@@ -44,7 +44,7 @@ Queue::Manager *statsQueue;
 xQueueHandle xPerihperals;
 Queue::Manager *peripheralsQueue;
 
-xQueueHandle xPrimaryButtonQueue;
+xQueueHandle xPrimaryButtonQueueHandle;
 Queue::Manager *primaryButtonQueue = nullptr;
 
 MyMutex mutex_I2C;
@@ -224,16 +224,16 @@ void setup()
 #endif
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
-  boardPacketQueue = new Queue::Manager(xBoardPacketQueue, (TickType_t)5);
+  boardPacketQueue = new Queue::Manager(xBoardPacketQueue, TICKS_5ms);
 
   xStatsQueue = xQueueCreate(3, sizeof(StatsClass *));
-  statsQueue = new Queue::Manager(xStatsQueue, (TickType_t)5);
+  statsQueue = new Queue::Manager(xStatsQueue, TICKS_5ms);
 
   xPerihperals = xQueueCreate(1, sizeof(nsPeripherals::Peripherals *));
-  peripheralsQueue = new Queue::Manager(xPerihperals, (TickType_t)5);
+  peripheralsQueue = new Queue::Manager(xPerihperals, TICKS_5ms);
 
-  xPrimaryButtonQueue = xQueueCreate(1, sizeof(PrimaryButtonState));
-  primaryButtonQueue = new Queue::Manager(xPrimaryButtonQueue, (TickType_t)5);
+  xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState));
+  primaryButtonQueue = new Queue::Manager(xPrimaryButtonQueueHandle, TICKS_5ms);
 
   peripherals = new nsPeripherals::Peripherals();
 

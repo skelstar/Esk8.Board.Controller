@@ -9,7 +9,7 @@ public:
   PrimaryButtonState() : QueueBase(event_id)
   {
     event_id = 0;
-    name = "PrimaryButtonState111";
+    name = "PrimaryButtonState";
   }
 
   bool pressed = false;

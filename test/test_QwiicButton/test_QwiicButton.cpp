@@ -31,7 +31,7 @@ Queue::Manager *boardPacketQueue = nullptr;
 xQueueHandle xBoardStateQueueHandle;
 Queue::Manager *packetStateQueue = nullptr;
 
-xQueueHandle xPrimaryButtonQueue;
+xQueueHandle xPrimaryButtonQueueHandle;
 Queue::Manager *primaryButtonQueue = nullptr;
 
 xQueueHandle xStatsQueue;
@@ -103,9 +103,9 @@ void setUp()
   mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
   mutex_I2C.enabled = true;
 
-  xPrimaryButtonQueue = xQueueCreate(1, sizeof(PrimaryButtonState *));
-  primaryButtonQueue = new Queue::Manager(xPrimaryButtonQueue, (TickType_t)5);
-  // Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, (TickType_t)5);
+  xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
+  primaryButtonQueue = new Queue::Manager(xPrimaryButtonQueueHandle, TICKS_5ms);
+  // Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, TICKS_5ms);
 }
 
 void tearDown()

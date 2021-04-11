@@ -20,7 +20,7 @@ namespace QwiicButtonTask
 
   PrimaryButtonState state;
 
-  Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueue, (TickType_t)5);
+  Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueueHandle, TICKS_5ms);
 
   const unsigned long CHECK_QUEUE_INTERVAL = 50;
   const unsigned long CHECK_BUTTON_INTERVAL = 500;
@@ -34,7 +34,7 @@ namespace QwiicButtonTask
     bool init_button = false;
     do
     {
-      if (mutex_I2C.take("QwiicButtonTask: init", (TickType_t)500))
+      if (mutex_I2C.take("QwiicButtonTask: init", TICKS_500ms))
       {
         init_button = qwiicButton.begin();
         if (!init_button)

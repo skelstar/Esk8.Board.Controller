@@ -31,7 +31,7 @@ namespace Remote
     Remote::battery.setup(nullptr);
 
     // queueHandle = xQueueCreate(/*len*/ 1, sizeof(BatteryInfo));
-    // queue = new Queue::Manager(queueHandle, (TickType_t)5);
+    // queue = new Queue::Manager(queueHandle, TICKS_5ms);
 
     mgr.ready = true;
     mgr.printReady();

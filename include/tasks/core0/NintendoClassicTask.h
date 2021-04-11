@@ -107,7 +107,7 @@ namespace NintendoClassicTask
   void init()
   {
     // xNintendoControllerQueue = xQueueCreate(/*len*/ 1, sizeof(NintendoController *));
-    // nintendoControllerQueue = new Queue::Manager(xNintendoControllerQueue, (TickType_t)5);
+    // nintendoControllerQueue = new Queue::Manager(xNintendoControllerQueue, TICKS_5ms);
 
     bool initialised = false;
 

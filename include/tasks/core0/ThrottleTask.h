@@ -13,7 +13,7 @@
 
 namespace ThrottleTask
 {
-  RTOSTaskManager mgr("ThrottleTask", 3000);
+  RTOSTaskManager mgr("ThrottleTask", 5000);
 
   // prototypes
   void init();
@@ -34,14 +34,14 @@ namespace ThrottleTask
   {
     mgr.printStarted();
 
-    Queue1::Manager<PrimaryButtonState> primaryBtnQueue(xPrimaryButtonQueue, (TickType_t)5);
+    Queue1::Manager<PrimaryButtonState> primaryBtnQueue(xPrimaryButtonQueueHandle, TICKS_5ms);
     primaryBtnQueue.setMissedEventCallback([](uint16_t num_events) {
       Serial.printf("WARNING: missed %d events in primaryBtnQueue (ThrottleTask)\n", num_events);
     });
 
-    Queue1::Manager<SendToBoardNotf> sendToBoardNotf(xSendToBoardQueueHandle, (TickType_t)5);
+    Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "SendNotfQueue");
 
-    Queue1::Manager<ThrottleState> throttleQueue1(xThrottleQueue, (TickType_t)5, "throttleQueue");
+    Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_5ms, "throttleQueue");
 
     MagneticThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, THROTTLE_DIRECTION);
     MagneticThrottle::setThrottleEnabledCb(throttleEnabled_cb);
@@ -58,20 +58,21 @@ namespace ThrottleTask
     while (true)
     {
 
-      if (sendToBoardNotf.hasValue())
+      if (sendNotfQueue.hasValue())
       {
         since_checked_throttle = 0;
 
-        if (primaryBtnQueue.hasValue()) //"ThrottleTask::primaryBtnQueue"))
+        if (primaryBtnQueue.hasValue())
         {
-          primary_button = primaryBtnQueue.value;
+          primary_button = primaryBtnQueue.payload;
         }
 
         MagneticThrottle::update();
 
         uint8_t raw_throttle = MagneticThrottle::get();
         throttle.val = raw_throttle;
-        throttleQueue1.send(&throttle, printSentToQueue);
+        Serial.printf("throttle.val %d\n", throttle.val);
+        throttleQueue.send(&throttle, printSentToQueue);
         // , [](ThrottleState t) {
         //   Serial.printf("[ThrottleTask] sending throttle: %d with id: %lu\n", t.val, t.event_id);
         // });

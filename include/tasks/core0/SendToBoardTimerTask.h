@@ -17,10 +17,10 @@ namespace SendToBoardTimerTask
     unsigned long sendInterval = SEND_TO_BOARD_INTERVAL;
   }
 
-  RTOSTaskManager mgr("SendToBoardTimerTask", 3000);
+  RTOSTaskManager mgr("SendToBoardTimerTask", 5000);
 
   //----------------------------------------------
-  void setInterval(unsigned long interval, bool print = false)
+  void setSendInterval(unsigned long interval, bool print = false)
   {
     sendInterval = interval;
     if (print)
@@ -35,9 +35,7 @@ namespace SendToBoardTimerTask
 
     SendToBoardNotf notification;
 
-    Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, (TickType_t)5);
-
-    notification.event_id = 0;
+    Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, TICKS_5ms);
 
     mgr.ready = true;
     mgr.printReady();
@@ -47,6 +45,8 @@ namespace SendToBoardTimerTask
       if (since_sent_to_board > sendInterval && mgr.enabled())
       {
         since_sent_to_board = 0;
+
+        notification.sent_time = millis();
 
         sendToBoardQueue.send(&notification);
       }

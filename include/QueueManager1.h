@@ -25,7 +25,7 @@ namespace Queue1
     typedef void (*SentCallback)(T packet);
 
   public:
-    T value;
+    T payload;
 
   public:
     Manager(QueueHandle_t queue, TickType_t ticks, const char *name = nullptr)
@@ -37,7 +37,7 @@ namespace Queue1
       }
       _queue = queue;
       _ticks = ticks;
-      _queue_name = name != nullptr ? name : ((QueueBase)value).name;
+      _queue_name = name != nullptr ? name : ((QueueBase)payload).name;
     }
 
     void sendLegacy(T *payload)
@@ -78,7 +78,7 @@ namespace Queue1
       {
         _checkForMissedEvents(result->event_id);
         _last_event_id = result->event_id;
-        value = *result;
+        payload = *result;
         return true;
       }
       return false;

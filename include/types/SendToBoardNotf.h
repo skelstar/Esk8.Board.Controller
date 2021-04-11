@@ -5,5 +5,11 @@
 class SendToBoardNotf : public QueueBase
 {
 public:
-  const char *name;
+  SendToBoardNotf() : QueueBase(event_id)
+  {
+    name = "SendToBoardNotf";
+  }
+
+  unsigned long event_id = 0,
+                sent_time = 0;
 };

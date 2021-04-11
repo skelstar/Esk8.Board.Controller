@@ -82,8 +82,8 @@ void tearDown()
 
 void test_calls_and_responds_in_same_task()
 {
-  Queue1::Manager<FirstTestObj> sendQueue(xFirstQueueHandle, (TickType_t)5, "sendQueue");
-  Queue1::Manager<FirstTestObj> readQueue(xFirstQueueHandle, (TickType_t)5, "readQueue");
+  Queue1::Manager<FirstTestObj> sendQueue(xFirstQueueHandle, TICKS_5ms, "sendQueue");
+  Queue1::Manager<FirstTestObj> readQueue(xFirstQueueHandle, TICKS_5ms, "readQueue");
 
   printTestInstructions("Test calls and responds in same task");
 
@@ -126,7 +126,7 @@ void taskSend(void *pvParameters)
 {
   DEBUG("taskSend created!");
 
-  Queue1::Manager<FirstTestObj> sendQueue(xFirstQueueHandle, (TickType_t)5, "sendQueue");
+  Queue1::Manager<FirstTestObj> sendQueue(xFirstQueueHandle, TICKS_5ms, "sendQueue");
   DEBUG("taskSend ready!");
 
   elapsedMillis since_sent;
@@ -151,7 +151,7 @@ void taskSend(void *pvParameters)
 
 void test_calls_from_one_task_and_reads_in_another()
 {
-  Queue1::Manager<FirstTestObj> readQueue(xFirstQueueHandle, (TickType_t)5, "readQueue");
+  Queue1::Manager<FirstTestObj> readQueue(xFirstQueueHandle, TICKS_5ms, "readQueue");
 
   printTestInstructions("Test calls from one task and reads in another");
 
