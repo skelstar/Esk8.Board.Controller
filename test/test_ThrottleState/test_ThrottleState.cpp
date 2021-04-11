@@ -95,7 +95,7 @@ void test_throttle_state_queue()
   Queue1::Manager<SendToBoardNotf> sendToBoardNotf(xSendToBoardQueueHandle, (TickType_t)5);
   sendNotf_::mgr.enable();
 
-  Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueue, (TickType_t)5);
+  Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueue, (TickType_t)5, "primaryButtonQueue");
   Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueue, (TickType_t)5);
 
   static uint8_t _throttle = 127;
@@ -126,19 +126,17 @@ void test_throttle_state_queue()
       if (sendToBoardNotf.hasValue())
       {
         state.pressed = false;
-        primaryButtonQueue.send(&state, [](PrimaryButtonState state) {
-          // Serial.printf("sending primary button: %d\n", state.pressed);
-        });
-
+        primaryButtonQueue.send(&state, printSentToQueue);
         vTaskDelay(50);
 
-        if (throttleQueue.hasValue("test::throttleQueue (hasValue)"))
+        if (throttleQueue.hasValue())
         {
           // Serial.printf("Got %d from ThrottleTask\n", throttleQueue.value.val);
           TEST_ASSERT_EQUAL(_throttle, throttleQueue.value.val);
         }
 
         counter++;
+        Serial.printf("------------------------------------\n");
       }
     }
     vTaskDelay(100);

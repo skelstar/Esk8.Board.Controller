@@ -41,7 +41,7 @@ namespace ThrottleTask
 
     Queue1::Manager<SendToBoardNotf> sendToBoardNotf(xSendToBoardQueueHandle, (TickType_t)5);
 
-    Queue1::Manager<ThrottleState> throttleQueue1(xThrottleQueue, (TickType_t)5);
+    Queue1::Manager<ThrottleState> throttleQueue1(xThrottleQueue, (TickType_t)5, "throttleQueue");
 
     MagneticThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, THROTTLE_DIRECTION);
     MagneticThrottle::setThrottleEnabledCb(throttleEnabled_cb);
@@ -62,7 +62,7 @@ namespace ThrottleTask
       {
         since_checked_throttle = 0;
 
-        if (primaryBtnQueue.hasValue("ThrottleTask"))
+        if (primaryBtnQueue.hasValue()) //"ThrottleTask::primaryBtnQueue"))
         {
           primary_button = primaryBtnQueue.value;
         }
@@ -71,9 +71,10 @@ namespace ThrottleTask
 
         uint8_t raw_throttle = MagneticThrottle::get();
         throttle.val = raw_throttle;
-        throttleQueue1.send(&throttle, [](ThrottleState t) {
-          // Serial.printf("sending throttle to queue t: %d\n", t.val);
-        });
+        throttleQueue1.send(&throttle, printSentToQueue);
+        // , [](ThrottleState t) {
+        //   Serial.printf("[ThrottleTask] sending throttle: %d with id: %lu\n", t.val, t.event_id);
+        // });
       }
 
       mgr.healthCheck(5000);

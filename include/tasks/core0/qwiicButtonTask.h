@@ -20,7 +20,7 @@ namespace QwiicButtonTask
 
   PrimaryButtonState state;
 
-  Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xSendToBoardQueueHandle, (TickType_t)5);
+  Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueue, (TickType_t)5);
 
   const unsigned long CHECK_QUEUE_INTERVAL = 50;
   const unsigned long CHECK_BUTTON_INTERVAL = 500;
@@ -52,7 +52,9 @@ namespace QwiicButtonTask
     vTaskDelay(1000);
 
     state.pressed = qwiicButton.isPressed();
-    primaryButtonQueue.send(&state);
+    primaryButtonQueue.send(&state, [](PrimaryButtonState state) {
+      Serial.printf("Primary button sent, id: %lu\n", state.event_id);
+    });
 
     while (true)
     {

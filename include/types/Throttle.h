@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef QUEUEBASE_CLASS
-#include <QueueManager1.h>>
+#include <QueueManager1.h>
 #endif
 
 //----------------------------------------

@@ -15,6 +15,8 @@
 
 #define REPORT_TAKEN_PERIOD true
 
+#define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
+
 struct TaskConfig
 {
   const char *name;

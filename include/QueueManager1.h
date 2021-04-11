@@ -6,27 +6,15 @@
 #include "Arduino.h"
 #endif
 
-#ifndef QUEUEBASE_CLASS
-#define QUEUEBASE_CLASS
-
-class QueueBase
-{
-public:
-  unsigned long event_id;
-
-  bool been_peeked(unsigned long prev_id)
-  {
-    return event_id == prev_id;
-  }
-
-  bool missed_packet(unsigned long prev_id)
-  {
-    return prev_id == 0 && event_id - prev_id > 1;
-  }
-};
-#endif
-
+#include <types/QueueBase.h>
 #include <types/Throttle.h>
+
+template <typename T>
+void printSentToQueue(T payload)
+{
+  if (std::is_base_of<QueueBase, T>::value)
+    Serial.printf("[%s] sent: id:%lu to queue\n", payload.name != nullptr ? payload.name : "", payload.event_id);
+}
 
 namespace Queue1
 {
@@ -34,14 +22,13 @@ namespace Queue1
   class Manager
   {
     typedef void (*QueueEventCallback)(uint16_t ev);
-    typedef void (*VoidCallback)(T packet);
+    typedef void (*SentCallback)(T packet);
 
   public:
-    elapsedMillis since_last_queue_send;
     T value;
 
   public:
-    Manager(QueueHandle_t queue, TickType_t ticks, uint16_t noMessageValue = 0)
+    Manager(QueueHandle_t queue, TickType_t ticks, const char *name = nullptr)
     {
       if (queue == nullptr)
       {
@@ -50,45 +37,23 @@ namespace Queue1
       }
       _queue = queue;
       _ticks = ticks;
-      _noMessageValue = noMessageValue;
+      _queue_name = name != nullptr ? name : ((QueueBase)value).name;
     }
-
-    // Manager(QueueHandle_t queue, const char *queueName, TickType_t ticks, uint16_t noMessageValue = 0)
-    // {
-    //   if (queue == nullptr)
-    //   {
-    //     Serial.printf("ERROR: queue is null (Queue::Manager constr)\n");
-    //     return;
-    //   }
-    //   _queue = queue;
-    //   _queue_name = queueName;
-    //   _ticks = ticks;
-    //   _noMessageValue = noMessageValue;
-    // }
-
-    // Manager(QueueHandle_t queue, TickType_t ticks, uint16_t noMessageValue = 0)
-    // {
-    //   Manager(queue, nullptr, ticks, noMessageValue);
-    // }
 
     void sendLegacy(T *payload)
     {
       xQueueSendToFront(_queue, (void *)&payload, _ticks);
-      since_last_queue_send = 0;
     }
 
-    void send(T *payload, VoidCallback sent_cb = nullptr)
+    void send(T *payload, SentCallback sent_cb = nullptr)
     {
       xQueueSendToFront(_queue, (void *)&payload, _ticks);
-      since_last_queue_send = 0;
+
+      if (_queue_name != nullptr)
+        Serial.printf("[%s] send id: %lu\n", _queue_name, payload->event_id);
 
       if (sent_cb != nullptr)
-      {
         sent_cb(*payload);
-      }
-
-      // if (_sentCallback != nullptr)
-      //   _sentCallback(payload->event_id);
 
       payload->event_id++;
     }
@@ -96,7 +61,7 @@ namespace Queue1
     // this will clear the queue
     T read()
     {
-      uint16_t e = _noMessageValue;
+      T e = nullptr;
       if (_queue != NULL && xQueueReceive(_queue, &e, _ticks) == pdPASS)
       {
         if (_readCallback != nullptr)
@@ -122,11 +87,10 @@ namespace Queue1
     T *peek(const char *name = nullptr)
     {
       T *new_pkt = nullptr;
-
-      if (xQueuePeek(_queue, &(new_pkt), (TickType_t)5) && name != nullptr)
-      {
-        Serial.printf("%s: peeked, new packet (id: %d)\n", name, new_pkt->event_id);
-      }
+      if (xQueuePeek(_queue, &(new_pkt), _ticks) &&
+          new_pkt->event_id != _last_event_id &&
+          name != nullptr)
+        Serial.printf("%s: peeked, new packet (id: %lu)\n", name, new_pkt->event_id);
       return new_pkt;
     }
 
@@ -161,8 +125,8 @@ namespace Queue1
     }
 
   private:
-    uint16_t _lastEvent = 0, _noMessageValue;
-    long _last_event_id = -1;
+    uint16_t _lastEvent = 0;
+    unsigned long _last_event_id = -1;
     QueueHandle_t _queue = NULL;
     const char *_queue_name = nullptr;
     TickType_t _ticks = 10;
