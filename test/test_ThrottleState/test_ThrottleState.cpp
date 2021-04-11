@@ -154,13 +154,13 @@ void test_ThrottleTask_sends_when_SendToBoardTask_triggers()
     vTaskDelay(100);
   }
 
-  throttleTask::mgr.deleteTask(PRINT_THIS); // .create(throttleTask::task, CORE_0, TASK_PRIORITY_1);
-  sendNotfTask::mgr.deleteTask(PRINT_THIS); //.create(sendNotfTask::task, CORE_0, TASK_PRIORITY_2);
+  throttleTask::mgr.deleteTask(PRINT_THIS);
+  sendNotfTask::mgr.deleteTask(PRINT_THIS);
 
   TEST_ASSERT_TRUE(counter == 6);
 }
 
-void test_throttle_limting_with_primary_button()
+void test_throttle_limting_with_primary_button_not_held()
 {
   namespace throttleTask = ThrottleTask;
   namespace sendNotfTask = SendToBoardTimerTask;
@@ -168,14 +168,15 @@ void test_throttle_limting_with_primary_button()
   throttleTask::mgr.create(throttleTask::task, CORE_0, TASK_PRIORITY_1);
   sendNotfTask::mgr.create(sendNotfTask::task, CORE_0, TASK_PRIORITY_2);
 
-  sendNotfTask::setSendInterval(1000);
+  sendNotfTask::setSendInterval(500);
 
   sendNotfTask::mgr.enable();
 
   static uint8_t _throttle = 127;
+  static uint8_t _s_Steps[] = {50, 60, 120, 127, 130, 140};
 
   MagneticThrottle::setGetThrottleCb([] {
-    _throttle = _throttle - 1;
+    _throttle = _s_Steps[counter];
     return _throttle;
   });
 
@@ -184,7 +185,7 @@ void test_throttle_limting_with_primary_button()
     vTaskDelay(5);
   }
 
-  printTestInstructions("Will test the throttle state queue sends out when sendBoardNotification is sent");
+  printTestInstructions("Will test the throttle stays <=127 when primary button not held");
 
   elapsedMillis since_checked_queue;
 
@@ -213,6 +214,8 @@ void test_throttle_limting_with_primary_button()
 
         TEST_ASSERT_FALSE(timedout);
         TEST_ASSERT_TRUE(gotResp);
+        uint8_t expected = _s_Steps[counter] <= 127 ? _s_Steps[counter] : 127;
+        TEST_ASSERT_EQUAL(expected, throttleQueue.payload.val);
         Serial.printf("------------------------------------\n");
 
         counter++;
@@ -221,8 +224,8 @@ void test_throttle_limting_with_primary_button()
     vTaskDelay(100);
   }
 
-  throttleTask::mgr.deleteTask(PRINT_THIS); // .create(throttleTask::task, CORE_0, TASK_PRIORITY_1);
-  sendNotfTask::mgr.deleteTask(PRINT_THIS); //.create(sendNotfTask::task, CORE_0, TASK_PRIORITY_2);
+  throttleTask::mgr.deleteTask(PRINT_THIS);
+  sendNotfTask::mgr.deleteTask(PRINT_THIS);
 
   TEST_ASSERT_TRUE(counter == 6);
 }
@@ -235,8 +238,8 @@ void setup()
 
   UNITY_BEGIN();
 
-  RUN_TEST(test_ThrottleTask_sends_when_SendToBoardTask_triggers);
-  RUN_TEST(test_throttle_limting_with_primary_button);
+  // RUN_TEST(test_ThrottleTask_sends_when_SendToBoardTask_triggers);
+  RUN_TEST(test_throttle_limting_with_primary_button_not_held);
 
   UNITY_END();
 }
