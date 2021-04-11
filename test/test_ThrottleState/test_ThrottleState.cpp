@@ -32,7 +32,7 @@ MyMutex mutex_SPI;
 
 xQueueHandle xBoardPacketQueue;
 xQueueHandle xSendToBoardQueueHandle;
-xQueueHandle xBoardStateQueueHandle;
+xQueueHandle xPacketStateQueueHandle;
 xQueueHandle xPrimaryButtonQueueHandle;
 xQueueHandle xStatsQueue;
 xQueueHandle xNintendoControllerQueue;

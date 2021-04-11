@@ -35,7 +35,7 @@ namespace SendToBoardTimerTask
 
     SendToBoardNotf notification;
 
-    Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, TICKS_5ms);
+    Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, TICKS_5ms, "(IRL)sendToBoardQueue");
 
     mgr.ready = true;
     mgr.printReady();

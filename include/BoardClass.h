@@ -1,10 +1,14 @@
 #include <VescData.h>
 
-#define PRINT_THIS true
-
 class BoardClass : public QueueBase
 {
 public:
+  BoardClass() : QueueBase(event_id)
+  {
+    event_id = 0;
+    name = "BoardClass";
+  }
+
   void save(VescData latest)
   {
     _old = packet;
@@ -38,9 +42,7 @@ public:
   CommandType getCommand() { return packet.command; }
 
   VescData packet;
-  unsigned long id;
-  unsigned long sent_id;
-  unsigned long time_sent = 0, time_received = 0;
+  unsigned long id, sent_id, time_sent = 0, time_received = 0, event_id = 0;
 
 private:
   elapsedMillis _sinceLastPacket;
@@ -53,6 +55,13 @@ class PacketState : public QueueBase
 public:
   float version = 0.0;
   unsigned long packet_id;
+  unsigned long event_id;
+
+  PacketState() : QueueBase(event_id)
+  {
+    event_id = 0;
+    name = "PacketState";
+  }
 
   void sent(ControllerPacketBase packet)
   {

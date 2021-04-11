@@ -37,14 +37,16 @@ namespace BoardCommsTask
     VescData packet = boardClient.read();
     board.save(packet);
 
+    Serial.printf("Received packet\n");
+
     if (packet.reason == CONFIG_RESPONSE)
     {
       Serial.printf("CONFIG_RESPONSE id: %lu\n", packet.id);
     }
-    boardPacketQueue->send(&board);
+    boardPacketQueue.send(&board);
 
     packetState.received(packet);
-    packetStateQueue->send(&packetState);
+    packetStateQueue.send(&packetState);
   }
   //----------------------------------------------------------
   void sendConfigToBoard(bool print)
@@ -60,7 +62,7 @@ namespace BoardCommsTask
     bool success = boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);
 
     packetState.sent(controller_config);
-    packetStateQueue->send(&packetState, "sendConfigToBoard");
+    packetStateQueue.send(&packetState, printSentToQueue);
 
     if (success == false)
       Serial.printf("Unable to send CONFIG packet to board id: %lu\n", controller_packet.id);
@@ -78,7 +80,7 @@ namespace BoardCommsTask
 
     packetState.sent(controller_packet);
 
-    packetStateQueue->send(&packetState);
+    packetStateQueue.send(&packetState);
 
     if (success == false)
       Serial.printf("Unable to send CONTROL packet to board id: %lu\n", controller_packet.id);
@@ -95,7 +97,9 @@ namespace BoardCommsTask
 
     controller_packet.id = 0;
 
-    Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, TICKS_5ms);
+    Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "BoardCommsTask::sendNotfQueue");
+    Queue1::Manager<BoardClass> boardPacketQueue(xBoardPacketQueue, TICKS_5ms, "(BoardCommsTask)boardPacketQueue");
+    Queue1::Manager<PacketState> packetStateQueue(xPacketStateQueueHandle, TICKS_5ms, "(BoardCommsTask)packetStateQueue");
 
     boardClientInit();
 
@@ -107,14 +111,12 @@ namespace BoardCommsTask
       vTaskDelay(500);
     }
 
-    unsigned long notf_id = -1;
-
     while (true)
     {
-      // check sendToBoardQueue for when to send packet to board
+      // check sendNotfQueue for when to send packet to board
       if (since_check_send_notf_queue > PERIOD_10MS)
       {
-        if (sendToBoardQueue.hasValue(__func__))
+        if (sendNotfQueue.hasValue("BoardCommsTask::task"))
         {
           sendPacketToBoard();
         }
@@ -125,9 +127,9 @@ namespace BoardCommsTask
       {
         since_checked_comms = 0;
 
-        bool new_packet = boardClient.update();
+        boardClient.update();
 
-        packetStateQueue->send(&packetState);
+        packetStateQueue.send(&packetState);
       }
 
       mgr.healthCheck(10000);

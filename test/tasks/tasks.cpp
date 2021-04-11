@@ -28,7 +28,7 @@ Queue::Manager *boardPacketQueue;
 xQueueHandle xSendToBoardQueueHandle;
 // Queue::Manager *sendToBoardQueue;
 
-xQueueHandle xBoardStateQueueHandle;
+xQueueHandle xPacketStateQueueHandle;
 Queue::Manager *packetStateQueue;
 
 xQueueHandle xPrimaryButtonQueueHandle;
@@ -127,8 +127,8 @@ void setUp()
   xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf *));
   Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, TICKS_5ms);
 
-  xBoardStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
-  packetStateQueue = new Queue::Manager(xBoardStateQueueHandle, TICKS_5ms);
+  xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
+  packetStateQueue = new Queue::Manager(xPacketStateQueueHandle, TICKS_5ms);
 
   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState));
   primaryButtonQueue = new Queue::Manager(xPrimaryButtonQueueHandle, TICKS_5ms);

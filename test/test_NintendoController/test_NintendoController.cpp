@@ -29,7 +29,7 @@ Queue::Manager *boardPacketQueue = nullptr;
 xQueueHandle xSendToBoardQueueHandle;
 Queue::Manager *sendToBoardQueue = nullptr;
 
-xQueueHandle xBoardStateQueueHandle;
+xQueueHandle xPacketStateQueueHandle;
 Queue::Manager *packetStateQueue = nullptr;
 
 xQueueHandle xPrimaryButtonQueueHandle;

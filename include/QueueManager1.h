@@ -47,10 +47,15 @@ namespace Queue1
 
     void send(T *payload, SentCallback sent_cb = nullptr)
     {
+      if (_queue == nullptr)
+      {
+        Serial.printf("ERROR: queue not initialised! (%s)\n", _queue_name);
+        return;
+      }
       xQueueSendToFront(_queue, (void *)&payload, _ticks);
 
       if (_queue_name != nullptr)
-        Serial.printf("[%s] send id: %lu\n", _queue_name, payload->event_id);
+        Serial.printf("[%s::send()] sent id: %lu\n", _queue_name, payload->event_id);
 
       if (sent_cb != nullptr)
         sent_cb(*payload);
@@ -86,6 +91,11 @@ namespace Queue1
 
     T *peek(const char *name = nullptr)
     {
+      if (_queue == nullptr)
+      {
+        Serial.printf("ERROR: queue not initialised! (%s)\n", _queue_name);
+        return nullptr;
+      }
       T *new_pkt = nullptr;
       if (xQueuePeek(_queue, &(new_pkt), _ticks) &&
           new_pkt->event_id != _last_event_id &&
@@ -128,7 +138,7 @@ namespace Queue1
     uint16_t _lastEvent = 0;
     unsigned long _last_event_id = -1;
     QueueHandle_t _queue = NULL;
-    const char *_queue_name = nullptr;
+    const char *_queue_name = "Queue name not supplied";
     TickType_t _ticks = 10;
     QueueEventCallback
         _missedCallback = nullptr,
