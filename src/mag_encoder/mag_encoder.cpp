@@ -5,32 +5,23 @@
 #include <Wire.h>
 #include <AS5600.h>
 
-#include <Button2.h>
-
 #include <FastMap.h>
 
 #include <utils.h>
-
-Button2 button35(35);
 
 // https://ams.com/documents/20143/36005/AS5600_DS000365_5-00.pdf
 
 AMS_5600 ams5600;
 
-int ang, lang = 0;
-//---------------------------------------------------------
-
 #include <MagThrottle.h>
+
+#include <NintendoController.h>
+
 #include <NintendoButtons.h>
 
-//---------------------------------------------------------
-
-void button35_click(Button2 &btn)
-{
-  Serial.printf("button 35 click\n");
-  MagThrottle::centre(/*print*/ true);
-  MagThrottle::fsm.trigger(MagThrottle::TR_CENTRE);
-}
+#include <SparkFun_Qwiic_Button.h>
+//https://www.sparkfun.com/products/15932
+QwiicButton qwiicButton;
 
 //---------------------------------------------------------
 
@@ -38,8 +29,6 @@ void setup()
 {
   Serial.begin(115200);
   Serial.printf("\n\nMag Encoder Ready\n\n");
-
-  button35.setPressedHandler(button35_click);
 
   Wire.begin();
 
@@ -65,34 +54,38 @@ void setup()
     }
   }
 
-  MagThrottle::init(
-      /*sweep*/ 60,
-      [](uint8_t throttle) {
-        // Serial.printf("   throttle: %d\n", throttle);
-      });
+  qwiicButton.begin();
+
+  MagThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, MagThrottle::ANTI_CLOCKWISE);
+  MagThrottle::setThrottleEnabledCb([] {
+    return qwiicButton.isPressed(); // ClassicButtons::buttonPressed(NintendoController::BUTTON_B);
+  });
 
   delay(1000);
 }
 
-#include <stdlib.h>
-#include <math.h>
-
-uint8_t old_throttle;
-elapsedMillis since_read_angle, since_read_classic;
+elapsedMillis since_update_throttle, since_read_classic, since_read_qwiicButton;
+uint8_t last_qwiic = 0;
 
 void loop()
 {
-  // button35.loop();
-
-  if (since_read_angle > 100)
+  if (since_update_throttle > 100)
   {
-    since_read_angle = 0;
+    since_update_throttle = 0;
 
-    // MagThrottle::get();
+    MagThrottle::update();
+  }
 
-    // if (MagThrottle::angleChanged())
-    MagThrottle::loop();
-    // old_throttle = t;
+  if (since_read_qwiicButton > 100)
+  {
+    since_read_qwiicButton = 0;
+    uint8_t pressed = qwiicButton.isPressed();
+    if (!pressed && last_qwiic == 1)
+    {
+      // released
+      MagThrottle::centre();
+    }
+    last_qwiic = pressed;
   }
 
   if (since_read_classic > 100)

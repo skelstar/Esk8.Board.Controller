@@ -70,7 +70,13 @@
     "cfloat": "cpp",
     "ciso646": "cpp",
     "climits": "cpp",
-    "queue": "cpp"
+    "queue": "cpp",
+    "cstdbool": "cpp",
+    "map": "cpp",
+    "iterator": "cpp",
+    "random": "cpp",
+    "ios": "cpp",
+    "locale": "cpp"
   },
   "peacock.color": "#ff3d00",
   "workbench.editor.enablePreviewFromQuickOpen": true

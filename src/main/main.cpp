@@ -14,6 +14,10 @@
 #include <types.h>
 #include <printFormatStrings.h>
 #include <Button2.h>
+#include <NintendoController.h>
+
+#include <Fsm.h>
+#include <FsmManager.h>
 
 #include <constants.h>
 
@@ -23,72 +27,30 @@ Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 #include <NRF24L01Lib.h>
 #include <GenericClient.h>
 
-#if OPTION_USING_DISPLAY
-#include <TFT_eSPI.h>
-#endif
-
 #include <Preferences.h>
 #include <BatteryLib.h>
 #include <QueueManager.h>
+#include <RTOSTaskManager.h>
 
 //------------------------------------------------------------
 #include "rtosManager.h"
 
-xQueueHandle xDisplayEventQueue;
-xQueueHandle xButtonPushEventQueue;
+xQueueHandle xBoardPacketQueue;
+Queue::Manager *boardPacketQueue;
 
-Queue::Manager *displayQueue;
-Queue::Manager *buttonQueue;
+xQueueHandle xStatsQueue;
+Queue::Manager *statsQueue;
+
+xQueueHandle xPerihperals;
+Queue::Manager *peripheralsQueue;
+
+xQueueHandle xPrimaryButtonQueueHandle;
+Queue::Manager *primaryButtonQueue = nullptr;
+
+MyMutex mutex_I2C;
+MyMutex mutex_SPI;
 
 //------------------------------------------------------------
-enum FeatureType
-{
-  CRUISE_CONTROL,
-  PUSH_TO_START
-};
-
-class FeatureServiceClass
-{
-public:
-  FeatureServiceClass()
-  {
-    set(CRUISE_CONTROL, FEATURE_CRUISE_CONTROL);
-    set(PUSH_TO_START, FEATURE_PUSH_TO_START);
-  }
-
-  template <class T>
-  void set(FeatureType feature, T value)
-  {
-    switch (feature)
-    {
-    case CRUISE_CONTROL:
-      _featureCruiseControl = value;
-      break;
-    case PUSH_TO_START:
-      _featurePushToStart = value;
-      break;
-    }
-  }
-
-  template <class T>
-  T get(FeatureType feature)
-  {
-    switch (feature)
-    {
-    case CRUISE_CONTROL:
-      return _featureCruiseControl;
-    case PUSH_TO_START:
-      return _featurePushToStart;
-    }
-    return NULL;
-  }
-
-private:
-  bool _featureCruiseControl;
-  bool _featurePushToStart;
-} featureService;
-
-//------------------------------------------------------------------
 
 ControllerData controller_packet;
 ControllerConfig controller_config;
@@ -97,46 +59,33 @@ ControllerConfig controller_config;
 
 BoardClass board;
 
+nsPeripherals::Peripherals *peripherals;
+
 //------------------------------------------------------------------
 
-namespace Board
-{
-  MyMutex mutex;
+#include <FeatureService.h>
 
-  void init()
-  {
-    mutex.create("board", TICKS_2);
-    // mutex.enabled = false;
-  }
-} // namespace Board
+//------------------------------------------------------------------
 
 // prototypes
 void boardPacketAvailable_cb(uint16_t from_id, uint8_t t);
+void waitForTasksToBeReady();
 
 NRF24L01Lib nrf24;
 
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
-void printSentToBoard_cb(ControllerData data)
-{
-  if (PRINT_TX_TO_BOARD)
-    Serial.printf(TX_TO_BOARD_FORMAT, (int)data.id);
-}
-void printRecvFromBoard_cb(VescData data)
-{
-  if (PRINT_RX_FROM_BOARD)
-    Serial.printf(RX_FROM_BOARD_FORMAT, data.id);
-}
-
 GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
+
+void boardConnectedState_cb();
+void printSentToBoard_cb(ControllerData data);
+void printRecvFromBoard_cb(VescData data);
+
 void boardClientInit()
 {
-  boardClient.begin(&network, boardPacketAvailable_cb);
-  boardClient.setConnectedStateChangeCallback([] {
-    if (PRINT_BOARD_CLIENT_CONNECTED_CHANGED)
-      Serial.printf(BOARD_CLIENT_CONNECTED_FORMAT, boardClient.connected() ? "CONNECTED" : "DISCONNECTED");
-  });
+  boardClient.begin(&network, boardPacketAvailable_cb, mutex_SPI.handle());
+  boardClient.setConnectedStateChangeCallback(boardConnectedState_cb);
   boardClient.setSentPacketCallback(printSentToBoard_cb);
   boardClient.setReadPacketCallback(printRecvFromBoard_cb);
 }
@@ -155,19 +104,9 @@ void m5AtomClientInit()
 
 //------------------------------------------------------------------
 
-#define BATTERY_MEASURE_PIN 34
-
-//------------------------------------------------------------------
-
 #ifndef SEND_TO_BOARD_INTERVAL
 #define SEND_TO_BOARD_INTERVAL 200
 #endif
-//------------------------------------------------------------------
-
-#if OPTION_USING_DISPLAY
-TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
-#endif
-
 //------------------------------------------------------------------
 
 elapsedMillis
@@ -185,48 +124,39 @@ void sendToBoard();
 
 //------------------------------------------------------------------
 
-class Config
-{
-public:
-  uint8_t headlightMode;
-};
-
-Config config;
-
-#define STORE_CONFIG "config"
-#define STORE_CONFIG_ACCEL_COUNTS "accel counts"
-#define STORE_CONFIG_BRAKE_COUNTS "brake counts"
-Preferences configStore;
-
-#include <throttle.h>
-
-#include <MagThrottle.h>
-
-// ThrottleClass throttle;
-
-//---------------------------------------------------------------
-
 #include <tasks/core0/statsTask.h>
 #include <tasks/core0/remoteTask.h>
 #include <utils.h>
 
-#if OPTION_USING_DISPLAY
-#include <screens.h>
+#include <tasks/core0/NintendoClassicTask.h>
+
+#include <tasks/core0/ThrottleTask.h>
+
+#if (USING_DISPLAY == 1)
 #include <displayState.h>
 #include <tasks/core0/displayTask.h>
 #endif
+
+#if (USING_LED == 1)
+#include <tasks/core0/ledTask.h>
+#endif
+
+#if (USING_DEBUG_TASK == 1)
+#include <tasks/core0/debugTask.h>
+#endif
+
 #include <tasks/core0/commsStateTask.h>
 #include <nrf_comms.h>
 
+#if (USING_QWIIC_BUTTON_TASK == 1)
+#include <tasks/core0/QwiicButtonTask.h>
+#endif
+
 #include <peripherals.h>
+#include <tasks/core0/peripheralsTask.h>
+
 #include <assert.h>
 #define __ASSERT_USE_STDERR
-
-void throttleChanged_cb(uint8_t throttle)
-{
-  if (PRINT_THROTTLE)
-    Serial.printf("throttle: %d\n", throttle);
-}
 
 //------------------------------------------------------------------
 
@@ -235,89 +165,95 @@ void setup()
   Serial.begin(115200);
   Serial.printf("------------------------ BOOT ------------------------\n");
 
+  Wire.begin();
+
   //get chip id
   String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
   chipId.toUpperCase();
 
-  Board::init();
   Stats::init();
-  MagThrottle::init(/*angle*/ 60.0, throttleChanged_cb);
 
-  configStore.begin(STORE_CONFIG, false);
-
-  if (Stats::mutex.take("setup()"))
+  if (stats.wasWatchdogReset())
   {
-    if (stats.wasWatchdogReset())
-    {
-      stats.controllerResets++;
-      storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
-      stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS, STORE_STATS_TRIP_TIME);
-      if (PRINT_RESET_DETECTION)
-        Serial.printf("RESET!!! =========> controllerResets: %d\n", stats.controllerResets);
-    }
-    else if (stats.powerOnReset())
-    {
-      stats.controllerResets = 0;
-      storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
-    }
-    Stats::mutex.give("setup()");
+    stats.controllerResets++;
+    storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
+    stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS, STORE_STATS_TRIP_TIME);
+    if (PRINT_RESET_DETECTION)
+      Serial.printf("RESET!!! =========> controllerResets: %d\n", stats.controllerResets);
+  }
+  else if (stats.powerOnReset())
+  {
+    stats.controllerResets = 0;
+    storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
   }
 
   nrf24.begin(&radio, &network, COMMS_CONTROLLER);
 
-  boardClientInit();
 #ifdef COMMS_M5ATOM
   m5AtomClientInit();
 #endif
 
   print_build_status(chipId);
 
-  throttle.init(/*pin*/ THROTTLE_PIN, [](uint8_t throttle) {
-    Serial.printf("throttle changed: %d (cruise: %d)\n",
-                  throttle,
-                  controller_packet.cruise_control);
-  });
-
-  primaryButtonInit();
-  rightButtonInit();
-
   vTaskDelay(100);
 
-// CORE_0
-#if OPTION_USING_DISPLAY
-  Display::createTask(DISPLAY_TASK_CORE, TASK_PRIORITY_3);
+  // CORE_0
+  Comms::mgr.create(Comms::task, CORE_0, TASK_PRIORITY_2);
+#if (USING_DISPLAY == 1)
+  Display::mgr.create(Display::task, CORE_0, TASK_PRIORITY_1);
 #endif
-  Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_2);
-  Remote::createTask(BATTERY_TASK_CORE, TASK_PRIORITY_1);
+#if (USING_REMOTE == 1)
+  Remote::mgr.create(Remote::task, CORE_0, TASK_PRIORITY_1);
+#endif
+#if (USING_STATS == 1)
   Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
-
-  xDisplayEventQueue = xQueueCreate(5, sizeof(uint8_t));
-  xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
-
-  displayQueue = new Queue::Manager(xDisplayEventQueue, 5);
-#if OPTION_USING_DISPLAY
-  displayQueue->setReadEventCallback(Display::queueReadCb);
 #endif
-  buttonQueue = new Queue::Manager(xButtonPushEventQueue, 10);
-
-  bool displayReady = false;
-
-  while (
-#if OPTION_USING_DISPLAY
-      !Display::taskReady &&
+#if (USING_LED == 1)
+  Led::createTask(LED_TASK_CORE, TASK_PRIORITY_1);
 #endif
-      !Comms::taskReady &&
-      !Stats::taskReady &&
-      !Remote::taskReady)
-  {
-    vTaskDelay(10);
-  }
+#if (USING_DEBUG_TASK == 1)
+  Debug::mgr.create(Debug::task, CORE_0, TASK_PRIORITY_0);
+#endif
+#if (USING_QWIIC_BUTTON_TASK == 1)
+  QwiicButtonTask::mgr.create(QwiicButtonTask::task, CORE_0, TASK_PRIORITY_2);
+#endif
+  // ThrottleTask::createTask(0, TASK_PRIORITY_1);
+  ThrottleTask::mgr.create(ThrottleTask::task, CORE_0, TASK_PRIORITY_1); //(0, TASK_PRIORITY_1);
+#if (USING_NINTENDO_BUTTONS == 1)
+  NintendoClassicTask::mgr.create(NintendoClassicTask::task, CORE_0, TASK_PRIORITY_0);
+#endif
+
+  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
+  boardPacketQueue = new Queue::Manager(xBoardPacketQueue, TICKS_5ms);
+
+  xStatsQueue = xQueueCreate(3, sizeof(StatsClass *));
+  statsQueue = new Queue::Manager(xStatsQueue, TICKS_5ms);
+
+  xPerihperals = xQueueCreate(1, sizeof(nsPeripherals::Peripherals *));
+  peripheralsQueue = new Queue::Manager(xPerihperals, TICKS_5ms);
+
+  xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState));
+  primaryButtonQueue = new Queue::Manager(xPrimaryButtonQueueHandle, TICKS_5ms);
+
+  peripherals = new nsPeripherals::Peripherals();
+
+  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
+  mutex_I2C.enabled = true;
+
+  mutex_SPI.create("SPI", /*default*/ TICKS_50ms);
+  mutex_SPI.enabled = true;
+
+  boardClientInit();
+
+  waitForTasksToBeReady();
 
   sendConfigToBoard();
 }
 //---------------------------------------------------------------
 
-elapsedMillis sinceNRFUpdate;
+elapsedMillis sinceNRFUpdate, since_update_throttle;
+uint8_t old_buttons[NintendoController::BUTTON_COUNT];
+unsigned long last_throttle_id = 0;
 
 void loop()
 {
@@ -326,24 +262,31 @@ void loop()
     sendToBoard();
   }
 
-  if (Board::mutex.take(__func__))
-  {
-    if (board.hasTimedout())
-      Comms::queue1->send(Comms::Event::BOARD_TIMEDOUT);
-    Board::mutex.give(__func__);
-  }
-
   if (sinceNRFUpdate > 20)
   {
     sinceNRFUpdate = 0;
+
     boardClient.update();
+
 #ifdef COMMS_M5ATOM
     m5AtomClient.update();
 #endif
   }
 
-  primaryButtonLoop();
-  rightButton.loop();
+  if (since_update_throttle > SEND_TO_BOARD_INTERVAL)
+  {
+    since_update_throttle = 0;
+
+    ThrottleState *throttle = ThrottleTask::queue->peek<ThrottleState>("PeripheralsTask loop");
+    if (throttle != nullptr && !throttle->been_peeked(last_throttle_id))
+    {
+      if (throttle->missed_packet(last_throttle_id))
+        Serial.printf("[MAIN_LOOP] missed at least one throttle packet! (id: %lu, last: %lu)\n", throttle->event_id, last_throttle_id);
+
+      controller_packet.throttle = throttle->val;
+      last_throttle_id = throttle->event_id;
+    }
+  }
 
   vTaskDelay(1);
 }
@@ -355,30 +298,53 @@ void sendToBoard()
   bool throttleEnabled = false;
   bool cruiseControlActive = false;
   bool primaryButtonPressed = false;
+  bool braking = false;
+
 #ifdef PRIMARY_BUTTON_PIN
   primaryButtonPressed = primaryButton.isPressedRaw();
+  braking = throttle.get() < 127;
+#endif
+#if OPTION_USING_MAG_THROTTLE
+  primaryButtonPressed = peripherals->primary_button == 1; // qwiicButton.isPressed();
+  braking = controller_packet.throttle < 127;
+#else
+
 #endif
 
-  if (Board::mutex.take(__func__, 50))
-  {
-    throttleEnabled =
-        throttle.get() < 127 || // braking
-        board.packet.moving ||
-        !featureService.get<bool>(PUSH_TO_START) ||
-        (featureService.get<bool>(PUSH_TO_START) && primaryButtonPressed);
+  throttleEnabled =
+      braking || // braking
+      board.packet.moving ||
+      !featureService.get<bool>(FeatureType::PUSH_TO_START) ||
+      (featureService.get<bool>(FeatureType::PUSH_TO_START) && primaryButtonPressed);
 
-    cruiseControlActive =
-        board.packet.moving &&
-        FEATURE_CRUISE_CONTROL &&
-        primaryButtonPressed;
-    Board::mutex.give(__func__);
-  }
+#if OPTION_USING_MAG_THROTTLE
+  cruiseControlActive = false;
+#else
+  cruiseControlActive =
+      board.packet.moving &&
+      FEATURE_CRUISE_CONTROL &&
+      primaryButtonPressed;
+#endif
+
+  controller_packet.cruise_control = cruiseControlActive;
 
   sinceSentToBoard = 0;
-  controller_packet.throttle = throttle.get(/*enabled*/ throttleEnabled);
-  controller_packet.cruise_control = cruiseControlActive;
   sendPacketToBoard();
 }
 //------------------------------------------------------------------
+
+void waitForTasksToBeReady()
+{
+  while (
+      (USING_DISPLAY == 0 || !Display::mgr.ready) &&
+      (USING_NINTENDO_BUTTONS == 0 || !NintendoClassicTask::mgr.ready) &&
+      !Comms::mgr.ready &&
+      !Stats::taskReady &&
+      (REMOTE_TASK_CORE == -1 || !Remote::mgr.ready) &&
+      (USING_QWIIC_BUTTON_TASK == 0 || !QwiicButtonTask::mgr.ready))
+  {
+    vTaskDelay(10);
+  }
+}
 
 #endif

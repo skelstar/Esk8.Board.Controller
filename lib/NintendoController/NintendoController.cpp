@@ -2,12 +2,14 @@
 #include "Arduino.h"
 #include "NintendoController.h"
 
-// NintendoController::NintendoController()
-// {
-//   Wire.begin();
-// }
+#ifndef PRINT_MUTEX_TAKE_SUCCESS
+#define PRINT_MUTEX_TAKE_SUCCESS 0
+#endif
+#ifndef PRINT_MUTEX_GIVE_SUCCESS
+#define PRINT_MUTEX_GIVE_SUCCESS 0
+#endif
 
-void NintendoController::init()
+bool NintendoController::init()
 {
   // Not required for NES mini controller
   // See http://wiibrew.org/wiki/Wiimote/Extension_Controllers
@@ -23,61 +25,106 @@ void NintendoController::init()
   Wire.beginTransmission(this->address);
   Wire.write(0xFB);
   Wire.write(0x00);
-  Wire.endTransmission();
+  bool success = Wire.endTransmission() == 0;
   delay(10);
 
   reset_buttons();
+
+  return success;
 }
 
-void NintendoController::update()
+ulong since_started;
+
+bool takeMutex(xSemaphoreHandle mutex, TickType_t ticks)
 {
-  Wire.beginTransmission(this->address);
-  if (Wire.endTransmission() != 0)
+  bool taken = xSemaphoreTake(mutex, ticks);
+  if (PRINT_MUTEX_TAKE_SUCCESS)
+    Serial.printf("MUTEX: taken %s\n", taken ? "OK" : "FAIL");
+  return taken;
+}
+
+bool giveMutex(xSemaphoreHandle mutex)
+{
+  bool given = xSemaphoreGive(mutex);
+  if (PRINT_MUTEX_GIVE_SUCCESS)
+    Serial.printf("MUTEX: given %s\n", given ? "OK" : "FAIL");
+  return given;
+}
+
+bool NintendoController::update(xSemaphoreHandle mutex, TickType_t ticks)
+{
+  if (takeMutex(mutex, ticks))
   {
-    // try to reconnect
-    this->init();
+    since_started = millis();
+    Wire.beginTransmission(this->address);
+    if (Wire.endTransmission() != 0)
+    {
+      // try to reconnect
+      this->init();
+    }
+    else
+    {
+      giveMutex(mutex);
+      vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
   }
   else
-    delay(10);
+  {
+    TaskHandle_t owner = xSemaphoreGetMutexHolder(mutex);
+    Serial.printf("NintendoController::update() Couldn't take semaphore, held by %s\n", pcTaskGetTaskName(owner));
+    return false;
+  }
 
-  // send 0x00 to ask for buttons, then read the results
-  Wire.beginTransmission(this->address);
-  Wire.write(0x00);
-  Wire.endTransmission();
-  delay(10);
+  if (takeMutex(mutex, ticks))
+  {
+    since_started = millis();
+    // send 0x00 to ask for buttons, then read the results
+    Wire.beginTransmission(this->address);
+    Wire.write(0x00);
+    Wire.endTransmission();
+    giveMutex(mutex);
+  }
+  vTaskDelay(10 / portTICK_PERIOD_MS);
 
   int current_byte = 0;
   int button_bytes = 0;
-  Wire.requestFrom(this->address, 6);
-  while (Wire.available())
+
+  if (takeMutex(mutex, ticks))
   {
-    int byte_read = Wire.read();
-    if (current_byte == 4)
+    since_started = millis();
+    Wire.requestFrom(this->address, 6);
+    while (Wire.available())
     {
-      button_bytes |= (255 - byte_read) << 8;
+      int byte_read = Wire.read();
+      if (current_byte == 4)
+      {
+        button_bytes |= (255 - byte_read) << 8;
+      }
+      else if (current_byte == 5)
+      {
+        button_bytes |= (255 - byte_read);
+      }
+      current_byte++;
     }
-    else if (current_byte == 5)
-    {
-      button_bytes |= (255 - byte_read);
-    }
-    current_byte++;
+    giveMutex(mutex);
   }
 
   for (int i = 0; i < BUTTONS_NUMBER; i++)
   {
     this->old_buttons[i].pressed = this->buttons[i].pressed;
     this->buttons[i].pressed = ((button_bytes & this->buttons[i].bytes) == this->buttons[i].bytes);
-    if (_buttonPressedEventCb != nullptr && was_pressed(i))
-      _buttonPressedEventCb(i);
-    if (_buttonReleasedEventCb != nullptr && was_released(i))
-      _buttonReleasedEventCb(i);
+    if (this->was_pressed(i) && _buttonPressed_cb != nullptr)
+      _buttonPressed_cb(i);
+    if (this->was_released(i) && _buttonReleased_cb != nullptr)
+      _buttonReleased_cb(i);
   }
+  return true;
 }
 
 bool NintendoController::is_pressed(int button_index)
 {
-  return (button_index >= 0 && 
-          button_index <= BUTTONS_NUMBER && 
+  return (button_index >= 0 &&
+          button_index <= BUTTONS_NUMBER &&
           this->buttons[button_index].pressed);
 }
 
@@ -97,6 +144,24 @@ bool NintendoController::was_released(int button_index)
       button_index <= BUTTONS_NUMBER &&
       this->buttons[button_index].pressed == 0 &&
       this->old_buttons[button_index].pressed == 1);
+}
+
+uint8_t *NintendoController::get_buttons()
+{
+  static uint8_t btns[BUTTON_COUNT];
+  for (int i = 0; i < BUTTON_COUNT; i++)
+    btns[i] = this->buttons[i].pressed;
+  return btns;
+}
+
+void NintendoController::setButtonPressedCb(ButtonEventCallback cb)
+{
+  _buttonPressed_cb = cb;
+}
+
+void NintendoController::setButtonReleasedCb(ButtonEventCallback cb)
+{
+  _buttonReleased_cb = cb;
 }
 
 void NintendoController::debug()

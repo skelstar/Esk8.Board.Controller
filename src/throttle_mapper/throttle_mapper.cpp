@@ -19,13 +19,13 @@ void setup()
   });
 }
 
-elapsedMillis since_read_angle;
+elapsedMillis since_update_throttle;
 
 void loop()
 {
-  if (since_read_angle > 200)
+  if (since_update_throttle > 200)
   {
-    since_read_angle = 0;
+    since_update_throttle = 0;
     uint8_t mapped = throttle.get();
     Serial.printf("raw: %d mapped: %d\n", throttle.getRaw(), mapped);
   }

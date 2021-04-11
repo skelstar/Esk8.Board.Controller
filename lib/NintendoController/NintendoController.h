@@ -1,13 +1,13 @@
 #ifndef NintendoController_h
 #define NintendoController_h
 
+// #include <types/NintendoController.h>
+
 #define BUTTONS_NUMBER 12
-#define I2C_ADDRESS 0x52
+#define I2C_ADDR 0x52
 
 class NintendoController
 {
-  typedef void (*ButtonEventCb)(uint8_t btn);
-
 public:
   static const int BUTTON_UP = 0;
   static const int BUTTON_RIGHT = 1;
@@ -23,23 +23,25 @@ public:
   static const int BUTTON_SELECT = 11;
   static const int BUTTON_COUNT = 12;
 
-  // NintendoController::NintendoController();
+  static const int BUTTON_PRESSED = 1;
+  static const int BUTTON_RELEASED = 0;
 
-  void init();
-  void update();
+  typedef void (*ButtonEventCallback)(uint8_t button);
+
+  bool init();
+  bool update(xSemaphoreHandle mutex, TickType_t ticks);
   bool is_pressed(int button_index);
   bool was_pressed(int button_index);
   bool was_released(int button_index);
+  uint8_t *get_buttons();
   void debug();
-  void setPressedEventCb(ButtonEventCb cb);
-  void setReleasedEventCb(ButtonEventCb cb);
-  const char* getButton(uint8_t i);
-
-private:
-  int address = I2C_ADDRESS;
+  int address = I2C_ADDR;
   uint8_t buttonStates[BUTTON_COUNT];
   ButtonEventCb _buttonPressedEventCb = nullptr;
   ButtonEventCb _buttonReleasedEventCb = nullptr;
+=======
+  ButtonEventCallback _buttonPressed_cb = nullptr;
+  ButtonEventCallback _buttonReleased_cb = nullptr;
 
   static const int BUTTON_BYTES_UP = 0x0001;
   static const int BUTTON_BYTES_RIGHT = 0x8000;

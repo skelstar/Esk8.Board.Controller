@@ -1,5 +1,17 @@
+#pragma once
 
-#include <stats.h>
+#include <statsClass.h>
+#include <Preferences.h>
+
+#ifndef STORE_STATS
+#define STORE_STATS "stats"
+#endif
+#ifndef STORE_STATS_SOFT_RSTS
+#define STORE_STATS_SOFT_RSTS "soft resets"
+#endif
+#ifndef STORE_STATS_TRIP_TIME
+#define STORE_STATS_TRIP_TIME "trip time"
+#endif
 
 //------------------------------------------------------------------
 
@@ -12,11 +24,13 @@ T readFromMemory(char *storeName, char *key, T defaultVal = 0);
 
 namespace Stats
 {
-  Queue::Manager *queue;
-
-  MyMutex mutex;
+  // prototypes
+  bool handleStartingStopping(BoardClass *brd);
 
   bool taskReady = false;
+  elapsedMillis sinceReadQueue, since_started_moving = 0;
+
+  BoardClass *myboard;
 
   enum ResetsType
   {
@@ -24,101 +38,33 @@ namespace Stats
     CONTROLLER_RESETS,
     BOARD_RESETS,
   };
-
-  enum StatsEvent
-  {
-    NONE = 0,
-    STOPPED,
-    MOVING,
-    CLEAR_CONTROLLER_RESETS,
-    CLEAR_BOARD_RESETS,
-    BOARD_FIRST_PACKET,
-  };
-
-  char *getName(uint8_t ev)
-  {
-    switch (ev)
-    {
-    case NONE:
-      return "NONE";
-    case STOPPED:
-      return "STOPPED";
-    case MOVING:
-      return "MOVING";
-    case CLEAR_CONTROLLER_RESETS:
-      return "CLEAR_CONTROLLER_RESETS";
-    case CLEAR_BOARD_RESETS:
-      return "CLEAR_BOARD_RESETS";
-    case BOARD_FIRST_PACKET:
-      return "BOARD_FIRST_PACKET";
-    }
-    return "Out of range (StatsQueue getName())";
-  }
+  //-----------------------------------------------------
 
   void task(void *pvParameters)
   {
     Serial.printf(PRINT_TASK_STARTED_FORMAT, "Stats", xPortGetCoreID());
 
     taskReady = true;
-
-    ulong queueReadPeriod = 100;
-
-    elapsedMillis sinceReadQueue, sinceStartedMoving = 0;
+    myboard = new BoardClass();
 
     while (true)
     {
-      if (sinceReadQueue > queueReadPeriod)
+      if (sinceReadQueue > 100)
       {
         sinceReadQueue = 0;
 
-        StatsEvent event = queue->read<StatsEvent>();
-
-        switch (event)
-        {
-        case StatsEvent::STOPPED:
-          if (sinceStartedMoving > 5000)
-          {
-            if (mutex.take(__func__))
-            {
-              // store moving time in memory
-              stats.addMovingTime(sinceStartedMoving);
-              storeInMemory<unsigned long>(STORE_STATS, STORE_STATS_TRIP_TIME, stats.timeMovingMS);
-              mutex.give(__func__);
-            }
-          }
-          break;
-        case StatsEvent::MOVING:
-          // start the clock
-          sinceStartedMoving = 0;
-          break;
-        case StatsEvent::CLEAR_CONTROLLER_RESETS:
-          if (mutex.take(__func__))
-          {
-            stats.clearControllerResets();
-            mutex.give(__func__);
-          }
-          break;
-        case StatsEvent::CLEAR_BOARD_RESETS:
-          if (mutex.take(__func__))
-          {
-            stats.clearControllerResets();
-            mutex.give(__func__);
-          }
-          break;
-        case StatsEvent::BOARD_FIRST_PACKET:
-          if (mutex.take(__func__))
-          {
-            if (stats.boardConnectedThisSession)
-            {
-              DEBUG("sending DispState::UPDATE");
-              displayQueue->send(DispState::UPDATE);
-            }
-            mutex.give(__func__);
-          }
-        }
+        // BoardClass *res = boardPacketQueue->peek<BoardClass>(__func__);
+        // if (res != nullptr)
+        // {
+        //   if (myboard->packet.moving != res->packet.moving)
+        //     if (handleStartingStopping(res))
+        //       // stats changed
+        //       statsQueue->sendLegacy(&stats);
+        //   myboard = new BoardClass(*res);
+        // }
       }
 
-      vTaskDelay(5);
+      vTaskDelay(10);
     }
     vTaskDelete(NULL);
   }
@@ -141,43 +87,38 @@ namespace Stats
     storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, 0);
   }
 
-  void queueSentEventCb(uint16_t ev)
-  {
-    if (PRINT_STATS_QUEUE_SEND)
-      Serial.printf(PRINT_QUEUE_SEND_FORMAT, getName(ev), "STATS");
-  }
-  void queueReadEventCb(uint16_t ev)
-  {
-    if (PRINT_STATS_QUEUE_READ)
-      Serial.printf(PRINT_QUEUE_READ_FORMAT, "STATS", getName(ev));
-  }
-
   void init()
   {
-    mutex.create("stats", TICKS_2);
-    mutex.enabled = true;
+    // TODO SPI mutex
 
-    queue = new Queue::Manager(/*length*/ 3, sizeof(StatsEvent), /*ticks*/ 5);
-    queue->setName("Stats");
-    queue->setSentEventCallback(queueSentEventCb);
-    queue->setReadEventCallback(queueReadEventCb);
+    // get the number of resets
+    stats.controllerResets = readFromMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS);
 
-    if (mutex.take(__func__))
-    {
-      // get the number of resets
-      stats.controllerResets = readFromMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS);
-
-      stats.setResetReasons(rtc_get_reset_reason(0), rtc_get_reset_reason(1));
-      stats.setResetsAcknowledgedCallback(resetsAcknowledged_callback);
-      mutex.give(__func__);
-    }
+    stats.setResetReasons(rtc_get_reset_reason(0), rtc_get_reset_reason(1));
+    stats.setResetsAcknowledgedCallback(resetsAcknowledged_callback);
   }
 
-  void storeTimeMovingInMemory()
+  /* returns whether it updated stats */
+  bool handleStartingStopping(BoardClass *brd)
   {
-    storeInMemory<ulong>(STORE_STATS, STORE_STATS_TRIP_TIME, stats.timeMovingMS);
+    bool updated_stats = false;
+    if (brd->packet.moving)
+    {
+      // start the clock
+      since_started_moving = 0;
+    }
+    else if (brd->packet.moving == false)
+    {
+      if (since_started_moving > 5000)
+      {
+        // store moving time in memory
+        stats.addMovingTime(since_started_moving);
+        storeInMemory<unsigned long>(STORE_STATS, STORE_STATS_TRIP_TIME, stats.timeMovingMS);
+        updated_stats = true;
+      }
+    }
+    return updated_stats;
   }
-
 } // namespace Stats
 
 template <typename T>

@@ -6,9 +6,6 @@
 #endif
 
 //------------------------------------------
-/* prototypes */
-bool boardVersionCompatible(float version);
-//------------------------------------------
 
 bool comms_session_started = false;
 bool commsStateTask_initialised = false;
@@ -17,11 +14,11 @@ bool skipOnEnter = false;
 
 namespace Comms
 {
+  RTOSTaskManager mgr("CommsTask", 3000);
+
   /* prototypes */
   void print(const char *stateName);
   void init();
-
-  bool taskReady = false;
 
   enum StateId
   {
@@ -44,100 +41,108 @@ namespace Comms
 
   FsmManager<Event> commsFsm;
 
+  QueueHandle_t commsQueue = NULL;
   Queue::Manager *queue1;
+
+  elapsedMillis since_peeked;
 
   //------------------------------------------
 
-  State stateDisconnected(
+  State stDisconnected(
       [] {
         commsFsm.printState(StateId::DISCONNECTED);
-        if (Stats::mutex.take("Comms: stateDisconnected", TICKS_100))
-        {
-          stats.boardConnected = false;
-          Stats::mutex.give("Comms: stateDisconnected");
-        }
+        stats.boardConnected = false;
       },
       NULL,
       NULL);
 
-  State stateConnected(
+  State stConnected(
       [] {
         commsFsm.printState(StateId::CONNECTED);
-        if (Board::mutex.take("Comms: stateConnected", TICKS_100))
-        {
-          bool boardCompatible = boardVersionCompatible(board.packet.version);
 
-          if (Stats::mutex.take("Comms: stateConnected", TICKS_100))
-          {
-            if (!boardCompatible)
-              displayQueue->send(DispState::VERSION_DOESNT_MATCH);
-            else if (stats.boardConnectedThisSession)
-              stats.boardResets++;
-
-            comms_session_started = true;
-            stats.boardConnected = true;
-            Stats::mutex.give("Comms: stateConnected");
-          }
-          Board::mutex.give("Comms: stateConnected");
-        }
+        comms_session_started = true;
+        stats.boardConnected = true;
       },
       NULL,
       NULL);
 
   namespace
   {
-    Fsm fsm(&stateDisconnected);
+    Fsm fsm(&stDisconnected);
   }
   //-----------------------------------------------------
 
   void addTransitions()
   {
-    fsm.add_transition(&stateDisconnected, &stateConnected, Comms::Event::PKT_RXD, NULL);
-    fsm.add_transition(&stateDisconnected, &stateConnected, Comms::Event::BOARD_FIRST_PACKET, NULL);
+    fsm.add_transition(&stDisconnected, &stConnected, Comms::Event::PKT_RXD, NULL);
+    fsm.add_transition(&stDisconnected, &stConnected, Comms::Event::BOARD_FIRST_PACKET, NULL);
 
-    fsm.add_transition(&stateConnected, &stateConnected, Comms::Event::BOARD_FIRST_PACKET, NULL);
+    fsm.add_transition(&stConnected, &stConnected, Comms::Event::BOARD_FIRST_PACKET, NULL);
 
-    fsm.add_transition(&stateConnected, &stateDisconnected, Comms::Event::BOARD_TIMEDOUT, NULL);
+    fsm.add_transition(&stConnected, &stDisconnected, Comms::Event::BOARD_TIMEDOUT, NULL);
   }
-  //-----------------------------------------------------
+  //=====================================================
 
   void task(void *pvParameters)
   {
-    Serial.printf(PRINT_TASK_STARTED_FORMAT, "Comms State", xPortGetCoreID());
+    mgr.printStarted();
 
     commsStateTask_initialised = true;
 
-    Comms::commsFsm.begin(&Comms::fsm);
-    Comms::commsFsm.setPrintStateCallback([](uint16_t id) {
+    commsFsm.begin(&fsm);
+    commsFsm.setPrintStateCallback([](uint16_t id) {
       if (PRINT_COMMS_STATE)
-        Serial.printf(PRINT_STATE_FORMAT, "COMMS", Comms::getStateName(id));
+        Serial.printf(PRINT_STATE_FORMAT, "COMMS", getStateName(id));
     });
-    Comms::commsFsm.setPrintTriggerCallback([](uint16_t ev) {
-      if (PRINT_COMMS_STATE_EVENT && ev != 0 && ev != Comms::PKT_RXD)
-        Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "COMMS", Comms::getEventName(ev));
+    commsFsm.setPrintTriggerCallback([](uint16_t ev) {
+      if (PRINT_COMMS_STATE_EVENT && ev != 0 && ev != PKT_RXD)
+        Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "COMMS", getEventName(ev));
     });
 
-    Comms::addTransitions();
+    addTransitions();
 
     fsm.run_machine();
 
     init();
 
-    taskReady = true;
+    mgr.ready = true;
 
-#if OPTION_USING_DISPLAY
-    while (!Display::taskReady)
+#if USING_DISPLAY
+    // wait for display task to be ready
+    // before checking for packets
+    while (!Display::mgr.ready)
     {
       vTaskDelay(1);
     }
 #endif
 
+    mgr.printReady();
+
     while (true)
     {
-      Comms::Event ev = Comms::queue1->read<Comms::Event>();
-      if (ev != Comms::NO_EVENT)
-        Comms::commsFsm.trigger(ev);
-      Comms::fsm.run_machine();
+      if (since_peeked > SEND_TO_BOARD_INTERVAL)
+      {
+        since_peeked = 0;
+
+        BoardClass *board = boardPacketQueue->peek<BoardClass>(__func__);
+        if (board != nullptr)
+        {
+          if (board->connected())
+          {
+            if (board->packet.reason == ReasonType::FIRST_PACKET)
+            {
+              commsFsm.trigger(Event::BOARD_FIRST_PACKET);
+            }
+            else
+              commsFsm.trigger(Event::PKT_RXD);
+          }
+          else
+            commsFsm.trigger(Event::BOARD_TIMEDOUT);
+        }
+        commsFsm.runMachine();
+      }
+
+      mgr.healthCheck(10000);
 
       vTaskDelay(10);
     }
@@ -145,48 +150,12 @@ namespace Comms
   }
   //------------------------------------------------------------
 
-  void queueSent_cb(uint16_t ev)
-  {
-    if (PRINT_COMMS_QUEUE_SENT)
-      Serial.printf(PRINT_QUEUE_SEND_FORMAT, getEventName(ev), "COMMS");
-  }
-
-  void queueRead_cb(uint16_t ev)
-  {
-    if (PRINT_COMMS_QUEUE_READ)
-      Serial.printf(PRINT_QUEUE_SEND_FORMAT, getEventName(ev), "COMMS");
-  }
-
   void init()
   {
-    queue1 = new Queue::Manager(/*len*/ 3, sizeof(Comms::Event), /*ticks*/ 10);
-    queue1->setName("Comms");
-    queue1->setSentEventCallback(queueSent_cb);
-    queue1->setReadEventCallback(queueRead_cb);
-  }
-
-  //------------------------------------------------------------
-
-  void createTask(uint8_t core, uint8_t priority)
-  {
-    xTaskCreatePinnedToCore(
-        task,
-        "commsStateTask",
-        10000,
-        NULL,
-        priority,
-        NULL,
-        core);
   }
 } // namespace Comms
 
 //------------------------------------------------------------
-
-// check version
-bool boardVersionCompatible(float version)
-{
-  return version == (float)VERSION_BOARD_COMPAT;
-}
 
 void print(const char *stateName)
 {

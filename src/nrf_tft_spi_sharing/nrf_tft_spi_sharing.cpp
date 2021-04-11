@@ -63,8 +63,6 @@ void init_tft()
   tft.setTextColor(TFT_WHITE, TFT_BLUE);
   tft.setTextSize(3);
   tft.drawString("ready", 20, 20);
-
-  DEBUG("setup_tft()");
 }
 
 void init_nrf()

@@ -33,101 +33,95 @@ void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
 {
   sinceLastBoardPacketRx = 0;
 
+  Serial.printf("nrf_comms\n");
+
+  // TODO read needs to send back a true/false
+  // maybe pass in reference to packet to be populated
   VescData packet = boardClient.read();
 
-  if (Board::mutex.take(__func__))
+  board.save(packet);
+
+  // send to other tasks
+  if (boardPacketQueue != NULL)
+    boardPacketQueue->send(&board);
+
+  if (board.packet.reason == FIRST_PACKET)
   {
-    board.save(packet);
-    Board::mutex.give(__func__);
-  }
+    DEBUG("*** board's first packet!! ***");
 
-  if (Board::mutex.take(__func__))
-  {
-    if (board.packet.reason == FIRST_PACKET)
-    {
-      DEBUG("*** board's first packet!! ***");
+    controller_packet.id = 0;
+    sendConfigToBoard();
 
-      Comms::queue1->send(Comms::Event::BOARD_FIRST_PACKET);
-
-      controller_packet.id = 0;
-      sendConfigToBoard();
-
-      sinceBoardConnected = 0;
-
-      Stats::queue->send(Stats::BOARD_FIRST_PACKET);
-    }
-    else if (board.startedMoving())
-    {
-      displayQueue->send(DispState::MOVING);
-      Stats::queue->send(Stats::MOVING);
-    }
-    else if (board.hasStopped())
-    {
-      displayQueue->send(DispState::STOPPED);
-      Stats::queue->send(Stats::STOPPED);
-    }
-    else if (board.valuesChanged())
-      displayQueue->send(DispState::UPDATE);
-
-    else if (board.isStopped())
-      displayQueue->send(DispState::STOPPED);
-
-    else if (board.isMoving())
-      displayQueue->send(DispState::MOVING);
-
-    Board::mutex.give(__func__);
+    sinceBoardConnected = 0;
   }
 
   // this should only happen when using M5STACK
-  if (Board::mutex.take(__func__))
+  if (DEBUG_BUILD && board.getCommand() == CommandType::RESET)
   {
-    if (DEBUG_BUILD && board.getCommand() == CommandType::RESET)
-    {
-      ESP.restart();
-    }
-    Board::mutex.give(__func__);
+    ESP.restart();
   }
-
-  Comms::queue1->send(Comms::Event::PKT_RXD);
 }
 //------------------------------------------------------------------
 
 void sendConfigToBoard()
 {
+  if (PRINT_TX_TO_BOARD)
+    Serial.printf("Sending config to board\n");
   controller_config.send_interval = SEND_TO_BOARD_INTERVAL;
   controller_config.id = controller_packet.id;
-  boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);
+
+  bool success = boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);
 }
 //------------------------------------------------------------------
 
 void sendPacketToBoard()
 {
-  if (Board::mutex.take(__func__, (TickType_t)TICKS_10))
+  bool rxLastResponse = board.packet.id == controller_packet.id - 1 &&
+                        board.packet.id > 0;
+
+  if (!rxLastResponse && stats.boardConnected)
   {
-    bool rxLastResponse = board.packet.id == controller_packet.id - 1 &&
-                          board.packet.id > 0;
-    Board::mutex.give(__func__);
-
-    if (Stats::mutex.take(__func__, (TickType_t)TICKS_10))
-    {
-      if (!rxLastResponse && stats.boardConnected)
-      {
-        stats.total_failed_sending += 1;
-        if (PRINT_IF_TOTAL_FAILED_SENDING)
-          DEBUGVAL(board.packet.id, controller_packet.id);
-      }
-      Stats::mutex.give(__func__);
-    }
-
-    boardClient.sendTo(Packet::CONTROL, controller_packet);
-
-    controller_packet.id++;
+    stats.total_failed_sending += 1;
+    if (PRINT_IF_TOTAL_FAILED_SENDING)
+      DEBUGVAL(board.packet.id, controller_packet.id);
   }
+
+  bool success = boardClient.sendTo(Packet::CONTROL, controller_packet);
+
+  controller_packet.id++;
 }
 //------------------------------------------------------------------
 
-bool boardTimedOut()
+void updateThrottle(uint8_t throttle, uint8_t primary_button)
 {
-  unsigned long timeout = SEND_TO_BOARD_INTERVAL * NUM_MISSED_PACKETS_MEANS_DISCONNECTED;
-  return board.sinceLastPacket > (timeout + 100);
+  if (throttle > 127 && primary_button == 1)
+    controller_packet.throttle = throttle;
+  else if (throttle > 127)
+    controller_packet.throttle = 127;
+  else
+    controller_packet.throttle = throttle;
+
+  if (PRINT_THROTTLE)
+    DEBUGVAL(controller_packet.throttle);
+}
+//------------------------------------------------------------------
+
+// callbacks
+
+void boardConnectedState_cb()
+{
+  if (PRINT_BOARD_CLIENT_CONNECTED_CHANGED)
+    Serial.printf(BOARD_CLIENT_CONNECTED_FORMAT, boardClient.connected() ? "CONNECTED" : "DISCONNECTED");
+}
+
+void printSentToBoard_cb(ControllerData data)
+{
+  if (PRINT_TX_TO_BOARD)
+    Serial.printf(TX_TO_BOARD_FORMAT, (int)data.id);
+}
+
+void printRecvFromBoard_cb(VescData data)
+{
+  if (PRINT_RX_FROM_BOARD)
+    Serial.printf(RX_FROM_BOARD_FORMAT, data.id);
 }
