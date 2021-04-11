@@ -71,11 +71,7 @@ namespace ThrottleTask
 
         uint8_t raw_throttle = MagneticThrottle::get();
         throttle.val = raw_throttle;
-        Serial.printf("throttle.val %d\n", throttle.val);
         throttleQueue.send(&throttle, printSentToQueue);
-        // , [](ThrottleState t) {
-        //   Serial.printf("[ThrottleTask] sending throttle: %d with id: %lu\n", t.val, t.event_id);
-        // });
       }
 
       mgr.healthCheck(5000);

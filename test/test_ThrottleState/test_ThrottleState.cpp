@@ -15,7 +15,7 @@ static int counter = 0;
 #include <types.h>
 #include <rtosManager.h>
 // #include <QueueManager.h>
-#include <QueueManager2.h>
+#include <QueueManager1.h>
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
@@ -30,26 +30,17 @@ static int counter = 0;
 MyMutex mutex_I2C;
 MyMutex mutex_SPI;
 
-// xQueueHandle xBoardPacketQueue;
+xQueueHandle xBoardPacketQueue;
 xQueueHandle xSendToBoardQueueHandle;
-// xQueueHandle xBoardStateQueueHandle;
+xQueueHandle xBoardStateQueueHandle;
 xQueueHandle xPrimaryButtonQueueHandle;
-// xQueueHandle xStatsQueue;
-// xQueueHandle xNintendoControllerQueue;
+xQueueHandle xStatsQueue;
+xQueueHandle xNintendoControllerQueue;
 xQueueHandle xThrottleQueueHandle;
-
-Queue2::Manager<ThrottleState> throttleQueue;
-Queue2::Manager<PrimaryButtonState> primaryButtonQueue;
-Queue2::Manager<SendToBoardNotf> sendNotfQueue;
 
 //----------------------------------
 #define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
 #define PRINT_THROTTLE 0
-
-#define TICKS_5ms 5 / portTICK_PERIOD_MS
-#define TICKS_10ms 10 / portTICK_PERIOD_MS
-#define TICKS_50ms 50 / portTICK_PERIOD_MS
-#define TICKS_100ms 100 / portTICK_PERIOD_MS
 
 #include <tasks/core0/QwiicButtonTask.h>
 #include <tasks/core0/ThrottleTask.h>
@@ -79,10 +70,6 @@ void setUp()
   xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf));
   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState));
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState));
-
-  throttleQueue.create(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
-  primaryButtonQueue.create(xPrimaryButtonQueueHandle, TICKS_5ms, "(test)PrimButtonQueue");
-  sendNotfQueue.create(xSendToBoardQueueHandle, TICKS_5ms, "sendNotfQueue");
 }
 
 void tearDown()
@@ -93,6 +80,10 @@ void test_ThrottleTask_sends_when_SendToBoardTask_triggers()
 {
   namespace throttleTask = ThrottleTask;
   namespace sendNotfTask = SendToBoardTimerTask;
+
+  Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
+  // Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueueHandle, TICKS_5ms, "(test)PrimButtonQueue");
+  Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "sendNotfQueue");
 
   Wire.begin(); //Join I2C bus
 
@@ -165,6 +156,10 @@ void test_throttle_limting_with_primary_button_not_held()
   namespace throttleTask = ThrottleTask;
   namespace sendNotfTask = SendToBoardTimerTask;
 
+  Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
+  Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "sendNotfQueue");
+  // Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueueHandle, TICKS_5ms, "(test)PrimButtonQueue");
+
   throttleTask::mgr.create(throttleTask::task, CORE_0, TASK_PRIORITY_1);
   sendNotfTask::mgr.create(sendNotfTask::task, CORE_0, TASK_PRIORITY_2);
 
@@ -230,6 +225,172 @@ void test_throttle_limting_with_primary_button_not_held()
   TEST_ASSERT_TRUE(counter == 6);
 }
 
+void test_throttle_not_limting_when_primary_button_is_held()
+{
+  namespace throttleTask = ThrottleTask;
+  namespace sendNotfTask = SendToBoardTimerTask;
+
+  Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
+  Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "sendNotfQueue");
+  Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueueHandle, TICKS_5ms, "(test)PrimButtonQueue");
+
+  throttleTask::mgr.create(throttleTask::task, CORE_0, TASK_PRIORITY_1);
+  sendNotfTask::mgr.create(sendNotfTask::task, CORE_0, TASK_PRIORITY_2);
+
+  sendNotfTask::setSendInterval(500);
+
+  sendNotfTask::mgr.enable();
+
+  static uint8_t _throttle = 127;
+  static uint8_t _s_Steps[] = {50, 60, 120, 127, 130, 140};
+
+  MagneticThrottle::setGetThrottleCb([] {
+    _throttle = _s_Steps[counter];
+    return _throttle;
+  });
+
+  while (!throttleTask::mgr.ready)
+  {
+    vTaskDelay(5);
+  }
+
+  PrimaryButtonState state;
+  state.pressed = 1;
+
+  Serial.printf("test 1\n");
+  primaryButtonQueue.send(&state); //, printSentToQueue);
+  Serial.printf("test 2\n");
+
+  printTestInstructions("Tests the throttle stays normal when primary button is held");
+
+  elapsedMillis since_checked_queue;
+
+  counter = 0;
+  Serial.printf("------------------------------------\n");
+
+  while (counter < 6)
+  {
+    if (since_checked_queue > 10)
+    {
+      since_checked_queue = 0;
+      if (sendNotfQueue.hasValue())
+      {
+        bool gotResp = false, timedout = false;
+        do
+        {
+          gotResp = throttleQueue.hasValue();
+          if (gotResp)
+          {
+            since_checked_queue = 0;
+            Serial.printf("Got response from throttleQueue, throttle=%d\n", throttleQueue.payload.val);
+          }
+          timedout = since_checked_queue > 500;
+          vTaskDelay(5);
+        } while (!gotResp && !timedout);
+
+        TEST_ASSERT_FALSE(timedout);
+        TEST_ASSERT_TRUE(gotResp);
+        uint8_t expected = _s_Steps[counter];
+        TEST_ASSERT_EQUAL(expected, throttleQueue.payload.val);
+        Serial.printf("------------------------------------\n");
+
+        counter++;
+      }
+    }
+    vTaskDelay(100);
+  }
+
+  throttleTask::mgr.deleteTask(PRINT_THIS);
+  sendNotfTask::mgr.deleteTask(PRINT_THIS);
+
+  TEST_ASSERT_TRUE(counter == 6);
+}
+
+void test_throttle_limts_then_does_not_limit()
+{
+  namespace throttleTask = ThrottleTask;
+  namespace sendNotfTask = SendToBoardTimerTask;
+
+  Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
+  Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "sendNotfQueue");
+  Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueueHandle, TICKS_5ms, "(test)PrimButtonQueue");
+
+  throttleTask::mgr.create(throttleTask::task, CORE_0, TASK_PRIORITY_1);
+  sendNotfTask::mgr.create(sendNotfTask::task, CORE_0, TASK_PRIORITY_2);
+
+  sendNotfTask::setSendInterval(500);
+
+  sendNotfTask::mgr.enable();
+
+  static uint8_t _throttle = 127;
+  static uint8_t _s_ThrottleSteps[] = {88, 130, 140, 127, 130, 140};
+  static uint8_t _s_PrimarySteps[]{0, 0, 0, 1, 1, 1};
+
+  MagneticThrottle::setGetThrottleCb([] {
+    _throttle = _s_ThrottleSteps[counter];
+    return _throttle;
+  });
+
+  while (!throttleTask::mgr.ready)
+  {
+    vTaskDelay(5);
+  }
+
+  PrimaryButtonState state;
+  state.pressed = 1;
+
+  primaryButtonQueue.send(&state); //, printSentToQueue);
+
+  printTestInstructions("Tests the throttle stays normal when primary button is held");
+
+  elapsedMillis since_checked_queue;
+
+  counter = 0;
+  Serial.printf("------------------------------------\n");
+
+  while (counter < 6)
+  {
+
+    since_checked_queue = 0;
+    if (sendNotfQueue.hasValue())
+    {
+      state.pressed = _s_PrimarySteps[counter];
+      primaryButtonQueue.send(&state);
+
+      vTaskDelay(50);
+
+      bool gotResp = false, timedout = false;
+      do
+      {
+        gotResp = throttleQueue.hasValue();
+        if (gotResp)
+        {
+          since_checked_queue = 0;
+          Serial.printf("Got response from throttleQueue, throttle=%d\n", throttleQueue.payload.val);
+        }
+        timedout = since_checked_queue > 500;
+        vTaskDelay(5);
+      } while (!gotResp && !timedout);
+
+      TEST_ASSERT_FALSE(timedout);
+      TEST_ASSERT_TRUE(gotResp);
+      uint8_t expected = !state.pressed && _s_ThrottleSteps[counter] > 127
+                             ? 127
+                             : _s_ThrottleSteps[counter];
+      TEST_ASSERT_EQUAL(expected, throttleQueue.payload.val);
+      Serial.printf("------------------------------------\n");
+
+      counter++;
+    }
+    vTaskDelay(100);
+  }
+
+  throttleTask::mgr.deleteTask(PRINT_THIS);
+  sendNotfTask::mgr.deleteTask(PRINT_THIS);
+
+  TEST_ASSERT_TRUE(counter == 6);
+}
+
 void setup()
 {
   delay(2000);
@@ -239,7 +400,9 @@ void setup()
   UNITY_BEGIN();
 
   // RUN_TEST(test_ThrottleTask_sends_when_SendToBoardTask_triggers);
-  RUN_TEST(test_throttle_limting_with_primary_button_not_held);
+  // RUN_TEST(test_throttle_limting_with_primary_button_not_held);
+  // RUN_TEST(test_throttle_not_limting_when_primary_button_is_held);
+  RUN_TEST(test_throttle_limts_then_does_not_limit);
 
   UNITY_END();
 }
