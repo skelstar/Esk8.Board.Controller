@@ -15,7 +15,7 @@ static int counter = 0;
 #include <types.h>
 #include <rtosManager.h>
 // #include <QueueManager.h>
-#include <QueueManager1.h>
+#include <QueueManager2.h>
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
@@ -37,6 +37,10 @@ xQueueHandle xPrimaryButtonQueueHandle;
 // xQueueHandle xStatsQueue;
 // xQueueHandle xNintendoControllerQueue;
 xQueueHandle xThrottleQueueHandle;
+
+Queue2::Manager<ThrottleState> throttleQueue;
+Queue2::Manager<PrimaryButtonState> primaryButtonQueue;
+Queue2::Manager<SendToBoardNotf> sendNotfQueue;
 
 //----------------------------------
 #define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
@@ -75,6 +79,10 @@ void setUp()
   xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf));
   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState));
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState));
+
+  throttleQueue.create(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
+  primaryButtonQueue.create(xPrimaryButtonQueueHandle, TICKS_5ms, "(test)PrimButtonQueue");
+  sendNotfQueue.create(xSendToBoardQueueHandle, TICKS_5ms, "sendNotfQueue");
 }
 
 void tearDown()
@@ -83,21 +91,17 @@ void tearDown()
 
 void test_ThrottleTask_sends_when_SendToBoardTask_triggers()
 {
-  namespace throttle_ = ThrottleTask;
-  namespace sendNotf_ = SendToBoardTimerTask;
+  namespace throttleTask = ThrottleTask;
+  namespace sendNotfTask = SendToBoardTimerTask;
 
   Wire.begin(); //Join I2C bus
 
-  throttle_::mgr.create(throttle_::task, CORE_0, TASK_PRIORITY_1);
-  sendNotf_::mgr.create(sendNotf_::task, CORE_0, TASK_PRIORITY_2);
+  throttleTask::mgr.create(throttleTask::task, CORE_0, TASK_PRIORITY_1);
+  sendNotfTask::mgr.create(sendNotfTask::task, CORE_0, TASK_PRIORITY_2);
 
-  sendNotf_::setSendInterval(1000);
+  sendNotfTask::setSendInterval(1000);
 
-  sendNotf_::mgr.enable();
-
-  Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_5ms, "(test)ThrottleQueue");
-  Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueueHandle, TICKS_5ms, "(test)PrimButtonQueue");
-  Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "sendNotfQueue");
+  sendNotfTask::mgr.enable();
 
   static uint8_t _throttle = 127;
 
@@ -106,7 +110,7 @@ void test_ThrottleTask_sends_when_SendToBoardTask_triggers()
     return _throttle;
   });
 
-  while (!throttle_::mgr.ready)
+  while (!throttleTask::mgr.ready)
   {
     vTaskDelay(5);
   }
@@ -137,6 +141,7 @@ void test_ThrottleTask_sends_when_SendToBoardTask_triggers()
             Serial.printf("Got response from throttleQueue, throttle=%d\n", throttleQueue.payload.val);
           }
           timedout = since_checked_queue > 500;
+          vTaskDelay(5);
         } while (!gotResp && !timedout);
 
         TEST_ASSERT_FALSE(timedout);
@@ -148,66 +153,79 @@ void test_ThrottleTask_sends_when_SendToBoardTask_triggers()
     }
     vTaskDelay(100);
   }
+
+  throttleTask::mgr.deleteTask(PRINT_THIS); // .create(throttleTask::task, CORE_0, TASK_PRIORITY_1);
+  sendNotfTask::mgr.deleteTask(PRINT_THIS); //.create(sendNotfTask::task, CORE_0, TASK_PRIORITY_2);
+
   TEST_ASSERT_TRUE(counter == 6);
 }
 
-// void test_throttle_limting_with_primary_button()
-// {
-//   counter = 0;
+void test_throttle_limting_with_primary_button()
+{
+  namespace throttleTask = ThrottleTask;
+  namespace sendNotfTask = SendToBoardTimerTask;
 
-//   Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_5ms, "(test)ThrottleQueue");
-//   Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueueHandle, TICKS_5ms, "(test)PrimButtonQueue");
-//   Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "sendNotfQueue");
+  throttleTask::mgr.create(throttleTask::task, CORE_0, TASK_PRIORITY_1);
+  sendNotfTask::mgr.create(sendNotfTask::task, CORE_0, TASK_PRIORITY_2);
 
-//   QwiicButton primaryButton;
-//   primaryButton.begin();
-//   primaryButton.setMockIsPressedCallback([] {
-//     return true;
-//   });
+  sendNotfTask::setSendInterval(1000);
 
-//   SendToBoardNotf notf;
+  sendNotfTask::mgr.enable();
 
-//   // start tasks
-//   ThrottleTask::mgr.create(ThrottleTask::task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);
+  static uint8_t _throttle = 127;
 
-//   PrimaryButtonState state;
-//   state.pressed = primaryButton.isPressed();
+  MagneticThrottle::setGetThrottleCb([] {
+    _throttle = _throttle - 1;
+    return _throttle;
+  });
 
-//   primaryButtonQueue.send(&state);
+  while (!throttleTask::mgr.ready)
+  {
+    vTaskDelay(5);
+  }
 
-//   elapsedMillis since_notf = 0;
+  printTestInstructions("Will test the throttle state queue sends out when sendBoardNotification is sent");
 
-//   while (counter < 6)
-//   {
-//     if (since_notf > 1000)
-//     {
-//       since_notf = 0;
+  elapsedMillis since_checked_queue;
 
-//       sendNotfQueue.send(&notf);
+  counter = 0;
+  Serial.printf("------------------------------------\n");
 
-//       bool gotThrottle = false, timedout = false;
-//       do
-//       {
-//         if (throttleQueue.hasValue(__func__))
-//         {
-//           gotThrottle = true;
-//           since_notf = 0;
-//           Serial.printf("Got throttle id: %lu\n", throttleQueue.value.event_id);
-//         }
-//         timedout = since_notf > 500;
-//         vTaskDelay(10);
-//       } while (!gotThrottle && !timedout);
+  while (counter < 6)
+  {
+    if (since_checked_queue > 10)
+    {
+      since_checked_queue = 0;
+      if (sendNotfQueue.hasValue())
+      {
+        bool gotResp = false, timedout = false;
+        do
+        {
+          gotResp = throttleQueue.hasValue();
+          if (gotResp)
+          {
+            since_checked_queue = 0;
+            Serial.printf("Got response from throttleQueue, throttle=%d\n", throttleQueue.payload.val);
+          }
+          timedout = since_checked_queue > 500;
+          vTaskDelay(5);
+        } while (!gotResp && !timedout);
 
-//       TEST_ASSERT_FALSE(timedout);
-//       TEST_ASSERT_TRUE(gotThrottle);
-//     }
+        TEST_ASSERT_FALSE(timedout);
+        TEST_ASSERT_TRUE(gotResp);
+        Serial.printf("------------------------------------\n");
 
-//     counter++;
-//     vTaskDelay(100);
-//   }
+        counter++;
+      }
+    }
+    vTaskDelay(100);
+  }
 
-//   vTaskDelete(NULL);
-// }
+  throttleTask::mgr.deleteTask(PRINT_THIS); // .create(throttleTask::task, CORE_0, TASK_PRIORITY_1);
+  sendNotfTask::mgr.deleteTask(PRINT_THIS); //.create(sendNotfTask::task, CORE_0, TASK_PRIORITY_2);
+
+  TEST_ASSERT_TRUE(counter == 6);
+}
 
 void setup()
 {
@@ -218,7 +236,7 @@ void setup()
   UNITY_BEGIN();
 
   RUN_TEST(test_ThrottleTask_sends_when_SendToBoardTask_triggers);
-  // RUN_TEST(test_throttle_limting_with_primary_button);
+  RUN_TEST(test_throttle_limting_with_primary_button);
 
   UNITY_END();
 }
