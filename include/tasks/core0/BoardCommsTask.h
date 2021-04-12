@@ -25,7 +25,6 @@ namespace BoardCommsTask
   PacketState packetState;
 
   Queue1::Manager<SendToBoardNotf> *sendNotfQueue = nullptr;
-  Queue1::Manager<BoardClass> *boardPacketQueue = nullptr;
   Queue1::Manager<PacketState> *packetStateQueue = nullptr;
 
   const unsigned long CHECK_COMMS_RX_INTERVAL = 50;
@@ -46,6 +45,8 @@ namespace BoardCommsTask
     }
 
     packetState.received(packet);
+
+    Serial.printf("boardPacketAvailable_cb id: %lu\n", packet.id);
   }
   //----------------------------------------------------------
   void sendConfigToBoard(bool print)
@@ -80,7 +81,7 @@ namespace BoardCommsTask
     packetState.sent(controller_packet);
 
     packetStateQueue->send(&packetState, [](PacketState pk) {
-      Serial.printf("[Queue:send|%lums] PacketState ->id:%lu (%s)\n", millis(), pk.event_id);
+      Serial.printf("[Queue|Send|%lums] PacketState ->id:%lu\n", millis(), pk.event_id);
     });
 
     if (success == false)
@@ -108,7 +109,7 @@ namespace BoardCommsTask
 
     while (mgr.enabled() == false)
     {
-      vTaskDelay(500);
+      vTaskDelay(TICKS_5ms);
     }
 
     while (true)
@@ -133,7 +134,7 @@ namespace BoardCommsTask
 
       mgr.healthCheck(10000);
 
-      vTaskDelay(10);
+      vTaskDelay(5);
     }
     vTaskDelete(NULL);
   }

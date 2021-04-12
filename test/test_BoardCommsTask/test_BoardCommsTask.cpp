@@ -125,7 +125,7 @@ void WhenTheNotfIsSentOut_BoardSendsPacketState()
 
   Serial.printf("------------------------------------\n");
 
-  while (!BoardCommsTask::mgr.ready) // || !SendToBoardTimerTask::mgr.ready)
+  while (!BoardCommsTask::mgr.ready || !SendToBoardTimerTask::mgr.ready)
   {
     vTaskDelay(5);
   }
@@ -147,23 +147,30 @@ void WhenTheNotfIsSentOut_BoardSendsPacketState()
 
       bool gotResp = false, timedout = false;
 
-      bool found = Test::waitForNewResponse<SendToBoardNotf>(readNotfQueue, gotResp, timedout, 2 * SECONDS);
-      TEST_ASSERT_TRUE(found);
+      // NOTF
+      DEBUG("--------- NOTF > ----------");
+      // bool found = Test::waitForNewResponse<SendToBoardNotf>(readNotfQueue, gotResp, timedout, 2 * SECONDS);
+      Test::WaitResp resp = Test::waitForNewResp<SendToBoardNotf>(readNotfQueue, 2 * SECONDS,
+                                                                  [](ulong event_id, ulong latency) {
+                                                                    Serial.printf("(test) got id: %lu from notf\n", event_id);
+                                                                  });
+      TEST_ASSERT_TRUE(resp == Test::OK);
 
-      // bool foundAgain = Test::waitForNewResponse<SendToBoardNotf>(readNotfQueue, gotResp, timedout, 2 * SECONDS);
-      // TEST_ASSERT_FALSE(foundAgain);
-      // DEBUG("PASS: notification found once, not found twice");
+      bool foundAgain = Test::waitForNewResponse<SendToBoardNotf>(readNotfQueue, gotResp, timedout, 2 * SECONDS);
+      TEST_ASSERT_FALSE(foundAgain);
+      DEBUG("PASS: notification found once, not found twice");
 
-      // bool foundPacket = Test::waitForNewResponse<PacketState>(
-      //     packetStateQueue, gotResp, timedout, 100,
-      //     [](unsigned long event_id, unsigned long latency) {
-      //       Serial.printf("[Queue|%lums] (test) Rxd id: %lu after %lums\n", millis(), event_id, latency);
-      //     });
-      // TEST_ASSERT_TRUE(foundPacket);
+      // PacketState
+      bool foundPacket = Test::waitForNewResponse<PacketState>(
+          packetStateQueue, gotResp, timedout, 100,
+          [](unsigned long event_id, unsigned long latency) {
+            Serial.printf("[Queue|Read|%lums] PacketState id: %lu after %lums\n", millis(), event_id, latency);
+          });
+      TEST_ASSERT_TRUE(foundPacket);
 
-      // bool foundPacketAgain = Test::waitForNewResponse<PacketState>(packetStateQueue, gotResp, timedout, 100);
-      // TEST_ASSERT_FALSE(foundPacketAgain);
-      // DEBUG("PASS: found PacketState packet once, not twice");
+      bool foundPacketAgain = Test::waitForNewResponse<PacketState>(packetStateQueue, gotResp, timedout, 100);
+      TEST_ASSERT_FALSE(foundPacketAgain);
+      DEBUG("PASS: found PacketState packet once, not twice");
 
       counter++;
       vTaskDelay(5);

@@ -38,4 +38,29 @@ namespace Test
     return reponseOut && !timedoutOut;
   }
 
+  enum WaitResp
+  {
+    OK = 0,
+    TIMEOUT,
+  };
+
+  template <typename T>
+  WaitResp waitForNewResp(Queue1::Manager<T> *queue,
+                          uint16_t timeout,
+                          ResponseCallback gotResponse_cb = nullptr)
+  {
+    elapsedMillis since_started_listening = 0;
+    do
+    {
+      if (queue->hasValue())
+      {
+        if (gotResponse_cb != nullptr)
+          gotResponse_cb(queue->payload.event_id, queue->payload.latency);
+        return OK;
+      }
+      vTaskDelay(1);
+    } while (since_started_listening < timeout);
+    return TIMEOUT;
+  }
+
 } // end namespace
