@@ -6,12 +6,14 @@
 class PrimaryButtonState : public QueueBase
 {
 public:
-  PrimaryButtonState() : QueueBase(event_id)
+  bool pressed = false;
+  unsigned long event_id = 0,
+                latency = 0;
+
+public:
+  PrimaryButtonState() : QueueBase(event_id, latency)
   {
     event_id = 0;
     name = "PrimaryButtonState";
   }
-
-  bool pressed = false;
-  unsigned long event_id = 0;
 };

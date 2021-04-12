@@ -5,11 +5,13 @@
 class SendToBoardNotf : public QueueBase
 {
 public:
-  SendToBoardNotf() : QueueBase(event_id)
+  unsigned long event_id = 0,
+                sent_time = 0,
+                latency = 0;
+
+public:
+  SendToBoardNotf() : QueueBase(event_id, latency)
   {
     name = "SendToBoardNotf";
   }
-
-  unsigned long event_id = 0,
-                sent_time = 0;
 };

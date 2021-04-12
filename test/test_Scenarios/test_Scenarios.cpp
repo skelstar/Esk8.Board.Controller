@@ -25,6 +25,7 @@ static int counter = 0;
 #include <types/SendToBoardNotf.h>
 #include <types/PrimaryButton.h>
 #include <types/Throttle.h>
+#include <types/PacketState.h>
 
 #include <MockMagThrottle.h>
 #include <MockedQwiicButton.h>
@@ -153,11 +154,11 @@ void WhenTheNotfIsSentOut_BoardSendsPacketState()
 
       vTaskDelay(100);
 
-      bool foundPacket = Test::waitForNewResponse<PacketState>(packetStateQueue, gotResp, timedout, 500);
+      bool foundPacket = Test::waitForNewResponse<PacketState>(packetStateQueue, gotResp, timedout, 100);
       TEST_ASSERT_TRUE(foundPacket);
       DEBUG("PASS: found PacketState packet");
 
-      bool foundPacketAgain = Test::waitForNewResponse<PacketState>(packetStateQueue, gotResp, timedout, 500);
+      bool foundPacketAgain = Test::waitForNewResponse<PacketState>(packetStateQueue, gotResp, timedout, 100);
       TEST_ASSERT_FALSE(foundPacketAgain);
       DEBUG("PASS: didnt' find PacketStatepacket twice");
 
@@ -169,8 +170,8 @@ void WhenTheNotfIsSentOut_BoardSendsPacketState()
 
   TEST_ASSERT_TRUE(counter == NUM_STEPS);
 
-  BoardCommsTask::mgr.deleteTask(PRINT_THIS);
-  SendToBoardNotf::mgr.deleteTask(PRINT_THIS);
+  // BoardCommsTask::mgr.deleteTask(PRINT_THIS);
+  // SendToBoardTimerTask::mgr.deleteTask(PRINT_THIS);
 }
 
 void setup()

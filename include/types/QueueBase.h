@@ -9,15 +9,16 @@ const TickType_t TICKS_500ms = 500 / portTICK_PERIOD_MS;
 class QueueBase
 {
 private:
-  unsigned long _event_id = 0;
+  unsigned long _event_id = 0, _latency = 0;
 
 public:
   const char *name = nullptr;
 
 public:
-  QueueBase(unsigned long event_id)
+  QueueBase(unsigned long event_id, unsigned long latency)
   {
     _event_id = event_id;
+    _latency = latency;
   }
 
   bool been_peeked(unsigned long prev_id)
