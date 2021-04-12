@@ -167,11 +167,12 @@ void WhenTheNotfIsSentOut_BoardSendsPacketState()
     }
     vTaskDelay(100);
   }
+  BoardCommsTask::mgr.deleteTask(PRINT_THIS);
+  SendToBoardTimerTask::mgr.deleteTask(PRINT_THIS);
 
   TEST_ASSERT_TRUE(counter == NUM_STEPS);
 
-  // BoardCommsTask::mgr.deleteTask(PRINT_THIS);
-  // SendToBoardTimerTask::mgr.deleteTask(PRINT_THIS);
+  vTaskDelete(NULL);
 }
 
 void setup()
