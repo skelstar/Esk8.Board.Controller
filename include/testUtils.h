@@ -15,21 +15,23 @@ namespace Test
   typedef void (*ResponseCallback)(ulong id);
 
   template <typename T>
-  bool waitForNewResponse(Queue1::Manager<T> queue,
+  bool waitForNewResponse(Queue1::Manager<T> *queue,
                           bool &reponseOut,
                           bool &timedoutOut,
                           uint16_t timeout,
                           ResponseCallback gotResponse_cb = nullptr)
   {
+    reponseOut = false;
+    timedoutOut = false;
     elapsedMillis since_started_listening = 0;
     do
     {
-      if (queue.hasValue())
+      if (queue->hasValue())
       {
         reponseOut = true;
         since_started_listening = 0;
         if (gotResponse_cb != nullptr)
-          gotResponse_cb(queue.payload.event_id);
+          gotResponse_cb(queue->payload.event_id);
       }
       timedoutOut = since_started_listening > timeout;
       vTaskDelay(1);

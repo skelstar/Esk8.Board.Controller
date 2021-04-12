@@ -20,6 +20,7 @@ static int counter = 0;
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
+#include <testUtils.h>
 
 #include <types/SendToBoardNotf.h>
 #include <types/PrimaryButton.h>
@@ -103,80 +104,73 @@ VescData mockStoppedResponse(ControllerData out)
   return mockresp;
 }
 
-void WhenTheBoardsStops_itCreatesNintendoButtonsTask_thenDeletesItWhenMovingAgain()
+void WhenTheNotfIsSentOut_BoardSendsPacketState()
 {
-  Queue1::Manager<PacketState> packetStateQueue(xPacketStateQueueHandle, TICKS_5ms, "(test)PacketStateQueue");
-  Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "(test)sendNotfQueue");
+
+  Queue1::Manager<PacketState> *packetStateQueue = new Queue1::Manager<PacketState>(xPacketStateQueueHandle, TICKS_5ms, "(test)PacketStateQueue");
+  Queue1::Manager<SendToBoardNotf> *readNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(test)readNotfQueue");
 
   BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_0, TASK_PRIORITY_1);
-  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, CORE_0, TASK_PRIORITY_1);
-
-  BoardCommsTask::mgr.enable();
-  SendToBoardTimerTask::mgr.enable();
-
-  SendToBoardTimerTask::setSendInterval(1000);
-  SendToBoardNotf notification;
-
   BoardCommsTask::boardClient.mockResponseCallback(mockStoppedResponse);
 
-  elapsedMillis since_checked_queue, since_last_notf = 0;
+  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, CORE_0, TASK_PRIORITY_1);
+
+  SendToBoardNotf notification;
+
+  elapsedMillis since_checked_queue, since_checked_for_notf = 0;
 
   Serial.printf("------------------------------------\n");
 
-  while (!BoardCommsTask::mgr.ready || !SendToBoardTimerTask::mgr.ready)
+  while (!BoardCommsTask::mgr.ready) // || !SendToBoardTimerTask::mgr.ready)
   {
     vTaskDelay(5);
   }
+
+  SendToBoardTimerTask::setSendInterval(3000, PRINT_THIS);
+
+  SendToBoardTimerTask::mgr.enable();
+  BoardCommsTask::mgr.enable();
+
   DEBUG("Tasks ready!");
 
   counter = 0;
 
   while (counter < NUM_STEPS)
   {
-    bool gotResp = false, timedout = false;
-    do
+    if (since_checked_for_notf > 100)
     {
-      if (sendNotfQueue.hasValue("test loop"))
-      {
-        gotResp = true;
-        since_last_notf = 0;
-      }
-      timedout = since_last_notf > 2000;
+      since_checked_for_notf = 0;
+
+      bool gotResp = false, timedout = false;
+
+      bool found = Test::waitForNewResponse<SendToBoardNotf>(readNotfQueue, gotResp, timedout, 2 * SECONDS);
+      TEST_ASSERT_TRUE(found);
+      DEBUG("PASS: found Notf");
+
+      bool foundAgain = Test::waitForNewResponse<SendToBoardNotf>(readNotfQueue, gotResp, timedout, 2 * SECONDS);
+      TEST_ASSERT_FALSE(foundAgain);
+      DEBUG("PASS: not found Notf twice");
+
+      vTaskDelay(100);
+
+      bool foundPacket = Test::waitForNewResponse<PacketState>(packetStateQueue, gotResp, timedout, 500);
+      TEST_ASSERT_TRUE(foundPacket);
+      DEBUG("PASS: found PacketState packet");
+
+      bool foundPacketAgain = Test::waitForNewResponse<PacketState>(packetStateQueue, gotResp, timedout, 500);
+      TEST_ASSERT_FALSE(foundPacketAgain);
+      DEBUG("PASS: didnt' find PacketStatepacket twice");
+
+      counter++;
       vTaskDelay(5);
-    } while (!gotResp && !timedout);
-
-    TEST_ASSERT_FALSE(timedout);
-    TEST_ASSERT_TRUE(gotResp);
-
-    Serial.printf("------------------------------------\n");
-
-    vTaskDelay(50);
-
-    gotResp = false, timedout = false;
-    // do
-    // {
-    //   if (packetStateQueue.hasValue())
-    //   {
-    //     gotResp = true;
-    //     Serial.printf("Board resp, id: %lu moving: %d\n",
-    //                   packetStateQueue.payload.event_id,
-    //                   packetStateQueue.payload.isMoving());
-    //   }
-    //   vTaskDelay(5);
-    // } while (!gotResp && !timedout);
-
-    TEST_ASSERT_FALSE(timedout);
-    TEST_ASSERT_TRUE(gotResp);
-    Serial.printf("------------------------------------\n");
-
-    counter++;
+    }
     vTaskDelay(100);
   }
 
-  BoardCommsTask::mgr.deleteTask(PRINT_THIS);
-  SendToBoardTimerTask::mgr.deleteTask(PRINT_THIS);
+  TEST_ASSERT_TRUE(counter == NUM_STEPS);
 
-  TEST_ASSERT_TRUE(counter == 6);
+  BoardCommsTask::mgr.deleteTask(PRINT_THIS);
+  SendToBoardNotf::mgr.deleteTask(PRINT_THIS);
 }
 
 void setup()
@@ -187,7 +181,7 @@ void setup()
 
   UNITY_BEGIN();
 
-  RUN_TEST(WhenTheBoardsStops_itCreatesNintendoButtonsTask_thenDeletesItWhenMovingAgain);
+  RUN_TEST(WhenTheNotfIsSentOut_BoardSendsPacketState);
 
   UNITY_END();
 }

@@ -54,9 +54,6 @@ namespace Queue1
       }
       xQueueSendToFront(_queue, (void *)&payload, _ticks);
 
-      if (_queue_name != nullptr)
-        Serial.printf("[%s::send()] sent id: %lu\n", _queue_name, payload->event_id);
-
       if (sent_cb != nullptr)
         sent_cb(*payload);
 
@@ -91,16 +88,9 @@ namespace Queue1
 
     T *peek(const char *name = nullptr)
     {
-      if (_queue == nullptr)
-      {
-        Serial.printf("ERROR: queue not initialised! (%s)\n", _queue_name);
-        return nullptr;
-      }
+      // TODO check for null queue
       T *new_pkt = nullptr;
-      if (xQueuePeek(_queue, &(new_pkt), _ticks) &&
-          new_pkt->event_id != _last_event_id &&
-          name != nullptr)
-        Serial.printf("%s: peeked, new packet (id: %lu)\n", name, new_pkt->event_id);
+      xQueuePeek(_queue, &(new_pkt), _ticks);
       return new_pkt;
     }
 
@@ -135,8 +125,7 @@ namespace Queue1
     }
 
   private:
-    uint16_t _lastEvent = 0;
-    unsigned long _last_event_id = -1;
+    unsigned long _last_event_id;
     QueueHandle_t _queue = NULL;
     const char *_queue_name = "Queue name not supplied";
     TickType_t _ticks = 10;
