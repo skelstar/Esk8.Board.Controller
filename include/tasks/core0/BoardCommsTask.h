@@ -44,12 +44,8 @@ namespace BoardCommsTask
     {
       Serial.printf("CONFIG_RESPONSE id: %lu\n", packet.id);
     }
-    // boardPacketQueue->send(&board);
 
     packetState.received(packet);
-    packetStateQueue->send(&packetState, [](PacketState pk) {
-      Serial.printf("[Queue:send|%lums] PacketState ->id:%lu (%s)\n", millis(), pk.event_id, "boardPacketAvailable_cb");
-    });
   }
   //----------------------------------------------------------
   void sendConfigToBoard(bool print)
@@ -65,7 +61,7 @@ namespace BoardCommsTask
     bool success = boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);
 
     packetState.sent(controller_config);
-    // packetStateQueue->send(&packetState, printSentToQueue);
+    packetStateQueue->send(&packetState, printSentToQueue);
 
     if (success == false)
       Serial.printf("Unable to send CONFIG packet to board id: %lu\n", controller_packet.id);
@@ -83,7 +79,9 @@ namespace BoardCommsTask
 
     packetState.sent(controller_packet);
 
-    // packetStateQueue->send(&packetState);
+    packetStateQueue->send(&packetState, [](PacketState pk) {
+      Serial.printf("[Queue:send|%lums] PacketState ->id:%lu (%s)\n", millis(), pk.event_id);
+    });
 
     if (success == false)
       Serial.printf("Unable to send CONTROL packet to board id: %lu\n", controller_packet.id);
@@ -101,7 +99,6 @@ namespace BoardCommsTask
     controller_packet.id = 0;
 
     sendNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "BoardCommsTask::sendNotfQueue");
-    // boardPacketQueue = new Queue1::Manager<BoardClass>(xBoardPacketQueue, TICKS_5ms, "(BoardCommsTask)boardPacketQueue");
     packetStateQueue = new Queue1::Manager<PacketState>(xPacketStateQueueHandle, TICKS_5ms, "(BoardCommsTask)packetStateQueue");
 
     boardClientInit();
@@ -121,6 +118,7 @@ namespace BoardCommsTask
       {
         if (sendNotfQueue->hasValue("BoardCommsTask::task"))
         {
+          packetState.latency = 0;
           sendPacketToBoard();
         }
       }

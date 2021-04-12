@@ -11,8 +11,7 @@
 
 namespace Test
 {
-
-  typedef void (*ResponseCallback)(ulong id);
+  typedef void (*ResponseCallback)(unsigned long id, unsigned long latency);
 
   template <typename T>
   bool waitForNewResponse(Queue1::Manager<T> *queue,
@@ -31,7 +30,7 @@ namespace Test
         reponseOut = true;
         since_started_listening = 0;
         if (gotResponse_cb != nullptr)
-          gotResponse_cb(queue->payload.event_id);
+          gotResponse_cb(queue->payload.event_id, queue->payload.latency);
       }
       timedoutOut = since_started_listening > timeout;
       vTaskDelay(1);
