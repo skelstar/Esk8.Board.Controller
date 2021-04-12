@@ -84,8 +84,6 @@ RF24Network network(radio);
 
 elapsedMillis since_checked_queue;
 
-const unsigned long SECONDS = 1000;
-
 void printTestTitle(const char *name)
 {
   Serial.printf("-------------------------------------------\n");

@@ -10,12 +10,12 @@ public:
       time_received = 0,
       event_id = 0,
       latency = 0;
+  const char *name = "BoardClass";
 
 public:
   BoardClass() : QueueBase(event_id, latency)
   {
     event_id = 0;
-    name = "BoardClass";
   }
 
   void save(VescData latest)

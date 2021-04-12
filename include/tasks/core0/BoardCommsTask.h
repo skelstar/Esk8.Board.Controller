@@ -1,13 +1,5 @@
 
 
-#define PERIOD_10MS 10
-#define PERIOD_20MS 20
-#define PERIOD_30MS 30
-#define PERIOD_40MS 40
-#define PERIOD_50MS 50
-#define PERIOD_100MS 100
-#define PERIOD_200MS 200
-
 namespace BoardCommsTask
 {
   GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
@@ -62,7 +54,7 @@ namespace BoardCommsTask
     bool success = boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);
 
     packetState.sent(controller_config);
-    packetStateQueue->send(&packetState, printSentToQueue);
+    packetStateQueue->send(&packetState);
 
     if (success == false)
       Serial.printf("Unable to send CONFIG packet to board id: %lu\n", controller_packet.id);
@@ -80,9 +72,7 @@ namespace BoardCommsTask
 
     packetState.sent(controller_packet);
 
-    packetStateQueue->send(&packetState, [](PacketState pk) {
-      Serial.printf("[Queue|Send|%lums] PacketState ->id:%lu\n", millis(), pk.event_id);
-    });
+    packetStateQueue->send_r(&packetState, QueueBase::printSend);
 
     if (success == false)
       Serial.printf("Unable to send CONTROL packet to board id: %lu\n", controller_packet.id);
@@ -115,7 +105,7 @@ namespace BoardCommsTask
     while (true)
     {
       // check sendNotfQueue for when to send packet to board
-      if (since_check_send_notf_queue > PERIOD_10MS)
+      if (since_check_send_notf_queue > PERIOD_10ms)
       {
         if (sendNotfQueue->hasValue("BoardCommsTask::task"))
         {
@@ -125,7 +115,7 @@ namespace BoardCommsTask
       }
 
       // check for incoming packets
-      if (since_checked_comms > PERIOD_100MS)
+      if (since_checked_comms > PERIOD_100ms)
       {
         since_checked_comms = 0;
 

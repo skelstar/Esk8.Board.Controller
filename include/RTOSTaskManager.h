@@ -68,8 +68,8 @@ public:
 
   void create(
       TaskFunction_t func,
-      int core,
-      int priority,
+      int core = 0,
+      int priority = 1,
       bool health_check = false)
   {
     _core = core;
@@ -88,13 +88,18 @@ public:
         _core);
   }
 
-  bool enabled()
+  bool enabled(bool print = false)
   {
     if (!_enabled)
       Serial.printf("[TASK] %s not enabled!\n", _task_name);
     return _enabled;
   }
-  void enable(bool e = true) { _enabled = e; }
+
+  void enable(bool e = true)
+  {
+    Serial.printf("[TASK]:%s %s\n", _task_name, e ? "enabled" : "disabled");
+    _enabled = e;
+  }
 
 private:
   const char *_task_name;

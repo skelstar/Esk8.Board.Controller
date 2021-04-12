@@ -9,6 +9,7 @@ public:
   uint8_t button;
   uint8_t state;
   unsigned long event_id, latency;
+  const char *name = "NintendoButtonEvent";
 
 public:
   NintendoButtonEvent() : QueueBase(event_id, latency) {}

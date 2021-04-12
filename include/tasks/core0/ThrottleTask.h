@@ -71,7 +71,7 @@ namespace ThrottleTask
 
         uint8_t raw_throttle = MagneticThrottle::get();
         throttle.val = raw_throttle;
-        throttleQueue.send(&throttle, printSentToQueue);
+        throttleQueue.send(&throttle);
       }
 
       mgr.healthCheck(5000);

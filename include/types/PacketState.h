@@ -9,11 +9,12 @@ public:
   unsigned long packet_id;
   unsigned long event_id;
   unsigned long latency;
+  const char *name = "PacketState";
+  uint8_t queue_type = QueueType::QT_NONE;
 
   PacketState() : QueueBase(event_id, latency)
   {
     event_id = 0;
-    name = "PacketState";
   }
 
   void sent(ControllerPacketBase packet)

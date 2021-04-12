@@ -9,12 +9,30 @@
 #include <types/QueueBase.h>
 #include <types/Throttle.h>
 
-template <typename T>
-void printSentToQueue(T payload)
+const unsigned long SECONDS = 1000;
+const unsigned long MILLIS_S = 1;
+
+const unsigned long PERIOD_10ms = 10;
+const unsigned long PERIOD_20ms = 20;
+const unsigned long PERIOD_30ms = 30;
+const unsigned long PERIOD_40ms = 40;
+const unsigned long PERIOD_50ms = 50;
+const unsigned long PERIOD_100ms = 100;
+const unsigned long PERIOD_200ms = 200;
+const unsigned long PERIOD_500ms = 500;
+const unsigned long PERIOD_1S = 1000;
+const unsigned long PERIOD_2S = 2000;
+
+typedef void (*ResponseCallback1)(QueueBase packet);
+
+namespace Response
 {
-  if (std::is_base_of<QueueBase, T>::value)
-    Serial.printf("[%s] sent: id:%lu to queue\n", payload.name != nullptr ? payload.name : "", payload.event_id);
-}
+  enum WaitResp
+  {
+    OK = 0,
+    TIMEOUT,
+  };
+};
 
 namespace Queue1
 {
@@ -23,6 +41,7 @@ namespace Queue1
   {
     typedef void (*QueueEventCallback)(uint16_t ev);
     typedef void (*SentCallback)(T packet);
+    typedef void (*SentCallback_r)(QueueBase packet);
 
   public:
     T payload;
@@ -37,7 +56,7 @@ namespace Queue1
       }
       _queue = queue;
       _ticks = ticks;
-      _queue_name = name != nullptr ? name : ((QueueBase)payload).name;
+      // _queue_name = name != nullptr ? name : ((QueueBase)payload).name;
     }
 
     void sendLegacy(T *payload)
@@ -46,6 +65,21 @@ namespace Queue1
     }
 
     void send(T *payload, SentCallback sent_cb = nullptr)
+    {
+      if (_queue == nullptr)
+      {
+        Serial.printf("ERROR: queue not initialised! (%s)\n", _queue_name);
+        return;
+      }
+      xQueueSendToFront(_queue, (void *)&payload, _ticks);
+
+      if (sent_cb != nullptr)
+        sent_cb(*payload);
+
+      payload->event_id++;
+    }
+
+    void send_r(T *payload, SentCallback_r sent_cb = nullptr)
     {
       if (_queue == nullptr)
       {
@@ -125,9 +159,9 @@ namespace Queue1
     }
 
   private:
+    const char *_queue_name = "Queue name not supplied";
     unsigned long _last_event_id;
     QueueHandle_t _queue = NULL;
-    const char *_queue_name = "Queue name not supplied";
     TickType_t _ticks = 10;
     QueueEventCallback
         _missedCallback = nullptr,
@@ -135,3 +169,22 @@ namespace Queue1
         _readCallback = nullptr;
   };
 } // namespace Queue
+
+template <typename T>
+Response::WaitResp waitForNew(Queue1::Manager<T> *queue,
+                              uint16_t timeout,
+                              ResponseCallback1 gotResponse1_cb = nullptr)
+{
+  elapsedMillis since_started_listening = 0;
+  do
+  {
+    if (queue->hasValue())
+    {
+      if (gotResponse1_cb != nullptr)
+        gotResponse1_cb(queue->payload);
+      return Response::OK;
+    }
+    vTaskDelay(1);
+  } while (since_started_listening < timeout);
+  return Response::TIMEOUT;
+}

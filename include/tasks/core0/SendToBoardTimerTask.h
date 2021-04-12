@@ -48,7 +48,7 @@ namespace SendToBoardTimerTask
 
         notification.sent_time = millis();
 
-        sendToBoardQueue.send(&notification);
+        sendToBoardQueue.send_r(&notification, QueueBase::printSend);
       }
 
       mgr.healthCheck(10000);

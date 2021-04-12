@@ -21,8 +21,13 @@ static int counter = 0;
 #include <BoardClass.h>
 #include <testUtils.h>
 
+#include <types/SendToBoardNotf.h>
+
 QueueHandle_t xFirstQueueHandle;
 QueueHandle_t xOtherTestQueueHandle;
+QueueHandle_t xSendToBoardQueueHandle;
+
+#include <tasks/core0/SendToBoardTimerTask.h>
 
 RTOSTaskManager firstTask("FirstTask", 3000);
 RTOSTaskManager otherTask("OtherTask", 3000);
@@ -30,18 +35,21 @@ RTOSTaskManager otherTask("OtherTask", 3000);
 class FirstTestObj : public QueueBase
 {
 public:
-  FirstTestObj() : QueueBase(event_id)
-  {
-  }
-
   uint16_t firstvalue;
   unsigned long event_id = 0;
+  // unsigned long latency = 0;
+
+public:
+  FirstTestObj() : QueueBase(event_id, 0)
+  {
+    queue_type = QueueType::QT_OTHER;
+  }
 };
 
 class OtherTestObj : public QueueBase
 {
 public:
-  OtherTestObj() : QueueBase(event_id)
+  OtherTestObj() : QueueBase(event_id, 0)
   {
   }
 
@@ -53,8 +61,6 @@ public:
 // #include <tasks/core0/QwiicButtonTask.h>
 // #include <tasks/core0/ThrottleTask.h>
 // #include <tasks/core0/SendToBoardTimerTask.h>
-
-const unsigned long SECONDS = 1000;
 
 void printTestTitle(const char *name)
 {
@@ -70,16 +76,18 @@ void printTestInstructions(const char *instructions)
 
 void setUp()
 {
+  DEBUG("----------------------------");
+  Serial.printf("    %s \n", __FILE__);
+  DEBUG("----------------------------");
+
   xFirstQueueHandle = xQueueCreate(1, sizeof(FirstTestObj));
   xOtherTestQueueHandle = xQueueCreate(1, sizeof(OtherTestObj));
+  xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf *));
 }
 
 void tearDown()
 {
 }
-
-#define CORE_0 0
-#define PRIORITY_1 1
 
 void test_calls_and_responds_in_same_task()
 {
@@ -174,12 +182,13 @@ void test_calls_from_one_task_and_reads_in_another()
 
   unsigned long sendInterval = 3000;
 
-  xTaskCreate(SendFirstObjOnInterval::task,
-              "SendFirstObjOnIntervalTask",
-              /*stack*/ 3000,
-              /*params*/ (void *)&sendInterval,
-              /*priority*/ 1,
-              CORE_0);
+  xTaskCreatePinnedToCore(SendFirstObjOnInterval::task,
+                          "SendFirstObjOnIntervalTask",
+                          /*stack*/ 3000,
+                          /*params*/ (void *)&sendInterval,
+                          /*priority*/ 1,
+                          /*handle*/ NULL,
+                          /*CORE*/ 0);
 
   counter = 0;
   firstObj.event_id = 0;
@@ -219,18 +228,17 @@ void test_queue_hasValue()
 
   FirstTestObj sendObj;
 
-  unsigned long sendInterval = 1 * SECONDS;
-
   counter = 0;
   sendObj.event_id = 0;
 
-  elapsedMillis since_last_packet = 0,
-                since_last_checked = 0;
+  elapsedMillis since_last_checked = 0;
+
   unsigned long last_event_id = -1;
 
   while (counter < 5)
   {
     ulong sent_event_id = sendObj.event_id;
+
     sendQueue.send(&sendObj);
 
     TEST_ASSERT_TRUE(sent_event_id == sendObj.event_id - 1);
@@ -284,15 +292,13 @@ void testUtils_waitForNewResponse()
     vTaskDelay(5);
 
     FirstTestObj *res = readQueue.peek(__func__);
+
     TEST_ASSERT_NOT_NULL(res);
     DEBUG("PASS: peek is NOT NULL");
 
-    bool gotResp = false, timedout = false;
-    bool found = Test::waitForNewResponse(readQueue, gotResp, timedout, 2 * SECONDS);
+    uint8_t resp = waitForNew(&readQueue, 2 * SECONDS, QueueBase::printRead); // ::waitForNewResponse(readQueue, gotResp, timedout, 2 * 1000);
 
-    TEST_ASSERT_TRUE(gotResp);
-    TEST_ASSERT_FALSE(timedout);
-    TEST_ASSERT_TRUE(found);
+    TEST_ASSERT_TRUE(resp == Response::OK);
     DEBUG("PASS: waiting found packet");
 
     counter++;
@@ -344,19 +350,100 @@ void test_queue_hasEvent_updates_id()
   TEST_ASSERT_TRUE(counter >= 10);
 }
 
+void testUtils_waitForNewResp_with_QueueType()
+{
+  Queue1::Manager<FirstTestObj> sendQueue(xFirstQueueHandle, TICKS_5ms, "sendQueue");
+  Queue1::Manager<FirstTestObj> readQueue(xFirstQueueHandle, TICKS_5ms, "readQueue");
+
+  printTestInstructions("Test calls from one task and reads in another using waitForNewResponse()");
+
+  FirstTestObj sendObj;
+  sendObj.queue_type = QueueType::QT_Notification;
+
+  counter = 0;
+  sendObj.event_id = 0;
+
+  while (counter < 5)
+  {
+    DEBUG("--------------------------");
+
+    ulong sent_event_id = sendObj.event_id;
+
+    // send
+    sendQueue.send_r(&sendObj, QueueBase::printSend);
+
+    TEST_ASSERT_TRUE(sent_event_id == sendObj.event_id - 1);
+    DEBUG("PASS: event_id incremented");
+    DEBUGVAL(sent_event_id, sendObj.event_id);
+
+    // read/wait for new
+    uint8_t resp = waitForNew(&readQueue, PERIOD_100ms, QueueBase::printRead);
+    TEST_ASSERT_TRUE(resp == Response::OK);
+    DEBUG("PASS: waiting found packet");
+
+    resp = waitForNew(&readQueue, 100 * MILLIS_S, QueueBase::printRead);
+    TEST_ASSERT_TRUE(resp == Response::TIMEOUT);
+    DEBUG("PASS: waiting didn't find new packet");
+
+    counter++;
+    vTaskDelay(200);
+  }
+
+  TEST_ASSERT_TRUE(counter >= 5);
+}
+
+void testUtils_waitForNewResp_with_QueueType_from_Notification_task()
+{
+  Queue1::Manager<SendToBoardNotf> *readNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(test)readNotfQueue");
+
+  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+
+  SendToBoardTimerTask::setSendInterval(3 * SECONDS);
+
+  printTestInstructions("Test testUtils_waitForNewResp_with_QueueType_from_Notification_task");
+
+  while (SendToBoardTimerTask::mgr.ready == false)
+    vTaskDelay(50);
+
+  SendToBoardTimerTask::mgr.enable();
+
+  counter = 0;
+
+  while (counter < 5)
+  {
+    DEBUG("--------------------------");
+
+    uint8_t firstResp = waitForNew(readNotfQueue, 10 * SECONDS, QueueBase::printRead);
+
+    uint8_t secondResp = waitForNew(readNotfQueue, PERIOD_50ms, QueueBase::printRead);
+
+    TEST_ASSERT_TRUE_MESSAGE(firstResp == Response::OK, "firstResp was not OK");
+    TEST_ASSERT_TRUE_MESSAGE(secondResp == Response::TIMEOUT, "secondResp was not TIMEOUT");
+    DEBUG("PASS: found Notf and didn't find it again");
+
+    counter++;
+    vTaskDelay(200);
+  }
+
+  TEST_ASSERT_TRUE(counter >= 5);
+}
+
 void setup()
 {
   delay(2000);
 
   Serial.begin(115200);
+  delay(100);
 
   UNITY_BEGIN();
 
   // RUN_TEST(test_calls_and_responds_in_same_task);
   // RUN_TEST(test_calls_from_one_task_and_reads_in_another);
   // RUN_TEST(test_queue_hasValue);
-  RUN_TEST(testUtils_waitForNewResponse);
+  // RUN_TEST(testUtils_waitForNewResponse);
   // RUN_TEST(test_queue_hasEvent_updates_id);
+  // RUN_TEST(testUtils_waitForNewResp_with_QueueType);
+  RUN_TEST(testUtils_waitForNewResp_with_QueueType_from_Notification_task);
 
   UNITY_END();
 }
