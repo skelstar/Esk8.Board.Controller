@@ -23,7 +23,7 @@ const unsigned long PERIOD_500ms = 500;
 const unsigned long PERIOD_1S = 1000;
 const unsigned long PERIOD_2S = 2000;
 
-typedef void (*ResponseCallback1)(QueueBase packet);
+typedef void (*ResponseCallback1)(QueueBase packet, const char *queueName);
 
 namespace Response
 {
@@ -41,13 +41,13 @@ namespace Queue1
   {
     typedef void (*QueueEventCallback)(uint16_t ev);
     typedef void (*SentCallback)(T packet);
-    typedef void (*SentCallback_r)(QueueBase packet);
+    typedef void (*SentCallback_r)(QueueBase packet, const char *queueName);
 
   public:
     T payload;
 
   public:
-    Manager(QueueHandle_t queue, TickType_t ticks, const char *name = nullptr)
+    Manager(QueueHandle_t queue, TickType_t ticks, const char *p_name = nullptr)
     {
       if (queue == nullptr)
       {
@@ -56,7 +56,7 @@ namespace Queue1
       }
       _queue = queue;
       _ticks = ticks;
-      // _queue_name = name != nullptr ? name : ((QueueBase)payload).name;
+      name = p_name != nullptr ? p_name : ((QueueBase)payload).name;
     }
 
     void sendLegacy(T *payload)
@@ -68,7 +68,7 @@ namespace Queue1
     {
       if (_queue == nullptr)
       {
-        Serial.printf("ERROR: queue not initialised! (%s)\n", _queue_name);
+        Serial.printf("ERROR: queue not initialised! (%s)\n", name);
         return;
       }
       xQueueSendToFront(_queue, (void *)&payload, _ticks);
@@ -83,14 +83,14 @@ namespace Queue1
     {
       if (_queue == nullptr)
       {
-        Serial.printf("ERROR: queue not initialised! (%s)\n", _queue_name);
+        Serial.printf("ERROR: queue not initialised! (%s)\n", name);
         return;
       }
       xQueueSendToFront(_queue, (void *)&payload, _ticks);
 
       if (sent_cb != nullptr)
-        sent_cb(*payload);
-
+        sent_cb(*payload, name);
+      payload->sent_time = millis();
       payload->event_id++;
     }
 
@@ -158,8 +158,10 @@ namespace Queue1
         _missedCallback(missed_packet_count);
     }
 
+  public:
+    const char *name = "Queue name not supplied";
+
   private:
-    const char *_queue_name = "Queue name not supplied";
     unsigned long _last_event_id;
     QueueHandle_t _queue = NULL;
     TickType_t _ticks = 10;
@@ -173,7 +175,8 @@ namespace Queue1
 template <typename T>
 Response::WaitResp waitForNew(Queue1::Manager<T> *queue,
                               uint16_t timeout,
-                              ResponseCallback1 gotResponse1_cb = nullptr)
+                              ResponseCallback1 gotResponse1_cb = nullptr,
+                              bool printTimeout = false)
 {
   elapsedMillis since_started_listening = 0;
   do
@@ -181,10 +184,14 @@ Response::WaitResp waitForNew(Queue1::Manager<T> *queue,
     if (queue->hasValue())
     {
       if (gotResponse1_cb != nullptr)
-        gotResponse1_cb(queue->payload);
+        gotResponse1_cb(queue->payload, queue->name);
+
       return Response::OK;
     }
     vTaskDelay(1);
   } while (since_started_listening < timeout);
+
+  if (printTimeout)
+    DEBUGMVAL("timeout: ", queue->name, timeout);
   return Response::TIMEOUT;
 }

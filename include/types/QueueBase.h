@@ -10,44 +10,47 @@ const TickType_t TICKS_500ms = 500 / portTICK_PERIOD_MS;
 
 class QueueBase
 {
-protected:
-  unsigned long _event_id = 0, _latency = 0;
-
 public:
+  unsigned long event_id = 0, latency = 0;
   const char *name = nullptr;
-  uint8_t queue_type = QueueType::QT_NONE;
+  unsigned long sent_time;
 
 public:
-  QueueBase(unsigned long event_id, unsigned long latency)
+  QueueBase()
   {
+    event_id = 0;
     name = "not set";
-    _event_id = event_id;
-    _latency = latency;
   }
 
   bool been_peeked(unsigned long prev_id)
   {
-    return _event_id == prev_id;
+    return event_id == prev_id;
   }
 
   bool missed_packet(unsigned long prev_id)
   {
-    return prev_id == 0 && _event_id - prev_id > 1;
+    return prev_id == 0 && event_id - prev_id > 1;
   }
 
-  static void printSend(QueueBase b)
+  unsigned long getSinceSent()
   {
-    Serial.printf("[Queue|Send|%s|%lums] id: %lu\n",
-                  getQueueType(b.queue_type),
-                  millis(),
-                  b._event_id);
+    return millis() - sent_time;
   }
 
-  static void printRead(QueueBase b)
+  static void printSend(QueueBase b, const char *queueName = nullptr)
   {
-    Serial.printf("[Queue|Read|%s|%lums] id: %lu\n",
-                  getQueueType(b.queue_type),
+    Serial.printf("[Queue|%s| --> |%lums] id: %lu\n",
+                  queueName != nullptr ? queueName : b.name,
                   millis(),
-                  b._event_id);
+                  b.event_id);
+  }
+
+  static void printRead(QueueBase b, const char *queueName = nullptr)
+  {
+    Serial.printf("[Queue|%s| <-- |%lums] id: %lu after %lu\n",
+                  queueName != nullptr ? queueName : b.name,
+                  millis(),
+                  b.event_id,
+                  b.getSinceSent());
   }
 };

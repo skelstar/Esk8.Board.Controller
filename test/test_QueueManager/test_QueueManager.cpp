@@ -36,25 +36,24 @@ class FirstTestObj : public QueueBase
 {
 public:
   uint16_t firstvalue;
-  unsigned long event_id = 0;
-  // unsigned long latency = 0;
 
 public:
-  FirstTestObj() : QueueBase(event_id, 0)
+  FirstTestObj() : QueueBase()
   {
-    queue_type = QueueType::QT_OTHER;
+    name = "FirstObj";
   }
 };
 
 class OtherTestObj : public QueueBase
 {
 public:
-  OtherTestObj() : QueueBase(event_id, 0)
-  {
-  }
-
   uint16_t othervalue;
-  unsigned long event_id;
+
+public:
+  OtherTestObj() : QueueBase()
+  {
+    name = "OtherObj";
+  }
 };
 
 //----------------------------------
@@ -358,7 +357,6 @@ void testUtils_waitForNewResp_with_QueueType()
   printTestInstructions("Test calls from one task and reads in another using waitForNewResponse()");
 
   FirstTestObj sendObj;
-  sendObj.queue_type = QueueType::QT_Notification;
 
   counter = 0;
   sendObj.event_id = 0;
@@ -427,6 +425,95 @@ void testUtils_waitForNewResp_with_QueueType_from_Notification_task()
 
   TEST_ASSERT_TRUE(counter >= 5);
 }
+//-----------------------------
+
+namespace OtherObj
+{
+  RTOSTaskManager mgr("OtherObjTask", 5000);
+
+  void taskOtherdObj(void *pvParameters)
+  {
+    mgr.printStarted();
+
+    OtherTestObj otherObj;
+
+    Queue1::Manager<SendToBoardNotf> readNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "(IRL)readNotf");
+    Queue1::Manager<OtherTestObj> sendOtherQueue(xOtherTestQueueHandle, TICKS_5ms, "(IRL)sendOther");
+
+    TEST_ASSERT_EQUAL_MESSAGE(((QueueBase)otherObj).event_id, otherObj.event_id, "Base does not have same id");
+    DEBUG("PASS: event_ids match from otherObj.event_id and base");
+
+    mgr.printReady();
+
+    elapsedMillis since_ready = 0;
+    while (since_ready > 100)
+    {
+    }
+
+    mgr.ready = true;
+
+    elapsedMillis since_check_for_notf = 0;
+
+    while (true)
+    {
+      if (since_check_for_notf > 100 && mgr.enabled())
+      {
+        since_check_for_notf = 0;
+
+        uint8_t response = waitForNew(&readNotfQueue, 100, QueueBase::printRead);
+        if (response == Response::OK)
+        {
+          sendOtherQueue.send_r(&otherObj, QueueBase::printSend);
+        }
+      }
+
+      mgr.healthCheck(10000);
+
+      vTaskDelay(10);
+    }
+    vTaskDelete(NULL);
+  }
+}
+
+void testUtils_waitForNewResp_with_notf_task_and_respond_task()
+{
+  Queue1::Manager<SendToBoardNotf> *readNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(test)readNotfQueue");
+  Queue1::Manager<OtherTestObj> *readOtherQueue = new Queue1::Manager<OtherTestObj>(xOtherTestQueueHandle, TICKS_5ms, "(test)readOtherQueue");
+
+  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  SendToBoardTimerTask::setSendInterval(3 * SECONDS);
+
+  OtherObj::mgr.create(OtherObj::taskOtherdObj, 0, 1);
+
+  printTestInstructions("testUtils_waitForNewResp_with_notf_task_and_respond_task");
+
+  while (SendToBoardTimerTask::mgr.ready == false ||
+         OtherObj::mgr.ready == false)
+    vTaskDelay(50);
+
+  OtherObj::mgr.enable();
+  SendToBoardTimerTask::mgr.enable();
+
+  counter = 0;
+
+  while (counter < 5)
+  {
+    DEBUG("--------------------------");
+
+    uint8_t firstResp = waitForNew(readNotfQueue, 10 * SECONDS);
+    TEST_ASSERT_TRUE_MESSAGE(firstResp == Response::OK, "firstResp was not OK");
+    DEBUG("PASS: found Notf");
+
+    uint8_t secondResp = waitForNew(readOtherQueue, PERIOD_100ms, QueueBase::printRead);
+    TEST_ASSERT_TRUE_MESSAGE(secondResp == Response::OK, "otherResp timed out after 100ms");
+    DEBUG("PASS: ...and otherObjTask responded");
+
+    counter++;
+    vTaskDelay(200);
+  }
+
+  TEST_ASSERT_TRUE(counter >= 5);
+}
 
 void setup()
 {
@@ -443,7 +530,8 @@ void setup()
   // RUN_TEST(testUtils_waitForNewResponse);
   // RUN_TEST(test_queue_hasEvent_updates_id);
   // RUN_TEST(testUtils_waitForNewResp_with_QueueType);
-  RUN_TEST(testUtils_waitForNewResp_with_QueueType_from_Notification_task);
+  // RUN_TEST(testUtils_waitForNewResp_with_QueueType_from_Notification_task);
+  RUN_TEST(testUtils_waitForNewResp_with_notf_task_and_respond_task);
 
   UNITY_END();
 }

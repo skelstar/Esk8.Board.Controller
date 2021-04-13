@@ -13,7 +13,7 @@ public:
   const char *name = "BoardClass";
 
 public:
-  BoardClass() : QueueBase(event_id, latency)
+  BoardClass() : QueueBase()
   {
     event_id = 0;
   }
