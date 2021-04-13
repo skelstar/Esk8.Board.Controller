@@ -429,7 +429,7 @@ void testUtils_waitForNewResp_with_QueueType_from_Notification_task()
 
 namespace OtherObj
 {
-  RTOSTaskManager mgr("OtherObjTask", 5000);
+  RTOSTaskManager mgr("OtherObjTask_OG", 5000);
 
   void taskOtherdObj(void *pvParameters)
   {
@@ -515,6 +515,106 @@ void testUtils_waitForNewResp_with_notf_task_and_respond_task()
   TEST_ASSERT_TRUE(counter >= 5);
 }
 
+namespace OtherTask
+{
+  // RTOSTaskManager mgr("OtherTask", 5000);
+
+  void taskOther(void *pvParameters)
+  {
+    Serial.printf("Task: %s started\n", (const char *)pvParameters);
+
+    OtherTestObj otherObj;
+
+    char queueName[30];
+    sprintf(queueName, "(IRL)%s", (const char *)pvParameters);
+
+    Queue1::Manager<SendToBoardNotf> readNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, queueName);
+    Queue1::Manager<OtherTestObj> sendOtherQueue(xOtherTestQueueHandle, TICKS_5ms, queueName);
+
+    Serial.printf("Task: %s ready\n", (const char *)pvParameters);
+
+    elapsedMillis since_ready = 0;
+
+    while (since_ready > 100)
+      vTaskDelay(5);
+
+    elapsedMillis since_check_for_notf = 0;
+
+    while (true)
+    {
+      if (since_check_for_notf > 100)
+      {
+        since_check_for_notf = 0;
+
+        uint8_t response = waitForNew(&readNotfQueue, 100, QueueBase::printRead);
+        if (response == Response::OK)
+          sendOtherQueue.send_r(&otherObj); //, QueueBase::printSend);
+      }
+
+      vTaskDelay(10);
+    }
+    vTaskDelete(NULL);
+  }
+}
+
+void boxing_tasks()
+{
+  Queue1::Manager<SendToBoardNotf> *readNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(test)readNotfQueue");
+  Queue1::Manager<OtherTestObj> *readOtherQueue = new Queue1::Manager<OtherTestObj>(xOtherTestQueueHandle, TICKS_5ms, "(test)readOtherQueue");
+
+  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  SendToBoardTimerTask::setSendInterval(3 * SECONDS);
+
+#define NUM_OTHER_TASKS 3
+
+  int t = 0;
+  RTOSTaskManager *mgrs[NUM_OTHER_TASKS];
+
+  for (RTOSTaskManager *m : mgrs)
+  {
+    char taskName[20];
+    sprintf(taskName, "OtherTask#%d", t);
+
+    m = new RTOSTaskManager(taskName, 5000);
+
+    xTaskCreatePinnedToCore(OtherTask::taskOther,
+                            taskName,
+                            /*stack*/ 3000,
+                            /*params*/ (void *)&taskName,
+                            /*priority*/ t,
+                            /*handle*/ NULL,
+                            /*CORE*/ 0);
+    t++;
+
+    vTaskDelay(50);
+
+    m->enable(true, PRINT_THIS);
+  }
+
+  printTestInstructions("boxing_tasks");
+
+  SendToBoardTimerTask::mgr.enable();
+
+#define NUM_LOOPS 100
+  counter = 0;
+
+  while (counter < NUM_LOOPS)
+  {
+    DEBUG("--------------------------");
+
+    uint8_t notfResp = waitForNew(readNotfQueue, 10 * SECONDS);
+    TEST_ASSERT_TRUE_MESSAGE(notfResp == Response::OK, "notfResp was not OK");
+
+    uint8_t secondResp = waitForNew(readOtherQueue, 10 * SECONDS, QueueBase::printRead);
+    TEST_ASSERT_TRUE_MESSAGE(secondResp == Response::OK, "otherResp timed out after 10s");
+
+    counter++;
+    vTaskDelay(200);
+  }
+
+  TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
+}
+
 void setup()
 {
   delay(2000);
@@ -531,7 +631,8 @@ void setup()
   // RUN_TEST(test_queue_hasEvent_updates_id);
   // RUN_TEST(testUtils_waitForNewResp_with_QueueType);
   // RUN_TEST(testUtils_waitForNewResp_with_QueueType_from_Notification_task);
-  RUN_TEST(testUtils_waitForNewResp_with_notf_task_and_respond_task);
+  // RUN_TEST(testUtils_waitForNewResp_with_notf_task_and_respond_task);
+  RUN_TEST(boxing_tasks);
 
   UNITY_END();
 }

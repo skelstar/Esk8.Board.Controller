@@ -95,9 +95,10 @@ public:
     return _enabled;
   }
 
-  void enable(bool e = true)
+  void enable(bool e = true, bool print = false)
   {
-    Serial.printf("[TASK]:%s %s\n", _task_name, e ? "enabled" : "disabled");
+    if (print)
+      Serial.printf("[TASK]:%s %s\n", _task_name, e ? "enabled" : "disabled");
     _enabled = e;
   }
 
