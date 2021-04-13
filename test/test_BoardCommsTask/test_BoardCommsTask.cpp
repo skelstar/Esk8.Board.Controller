@@ -148,9 +148,9 @@ void WhenTheNotfIsSentOut_BoardSendsPacketState()
       uint8_t resp = waitForNew<SendToBoardNotf>(readNotfQueue, 2 * SECONDS, QueueBase::printRead);
       TEST_ASSERT_TRUE(resp == Response::OK);
 
+      // notification
       resp = waitForNew<SendToBoardNotf>(readNotfQueue, 2 * SECONDS, QueueBase::printRead);
       TEST_ASSERT_TRUE(resp == Response::TIMEOUT);
-      DEBUG("PASS: notification found once, not found twice");
 
       // PacketState
       resp = waitForNew<PacketState>(packetStateQueue, 100 * MILLIS_S, QueueBase::printRead);

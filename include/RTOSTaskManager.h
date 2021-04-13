@@ -66,7 +66,7 @@ public:
     vTaskDelete(_taskHandle);
   }
 
-  void create(
+  TaskHandle_t create(
       TaskFunction_t func,
       int core = 0,
       int priority = 1,

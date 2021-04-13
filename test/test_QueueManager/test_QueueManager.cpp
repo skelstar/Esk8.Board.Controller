@@ -512,6 +512,8 @@ void testUtils_waitForNewResp_with_notf_task_and_respond_task()
     vTaskDelay(200);
   }
 
+  OtherObj::mgr.deleteTask(PRINT_THIS);
+
   TEST_ASSERT_TRUE(counter >= 5);
 }
 
@@ -595,7 +597,7 @@ void boxing_tasks()
 
   SendToBoardTimerTask::mgr.enable();
 
-#define NUM_LOOPS 100
+#define NUM_LOOPS 5
   counter = 0;
 
   while (counter < NUM_LOOPS)
@@ -611,6 +613,9 @@ void boxing_tasks()
     counter++;
     vTaskDelay(200);
   }
+
+  for (RTOSTaskManager *m : mgrs)
+    m->deleteTask(PRINT_THIS);
 
   TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
 }

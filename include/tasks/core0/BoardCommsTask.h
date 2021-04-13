@@ -16,7 +16,7 @@ namespace BoardCommsTask
   BoardClass board;
   PacketState packetState;
 
-  Queue1::Manager<SendToBoardNotf> *sendNotfQueue = nullptr;
+  Queue1::Manager<SendToBoardNotf> *readNotfQueue = nullptr;
   Queue1::Manager<PacketState> *packetStateQueue = nullptr;
 
   const unsigned long CHECK_COMMS_RX_INTERVAL = 50;
@@ -38,7 +38,7 @@ namespace BoardCommsTask
 
     packetState.received(packet);
 
-    Serial.printf("boardPacketAvailable_cb id: %lu\n", packet.id);
+    Serial.printf("boardPacketAvailable_cb packet_id: %lu @ %lu\n", packet.id, millis());
   }
   //----------------------------------------------------------
   void sendConfigToBoard(bool print)
@@ -89,7 +89,7 @@ namespace BoardCommsTask
 
     controller_packet.id = 0;
 
-    sendNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "BoardCommsTask::sendNotfQueue");
+    readNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(BoardCommsTask)readNotfQueue");
     packetStateQueue = new Queue1::Manager<PacketState>(xPacketStateQueueHandle, TICKS_5ms, "(BoardCommsTask)packetStateQueue");
 
     boardClientInit();
@@ -104,18 +104,19 @@ namespace BoardCommsTask
 
     while (true)
     {
-      // check sendNotfQueue for when to send packet to board
+      // check readNotfQueue for when to send packet to board
       if (since_check_send_notf_queue > PERIOD_10ms)
       {
-        if (sendNotfQueue->hasValue("BoardCommsTask::task"))
+        if (readNotfQueue->hasValue("BoardCommsTask::task"))
         {
           packetState.latency = 0;
-          sendPacketToBoard();
+
+          sendPacketToBoard(PRINT_THIS);
         }
       }
 
       // check for incoming packets
-      if (since_checked_comms > PERIOD_100ms)
+      if (since_checked_comms > PERIOD_50ms)
       {
         since_checked_comms = 0;
 
