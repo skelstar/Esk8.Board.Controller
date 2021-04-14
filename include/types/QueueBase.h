@@ -47,7 +47,7 @@ public:
 
   static void printRead(QueueBase b, const char *queueName = nullptr)
   {
-    Serial.printf("[Queue|%s| <-- |%lums] id: %lu after %lu\n",
+    Serial.printf("[Queue|%s| <-- |%lums] id: %lu after %lums\n",
                   queueName != nullptr ? queueName : b.name,
                   millis(),
                   b.event_id,

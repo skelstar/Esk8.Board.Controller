@@ -38,7 +38,7 @@ namespace BoardCommsTask
 
     packetState.received(packet);
 
-    Serial.printf("boardPacketAvailable_cb packet_id: %lu @ %lu\n", packet.id, millis());
+    vTaskDelay(10);
   }
   //----------------------------------------------------------
   void sendConfigToBoard(bool print)
@@ -66,7 +66,7 @@ namespace BoardCommsTask
     controller_packet.acknowledged = false;
 
     if (print)
-      Serial.printf("Sending CONTROL id: %lu\n", controller_packet.id);
+      Serial.printf("sendPacketToBoard() id: %lu\n", controller_packet.id);
 
     bool success = boardClient.sendTo(Packet::CONTROL, controller_packet);
 

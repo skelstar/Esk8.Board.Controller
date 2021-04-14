@@ -96,7 +96,7 @@ void tearDown()
 const int NUM_STEPS = 5;
 uint8_t _s_MovingSteps[NUM_STEPS] = {1, 0, 0, 0, 1};
 
-VescData mockStoppedResponse(ControllerData out)
+VescData mockMovingResponse(ControllerData out)
 {
   VescData mockresp;
   mockresp.id = out.id;
@@ -106,6 +106,7 @@ VescData mockStoppedResponse(ControllerData out)
 }
 
 //==========================================
+
 void WhenTheNotfIsSentOut_BoardSendsPacketState()
 {
 
@@ -113,7 +114,7 @@ void WhenTheNotfIsSentOut_BoardSendsPacketState()
   Queue1::Manager<SendToBoardNotf> *readNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(test)readNotfQueue");
 
   BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_0, TASK_PRIORITY_1);
-  BoardCommsTask::boardClient.mockResponseCallback(mockStoppedResponse);
+  BoardCommsTask::boardClient.mockResponseCallback(mockMovingResponse);
 
   SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, CORE_0, TASK_PRIORITY_1);
 
@@ -140,8 +141,6 @@ void WhenTheNotfIsSentOut_BoardSendsPacketState()
     if (since_checked_for_notf > 100)
     {
       since_checked_for_notf = 0;
-
-      bool gotResp = false, timedout = false;
 
       // NOTF
       DEBUG("--------- NOTF > ----------");
@@ -172,6 +171,67 @@ void WhenTheNotfIsSentOut_BoardSendsPacketState()
 
   vTaskDelete(NULL);
 }
+
+//==========================================
+
+void WhenMockPacketWithMovingIsSent_SendsPacketWithMovingTrue()
+{
+
+  Queue1::Manager<PacketState> *packetStateQueue = new Queue1::Manager<PacketState>(xPacketStateQueueHandle, TICKS_5ms, "(test)PacketStateQueue");
+  Queue1::Manager<SendToBoardNotf> *sendNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(test)sendNotfQueue");
+
+  BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_0, TASK_PRIORITY_1);
+
+  elapsedMillis since_checked_for_notf = 0;
+
+  Serial.printf("------------------------------------\n");
+
+  while (!BoardCommsTask::mgr.ready)
+  {
+    vTaskDelay(5);
+  }
+
+  BoardCommsTask::mgr.enable();
+
+  BoardCommsTask::boardClient.mockResponseCallback([](ControllerData out) {
+    VescData mockresp;
+    mockresp.id = out.id;
+    mockresp.version = VERSION_BOARD_COMPAT;
+    mockresp.moving = true;
+    return mockresp;
+  });
+
+  DEBUG("Tasks ready!");
+
+  SendToBoardNotf notification;
+  DEBUG("--------- NOTF -> --------");
+  // spam the queue a bit first
+  sendNotfQueue->send(&notification);
+  vTaskDelay(200);
+  sendNotfQueue->send(&notification);
+
+  vTaskDelay(500);
+
+  // get packet from the queue
+  uint8_t resp = waitForNew<PacketState>(packetStateQueue, PERIOD_500ms, QueueBase::printRead);
+  Serial.printf("(test2)packet from boardComms id: %lu moving: %d \n",
+                packetStateQueue->payload.packet_id,
+                packetStateQueue->payload.moving);
+
+  // assert
+  TEST_ASSERT_TRUE_MESSAGE(resp == Response::OK, "there was no new Packet from BoardCommsTask");
+  TEST_ASSERT_TRUE_MESSAGE(packetStateQueue->payload.moving, "Board is not showing to be moving");
+
+  maybe test to see that "stopping" is working
+
+      vTaskDelay(100);
+
+  BoardCommsTask::mgr.deleteTask(PRINT_THIS);
+
+  TEST_ASSERT_TRUE(true);
+
+  vTaskDelete(NULL);
+}
 //==========================================
 
 void setup()
@@ -182,7 +242,8 @@ void setup()
 
   UNITY_BEGIN();
 
-  RUN_TEST(WhenTheNotfIsSentOut_BoardSendsPacketState);
+  // RUN_TEST(WhenTheNotfIsSentOut_BoardSendsPacketState);
+  RUN_TEST(WhenMockPacketWithMovingIsSent_SendsPacketWithMovingTrue);
 
   UNITY_END();
 }

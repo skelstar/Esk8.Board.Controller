@@ -7,7 +7,9 @@ class PacketState : public QueueBase
 public:
   float version = 0.0;
   unsigned long packet_id;
+  bool moving = false;
 
+public:
   PacketState() : QueueBase()
   {
     event_id = 0;
@@ -30,12 +32,7 @@ public:
   {
     _reply_packet_id = packet.id;
     version = packet.version;
-    _moving = packet.moving;
-  }
-
-  bool isMoving()
-  {
-    return _moving;
+    moving = packet.moving;
   }
 
   bool acknowledged()
@@ -53,5 +50,4 @@ public:
 private:
   elapsedMillis _since_sent;
   unsigned long _reply_packet_id;
-  bool _moving = false;
 };

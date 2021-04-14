@@ -128,9 +128,9 @@ namespace Display
     }
     else if (board->connected())
     {
-      if (!fsm_mgr.currentStateIs(Display::ST_MOVING_SCREEN) && board->isMoving())
+      if (!fsm_mgr.currentStateIs(Display::ST_MOVING_SCREEN) && board->moving)
         fsm_mgr.trigger(DispState::Trigger::TR_MOVING);
-      else if (!fsm_mgr.currentStateIs(Display::ST_STOPPED_SCREEN) && !board->isMoving())
+      else if (!fsm_mgr.currentStateIs(Display::ST_STOPPED_SCREEN) && !board->moving)
         fsm_mgr.trigger(DispState::Trigger::TR_STOPPED);
     }
     else
