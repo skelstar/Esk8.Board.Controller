@@ -36,6 +36,8 @@ namespace Response
 
 namespace Queue1
 {
+  const int HISTORY_LENGTH = 3;
+
   template <typename T>
   class Manager
   {
@@ -57,6 +59,8 @@ namespace Queue1
       _queue = queue;
       _ticks = ticks;
       name = p_name != nullptr ? p_name : ((QueueBase)payload).name;
+
+      _initHistory();
     }
 
     void sendLegacy(T *payload)
@@ -90,6 +94,9 @@ namespace Queue1
 
       if (sent_cb != nullptr)
         sent_cb(*payload, name);
+
+      _addToHistory(*payload);
+
       payload->sent_time = millis();
       payload->event_id++;
     }
@@ -128,6 +135,14 @@ namespace Queue1
       return new_pkt;
     }
 
+    T getFromHistory(uint8_t offset)
+    {
+      if (offset < HISTORY_LENGTH)
+        return _getFromHistory(offset);
+      DEBUG("ERROR: going back too far in history!");
+      return _getFromHistory(0);
+    }
+
     bool missedPacket()
     {
       return QueueBase::missed_packet(_last_event_id);
@@ -158,6 +173,30 @@ namespace Queue1
         _missedCallback(missed_packet_count);
     }
 
+    void _initHistory()
+    {
+      for (int i = 0; i < HISTORY_LENGTH; i++)
+        _history[i] = nullptr;
+    }
+
+    void _addToHistory(T item)
+    {
+      int _old_idx = _historyIdx;
+      _history[_historyIdx] = new T(item);
+      _historyIdx = (_historyIdx < HISTORY_LENGTH - 1) ? _historyIdx + 1 : 0;
+      DEBUGMVAL("_addToHistory", _old_idx, _historyIdx, _history[_old_idx]->event_id);
+    }
+
+    T _getFromHistory(int stepsBack)
+    {
+      int calc = _historyIdx - stepsBack;
+      if (calc < 0)
+        calc = HISTORY_LENGTH - calc;
+      T *result = new T(*_history[calc]);
+      DEBUGMVAL("_getFromHistory", stepsBack, _historyIdx, calc, result->event_id);
+      return *result;
+    }
+
   public:
     const char *name = "Queue name not supplied";
 
@@ -169,6 +208,9 @@ namespace Queue1
         _missedCallback = nullptr,
         _sentCallback = nullptr,
         _readCallback = nullptr;
+
+    T *_history[HISTORY_LENGTH];
+    uint8_t _historyIdx = 0;
   };
 } // namespace Queue
 

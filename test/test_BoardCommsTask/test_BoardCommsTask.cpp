@@ -250,6 +250,8 @@ void WhenMockPacketWithMovingIsSent_SendsPacketWithMovingTrue()
     mockresp.moving = true;
     mockCalls.record((uint8_t)Method::MockBoardClientResponse, mockresp);
 
+    VescData::print(mockresp, "mockresp");
+
     return mockresp;
   });
 
@@ -276,18 +278,6 @@ void WhenMockPacketWithMovingIsSent_SendsPacketWithMovingTrue()
 
   TEST_ASSERT_TRUE_MESSAGE(mockCalls.calls[Method::MockBoardClientResponse].time > 0, "mockCalls time was 0");
 
-  DEBUGVAL(mockCalls.calls[Method::MockBoardClientResponse].time);
-  DEBUGVAL(mockCalls.calls[Method::MockBoardClientResponse].count);
-  DEBUG("-----");
-  DEBUGVAL(((VescData)mockCalls.calls[Method::MockBoardClientResponse].payload).moving);
-  DEBUGVAL(((VescData)mockCalls.calls[Method::MockBoardClientResponse].payload).id);
-  DEBUGVAL(((VescData)mockCalls.calls[Method::MockBoardClientResponse].payload).version);
-  DEBUG("-----");
-  // DEBUGVAL(
-  //     ((VescData *)mockCalls.calls[Method::MockBoardClientResponse].payload)->moving,
-  //     ((VescData *)mockCalls.calls[Method::MockBoardClientResponse].payload)->id,
-  //     ((VescData *)mockCalls.calls[Method::MockBoardClientResponse].payload)->version);
-
   TEST_ASSERT_TRUE_MESSAGE(mockCalls.calls[Method::MockBoardClientResponse].payload.moving == 1, "mockCalls moving was not 1");
 
   // maybe test to see that "stopping" is working
@@ -300,6 +290,41 @@ void WhenMockPacketWithMovingIsSent_SendsPacketWithMovingTrue()
 
   vTaskDelete(NULL);
 }
+
+void WhenSendingToAQueue_ItStoresTheItemInHistory()
+{
+  Queue1::Manager<PacketState> *sendToPacketState = new Queue1::Manager<PacketState>(xPacketStateQueueHandle, TICKS_5ms, "(test)sendPacket");
+
+  PacketState packet;
+
+  sendToPacketState->send_r(&packet);
+  vTaskDelay(200);
+
+  sendToPacketState->send_r(&packet);
+  vTaskDelay(200);
+
+  sendToPacketState->send_r(&packet);
+  vTaskDelay(200);
+
+  PacketState::print(sendToPacketState->getFromHistory(0), "history: 0");
+  PacketState::print(sendToPacketState->getFromHistory(1), "history: 1");
+  PacketState::print(sendToPacketState->getFromHistory(2), "history: 2");
+
+  TEST_ASSERT_EQUAL_MESSAGE(0, sendToPacketState->getFromHistory(0).event_id, "history element 0 not the right one");
+  TEST_ASSERT_EQUAL_MESSAGE(1, sendToPacketState->getFromHistory(1).event_id, "history element 1 not the right one");
+  TEST_ASSERT_EQUAL_MESSAGE(2, sendToPacketState->getFromHistory(2).event_id, "history element 2 not the right one");
+
+  // maybe test to see that "stopping" is working
+
+  vTaskDelay(100);
+
+  BoardCommsTask::mgr.deleteTask(PRINT_THIS);
+
+  TEST_ASSERT_TRUE(true);
+
+  vTaskDelete(NULL);
+}
+
 //==========================================
 
 void setup()
@@ -311,7 +336,8 @@ void setup()
   UNITY_BEGIN();
 
   // RUN_TEST(WhenTheNotfIsSentOut_BoardSendsPacketState);
-  RUN_TEST(WhenMockPacketWithMovingIsSent_SendsPacketWithMovingTrue);
+  // RUN_TEST(WhenMockPacketWithMovingIsSent_SendsPacketWithMovingTrue);
+  RUN_TEST(WhenSendingToAQueue_ItStoresTheItemInHistory);
 
   UNITY_END();
 }

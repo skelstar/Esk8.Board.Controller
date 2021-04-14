@@ -47,6 +47,16 @@ public:
            _since_sent < 200;
   }
 
+  static void print(PacketState item, const char *preamble = nullptr)
+  {
+    if (preamble != nullptr)
+      Serial.printf("%s: ", preamble);
+    Serial.printf("event_id: %lu  ", item.event_id);
+    Serial.printf("packet_id: %lu:  ", item.packet_id);
+    Serial.printf("moving: %d:  ", item.moving);
+    Serial.println();
+  }
+
 private:
   elapsedMillis _since_sent;
   unsigned long _reply_packet_id;
