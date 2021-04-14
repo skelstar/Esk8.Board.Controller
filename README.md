@@ -14,3 +14,52 @@
   - packetReceived()
     - send config if board_packet.id == 0
     - disp_queue if moving or stopped (on change)
+
+--------------------------------------------------
+
+### Tasks
+- SendToBoardTimerTask
+  - Provides:
+    - SendToBoardNotf
+  - Consumes:
+    - _N/A_
+- BoardCommsTask
+  - Provides:
+    - PacketState
+  - Consumes:
+    - SendToBoardNotf
+- Display
+  - Provides:
+    - _N/A_
+  - Consumes:
+    - SendToBoardNotf (maybe?)
+    - PacketState
+- NintendoClassicTask
+  - Provides:
+    - NintendoButtonEvent
+  - Consumes:
+    - SendToBoardNotf
+    - PacketState
+  - Special:
+    - turns on/off when start/stop
+- QwiicButtonTask
+  - Provides:
+    - PrimaryButtonState
+  - Consumes:
+    - SendToBoardNotf
+- RemoteTask
+  - Provides:
+    - BatteryInfo
+  - Consumes:
+    - SendToBoardNotf
+- StatsTask
+  - Provides:
+    - _N/A_
+  - Consumes:
+    - SendToBoardNotf
+    - PacketState
+  - Special:
+    - turns on/off when start/stop
+
+
+

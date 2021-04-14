@@ -1,13 +1,5 @@
 
 
-#define PERIOD_10MS 10
-#define PERIOD_20MS 20
-#define PERIOD_30MS 30
-#define PERIOD_40MS 40
-#define PERIOD_50MS 50
-#define PERIOD_100MS 100
-#define PERIOD_200MS 200
-
 namespace BoardCommsTask
 {
   GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
@@ -24,10 +16,12 @@ namespace BoardCommsTask
   BoardClass board;
   PacketState packetState;
 
+  Queue1::Manager<SendToBoardNotf> *readNotfQueue = nullptr;
+  Queue1::Manager<PacketState> *packetStateQueue = nullptr;
+
   const unsigned long CHECK_COMMS_RX_INTERVAL = 50;
 
   elapsedMillis
-      // since_sent_to_board = SEND_TO_BOARD_INTERVAL - 500,
       since_checked_comms = 0,
       since_check_send_notf_queue;
 
@@ -37,16 +31,14 @@ namespace BoardCommsTask
     VescData packet = boardClient.read();
     board.save(packet);
 
-    Serial.printf("Received packet\n");
-
     if (packet.reason == CONFIG_RESPONSE)
     {
       Serial.printf("CONFIG_RESPONSE id: %lu\n", packet.id);
     }
-    boardPacketQueue.send(&board);
 
     packetState.received(packet);
-    packetStateQueue.send(&packetState);
+
+    vTaskDelay(10);
   }
   //----------------------------------------------------------
   void sendConfigToBoard(bool print)
@@ -62,7 +54,7 @@ namespace BoardCommsTask
     bool success = boardClient.sendAltTo<ControllerConfig>(Packet::CONFIG, controller_config);
 
     packetState.sent(controller_config);
-    packetStateQueue.send(&packetState, printSentToQueue);
+    packetStateQueue->send(&packetState);
 
     if (success == false)
       Serial.printf("Unable to send CONFIG packet to board id: %lu\n", controller_packet.id);
@@ -74,13 +66,13 @@ namespace BoardCommsTask
     controller_packet.acknowledged = false;
 
     if (print)
-      Serial.printf("Sending CONTROL id: %lu\n", controller_packet.id);
+      Serial.printf("sendPacketToBoard() id: %lu\n", controller_packet.id);
 
     bool success = boardClient.sendTo(Packet::CONTROL, controller_packet);
 
     packetState.sent(controller_packet);
 
-    packetStateQueue.send(&packetState);
+    packetStateQueue->send_r(&packetState, QueueBase::printSend);
 
     if (success == false)
       Serial.printf("Unable to send CONTROL packet to board id: %lu\n", controller_packet.id);
@@ -97,9 +89,8 @@ namespace BoardCommsTask
 
     controller_packet.id = 0;
 
-    Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "BoardCommsTask::sendNotfQueue");
-    Queue1::Manager<BoardClass> boardPacketQueue(xBoardPacketQueue, TICKS_5ms, "(BoardCommsTask)boardPacketQueue");
-    Queue1::Manager<PacketState> packetStateQueue(xPacketStateQueueHandle, TICKS_5ms, "(BoardCommsTask)packetStateQueue");
+    readNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(BoardCommsTask)readNotfQueue");
+    packetStateQueue = new Queue1::Manager<PacketState>(xPacketStateQueueHandle, TICKS_5ms, "(BoardCommsTask)packetStateQueue");
 
     boardClientInit();
 
@@ -108,33 +99,33 @@ namespace BoardCommsTask
 
     while (mgr.enabled() == false)
     {
-      vTaskDelay(500);
+      vTaskDelay(TICKS_5ms);
     }
 
     while (true)
     {
-      // check sendNotfQueue for when to send packet to board
-      if (since_check_send_notf_queue > PERIOD_10MS)
+      // check readNotfQueue for when to send packet to board
+      if (since_check_send_notf_queue > PERIOD_10ms)
       {
-        if (sendNotfQueue.hasValue("BoardCommsTask::task"))
+        if (readNotfQueue->hasValue("BoardCommsTask::task"))
         {
-          sendPacketToBoard();
+          packetState.latency = 0;
+
+          sendPacketToBoard(PRINT_THIS);
         }
       }
 
       // check for incoming packets
-      if (since_checked_comms > PERIOD_100MS)
+      if (since_checked_comms > PERIOD_50ms)
       {
         since_checked_comms = 0;
 
         boardClient.update();
-
-        packetStateQueue.send(&packetState);
       }
 
       mgr.healthCheck(10000);
 
-      vTaskDelay(10);
+      vTaskDelay(5);
     }
     vTaskDelete(NULL);
   }

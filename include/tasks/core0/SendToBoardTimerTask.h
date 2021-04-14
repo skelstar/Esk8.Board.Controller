@@ -35,7 +35,7 @@ namespace SendToBoardTimerTask
 
     SendToBoardNotf notification;
 
-    Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, TICKS_5ms, "(IRL)sendToBoardQueue");
+    Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, TICKS_5ms, "(IRL)sendNotf");
 
     mgr.ready = true;
     mgr.printReady();
@@ -48,7 +48,7 @@ namespace SendToBoardTimerTask
 
         notification.sent_time = millis();
 
-        sendToBoardQueue.send(&notification);
+        sendToBoardQueue.send_r(&notification);
       }
 
       mgr.healthCheck(10000);

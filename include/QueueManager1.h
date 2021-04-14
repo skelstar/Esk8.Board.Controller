@@ -9,26 +9,47 @@
 #include <types/QueueBase.h>
 #include <types/Throttle.h>
 
-template <typename T>
-void printSentToQueue(T payload)
+const unsigned long SECONDS = 1000;
+const unsigned long MILLIS_S = 1;
+
+const unsigned long PERIOD_10ms = 10;
+const unsigned long PERIOD_20ms = 20;
+const unsigned long PERIOD_30ms = 30;
+const unsigned long PERIOD_40ms = 40;
+const unsigned long PERIOD_50ms = 50;
+const unsigned long PERIOD_100ms = 100;
+const unsigned long PERIOD_200ms = 200;
+const unsigned long PERIOD_500ms = 500;
+const unsigned long PERIOD_1S = 1000;
+const unsigned long PERIOD_2S = 2000;
+
+typedef void (*ResponseCallback1)(QueueBase packet, const char *queueName);
+
+namespace Response
 {
-  if (std::is_base_of<QueueBase, T>::value)
-    Serial.printf("[%s] sent: id:%lu to queue\n", payload.name != nullptr ? payload.name : "", payload.event_id);
-}
+  enum WaitResp
+  {
+    OK = 0,
+    TIMEOUT,
+  };
+};
 
 namespace Queue1
 {
+  const int HISTORY_LENGTH = 3;
+
   template <typename T>
   class Manager
   {
     typedef void (*QueueEventCallback)(uint16_t ev);
     typedef void (*SentCallback)(T packet);
+    typedef void (*SentCallback_r)(QueueBase packet, const char *queueName);
 
   public:
     T payload;
 
   public:
-    Manager(QueueHandle_t queue, TickType_t ticks, const char *name = nullptr)
+    Manager(QueueHandle_t queue, TickType_t ticks, const char *p_name = nullptr)
     {
       if (queue == nullptr)
       {
@@ -37,7 +58,9 @@ namespace Queue1
       }
       _queue = queue;
       _ticks = ticks;
-      _queue_name = name != nullptr ? name : ((QueueBase)payload).name;
+      name = p_name != nullptr ? p_name : ((QueueBase)payload).name;
+
+      _initHistory();
     }
 
     void sendLegacy(T *payload)
@@ -49,17 +72,32 @@ namespace Queue1
     {
       if (_queue == nullptr)
       {
-        Serial.printf("ERROR: queue not initialised! (%s)\n", _queue_name);
+        Serial.printf("ERROR: queue not initialised! (%s)\n", name);
         return;
       }
       xQueueSendToFront(_queue, (void *)&payload, _ticks);
 
-      if (_queue_name != nullptr)
-        Serial.printf("[%s::send()] sent id: %lu\n", _queue_name, payload->event_id);
-
       if (sent_cb != nullptr)
         sent_cb(*payload);
 
+      payload->event_id++;
+    }
+
+    void send_r(T *payload, SentCallback_r sent_cb = nullptr)
+    {
+      if (_queue == nullptr)
+      {
+        Serial.printf("ERROR: queue not initialised! (%s)\n", name);
+        return;
+      }
+      xQueueSendToFront(_queue, (void *)&payload, _ticks);
+
+      if (sent_cb != nullptr)
+        sent_cb(*payload, name);
+
+      _addToHistory(*payload);
+
+      payload->sent_time = millis();
       payload->event_id++;
     }
 
@@ -91,17 +129,18 @@ namespace Queue1
 
     T *peek(const char *name = nullptr)
     {
-      if (_queue == nullptr)
-      {
-        Serial.printf("ERROR: queue not initialised! (%s)\n", _queue_name);
-        return nullptr;
-      }
+      // TODO check for null queue
       T *new_pkt = nullptr;
-      if (xQueuePeek(_queue, &(new_pkt), _ticks) &&
-          new_pkt->event_id != _last_event_id &&
-          name != nullptr)
-        Serial.printf("%s: peeked, new packet (id: %lu)\n", name, new_pkt->event_id);
+      xQueuePeek(_queue, &(new_pkt), _ticks);
       return new_pkt;
+    }
+
+    T getFromHistory(uint8_t offset)
+    {
+      if (offset < HISTORY_LENGTH)
+        return _getFromHistory(offset);
+      DEBUG("ERROR: going back too far in history!");
+      return _getFromHistory(0);
     }
 
     bool missedPacket()
@@ -134,15 +173,67 @@ namespace Queue1
         _missedCallback(missed_packet_count);
     }
 
+    void _initHistory()
+    {
+      for (int i = 0; i < HISTORY_LENGTH; i++)
+        _history[i] = nullptr;
+    }
+
+    void _addToHistory(T item)
+    {
+      int _old_idx = _historyIdx;
+      _history[_historyIdx] = new T(item);
+      _historyIdx = (_historyIdx < HISTORY_LENGTH - 1) ? _historyIdx + 1 : 0;
+      DEBUGMVAL("_addToHistory", _old_idx, _historyIdx, _history[_old_idx]->event_id);
+    }
+
+    T _getFromHistory(int stepsBack)
+    {
+      int calc = _historyIdx - stepsBack;
+      if (calc < 0)
+        calc = HISTORY_LENGTH - calc;
+      T *result = new T(*_history[calc]);
+      DEBUGMVAL("_getFromHistory", stepsBack, _historyIdx, calc, result->event_id);
+      return *result;
+    }
+
+  public:
+    const char *name = "Queue name not supplied";
+
   private:
-    uint16_t _lastEvent = 0;
-    unsigned long _last_event_id = -1;
+    unsigned long _last_event_id;
     QueueHandle_t _queue = NULL;
-    const char *_queue_name = "Queue name not supplied";
     TickType_t _ticks = 10;
     QueueEventCallback
         _missedCallback = nullptr,
         _sentCallback = nullptr,
         _readCallback = nullptr;
+
+    T *_history[HISTORY_LENGTH];
+    uint8_t _historyIdx = 0;
   };
 } // namespace Queue
+
+template <typename T>
+Response::WaitResp waitForNew(Queue1::Manager<T> *queue,
+                              uint16_t timeout,
+                              ResponseCallback1 gotResponse1_cb = nullptr,
+                              bool printTimeout = false)
+{
+  elapsedMillis since_started_listening = 0;
+  do
+  {
+    if (queue->hasValue())
+    {
+      if (gotResponse1_cb != nullptr)
+        gotResponse1_cb(queue->payload, queue->name);
+
+      return Response::OK;
+    }
+    vTaskDelay(1);
+  } while (since_started_listening < timeout);
+
+  if (printTimeout)
+    DEBUGMVAL("timeout: ", queue->name, timeout);
+  return Response::TIMEOUT;
+}

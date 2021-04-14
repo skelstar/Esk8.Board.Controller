@@ -84,8 +84,6 @@ RF24Network network(radio);
 
 elapsedMillis since_checked_queue;
 
-const unsigned long SECONDS = 1000;
-
 void printTestTitle(const char *name)
 {
   Serial.printf("-------------------------------------------\n");
@@ -98,7 +96,7 @@ void printTestInstructions(const char *instructions)
   Serial.printf("*** INSTR: %s\n", instructions);
 }
 
-VescData mockStoppedResponse(ControllerData out)
+VescData mockMovingResponse(ControllerData out)
 {
   VescData mockresp;
   mockresp.id = out.id;
@@ -272,7 +270,7 @@ void test_display_remote_battery()
   BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_3);
   SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, CORE_1, PRIORITY_3);
 
-  BoardCommsTask::boardClient.mockResponseCallback(mockStoppedResponse);
+  BoardCommsTask::boardClient.mockResponseCallback(mockMovingResponse);
   BoardCommsTask::mgr.enable();
 
   Serial.printf("Waiting for tasks to start\n");
