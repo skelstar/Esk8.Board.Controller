@@ -174,15 +174,59 @@ void WhenTheNotfIsSentOut_BoardSendsPacketState()
 
 //==========================================
 
+template <typename T>
+class Calls
+{
+#define NUM_METHODS_CALLED 20;
+
+public:
+  struct Call
+  {
+    unsigned long time;
+    T payload;
+    int count;
+  };
+
+  Call calls[20];
+
+  Calls()
+  {
+  }
+
+  void record(uint8_t p_method, T p_payload)
+  {
+    if (p_method < 20)
+    {
+      calls[p_method].time = millis();
+      calls[p_method].payload = p_payload;
+      calls[p_method].count++;
+
+      // DEBUGVAL(((VescData *)p_payload)->moving, ((VescData *)p_payload)->id, ((VescData *)p_payload)->version);
+      // DEBUGVAL(((VescData *)calls[p_method].payload)->moving, ((VescData *)calls[p_method].payload)->id, ((VescData *)calls[p_method].payload)->version);
+      DEBUGVAL(((VescData)p_payload).moving, ((VescData)p_payload).id, ((VescData)p_payload).version);
+      DEBUGVAL(((VescData)calls[p_method].payload).moving, ((VescData)calls[p_method].payload).id, ((VescData)calls[p_method].payload).version);
+    }
+  }
+
+  Call *getCall(uint8_t method)
+  {
+    return calls[method].time > 0 ? calls(method) : nullptr;
+  }
+
+private:
+  int _idx = 0;
+};
+
 void WhenMockPacketWithMovingIsSent_SendsPacketWithMovingTrue()
 {
+  static Calls<VescData> mockCalls;
 
   Queue1::Manager<PacketState> *packetStateQueue = new Queue1::Manager<PacketState>(xPacketStateQueueHandle, TICKS_5ms, "(test)PacketStateQueue");
   Queue1::Manager<SendToBoardNotf> *sendNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(test)sendNotfQueue");
 
   BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_0, TASK_PRIORITY_1);
 
-  elapsedMillis since_checked_for_notf = 0;
+  // elapsedMillis since_checked_for_notf = 0;
 
   Serial.printf("------------------------------------\n");
 
@@ -191,6 +235,12 @@ void WhenMockPacketWithMovingIsSent_SendsPacketWithMovingTrue()
     vTaskDelay(5);
   }
 
+  enum Method
+  {
+    NONE = 0,
+    MockBoardClientResponse,
+  };
+
   BoardCommsTask::mgr.enable();
 
   BoardCommsTask::boardClient.mockResponseCallback([](ControllerData out) {
@@ -198,6 +248,8 @@ void WhenMockPacketWithMovingIsSent_SendsPacketWithMovingTrue()
     mockresp.id = out.id;
     mockresp.version = VERSION_BOARD_COMPAT;
     mockresp.moving = true;
+    mockCalls.record((uint8_t)Method::MockBoardClientResponse, mockresp);
+
     return mockresp;
   });
 
@@ -222,9 +274,25 @@ void WhenMockPacketWithMovingIsSent_SendsPacketWithMovingTrue()
   TEST_ASSERT_TRUE_MESSAGE(resp == Response::OK, "there was no new Packet from BoardCommsTask");
   TEST_ASSERT_TRUE_MESSAGE(packetStateQueue->payload.moving, "Board is not showing to be moving");
 
-  maybe test to see that "stopping" is working
+  TEST_ASSERT_TRUE_MESSAGE(mockCalls.calls[Method::MockBoardClientResponse].time > 0, "mockCalls time was 0");
 
-      vTaskDelay(100);
+  DEBUGVAL(mockCalls.calls[Method::MockBoardClientResponse].time);
+  DEBUGVAL(mockCalls.calls[Method::MockBoardClientResponse].count);
+  DEBUG("-----");
+  DEBUGVAL(((VescData)mockCalls.calls[Method::MockBoardClientResponse].payload).moving);
+  DEBUGVAL(((VescData)mockCalls.calls[Method::MockBoardClientResponse].payload).id);
+  DEBUGVAL(((VescData)mockCalls.calls[Method::MockBoardClientResponse].payload).version);
+  DEBUG("-----");
+  // DEBUGVAL(
+  //     ((VescData *)mockCalls.calls[Method::MockBoardClientResponse].payload)->moving,
+  //     ((VescData *)mockCalls.calls[Method::MockBoardClientResponse].payload)->id,
+  //     ((VescData *)mockCalls.calls[Method::MockBoardClientResponse].payload)->version);
+
+  TEST_ASSERT_TRUE_MESSAGE(mockCalls.calls[Method::MockBoardClientResponse].payload.moving == 1, "mockCalls moving was not 1");
+
+  // maybe test to see that "stopping" is working
+
+  vTaskDelay(100);
 
   BoardCommsTask::mgr.deleteTask(PRINT_THIS);
 
