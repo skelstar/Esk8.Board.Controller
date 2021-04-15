@@ -73,7 +73,7 @@ RF24Network network(radio);
 // #include <tasks/core0/NintendoClassicTask.h>
 // #include <tasks/core0/ThrottleTask.h>
 // #include <tasks/core0/debugTask.h>
-// #include <tasks/core0/displayTask.h>
+// #include <tasks/core0/DisplayTask.h>
 
 elapsedMillis since_checked_queue;
 

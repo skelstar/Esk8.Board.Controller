@@ -5,8 +5,12 @@
 #include <utils.h>
 #include <types/Throttle.h>
 
+#ifndef PRINT_THROTTLE
+#define PRINT_THROTTLE 0
+#endif
+
 #ifndef MAGNETIC_THROTTLE_H
-#include <MagThrottle.h>>
+#include <MagThrottle.h>
 #endif
 
 //----------------------------------------
@@ -99,5 +103,10 @@ namespace ThrottleTask
       initialised = true;
       vTaskDelay(10);
     } while (!initialised);
+  }
+
+  Queue1::Manager<ThrottleState> *createQueueManager(const char *name)
+  {
+    return new Queue1::Manager<ThrottleState>(xThrottleQueueHandle, TICKS_5ms, name);
   }
 }

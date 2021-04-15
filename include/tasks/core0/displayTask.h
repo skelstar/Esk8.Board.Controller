@@ -1,7 +1,11 @@
+#pragma once
+
 #include <statsClass.h>
 #include <TFT_eSPI.h>
 #include <tft.h>
 #include <printFormatStrings.h>
+
+#include <tasks/core0/BoardCommsTask.h>
 
 #ifndef PRINT_DISP_STATE
 #define PRINT_DISP_STATE 0
@@ -26,6 +30,8 @@ namespace Display
 
     setupLCD();
 
+    Queue1::Manager<PacketState> *readPacketQueue = BoardCommsTask::createQueueManager("(test)readPacketQueue");
+
     fsm_mgr.begin(&_fsm);
     fsm_mgr.setPrintStateCallback(printState);
     fsm_mgr.setPrintTriggerCallback(printTrigger);
@@ -34,12 +40,12 @@ namespace Display
 
     _fsm.run_machine();
 
-    remote = new BatteryInfo();
+    // remote = new BatteryInfo();
 
     elapsedMillis sinceReadDispEventQueue, since_checked_queue, since_fsm_update;
     unsigned long last_board_id = -1, last_classic_id = -1, last_batt_id = -1;
 
-    while (packetStateQueue == nullptr)
+    while (readPacketQueue == nullptr)
     {
       vTaskDelay(10);
     }
@@ -55,34 +61,34 @@ namespace Display
       {
         since_checked_queue = 0;
 
-        PacketState *packet = packetStateQueue->peek<PacketState>(__func__);
-        if (packet != nullptr && packet->event_id != last_packet_id)
-        {
-          last_packet_id = packet->event_id;
-          if (packet->connected() && packet->acknowledged())
-            handle_packetState_packet(packet);
-        }
+        // PacketState *packet = readPacketQueue->peek<PacketState>(__func__);
+        // if (packet != nullptr && packet->event_id != last_packet_id)
+        // {
+        //   last_packet_id = packet->event_id;
+        //   if (packet->connected() && packet->acknowledged())
+        //     handle_packetState_packet(packet);
+        // }
 
-        if (NintendoClassicTask::queue != nullptr)
-        {
-          NintendoButtonEvent *ev = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
-          if (ev != nullptr && ev->event_id != last_classic_id)
-          {
-            handle_nintendo_classic_event(ev);
-            last_classic_id = ev->event_id;
-          }
-        }
+        // if (NintendoClassicTask::queue != nullptr)
+        // {
+        //   NintendoButtonEvent *ev = NintendoClassicTask::queue->peek<NintendoButtonEvent>(__func__);
+        //   if (ev != nullptr && ev->event_id != last_classic_id)
+        //   {
+        //     handle_nintendo_classic_event(ev);
+        //     last_classic_id = ev->event_id;
+        //   }
+        // }
 
-        if (Remote::queue != nullptr)
-        {
-          BatteryInfo *batt = Remote::queue->peek<BatteryInfo>(__func__);
-          if (batt != nullptr && !batt->been_peeked(last_batt_id))
-          {
-            last_batt_id = batt->event_id;
-            remote = new BatteryInfo(*batt);
-            fsm_mgr.trigger(DispState::TR_REMOTE_BATTERY_CHANGED);
-          }
-        }
+        // if (Remote::queue != nullptr)
+        // {
+        //   BatteryInfo *batt = Remote::queue->peek<BatteryInfo>(__func__);
+        //   if (batt != nullptr && !batt->been_peeked(last_batt_id))
+        //   {
+        //     last_batt_id = batt->event_id;
+        //     remote = new BatteryInfo(*batt);
+        //     fsm_mgr.trigger(DispState::TR_REMOTE_BATTERY_CHANGED);
+        //   }
+        // }
       }
 
       if (since_fsm_update > 50)

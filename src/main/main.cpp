@@ -27,6 +27,13 @@ Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
 #include <NRF24L01Lib.h>
 #include <GenericClient.h>
 
+#define RADIO_OBJECTS
+NRF24L01Lib nrf24;
+
+RF24 radio(NRF_CE, NRF_CS);
+RF24Network network(radio);
+GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
+
 #include <Preferences.h>
 #include <BatteryLib.h>
 #include <QueueManager.h>
@@ -70,13 +77,6 @@ nsPeripherals::Peripherals *peripherals;
 // prototypes
 void boardPacketAvailable_cb(uint16_t from_id, uint8_t t);
 void waitForTasksToBeReady();
-
-NRF24L01Lib nrf24;
-
-RF24 radio(NRF_CE, NRF_CS);
-RF24Network network(radio);
-
-GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
 
 void boardConnectedState_cb();
 void printSentToBoard_cb(ControllerData data);
@@ -134,7 +134,7 @@ void sendToBoard();
 
 #if (USING_DISPLAY == 1)
 #include <displayState.h>
-#include <tasks/core0/displayTask.h>
+#include <tasks/core0/DisplayTask.h>
 #endif
 
 #if (USING_LED == 1)

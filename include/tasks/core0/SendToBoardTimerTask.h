@@ -58,4 +58,9 @@ namespace SendToBoardTimerTask
     vTaskDelete(NULL);
   }
   //==============================================
+
+  Queue1::Manager<SendToBoardNotf> *createQueueManager(const char *name)
+  {
+    return new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, name);
+  }
 } // namespace SendToBoardTimerTask

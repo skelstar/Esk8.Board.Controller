@@ -1,7 +1,9 @@
 #define BUTTONS_NUMBER 12
 #define I2C_ADDR 0x52
 
-#include <types/NintendoController.h>
+#include <types/NintendoButtonEvent.h>
+
+#define NintendoController_h
 
 class NintendoController
 {

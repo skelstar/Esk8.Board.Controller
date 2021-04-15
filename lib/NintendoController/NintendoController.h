@@ -1,7 +1,7 @@
+#pragma once
+
 #ifndef NintendoController_h
 #define NintendoController_h
-
-// #include <types/NintendoController.h>
 
 #define BUTTONS_NUMBER 12
 #define I2C_ADDR 0x52

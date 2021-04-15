@@ -84,5 +84,10 @@ namespace QwiicButtonTask
     vTaskDelete(NULL);
   }
 
+  Queue1::Manager<PrimaryButtonState> *createQueueManager(const char *name)
+  {
+    return new Queue1::Manager<PrimaryButtonState>(xPrimaryButtonQueueHandle, TICKS_5ms, name);
+  }
+
   //============================================================
 } // namespace

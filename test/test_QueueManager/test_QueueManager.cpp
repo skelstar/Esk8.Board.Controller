@@ -21,13 +21,53 @@ static int counter = 0;
 #include <BoardClass.h>
 #include <testUtils.h>
 
+#include <types/PacketState.h>
 #include <types/SendToBoardNotf.h>
+#include <types/NintendoButtonEvent.h>
+#include <types/PrimaryButton.h>
+#include <types/Throttle.h>
+
+#include <RF24Network.h>
+#include <NRF24L01Lib.h>
+#include <MockGenericClient.h>
+// #include <GenericClient.h>
+
+#define RADIO_OBJECTS
+// NRF24L01Lib nrf24;
+
+// RF24 radio(NRF_CE, NRF_CS);
+// RF24Network network(radio);
+GenericClient<ControllerData, VescData> boardClient(01);
+
+#include <MockedQwiicButton.h>
+#include <MockNintendoController.h>
+
+// RTOS ENTITES-------------------
 
 QueueHandle_t xFirstQueueHandle;
 QueueHandle_t xOtherTestQueueHandle;
+
+QueueHandle_t xBoardPacketQueue;
+QueueHandle_t xNintendoControllerQueue;
+QueueHandle_t xPacketStateQueueHandle;
+QueueHandle_t xPrimaryButtonQueueHandle;
 QueueHandle_t xSendToBoardQueueHandle;
+QueueHandle_t xThrottleQueueHandle;
+
+MyMutex mutex_I2C;
+MyMutex mutex_SPI;
+
+#include <displayState.h>
+
+// TASKS ------------------------
 
 #include <tasks/core0/SendToBoardTimerTask.h>
+#include <tasks/core0/DisplayTask.h>
+#include <tasks/core0/QwiicButtonTask.h>
+#include <tasks/core0/ThrottleTask.h>
+#include <tasks/core0/BoardCommsTask.h>
+#include <tasks/core0/NintendoClassicTask.h>
+#include <tasks/core0/remoteTask.h>
 
 RTOSTaskManager firstTask("FirstTask", 3000);
 RTOSTaskManager otherTask("OtherTask", 3000);
@@ -81,7 +121,13 @@ void setUp()
 
   xFirstQueueHandle = xQueueCreate(1, sizeof(FirstTestObj));
   xOtherTestQueueHandle = xQueueCreate(1, sizeof(OtherTestObj));
+
+  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
+  xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
+  xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
+  xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState));
   xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf *));
+  xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState));
 }
 
 void tearDown()
@@ -620,6 +666,58 @@ void boxing_tasks()
   TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
 }
 
+void sendOutNotification_allTasksRespondWithCorrelationId()
+{
+  Queue1::Manager<SendToBoardNotf> *sendNotfQueue = SendToBoardTimerTask::createQueueManager("test)sendNotfQueue");
+  Queue1::Manager<PrimaryButtonState> *readPrimaryButtonQueue = QwiicButtonTask::createQueueManager("(test)readPrimaryButtonQueue");
+  Queue1::Manager<ThrottleState> *readThrottleQueue = ThrottleTask::createQueueManager("(test)readThrottleQueue");
+  Queue1::Manager<PacketState> *readPacketStateQueue = BoardCommsTask::createQueueManager("(test)readPacketStateQueue");
+  Queue1::Manager<NintendoButtonEvent> *readNintendoQueue = NintendoClassicTask::createQueueManager("(test)readNintendoQueue");
+
+  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  Display::mgr.create(Display::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  QwiicButtonTask::mgr.create(Display::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  ThrottleTask::mgr.create(ThrottleTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  BoardCommsTask::mgr.create(BoardCommsTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  NintendoClassicTask::mgr.create(NintendoClassicTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+
+  SendToBoardTimerTask::setSendInterval(3 * SECONDS);
+
+  printTestInstructions("Test testUtils_waitForNewResp_with_QueueType_from_Notification_task");
+
+  while (SendToBoardTimerTask::mgr.ready == false ||
+         Display::mgr.ready == false ||
+         QwiicButtonTask::mgr.ready == false ||
+         ThrottleTask::mgr.ready == false ||
+         BoardCommsTask::mgr.ready == false)
+    vTaskDelay(50);
+
+  SendToBoardTimerTask::mgr.enable();
+
+  SendToBoardNotf notification;
+  notification.correlationId = 10;
+
+  static int counter = 0;
+
+  while (counter < 5)
+  {
+    DEBUG("--------------------------");
+
+    sendNotfQueue->send_r(&notification, QueueBase::printSend);
+
+    vTaskDelay(TICKS_100ms);
+
+    uint8_t dispResult = readPrimaryButtonQueue->hasValue();
+    TEST_ASSERT_EQUAL(dispResult, Response::OK);
+    TEST_ASSERT_EQUAL(readPrimaryButtonQueue->payload.correlationId, notification.correlationId);
+
+    counter++;
+    vTaskDelay(200);
+  }
+
+  TEST_ASSERT_TRUE(counter == 5);
+}
+
 void setup()
 {
   delay(2000);
@@ -637,7 +735,8 @@ void setup()
   // RUN_TEST(testUtils_waitForNewResp_with_QueueType);
   // RUN_TEST(testUtils_waitForNewResp_with_QueueType_from_Notification_task);
   // RUN_TEST(testUtils_waitForNewResp_with_notf_task_and_respond_task);
-  RUN_TEST(boxing_tasks);
+  // RUN_TEST(boxing_tasks);
+  RUN_TEST(sendOutNotification_allTasksRespondWithCorrelationId);
 
   UNITY_END();
 }

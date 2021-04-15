@@ -11,7 +11,7 @@ const TickType_t TICKS_500ms = 500 / portTICK_PERIOD_MS;
 class QueueBase
 {
 public:
-  unsigned long event_id = 0, latency = 0;
+  unsigned long event_id = 0, latency = 0, correlationId = 0;
   const char *name = nullptr;
   unsigned long sent_time;
 

@@ -1,7 +1,21 @@
+#pragma once
 
+#include <types/PacketState.h>
 
 namespace BoardCommsTask
 {
+#ifndef RADIO_OBJECTS
+#define RADIO_OBJECTS
+
+#include <RF24Network.h>
+#include <NRF24L01Lib.h>
+
+  NRF24L01Lib nrf24;
+
+  RF24 radio(NRF_CE, NRF_CS);
+  RF24Network network(radio);
+#endif
+
   GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
 
   // prototypes
@@ -138,4 +152,10 @@ namespace BoardCommsTask
     // boardClient.setReadPacketCallback(printRecvFromBoard_cb);
   }
   //----------------------------------------------------------
+
+  Queue1::Manager<PacketState> *createQueueManager(const char *name)
+  {
+    return new Queue1::Manager<PacketState>(xThrottleQueueHandle, TICKS_5ms, name);
+  }
+
 } // namespace Remote

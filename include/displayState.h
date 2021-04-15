@@ -5,7 +5,7 @@
 #define TFT_DEFAULT_BG TFT_BLACK
 //------------------------------------------------------------
 
-BatteryInfo *remote;
+// BatteryInfo *remote;
 
 #include <FsmManager.h>
 #include <screens.h>

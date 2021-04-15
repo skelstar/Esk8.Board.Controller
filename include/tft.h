@@ -4,6 +4,8 @@
 #include <TFT_eSPI.h>
 #endif
 
+#include <BatteryLib.h>
+
 // #include <fonts/Custom/Orbitron_Light_24.h>
 #include <fonts/Orbitron_Med_12.h>
 #include <fonts/Orbitron_Med_16.h>

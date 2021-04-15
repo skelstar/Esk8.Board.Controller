@@ -115,20 +115,20 @@ namespace Display
       tft.drawString("OFFLINE", LCD_WIDTH / 2, y);
       y += tft.fontHeight() + 10;
 
-      if (Remote::mgr.running && remote != nullptr)
-      {
-        // remote battery
-        const int batteryWidth = 50;
-        y += 15;
-        drawSmallBattery(remote->percent, LCD_WIDTH / 2 - 5, y, batteryWidth, TR_DATUM, remote->charging);
+      // if (Remote::mgr.running && remote != nullptr)
+      // {
+      //   // remote battery
+      //   const int batteryWidth = 50;
+      //   y += 15;
+      //   drawSmallBattery(remote->percent, LCD_WIDTH / 2 - 5, y, batteryWidth, TR_DATUM, remote->charging);
 
-        char buff[10];
-        sprintf(buff, "%0.1fv", remote->volts);
-        tft.setTextDatum(TL_DATUM);
-        tft.setFreeFont(FONT_LG);
-        tft.setTextColor(TFT_DARKGREY);
-        tft.drawString(buff, LCD_WIDTH / 2 + 5, y - 4);
-      }
+      //   char buff[10];
+      //   sprintf(buff, "%0.1fv", remote->volts);
+      //   tft.setTextDatum(TL_DATUM);
+      //   tft.setFreeFont(FONT_LG);
+      //   tft.setTextColor(TFT_DARKGREY);
+      //   tft.drawString(buff, LCD_WIDTH / 2 + 5, y - 4);
+      // }
 
       y += 30;
       tft.setTextColor(TFT_DARKGREY);
@@ -304,17 +304,17 @@ namespace Display
 
       if (USING_REMOTE)
       { // remote battery
-        const int batteryWidth = 50;
-        y += 15;
-        uint8_t percent = Remote::battery.chargePercent;
-        drawSmallBattery(percent, LCD_WIDTH / 2 - 5, y, batteryWidth, TR_DATUM, Remote::battery.isCharging);
+        // const int batteryWidth = 50;
+        // y += 15;
+        // uint8_t percent = Remote::battery.chargePercent;
+        // drawSmallBattery(percent, LCD_WIDTH / 2 - 5, y, batteryWidth, TR_DATUM, Remote::battery.isCharging);
 
-        char buff[10];
-        sprintf(buff, "%0.1fv", Remote::battery.getVolts());
-        tft.setTextDatum(TL_DATUM);
-        tft.setFreeFont(FONT_LG);
-        tft.setTextColor(TFT_DARKGREY);
-        tft.drawString(buff, LCD_WIDTH / 2 + 5, y - 4);
+        // char buff[10];
+        // sprintf(buff, "%0.1fv", Remote::battery.getVolts());
+        // tft.setTextDatum(TL_DATUM);
+        // tft.setFreeFont(FONT_LG);
+        // tft.setTextColor(TFT_DARKGREY);
+        // tft.drawString(buff, LCD_WIDTH / 2 + 5, y - 4);
       }
 
       y += 30;

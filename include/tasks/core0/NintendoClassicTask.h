@@ -1,10 +1,16 @@
 #pragma once
 
 #include <Wire.h>
-#include <types/NintendoController.h>
+#include <types/NintendoButtonEvent.h>
+#ifndef NintendoController
+#include <NintendoController.h>
+#endif
 
 namespace NintendoClassicTask
 {
+
+  Queue1::Manager<NintendoButtonEvent> *createQueueManager(const char *name);
+
   NintendoController classic;
 
   RTOSTaskManager mgr("NintendoClassicTask", 3000);
@@ -23,6 +29,8 @@ namespace NintendoClassicTask
   void task(void *pvParameters)
   {
     mgr.printStarted();
+
+    Queue1::Manager<NintendoButtonEvent> *nintendoControllerQueue = createQueueManager("IRL nintCtrlrQueue");
 
     NintendoButtonEvent ev;
 
@@ -122,5 +130,10 @@ namespace NintendoClassicTask
       }
       vTaskDelay(10);
     } while (!initialised);
+  }
+
+  Queue1::Manager<NintendoButtonEvent> *createQueueManager(const char *name)
+  {
+    return new Queue1::Manager<NintendoButtonEvent>(xNintendoControllerQueue, TICKS_5ms, name);
   }
 }
