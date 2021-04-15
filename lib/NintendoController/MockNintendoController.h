@@ -58,7 +58,10 @@ public:
 
   bool update(xSemaphoreHandle mutex, TickType_t ticks)
   {
-    uint8_t button = _mockGetButtonEventCallback();
+    uint8_t button = _mockGetButtonEventCallback != nullptr ? _mockGetButtonEventCallback() : 0;
+
+    if (_mockGetButtonEventCallback == nullptr)
+      DEBUG("ERROR: _mockGetButtonEventCallback has not been initiailised!");
 
     if (buttonStates[button] != 1)
     {

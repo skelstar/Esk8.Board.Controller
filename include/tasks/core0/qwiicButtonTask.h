@@ -80,6 +80,7 @@ namespace QwiicButtonTask
     {
       if (since_check_notf > PERIOD_50ms)
       {
+        since_check_notf = 0;
         if (readNotfQueue->hasValue() == Response::OK)
         {
           if (takeMutex(i2cMutex, TICKS_10ms))

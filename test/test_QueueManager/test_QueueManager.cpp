@@ -668,6 +668,33 @@ void boxing_tasks()
   TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
 }
 
+uint8_t mockNintendoClassicButtonPress()
+{
+  Serial.printf("counter: %d\n", counter);
+  switch (counter)
+  {
+  case 0:
+    Serial.printf("picking: %s\n", "BUTTON_LEFT");
+    return (uint8_t)NintendoController::BUTTON_LEFT;
+  case 1:
+    Serial.printf("picking: %s\n", "BUTTON_RIGHT");
+    return (uint8_t)NintendoController::BUTTON_RIGHT;
+  case 2:
+    Serial.printf("picking: %s\n", "BUTTON_UP");
+    return (uint8_t)NintendoController::BUTTON_UP;
+  case 3:
+    Serial.printf("picking: %s\n", "BUTTON_START");
+    return (uint8_t)NintendoController::BUTTON_START;
+  case 4:
+    Serial.printf("picking: %s\n", "BUTTON_DOWN");
+    return (uint8_t)NintendoController::BUTTON_DOWN;
+  case 5:
+    Serial.printf("picking: %s\n", "BUTTON_SELECT");
+    return (uint8_t)NintendoController::BUTTON_SELECT;
+  }
+  return (uint8_t)NintendoController::BUTTON_A;
+}
+
 void sendOutNotification_allTasksRespondWithCorrelationId()
 {
   i2cMutex = xSemaphoreCreateMutex();
@@ -693,7 +720,9 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
   QwiicButtonTask::mgr.create(QwiicButtonTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // ThrottleTask::mgr.create(ThrottleTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // BoardCommsTask::mgr.create(BoardCommsTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
-  // NintendoClassicTask::mgr.create(NintendoClassicTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  NintendoClassicTask::mgr.create(NintendoClassicTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+
+  NintendoClassicTask::classic.setMockGetButtonEventCallback(mockNintendoClassicButtonPress);
 
   SendToBoardTimerTask::setSendInterval(3 * SECONDS);
 
@@ -703,7 +732,8 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
          //  Display::mgr.ready == false ||
          QwiicButtonTask::mgr.ready == false ||
          //  ThrottleTask::mgr.ready == false ||
-         //  BoardCommsTask::mgr.ready == false
+         //  BoardCommsTask::mgr.ready == false ||
+         NintendoClassicTask::mgr.ready == false ||
          false)
   {
     vTaskDelay(50);
@@ -731,7 +761,7 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
     TEST_ASSERT_EQUAL(res, Response::OK);
 
     counter++;
-    // vTaskDelay(200);
+    vTaskDelay(200);
   }
 
   TEST_ASSERT_TRUE(counter == 5);
@@ -765,4 +795,5 @@ void setup()
 
 void loop()
 {
+  vTaskDelete(NULL);
 }

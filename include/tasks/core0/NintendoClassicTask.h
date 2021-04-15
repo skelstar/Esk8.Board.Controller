@@ -8,8 +8,13 @@
 
 namespace NintendoClassicTask
 {
+  Queue1::Manager<NintendoButtonEvent> *createQueueManager(const char *name)
+  {
+    return new Queue1::Manager<NintendoButtonEvent>(xNintendoControllerQueue, TICKS_5ms, name);
+  }
 
-  Queue1::Manager<NintendoButtonEvent> *createQueueManager(const char *name);
+  // Queue1::Manager<NintendoButtonEvent> *nintendoControllerQueue = createQueueManager("IRL nintCtrlrQueue");
+  // Queue1::Manager<SendToBoardNotf> *readSendNotfQueue = SendToBoardTimerTask::createQueueManager("IRL(Nintendo) readSendNotfQueue");
 
   NintendoController classic;
 
@@ -19,7 +24,7 @@ namespace NintendoClassicTask
   uint8_t button_changed(uint8_t *new_buttons, uint8_t *old_buttons);
   void init();
 
-  elapsedMillis since_checked_buttons, since_health_check, since_task_created;
+  elapsedMillis since_checked_buttons, since_health_check, since_task_created, since_checked_notf;
 
   const unsigned long CHECK_BUTTONS_INTERVAL = 100;
 
@@ -29,8 +34,6 @@ namespace NintendoClassicTask
   void task(void *pvParameters)
   {
     mgr.printStarted();
-
-    Queue1::Manager<NintendoButtonEvent> *nintendoControllerQueue = createQueueManager("IRL nintCtrlrQueue");
 
     NintendoButtonEvent ev;
 
@@ -43,30 +46,58 @@ namespace NintendoClassicTask
 
     while (true)
     {
-      if (since_checked_buttons > CHECK_BUTTONS_INTERVAL)
+      if (since_checked_notf > PERIOD_50ms)
       {
-        since_checked_buttons = 0;
+        since_checked_notf = 0;
+        // if (waitForNew(readSendNotfQueue, PERIOD_10ms) == Response::OK)
+        // {
 
-        bool changed = classic.update(mutex_I2C.handle(), TICKS_50ms);
-        if (changed)
-        {
-          uint8_t *new_buttons = classic.get_buttons();
-          uint8_t button_that_changed = button_changed(new_buttons, last_buttons);
-          if (button_that_changed != 99)
-          {
-            // something changed, send
-            ev.button = button_that_changed;
-            ev.state = new_buttons[button_that_changed];
-
-            nintendoControllerQueue->send(&ev);
-          }
-          // save
-          for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
-          {
-            last_buttons[i] = new_buttons[i];
-          }
-        }
+        //   // bool changed = classic.update(mutex_I2C.handle(), TICKS_50ms);
+        //   // if (changed)
+        //   // {
+        //   //   uint8_t *new_buttons = classic.get_buttons();
+        //   //   uint8_t button_that_changed = button_changed(new_buttons, last_buttons);
+        //   //   if (button_that_changed != 99)
+        //   //   {
+        //   //     // something changed, send
+        //   //     ev.button = button_that_changed;
+        //   //     ev.state = new_buttons[button_that_changed];
+        //   //   }
+        //   //   // save
+        //   //   for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
+        //   //   {
+        //   //     last_buttons[i] = new_buttons[i];
+        //   //   }
+        //   // }
+        //   // ev.correlationId = readSendNotfQueue->payload.correlationId;
+        //   // nintendoControllerQueue->send_r(&ev);
+        // }
       }
+
+      // if (since_checked_buttons > CHECK_BUTTONS_INTERVAL)
+      // {
+      //   since_checked_buttons = 0;
+
+      //   bool changed = classic.update(mutex_I2C.handle(), TICKS_50ms);
+      //   if (changed)
+      //   {
+      //     uint8_t *new_buttons = classic.get_buttons();
+      //     uint8_t button_that_changed = button_changed(new_buttons, last_buttons);
+      //     if (button_that_changed != 99)
+      //     {
+      //       // something changed, send
+      //       ev.button = button_that_changed;
+      //       ev.state = new_buttons[button_that_changed];
+
+      //       nintendoControllerQueue->send(&ev);
+      //     }
+      //     // save
+      //     for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
+      //     {
+      //       last_buttons[i] = new_buttons[i];
+      //     }
+      //   }
+      // }
 
       mgr.healthCheck(10000);
 
@@ -102,7 +133,7 @@ namespace NintendoClassicTask
     return "OUT OF RANGE: getButtonName()";
   }
 
-  NintendoController::ButtonEventCallback _pressed_cb = nullptr, _released_cb = nullptr;
+  // NintendoController::ButtonEventCallback _pressed_cb = nullptr, _released_cb = nullptr;
 
   uint8_t button_changed(uint8_t *new_buttons, uint8_t *old_buttons)
   {
@@ -114,9 +145,6 @@ namespace NintendoClassicTask
 
   void init()
   {
-    // xNintendoControllerQueue = xQueueCreate(/*len*/ 1, sizeof(NintendoController *));
-    // nintendoControllerQueue = new Queue::Manager(xNintendoControllerQueue, TICKS_5ms);
-
     bool initialised = false;
 
     do
@@ -130,10 +158,5 @@ namespace NintendoClassicTask
       }
       vTaskDelay(10);
     } while (!initialised);
-  }
-
-  Queue1::Manager<NintendoButtonEvent> *createQueueManager(const char *name)
-  {
-    return new Queue1::Manager<NintendoButtonEvent>(xNintendoControllerQueue, TICKS_5ms, name);
   }
 }
