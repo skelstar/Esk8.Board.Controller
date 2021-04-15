@@ -57,6 +57,8 @@ QueueHandle_t xThrottleQueueHandle;
 MyMutex mutex_I2C;
 MyMutex mutex_SPI;
 
+SemaphoreHandle_t i2cMutex;
+
 #include <displayState.h>
 
 // TASKS ------------------------
@@ -668,6 +670,18 @@ void boxing_tasks()
 
 void sendOutNotification_allTasksRespondWithCorrelationId()
 {
+  i2cMutex = xSemaphoreCreateMutex();
+
+  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
+  mutex_I2C.enabled = true;
+
+  mutex_SPI.create("SPI", /*default*/ TICKS_50ms);
+  mutex_SPI.enabled = true;
+
+  QwiicButtonTask::qwiicButton.setMockIsPressedCallback([] {
+    return false;
+  });
+
   Queue1::Manager<SendToBoardNotf> *sendNotfQueue = SendToBoardTimerTask::createQueueManager("test)sendNotfQueue");
   Queue1::Manager<PrimaryButtonState> *readPrimaryButtonQueue = QwiicButtonTask::createQueueManager("(test)readPrimaryButtonQueue");
   Queue1::Manager<ThrottleState> *readThrottleQueue = ThrottleTask::createQueueManager("(test)readThrottleQueue");
@@ -675,24 +689,29 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
   Queue1::Manager<NintendoButtonEvent> *readNintendoQueue = NintendoClassicTask::createQueueManager("(test)readNintendoQueue");
 
   SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
-  Display::mgr.create(Display::task, /*CORE*/ 0, /*PRIORITY*/ 1);
-  QwiicButtonTask::mgr.create(Display::task, /*CORE*/ 0, /*PRIORITY*/ 1);
-  ThrottleTask::mgr.create(ThrottleTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
-  BoardCommsTask::mgr.create(BoardCommsTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
-  NintendoClassicTask::mgr.create(NintendoClassicTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  // Display::mgr.create(Display::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  QwiicButtonTask::mgr.create(QwiicButtonTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  // ThrottleTask::mgr.create(ThrottleTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  // BoardCommsTask::mgr.create(BoardCommsTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  // NintendoClassicTask::mgr.create(NintendoClassicTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
 
   SendToBoardTimerTask::setSendInterval(3 * SECONDS);
 
   printTestInstructions("Test testUtils_waitForNewResp_with_QueueType_from_Notification_task");
 
   while (SendToBoardTimerTask::mgr.ready == false ||
-         Display::mgr.ready == false ||
+         //  Display::mgr.ready == false ||
          QwiicButtonTask::mgr.ready == false ||
-         ThrottleTask::mgr.ready == false ||
-         BoardCommsTask::mgr.ready == false)
+         //  ThrottleTask::mgr.ready == false ||
+         //  BoardCommsTask::mgr.ready == false
+         false)
+  {
     vTaskDelay(50);
+  }
 
-  SendToBoardTimerTask::mgr.enable();
+  DEBUG("Tasks ready!");
+
+  SendToBoardTimerTask::mgr.enable(PRINT_THIS);
 
   SendToBoardNotf notification;
   notification.correlationId = 10;
@@ -705,17 +724,20 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
 
     sendNotfQueue->send_r(&notification, QueueBase::printSend);
 
-    vTaskDelay(TICKS_100ms);
+    vTaskDelay(TICKS_1s);
 
-    uint8_t dispResult = readPrimaryButtonQueue->hasValue();
-    TEST_ASSERT_EQUAL(dispResult, Response::OK);
-    TEST_ASSERT_EQUAL(readPrimaryButtonQueue->payload.correlationId, notification.correlationId);
+    uint8_t res = waitForNew(readPrimaryButtonQueue, PERIOD_50ms);
+    TEST_ASSERT_EQUAL(readPrimaryButtonQueue->payload.correlationId, /*expected*/ notification.correlationId);
+    TEST_ASSERT_EQUAL(res, Response::OK);
 
     counter++;
-    vTaskDelay(200);
+    // vTaskDelay(200);
   }
 
   TEST_ASSERT_TRUE(counter == 5);
+
+  QwiicButtonTask::mgr.deleteTask(PRINT_THIS);
+  SendToBoardTimerTask::mgr.deleteTask(PRINT_THIS);
 }
 
 void setup()

@@ -28,6 +28,9 @@ struct TaskConfig
 class MyMutex
 {
 public:
+  bool created = false;
+
+public:
   void create(const char *name, TickType_t defaultticks)
   {
     _name = name;
@@ -35,6 +38,7 @@ public:
     _mutex = xSemaphoreCreateMutex();
     if (_mutex == NULL)
       Serial.printf("ERROR: unsufficient space in heap for '%s'\n", name);
+    created = true;
   }
 
   bool enabled = true;

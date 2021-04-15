@@ -21,6 +21,11 @@ public:
 
   bool isPressed()
   {
+    if (_mockedIsPressedCallback == nullptr)
+    {
+      DEBUG("WARING: _mockedIsPressedCallback has not been initialised!");
+      return false;
+    }
     return _mockedIsPressedCallback();
   }
 

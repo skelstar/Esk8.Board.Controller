@@ -90,8 +90,11 @@ public:
 
   bool enabled(bool print = false)
   {
-    if (!_enabled)
+    if (!_enabled && !_reportedNotEnabled)
+    {
       Serial.printf("[TASK] %s not enabled!\n", _task_name);
+      _reportedNotEnabled = true;
+    }
     return _enabled;
   }
 
@@ -99,13 +102,14 @@ public:
   {
     if (print)
       Serial.printf("[TASK]:%s %s\n", _task_name, e ? "enabled" : "disabled");
+    _reportedNotEnabled = false;
     _enabled = e;
   }
 
 private:
   const char *_task_name;
   int _stackSize, _priority, _core;
-  bool _health_check, _enabled = false;
+  bool _health_check, _enabled = false, _reportedNotEnabled = false;
   TaskHandle_t _taskHandle;
   elapsedMillis
       _since_health_check,

@@ -184,7 +184,7 @@ namespace Queue1
       int _old_idx = _historyIdx;
       _history[_historyIdx] = new T(item);
       _historyIdx = (_historyIdx < HISTORY_LENGTH - 1) ? _historyIdx + 1 : 0;
-      DEBUGMVAL("_addToHistory", _old_idx, _historyIdx, _history[_old_idx]->event_id);
+      // DEBUGMVAL("_addToHistory", _old_idx, _historyIdx, _history[_old_idx]->event_id);
     }
 
     T _getFromHistory(int stepsBack)
@@ -193,7 +193,7 @@ namespace Queue1
       if (calc < 0)
         calc = HISTORY_LENGTH - calc;
       T *result = new T(*_history[calc]);
-      DEBUGMVAL("_getFromHistory", stepsBack, _historyIdx, calc, result->event_id);
+      // DEBUGMVAL("_getFromHistory", stepsBack, _historyIdx, calc, result->event_id);
       return *result;
     }
 

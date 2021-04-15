@@ -14,32 +14,57 @@ namespace QwiicButtonTask
 {
   RTOSTaskManager mgr("QwiicButtonTask", 3000);
 
-  elapsedMillis since_peeked, since_checked_button, since_malloc;
+  elapsedMillis since_peeked, since_checked_button, since_malloc, since_check_notf;
 
   QwiicButton qwiicButton;
 
   PrimaryButtonState state;
 
-  Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueueHandle, TICKS_5ms);
+  Queue1::Manager<PrimaryButtonState> *primaryButtonQueue;
+  Queue1::Manager<SendToBoardNotf> *readNotfQueue;
 
   const unsigned long CHECK_QUEUE_INTERVAL = 50;
   const unsigned long CHECK_BUTTON_INTERVAL = 500;
 
   //=====================================================
 
+  Queue1::Manager<PrimaryButtonState> *createQueueManager(const char *name)
+  {
+    return new Queue1::Manager<PrimaryButtonState>(xPrimaryButtonQueueHandle, TICKS_5ms, name);
+  }
+
+  bool takeMutex(SemaphoreHandle_t handle, TickType_t ticks = 10)
+  {
+    return handle != nullptr
+               ? xSemaphoreTake(handle, (TickType_t)5) == pdPASS
+               : false;
+  }
+
+  void giveMutex(SemaphoreHandle_t handle)
+  {
+    if (handle != nullptr)
+      xSemaphoreGive(handle);
+  }
+
   void task(void *pvParameters)
   {
     mgr.printStarted();
 
+    if (i2cMutex == nullptr)
+      DEBUG("WARNING! i2cMutex has not been initialised!");
+
+    primaryButtonQueue = createQueueManager("IRL primaryButtonQueue");
+    readNotfQueue = SendToBoardTimerTask::createQueueManager("IRL qwiickReadNotfQueue");
+
     bool init_button = false;
     do
     {
-      if (mutex_I2C.take("QwiicButtonTask: init", TICKS_500ms))
+      if (takeMutex(i2cMutex, TICKS_500ms))
       {
         init_button = qwiicButton.begin();
         if (!init_button)
           DEBUG("Error initialising Qwiik button");
-        mutex_I2C.give(__func__);
+        giveMutex(i2cMutex);
       }
       vTaskDelay(200);
     } while (!init_button);
@@ -48,32 +73,23 @@ namespace QwiicButtonTask
     mgr.ready = true;
     mgr.printReady();
 
-    // TODO remove this? Wait for queues?
-    vTaskDelay(1000);
-
     state.pressed = qwiicButton.isPressed();
-    primaryButtonQueue.send(&state, [](PrimaryButtonState state) {
-      Serial.printf("Primary button sent, id: %lu\n", state.event_id);
-    });
+    primaryButtonQueue->send_r(&state, QueueBase::printSend);
 
     while (true)
     {
-      if (since_checked_button > CHECK_BUTTON_INTERVAL)
+      if (since_check_notf > PERIOD_50ms)
       {
-        since_checked_button = 0;
-
-        bool pressed = state.pressed;
-
-        if (mutex_I2C.take("QwiicButtonTask: loop", TICKS_10ms))
+        if (readNotfQueue->hasValue() == Response::OK)
         {
-          pressed = qwiicButton.isPressed();
-          mutex_I2C.give(nullptr); // 1ms
-        }
+          if (takeMutex(i2cMutex, TICKS_10ms))
+          {
+            state.pressed = qwiicButton.isPressed();
+            state.correlationId = readNotfQueue->payload.correlationId;
+            giveMutex(i2cMutex);
+          }
 
-        if (state.pressed != pressed)
-        {
-          state.pressed = pressed;
-          primaryButtonQueue.send(&state);
+          primaryButtonQueue->send_r(&state);
         }
       }
 
@@ -81,12 +97,8 @@ namespace QwiicButtonTask
 
       vTaskDelay(10);
     }
-    vTaskDelete(NULL);
-  }
 
-  Queue1::Manager<PrimaryButtonState> *createQueueManager(const char *name)
-  {
-    return new Queue1::Manager<PrimaryButtonState>(xPrimaryButtonQueueHandle, TICKS_5ms, name);
+    vTaskDelete(NULL);
   }
 
   //============================================================
