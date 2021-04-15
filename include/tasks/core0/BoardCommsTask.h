@@ -40,6 +40,11 @@ namespace BoardCommsTask
       since_check_send_notf_queue;
 
   //----------------------------------------------------------
+  Queue1::Manager<PacketState> *createQueueManager(const char *name)
+  {
+    return new Queue1::Manager<PacketState>(xPacketStateQueueHandle, TICKS_5ms, name);
+  }
+  //----------------------------------------------------------
   void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   {
     VescData packet = boardClient.read();
@@ -103,13 +108,16 @@ namespace BoardCommsTask
 
     controller_packet.id = 0;
 
-    readNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(BoardCommsTask)readNotfQueue");
-    packetStateQueue = new Queue1::Manager<PacketState>(xPacketStateQueueHandle, TICKS_5ms, "(BoardCommsTask)packetStateQueue");
+    readNotfQueue = SendToBoardTimerTask::createQueueManager("IRL: BoardCommsTask readNotfQueue");
+    packetStateQueue = createQueueManager("(BoardCommsTask)packetStateQueue");
 
-    boardClientInit();
+    boardClient.begin(&network, boardPacketAvailable_cb, mux_SPI);
 
     mgr.ready = true;
     mgr.printReady();
+
+    if (boardClient.ready() == false)
+      DEBUG("WARNING: boardClient is not ready");
 
     while (mgr.enabled() == false)
     {
@@ -124,8 +132,9 @@ namespace BoardCommsTask
         if (readNotfQueue->hasValue("BoardCommsTask::task"))
         {
           packetState.latency = 0;
+          packetState.correlationId = readNotfQueue->payload.correlationId;
 
-          sendPacketToBoard(PRINT_THIS);
+          sendPacketToBoard();
         }
       }
 
@@ -146,16 +155,10 @@ namespace BoardCommsTask
   //--------------------------------------------------------
   void boardClientInit()
   {
-    boardClient.begin(&network, boardPacketAvailable_cb, mutex_SPI.handle());
+    // boardClient.begin(&network, boardPacketAvailable_cb, mutex_SPI.handle());
     // boardClient.setConnectedStateChangeCallback(boardConnectedState_cb);
     // boardClient.setSentPacketCallback(printSentToBoard_cb);
     // boardClient.setReadPacketCallback(printRecvFromBoard_cb);
   }
   //----------------------------------------------------------
-
-  Queue1::Manager<PacketState> *createQueueManager(const char *name)
-  {
-    return new Queue1::Manager<PacketState>(xThrottleQueueHandle, TICKS_5ms, name);
-  }
-
 } // namespace Remote

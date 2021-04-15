@@ -41,10 +41,11 @@ public:
 
   static void printSend(QueueBase b, const char *queueName = nullptr)
   {
-    Serial.printf("[Queue|%s| --> |%lums] id: %lu\n",
+    Serial.printf("[Queue|%s| --> |%lums] id: %lu correlationID: %lu\n",
                   queueName != nullptr ? queueName : b.name,
-                  millis(),
-                  b.event_id);
+                  b.getSinceSent(),
+                  b.event_id,
+                  b.correlationId);
   }
 
   static void printRead(QueueBase b, const char *queueName = nullptr)

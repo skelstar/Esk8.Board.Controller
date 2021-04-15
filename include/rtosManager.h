@@ -25,6 +25,23 @@ struct TaskConfig
   bool taskReady;
 };
 
+class MutexLite
+{
+public:
+  static bool take(SemaphoreHandle_t handle, TickType_t ticks = 10)
+  {
+    return handle != nullptr
+               ? xSemaphoreTake(handle, (TickType_t)5) == pdPASS
+               : false;
+  }
+
+  static void give(SemaphoreHandle_t handle)
+  {
+    if (handle != nullptr)
+      xSemaphoreGive(handle);
+  }
+};
+
 class MyMutex
 {
 public:

@@ -79,5 +79,16 @@
     "locale": "cpp"
   },
   "peacock.color": "#ff3d00",
-  "workbench.editor.enablePreviewFromQuickOpen": true
+  "workbench.editor.enablePreviewFromQuickOpen": true,
+  "python.languageServer": "Pylance",
+  "python.linting.pylintEnabled": false,
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingModuleSource": "none"
+  },
+  "python.analysis.extraPaths": [
+    null,
+    "c:\\Users\\skels\\.vscode-insiders\\extensions\\joedevivo.vscode-circuitpython-0.1.11\\stubs",
+    "c:\\Users\\skels\\AppData\\Roaming\\Code - Insiders\\User\\globalStorage\\joedevivo.vscode-circuitpython\\bundle\\20210415\\adafruit-circuitpython-bundle-py-20210415\\lib"
+  ],
+  "circuitpython.board.version": null
 }

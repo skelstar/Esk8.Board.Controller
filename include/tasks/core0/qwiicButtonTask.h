@@ -50,8 +50,8 @@ namespace QwiicButtonTask
   {
     mgr.printStarted();
 
-    if (i2cMutex == nullptr)
-      DEBUG("WARNING! i2cMutex has not been initialised!");
+    if (mux_I2C == nullptr)
+      DEBUG("WARNING! mux_I2C has not been initialised!");
 
     primaryButtonQueue = createQueueManager("IRL primaryButtonQueue");
     readNotfQueue = SendToBoardTimerTask::createQueueManager("IRL qwiickReadNotfQueue");
@@ -59,12 +59,12 @@ namespace QwiicButtonTask
     bool init_button = false;
     do
     {
-      if (takeMutex(i2cMutex, TICKS_500ms))
+      if (takeMutex(mux_I2C, TICKS_500ms))
       {
         init_button = qwiicButton.begin();
         if (!init_button)
           DEBUG("Error initialising Qwiik button");
-        giveMutex(i2cMutex);
+        giveMutex(mux_I2C);
       }
       vTaskDelay(200);
     } while (!init_button);
@@ -83,11 +83,11 @@ namespace QwiicButtonTask
         since_check_notf = 0;
         if (readNotfQueue->hasValue() == Response::OK)
         {
-          if (takeMutex(i2cMutex, TICKS_10ms))
+          if (takeMutex(mux_I2C, TICKS_10ms))
           {
             state.pressed = qwiicButton.isPressed();
             state.correlationId = readNotfQueue->payload.correlationId;
-            giveMutex(i2cMutex);
+            giveMutex(mux_I2C);
           }
 
           primaryButtonQueue->send_r(&state);

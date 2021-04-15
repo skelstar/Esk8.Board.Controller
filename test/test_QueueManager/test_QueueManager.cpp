@@ -57,7 +57,8 @@ QueueHandle_t xThrottleQueueHandle;
 MyMutex mutex_I2C;
 MyMutex mutex_SPI;
 
-SemaphoreHandle_t i2cMutex;
+SemaphoreHandle_t mux_I2C;
+SemaphoreHandle_t mux_SPI;
 
 #include <displayState.h>
 
@@ -697,7 +698,7 @@ uint8_t mockNintendoClassicButtonPress()
 
 void sendOutNotification_allTasksRespondWithCorrelationId()
 {
-  i2cMutex = xSemaphoreCreateMutex();
+  mux_I2C = xSemaphoreCreateMutex();
 
   mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
   mutex_I2C.enabled = true;
@@ -719,8 +720,8 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
   // Display::mgr.create(Display::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   QwiicButtonTask::mgr.create(QwiicButtonTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // ThrottleTask::mgr.create(ThrottleTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
-  // BoardCommsTask::mgr.create(BoardCommsTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
-  NintendoClassicTask::mgr.create(NintendoClassicTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  BoardCommsTask::mgr.create(BoardCommsTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  // NintendoClassicTask::mgr.create(NintendoClassicTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
 
   NintendoClassicTask::classic.setMockGetButtonEventCallback(mockNintendoClassicButtonPress);
 
@@ -732,16 +733,26 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
          //  Display::mgr.ready == false ||
          QwiicButtonTask::mgr.ready == false ||
          //  ThrottleTask::mgr.ready == false ||
-         //  BoardCommsTask::mgr.ready == false ||
-         NintendoClassicTask::mgr.ready == false ||
+         BoardCommsTask::mgr.ready == false ||
+         //  NintendoClassicTask::mgr.ready == false ||
          false)
   {
     vTaskDelay(50);
   }
 
+  BoardCommsTask::boardClient.mockResponseCallback([](ControllerData out) {
+    VescData mockresp;
+    mockresp.id = out.id;
+    return mockresp;
+  });
+  // BoardCommsTask::boardClient.mockClientAvailableCallback([](BoardClass out) {
+
+  // });
+
   DEBUG("Tasks ready!");
 
   SendToBoardTimerTask::mgr.enable(PRINT_THIS);
+  BoardCommsTask::mgr.enable(PRINT_THIS);
 
   SendToBoardNotf notification;
   notification.correlationId = 10;
@@ -756,10 +767,24 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
 
     vTaskDelay(TICKS_1s);
 
-    uint8_t res = waitForNew(readPrimaryButtonQueue, PERIOD_50ms);
-    TEST_ASSERT_EQUAL(readPrimaryButtonQueue->payload.correlationId, /*expected*/ notification.correlationId);
-    TEST_ASSERT_EQUAL(res, Response::OK);
+    uint8_t res = Response::OK;
 
+    // PrimaryButton
+    res = waitForNew(readPrimaryButtonQueue, PERIOD_50ms);
+    TEST_ASSERT_EQUAL(res, Response::OK);
+    TEST_ASSERT_EQUAL_MESSAGE(
+        readPrimaryButtonQueue->payload.correlationId, /*expected*/ notification.correlationId,
+        "CorrelationID did not match for PrimaryButton");
+
+    // PacketState
+    res = waitForNew(readPacketStateQueue, PERIOD_100ms);
+    TEST_ASSERT_EQUAL(
+        res, Response::OK);
+    TEST_ASSERT_EQUAL_MESSAGE(
+        readPacketStateQueue->payload.correlationId, /*expected*/ notification.correlationId,
+        "CorrelationID did not match for PacketState");
+
+    notification.correlationId++;
     counter++;
     vTaskDelay(200);
   }
