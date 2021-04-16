@@ -59,8 +59,6 @@ namespace Queue1
       _queue = queue;
       _ticks = ticks;
       name = p_name != nullptr ? p_name : ((QueueBase)payload).name;
-
-      _initHistory();
     }
 
     void sendLegacy(T *payload)
@@ -95,7 +93,25 @@ namespace Queue1
       if (sent_cb != nullptr)
         sent_cb(*payload, name);
 
-      _addToHistory(*payload);
+      // _addToHistory(*payload);
+
+      payload->sent_time = millis();
+      payload->event_id++;
+    }
+
+    void send_n(QueueBase *payload, SentCallback_r sent_cb = nullptr)
+    {
+      if (_queue == nullptr)
+      {
+        Serial.printf("ERROR: queue not initialised! (%s)\n", name);
+        return;
+      }
+      xQueueSendToFront(_queue, (void *)&payload, _ticks);
+
+      if (sent_cb != nullptr)
+        sent_cb(*payload, name);
+
+      // _addToHistory(*payload);
 
       payload->sent_time = millis();
       payload->event_id++;
@@ -117,10 +133,10 @@ namespace Queue1
     bool hasValue(const char *name = nullptr)
     {
       T *result = this->peek(name);
-      if (result != nullptr && result->event_id != _last_event_id)
+      if (result != nullptr && ((QueueBase *)result)->correlationId != _last_event_id)
       {
-        _checkForMissedEvents(result->event_id);
-        _last_event_id = result->event_id;
+        // _checkForMissedEvents(((QueueBase *)result)->correlationId);
+        _last_event_id = ((QueueBase *)result)->correlationId;
         payload = *result;
         return true;
       }
@@ -135,13 +151,13 @@ namespace Queue1
       return new_pkt;
     }
 
-    T getFromHistory(uint8_t offset)
-    {
-      if (offset < HISTORY_LENGTH)
-        return _getFromHistory(offset);
-      DEBUG("ERROR: going back too far in history!");
-      return _getFromHistory(0);
-    }
+    // T getFromHistory(uint8_t offset)
+    // {
+    //   if (offset < HISTORY_LENGTH)
+    //     return _getFromHistory(offset);
+    //   DEBUG("ERROR: going back too far in history!");
+    //   return _getFromHistory(0);
+    // }
 
     bool missedPacket()
     {
@@ -164,38 +180,38 @@ namespace Queue1
     }
 
   private:
-    void _checkForMissedEvents(unsigned long event_id)
+    void _checkForMissedEvents(unsigned long p_id)
     {
-      uint16_t missed_packet_count = event_id - _last_event_id - 1;
+      uint16_t missed_packet_count = p_id - _last_event_id - 1;
       if (_missedCallback != nullptr &&
           missed_packet_count > 0 &&
           _last_event_id > 0)
         _missedCallback(missed_packet_count);
     }
 
-    void _initHistory()
-    {
-      for (int i = 0; i < HISTORY_LENGTH; i++)
-        _history[i] = nullptr;
-    }
+    // void _initHistory()
+    // {
+    //   for (int i = 0; i < HISTORY_LENGTH; i++)
+    //     _history[i] = nullptr;
+    // }
 
-    void _addToHistory(T item)
-    {
-      int _old_idx = _historyIdx;
-      _history[_historyIdx] = new T(item);
-      _historyIdx = (_historyIdx < HISTORY_LENGTH - 1) ? _historyIdx + 1 : 0;
-      // DEBUGMVAL("_addToHistory", _old_idx, _historyIdx, _history[_old_idx]->event_id);
-    }
+    // void _addToHistory(T item)
+    // {
+    //   int _old_idx = _historyIdx;
+    //   _history[_historyIdx] = new T(item);
+    //   _historyIdx = (_historyIdx < HISTORY_LENGTH - 1) ? _historyIdx + 1 : 0;
+    //   // DEBUGMVAL("_addToHistory", _old_idx, _historyIdx, _history[_old_idx]->event_id);
+    // }
 
-    T _getFromHistory(int stepsBack)
-    {
-      int calc = _historyIdx - stepsBack;
-      if (calc < 0)
-        calc = HISTORY_LENGTH - calc;
-      T *result = new T(*_history[calc]);
-      // DEBUGMVAL("_getFromHistory", stepsBack, _historyIdx, calc, result->event_id);
-      return *result;
-    }
+    // T _getFromHistory(int stepsBack)
+    // {
+    //   int calc = _historyIdx - stepsBack;
+    //   if (calc < 0)
+    //     calc = HISTORY_LENGTH - calc;
+    //   T *result = new T(*_history[calc]);
+    //   // DEBUGMVAL("_getFromHistory", stepsBack, _historyIdx, calc, result->event_id);
+    //   return *result;
+    // }
 
   public:
     const char *name = "Queue name not supplied";
