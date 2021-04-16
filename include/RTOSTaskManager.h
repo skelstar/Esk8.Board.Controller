@@ -56,14 +56,21 @@ public:
 
   void deleteTask(bool print = false)
   {
-    if (print)
+    if (running)
     {
-      Serial.printf("------------------------\n");
-      Serial.printf("DELETING %s!\n", _task_name);
-      Serial.printf("------------------------\n");
+      if (print)
+      {
+        Serial.printf("------------------------\n");
+        Serial.printf("DELETING %s!\n", _task_name);
+        Serial.printf("------------------------\n");
+      }
+      vTaskDelay(100);
+      vTaskDelete(_taskHandle);
     }
-    vTaskDelay(100);
-    vTaskDelete(_taskHandle);
+    else
+    {
+      Serial.printf("WARING: trying to delete %s but it's not running!\n", _task_name);
+    }
   }
 
   TaskHandle_t create(

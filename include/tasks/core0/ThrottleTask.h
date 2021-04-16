@@ -22,9 +22,13 @@ namespace ThrottleTask
   // prototypes
   void init();
 
-  elapsedMillis since_checked_throttle;
+  elapsedMillis since_checked_throttle, since_checked_for_notf;
 
   const unsigned long CHECK_THROTTLE_INTERVAL = 200;
+
+  Queue1::Manager<SendToBoardNotf> *readNotfQueue = nullptr;
+  Queue1::Manager<ThrottleState> *throttleStateQueue = nullptr;
+  Queue1::Manager<PrimaryButtonState> *primaryButton = nullptr;
 
   PrimaryButtonState primary_button;
 
@@ -33,24 +37,28 @@ namespace ThrottleTask
     return primary_button.pressed;
   }
 
+  Queue1::Manager<ThrottleState> *createQueueManager(const char *name)
+  {
+    return new Queue1::Manager<ThrottleState>(xThrottleQueueHandle, TICKS_5ms, name);
+  }
+
   //================================================
   void task(void *pvParameters)
   {
     mgr.printStarted();
 
-    Queue1::Manager<PrimaryButtonState> primaryBtnQueue(xPrimaryButtonQueueHandle, TICKS_5ms);
-    primaryBtnQueue.setMissedEventCallback([](uint16_t num_events) {
-      Serial.printf("WARNING: missed %d events in primaryBtnQueue (ThrottleTask)\n", num_events);
-    });
+    readNotfQueue = SendToBoardTimerTask::createQueueManager("readNotf");
+    throttleStateQueue = createQueueManager("IRL ThrottleState");
+    primaryButton = QwiicButtonTask::createQueueManager("IRL PrimaryButtonState");
 
-    Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "SendNotfQueue");
+    // primaryButton->setMissedEventCallback([](uint16_t num_events) {
+    //   Serial.printf("WARNING: missed %d events in primaryBtnQueue (ThrottleTask)\n", num_events);
+    // });
 
-    Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_5ms, "throttleQueue");
+    // MagneticThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, THROTTLE_DIRECTION);
+    // MagneticThrottle::setThrottleEnabledCb(throttleEnabled_cb);
 
-    MagneticThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, THROTTLE_DIRECTION);
-    MagneticThrottle::setThrottleEnabledCb(throttleEnabled_cb);
-
-    init();
+    // init();
 
     vTaskDelay(100);
 
@@ -61,23 +69,26 @@ namespace ThrottleTask
 
     while (true)
     {
-
-      if (sendNotfQueue.hasValue())
+      if (since_checked_for_notf > 50)
       {
-        since_checked_throttle = 0;
-
-        if (primaryBtnQueue.hasValue())
+        if (readNotfQueue->hasValue())
         {
-          primary_button = primaryBtnQueue.payload;
+          DEBUG("Throttle has notf");
+          // since_checked_throttle = 0;
+          //     throttleStateQueue->payload.correlationId = readNotfQueue->payload.correlationId;
+
+          //     if (primaryButton->hasValue())
+          //     {
+          //       primary_button.pressed = primaryButton->payload.pressed;
+          //     }
+
+          //     MagneticThrottle::update();
+
+          //     uint8_t raw_throttle = MagneticThrottle::get();
+          //     throttle.val = raw_throttle;
+          //     throttleStateQueue->send_r(&throttle, QueueBase::printSend);
         }
-
-        MagneticThrottle::update();
-
-        uint8_t raw_throttle = MagneticThrottle::get();
-        throttle.val = raw_throttle;
-        throttleQueue.send(&throttle);
       }
-
       mgr.healthCheck(5000);
 
       vTaskDelay(10);
@@ -103,10 +114,5 @@ namespace ThrottleTask
       initialised = true;
       vTaskDelay(10);
     } while (!initialised);
-  }
-
-  Queue1::Manager<ThrottleState> *createQueueManager(const char *name)
-  {
-    return new Queue1::Manager<ThrottleState>(xThrottleQueueHandle, TICKS_5ms, name);
   }
 }

@@ -718,12 +718,12 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
 
   SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // Display::mgr.create(Display::task, /*CORE*/ 0, /*PRIORITY*/ 1);
-  QwiicButtonTask::mgr.create(QwiicButtonTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  // QwiicButtonTask::mgr.create(QwiicButtonTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // ThrottleTask::mgr.create(ThrottleTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   BoardCommsTask::mgr.create(BoardCommsTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // NintendoClassicTask::mgr.create(NintendoClassicTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
 
-  NintendoClassicTask::classic.setMockGetButtonEventCallback(mockNintendoClassicButtonPress);
+  // NintendoClassicTask::classic.setMockGetButtonEventCallback(mockNintendoClassicButtonPress);
 
   SendToBoardTimerTask::setSendInterval(3 * SECONDS);
 
@@ -731,7 +731,7 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
 
   while (SendToBoardTimerTask::mgr.ready == false ||
          //  Display::mgr.ready == false ||
-         QwiicButtonTask::mgr.ready == false ||
+         //  QwiicButtonTask::mgr.ready == false ||
          //  ThrottleTask::mgr.ready == false ||
          BoardCommsTask::mgr.ready == false ||
          //  NintendoClassicTask::mgr.ready == false ||
@@ -770,11 +770,11 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
     uint8_t res = Response::OK;
 
     // PrimaryButton
-    res = waitForNew(readPrimaryButtonQueue, PERIOD_50ms);
-    TEST_ASSERT_EQUAL(res, Response::OK);
-    TEST_ASSERT_EQUAL_MESSAGE(
-        readPrimaryButtonQueue->payload.correlationId, /*expected*/ notification.correlationId,
-        "CorrelationID did not match for PrimaryButton");
+    // res = waitForNew(readPrimaryButtonQueue, PERIOD_50ms);
+    // TEST_ASSERT_EQUAL(res, Response::OK);
+    // TEST_ASSERT_EQUAL_MESSAGE(
+    //     readPrimaryButtonQueue->payload.correlationId, /*expected*/ notification.correlationId,
+    //     "CorrelationID did not match for PrimaryButton");
 
     // PacketState
     res = waitForNew(readPacketStateQueue, PERIOD_100ms);
@@ -791,7 +791,7 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
 
   TEST_ASSERT_TRUE(counter == 5);
 
-  QwiicButtonTask::mgr.deleteTask(PRINT_THIS);
+  BoardCommsTask::mgr.deleteTask(PRINT_THIS);
   SendToBoardTimerTask::mgr.deleteTask(PRINT_THIS);
 }
 
