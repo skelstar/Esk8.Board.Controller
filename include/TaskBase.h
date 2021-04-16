@@ -9,13 +9,40 @@ public:
   RTOSTaskManager *rtos;
 
 public:
-  virtual void task(void *parameters);
-  virtual void initialiseQueues();
-  virtual void createTask();
-
   TaskBase(const char *name)
   {
+    rtos = new RTOSTaskManager(_name, /*stack*/ 3000);
   }
+
+  void task(void *parameters)
+  {
+    rtos->printStarted();
+
+    //remove
+    bool notfQueue_hasContent = true;
+
+    if (_initialiseQueues_cb != nullptr)
+      _initialiseQueues_cb();
+
+    if (_initialise_cb != nullptr)
+      _initialise_cb();
+
+    while (true)
+    {
+      if (notfQueue_hasContent)
+      {
+        if (_doWork_cb == nullptr)
+          _doWork_cb();
+      }
+    }
+  }
+
+  typedef void (*VoidVoidCallback)();
+
+  VoidVoidCallback _initialise_cb = nullptr;
+  VoidVoidCallback _initialiseQueues_cb = nullptr;
+  VoidVoidCallback _createTask_cb = nullptr;
+  VoidVoidCallback _doWork_cb = nullptr;
 
 private:
   const char *_name = "Task has not name";
