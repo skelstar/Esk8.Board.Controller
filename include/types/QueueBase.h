@@ -7,6 +7,8 @@ const TickType_t TICKS_100ms = 100 / portTICK_PERIOD_MS;
 const TickType_t TICKS_500ms = 500 / portTICK_PERIOD_MS;
 const TickType_t TICKS_1s = 1000 / portTICK_PERIOD_MS;
 const TickType_t TICKS_2s = 2000 / portTICK_PERIOD_MS;
+const TickType_t TICKS_3s = 3000 / portTICK_PERIOD_MS;
+const TickType_t TICKS_4s = 4000 / portTICK_PERIOD_MS;
 
 #include <types/QueueType.h>
 
@@ -41,19 +43,18 @@ public:
 
   static void printSend(QueueBase b, const char *queueName = nullptr)
   {
-    Serial.printf("[Queue|%s| --> |%lums] id: %lu correlationID: %lu\n",
+    Serial.printf("[Queue|%s| --> |%lums] correlationID: %lu\n",
                   queueName != nullptr ? queueName : b.name,
-                  b.getSinceSent(),
-                  b.event_id,
+                  millis(),
                   b.correlationId);
   }
 
   static void printRead(QueueBase b, const char *queueName = nullptr)
   {
-    Serial.printf("[Queue|%s| <-- |%lums] id: %lu after %lums\n",
+    Serial.printf("[Queue|%s| <-- |%lums] correlationId: %lu after %lums\n",
                   queueName != nullptr ? queueName : b.name,
                   millis(),
-                  b.event_id,
+                  b.correlationId,
                   b.getSinceSent());
   }
 };

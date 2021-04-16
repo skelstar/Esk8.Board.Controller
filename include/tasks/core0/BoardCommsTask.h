@@ -129,7 +129,7 @@ namespace BoardCommsTask
       // check readNotfQueue for when to send packet to board
       if (since_check_send_notf_queue > PERIOD_10ms)
       {
-        if (readNotfQueue->hasValue("BoardCommsTask::task"))
+        if (readNotfQueue->hasValue())
         {
           packetState.latency = 0;
           packetState.correlationId = readNotfQueue->payload.correlationId;

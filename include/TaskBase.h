@@ -29,6 +29,11 @@ public:
     if (_initialise_cb != nullptr)
       _initialise_cb();
 
+    ready = true;
+
+    while (!enabled)
+      vTaskDelay(TICKS_5ms);
+
     while (true)
     {
       if (_timeToDoWork_cb != nullptr && _timeToDoWork_cb())
@@ -74,12 +79,6 @@ public:
   Queue1::Manager<PacketState> *readPacketStateQueue;
   Queue1::Manager<NintendoButtonEvent> *readNintendoQueue;
 
-  // Queue1::Manager<SendToBoardNotf> *sendNotfQueue = SendToBoardTimerTask::createQueueManager("test)sendNotfQueue");
-  // Queue1::Manager<PrimaryButtonState> *readPrimaryButtonQueue = QwiicButtonTask::createQueueManager("(test)readPrimaryButtonQueue");
-  // Queue1::Manager<ThrottleState> *readThrottleQueue = ThrottleTask::createQueueManager("(test)readThrottleQueue");
-  // Queue1::Manager<PacketState> *readPacketStateQueue = BoardCommsTask::createQueueManager("(test)readPacketStateQueue");
-  // Queue1::Manager<NintendoButtonEvent> *readNintendoQueue = NintendoClassicTask::createQueueManager("(test)readNintendoQueue");
-
   VoidVoidCallback _initialise_cb = nullptr;
   VoidVoidCallback _initialiseQueues_cb = nullptr;
   VoidVoidCallback _createTask_cb = nullptr;
@@ -87,4 +86,5 @@ public:
   VoidVoidCallback _doWork_cb = nullptr;
 
   const char *_name = "Task has not name";
+  bool ready = false, enabled = false;
 };

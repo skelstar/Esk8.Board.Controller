@@ -93,8 +93,6 @@ namespace Queue1
       if (sent_cb != nullptr)
         sent_cb(*payload, name);
 
-      // _addToHistory(*payload);
-
       payload->sent_time = millis();
       payload->event_id++;
     }
@@ -110,8 +108,6 @@ namespace Queue1
 
       if (sent_cb != nullptr)
         sent_cb(*payload, name);
-
-      // _addToHistory(*payload);
 
       payload->sent_time = millis();
       payload->event_id++;
@@ -130,9 +126,9 @@ namespace Queue1
       return (T)e;
     }
 
-    bool hasValue(const char *name = nullptr)
+    bool hasValue()
     {
-      T *result = this->peek(name);
+      T *result = this->peek();
       if (result != nullptr && ((QueueBase *)result)->correlationId != _last_event_id)
       {
         // _checkForMissedEvents(((QueueBase *)result)->correlationId);
@@ -143,20 +139,21 @@ namespace Queue1
       return false;
     }
 
-    T *peek(const char *name = nullptr)
+    T *peek()
     {
       // TODO check for null queue
       T *new_pkt = nullptr;
       xQueuePeek(_queue, &(new_pkt), _ticks);
+      DEBUGMVAL("peek", new_pkt->correlationId);
       return new_pkt;
     }
 
-    // T getFromHistory(uint8_t offset)
+    // PrimaryButtonState *peek1(const char *name = nullptr)
     // {
-    //   if (offset < HISTORY_LENGTH)
-    //     return _getFromHistory(offset);
-    //   DEBUG("ERROR: going back too far in history!");
-    //   return _getFromHistory(0);
+    //   // TODO check for null queue
+    //   PrimaryButtonState *new_pkt = nullptr;
+    //   xQueuePeek(_queue, &(new_pkt), _ticks);
+    //   return new_pkt;
     // }
 
     bool missedPacket()
@@ -188,30 +185,6 @@ namespace Queue1
           _last_event_id > 0)
         _missedCallback(missed_packet_count);
     }
-
-    // void _initHistory()
-    // {
-    //   for (int i = 0; i < HISTORY_LENGTH; i++)
-    //     _history[i] = nullptr;
-    // }
-
-    // void _addToHistory(T item)
-    // {
-    //   int _old_idx = _historyIdx;
-    //   _history[_historyIdx] = new T(item);
-    //   _historyIdx = (_historyIdx < HISTORY_LENGTH - 1) ? _historyIdx + 1 : 0;
-    //   // DEBUGMVAL("_addToHistory", _old_idx, _historyIdx, _history[_old_idx]->event_id);
-    // }
-
-    // T _getFromHistory(int stepsBack)
-    // {
-    //   int calc = _historyIdx - stepsBack;
-    //   if (calc < 0)
-    //     calc = HISTORY_LENGTH - calc;
-    //   T *result = new T(*_history[calc]);
-    //   // DEBUGMVAL("_getFromHistory", stepsBack, _historyIdx, calc, result->event_id);
-    //   return *result;
-    // }
 
   public:
     const char *name = "Queue name not supplied";

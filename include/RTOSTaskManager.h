@@ -93,6 +93,7 @@ public:
         priority,
         &_taskHandle,
         _core);
+    return _taskHandle;
   }
 
   bool enabled(bool print = false)

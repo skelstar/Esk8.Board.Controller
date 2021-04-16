@@ -118,7 +118,11 @@ void printTestInstructions(const char *instructions)
   Serial.printf("*** INSTR: %s\n", instructions);
 }
 
-Queue1::Manager<SendToBoardNotf> *sendNotfQueue1;
+Queue1::Manager<SendToBoardNotf> *sendNotfQueue;
+Queue1::Manager<PrimaryButtonState> *readPrimaryButtonQueue;
+Queue1::Manager<ThrottleState> *readThrottleQueue;
+Queue1::Manager<PacketState> *readPacketStateQueue;
+Queue1::Manager<NintendoButtonEvent> *readNintendoQueue;
 
 void setUp()
 {
@@ -126,15 +130,15 @@ void setUp()
   Serial.printf("    %s \n", __FILE__);
   DEBUG("----------------------------");
 
-  xFirstQueueHandle = xQueueCreate(1, sizeof(FirstTestObj));
-  xOtherTestQueueHandle = xQueueCreate(1, sizeof(OtherTestObj));
+  xFirstQueueHandle = xQueueCreate(1, sizeof(FirstTestObj *));
+  xOtherTestQueueHandle = xQueueCreate(1, sizeof(OtherTestObj *));
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
   xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
-  xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState));
+  xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
   xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf *));
-  xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState));
+  xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 }
 
 void tearDown()
@@ -167,7 +171,7 @@ void test_calls_and_responds_in_same_task()
       do
       {
         vTaskDelay(50);
-        gotObj = readQueue.hasValue("readQueue.hasValue()");
+        gotObj = readQueue.hasValue();
         timedout = since_last_created > 500;
       } while (!gotObj && !timedout);
 
@@ -253,7 +257,7 @@ void test_calls_from_one_task_and_reads_in_another()
     do
     {
       vTaskDelay(50);
-      gotObj = readQueue.hasValue("readQueue.hasValue()");
+      gotObj = readQueue.hasValue();
       if (gotObj)
         since_last_packet = 0;
       timedout = since_last_packet > 1000;
@@ -298,7 +302,7 @@ void test_queue_hasValue()
 
     vTaskDelay(5);
 
-    FirstTestObj *res = readQueue.peek(__func__);
+    FirstTestObj *res = readQueue.peek();
     TEST_ASSERT_NOT_NULL(res);
     DEBUG("PASS: peek is NOT NULL");
 
@@ -324,14 +328,8 @@ void testUtils_waitForNewResponse()
 
   FirstTestObj sendObj;
 
-  unsigned long sendInterval = 1 * SECONDS;
-
   counter = 0;
   sendObj.event_id = 0;
-
-  elapsedMillis since_last_packet = 0,
-                since_last_checked = 0;
-  unsigned long last_event_id = -1;
 
   while (counter < 5)
   {
@@ -343,7 +341,7 @@ void testUtils_waitForNewResponse()
 
     vTaskDelay(5);
 
-    FirstTestObj *res = readQueue.peek(__func__);
+    FirstTestObj *res = readQueue.peek();
 
     TEST_ASSERT_NOT_NULL(res);
     DEBUG("PASS: peek is NOT NULL");
@@ -714,34 +712,38 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
     return false;
   });
 
-  Queue1::Manager<SendToBoardNotf> *sendNotfQueue = SendToBoardTimerTask::createQueueManager("test)sendNotfQueue");
-  Queue1::Manager<PrimaryButtonState> *readPrimaryButtonQueue = QwiicButtonTask::createQueueManager("(test)readPrimaryButtonQueue");
-  Queue1::Manager<ThrottleState> *readThrottleQueue = ThrottleTask::createQueueManager("(test)readThrottleQueue");
-  Queue1::Manager<PacketState> *readPacketStateQueue = BoardCommsTask::createQueueManager("(test)readPacketStateQueue");
-  Queue1::Manager<NintendoButtonEvent> *readNintendoQueue = NintendoClassicTask::createQueueManager("(test)readNintendoQueue");
+  sendNotfQueue = SendToBoardTimerTask::createQueueManager("test)sendNotfQueue");
+  readPrimaryButtonQueue = QwiicButtonTask::createQueueManager("(test)readPrimaryButtonQueue");
+  readThrottleQueue = ThrottleTask::createQueueManager("(test)readThrottleQueue");
+  readPacketStateQueue = BoardCommsTask::createQueueManager("(test)readPacketStateQueue");
+  readNintendoQueue = NintendoClassicTask::createQueueManager("(test)readNintendoQueue");
 
-  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  Queue1::Manager<SendToBoardNotf> *read_NotfQueue = SendToBoardTimerTask::createQueueManager("test)read_NotfQueue");
+  Queue1::Manager<PrimaryButtonState> *send_Primary = QwiicButtonTask::createQueueManager("test)send_PrimaryQueue");
+
+  // SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // Display::mgr.create(Display::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // QwiicButtonTask::mgr.create(QwiicButtonTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // ThrottleTask::mgr.create(ThrottleTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
-  BoardCommsTask::mgr.create(BoardCommsTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  // BoardCommsTask::mgr.create(BoardCommsTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // NintendoClassicTask::mgr.create(NintendoClassicTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
 
-  BaseTaskTest::start();
+  // BaseTaskTest::start();
 
   // NintendoClassicTask::classic.setMockGetButtonEventCallback(mockNintendoClassicButtonPress);
 
-  SendToBoardTimerTask::setSendInterval(3 * SECONDS);
+  // SendToBoardTimerTask::setSendInterval(3 * SECONDS);
 
   printTestInstructions("Test testUtils_waitForNewResp_with_QueueType_from_Notification_task");
 
-  while (SendToBoardTimerTask::mgr.ready == false ||
-         //  Display::mgr.ready == false ||
-         //  QwiicButtonTask::mgr.ready == false ||
-         //  ThrottleTask::mgr.ready == false ||
-         BoardCommsTask::mgr.ready == false ||
-         //  NintendoClassicTask::mgr.ready == false ||
-         false)
+  while ( // SendToBoardTimerTask::mgr.ready == false ||
+      //  Display::mgr.ready == false ||
+      //  QwiicButtonTask::mgr.ready == false ||
+      //  ThrottleTask::mgr.ready == false ||
+      //  BoardCommsTask::mgr.ready == false ||
+      //  NintendoClassicTask::mgr.ready == false ||
+      // BaseTaskTest::thisTask->ready == false ||
+      false)
   {
     vTaskDelay(50);
   }
@@ -751,54 +753,135 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
     mockresp.id = out.id;
     return mockresp;
   });
-  // BoardCommsTask::boardClient.mockClientAvailableCallback([](BoardClass out) {
-
-  // });
 
   DEBUG("Tasks ready!");
 
-  SendToBoardTimerTask::mgr.enable(PRINT_THIS);
-  BoardCommsTask::mgr.enable(PRINT_THIS);
+  // SendToBoardTimerTask::mgr.enable(PRINT_THIS);
+  // BoardCommsTask::mgr.enable(PRINT_THIS);
 
   SendToBoardNotf notification;
-  notification.correlationId = 10;
+  notification.correlationId = 10 - 1;
 
   static int counter = 0;
+  const int NUM_TEST_LOOPS = 4;
 
-  while (counter < 5)
+  while (counter < NUM_TEST_LOOPS)
   {
-    DEBUG("--------------------------");
+    vTaskDelay(TICKS_50ms);
 
-    sendNotfQueue->send_r(&notification, QueueBase::printSend);
+    DEBUG("--------------------------");
+    notification.sent_time = millis();
+    notification.correlationId++;
+    sendNotfQueue->send_n(&notification, QueueBase::printSend);
 
     vTaskDelay(TICKS_1s);
 
     uint8_t res = Response::OK;
 
-    // PrimaryButton
+    // read_NotfQueue
+    res = waitForNew(read_NotfQueue, PERIOD_50ms, QueueBase::printRead);
+    if (res == Response::OK)
+    {
+      // DEBUGMVAL("1. read_NotfQueue waitForNew",
+      //           read_NotfQueue->payload.name,
+      //           read_NotfQueue->payload.correlationId,
+      //           read_NotfQueue->payload.event_id);
+    }
+    else
+    {
+      DEBUG("read_NotfQueue waitForNew TIMEOUT");
+    }
+    DEBUGMVAL("after read notf", notification.correlationId, notification.name);
+
+    // Primary send
+    if (res == Response::OK)
+    {
+      PrimaryButtonState sendPrimaryState;
+      sendPrimaryState.correlationId = read_NotfQueue->payload.correlationId;
+      sendPrimaryState.version = 1.23;
+
+      send_Primary->send_n(&sendPrimaryState, QueueBase::printSend);
+      DEBUGVAL(sendPrimaryState.correlationId, sendPrimaryState.version);
+    }
+    DEBUGMVAL("after send Primary", notification.correlationId, notification.name);
+
+    // Primary read
+    PrimaryButtonState *readPrimaryState;
+
+    readPrimaryState = readPrimaryButtonQueue->peek();
+    if (readPrimaryState != nullptr)
+    {
+      // if (readPrimaryButtonQueue->hasValue())
+      // {
+      DEBUGMVAL("after wait Primary",
+                notification.correlationId,
+                readPrimaryState->correlationId,
+                readPrimaryState->version);
+    }
+    else
+      DEBUG("Primary Read doesn't have value");
+
+    // if (readPrimaryButtonQueue->hasValue())
+    // {
+    //   DEBUGMVAL("after wait Primary", notification.correlationId);
+    // }
+    // else
+    //   DEBUG("Primary Read doesn't have value");
+
+    // res = waitForNew(readPrimaryButtonQueue, PERIOD_50ms, QueueBase::printRead);
+    // DEBUGMVAL("after wait Primary", notification.correlationId, notification.name);
+    // if (res == Response::OK)
+    // {
+    //   // DEBUGMVAL("2. readPrimaryButtonQueue",
+    //   //           readPrimaryButtonQueue->payload.correlationId,
+    //   //           readPrimaryButtonQueue->payload.name,
+    //   //           readPrimaryButtonQueue->payload.version);
+    // }
+    // else
+    // {
+    //   DEBUG("readPrimaryButtonQueue waitForNew TIMEOUT");
+    // }
+
+    vTaskDelay(TICKS_1s);
+
+    // // PrimaryButton
     // res = waitForNew(readPrimaryButtonQueue, PERIOD_50ms);
+    // if (res == Response::OK)
+    // {
+    //   DEBUGMVAL("PrimaryButton waitForNew",
+    //             readPrimaryButtonQueue->payload.name,
+    //             readPrimaryButtonQueue->payload.correlationId,
+    //             readPrimaryButtonQueue->payload.event_id,
+    //             readPrimaryButtonQueue->payload.latency);
+    // }
+    // else
+    // {
+    //   DEBUG("PrimaryButton waitForNew TIMEOUT");
+    // }
+
     // TEST_ASSERT_EQUAL(res, Response::OK);
     // TEST_ASSERT_EQUAL_MESSAGE(
-    //     readPrimaryButtonQueue->payload.correlationId, /*expected*/ notification.correlationId,
+    //     /*actual*/ readPrimaryButtonQueue->payload.correlationId,
+    //     /*expected*/ notification.correlationId,
     //     "CorrelationID did not match for PrimaryButton");
 
     // PacketState
-    res = waitForNew(readPacketStateQueue, PERIOD_100ms);
-    TEST_ASSERT_EQUAL(
-        res, Response::OK);
-    TEST_ASSERT_EQUAL_MESSAGE(
-        readPacketStateQueue->payload.correlationId, /*expected*/ notification.correlationId,
-        "CorrelationID did not match for PacketState");
+    // res = waitForNew(readPacketStateQueue, PERIOD_100ms);
+    // TEST_ASSERT_EQUAL(
+    //     res, Response::OK);
+    // TEST_ASSERT_EQUAL_MESSAGE(
+    //     readPacketStateQueue->payload.correlationId, /*expected*/ notification.correlationId,
+    //     "CorrelationID did not match for PacketState");
 
-    notification.correlationId++;
     counter++;
     vTaskDelay(200);
   }
 
-  TEST_ASSERT_TRUE(counter == 5);
+  TEST_ASSERT_TRUE(counter == NUM_TEST_LOOPS);
 
-  BoardCommsTask::mgr.deleteTask(PRINT_THIS);
-  SendToBoardTimerTask::mgr.deleteTask(PRINT_THIS);
+  // BaseTaskTest::thisTask->rtos->deleteTask();
+  // BoardCommsTask::mgr.deleteTask(PRINT_THIS);
+  // SendToBoardTimerTask::mgr.deleteTask(PRINT_THIS);
 }
 
 void setup()
