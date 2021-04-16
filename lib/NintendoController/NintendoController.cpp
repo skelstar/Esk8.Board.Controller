@@ -154,15 +154,15 @@ uint8_t *NintendoController::get_buttons()
   return btns;
 }
 
-void NintendoController::setButtonPressedCb(ButtonEventCallback cb)
-{
-  _buttonPressed_cb = cb;
-}
+// void NintendoController::setButtonPressedCb(ButtonEventCallback cb)
+// {
+//   _buttonPressed_cb = cb;
+// }
 
-void NintendoController::setButtonReleasedCb(ButtonEventCallback cb)
-{
-  _buttonReleased_cb = cb;
-}
+// void NintendoController::setButtonReleasedCb(ButtonEventCallback cb)
+// {
+//   _buttonReleased_cb = cb;
+// }
 
 void NintendoController::debug()
 {
@@ -205,14 +205,14 @@ void NintendoController::debug()
     Serial.println(debug_str);
 }
 
-void NintendoController::setPressedEventCb(ButtonEventCb cb)
-{
-  this->_buttonPressedEventCb = cb;
-}
-void NintendoController::setReleasedEventCb(ButtonEventCb cb)
-{
-  _buttonReleasedEventCb = cb;
-}
+// void NintendoController::setPressedEventCb(ButtonEventCb cb)
+// {
+//   this->_buttonPressedEventCb = cb;
+// }
+// void NintendoController::setReleasedEventCb(ButtonEventCb cb)
+// {
+//   _buttonReleasedEventCb = cb;
+// }
 
 void NintendoController::reset_buttons()
 {
@@ -227,19 +227,28 @@ void NintendoController::reset_buttons()
   }
 }
 
-const char *NintendoController::getButton(uint8_t i)
-{
-  switch (i)
-  {
-  case this->BUTTON_UP: return "BUTTON_UP";
-  case this->BUTTON_RIGHT: return "BUTTON_RIGHT";
-  case this->BUTTON_DOWN: return "BUTTON_DOWN";
-  case this->BUTTON_LEFT: return "BUTTON_LEFT";
-  case this->BUTTON_A: return "BUTTON_A";
-  case this->BUTTON_B: return "BUTTON_B";
-  case this->BUTTON_START: return "BUTTON_START";
-  case this->BUTTON_SELECT: return "BUTTON_SELECT";
-  case this->BUTTON_COUNT: return "BUTTON_COUNT";
-  }
-  return "OUT OF RANGE getButton(uint8_t i)";
-}
+// const char *NintendoController::getButton(uint8_t i)
+// {
+//   switch (i)
+//   {
+//   case this->BUTTON_UP:
+//     return "BUTTON_UP";
+//   case this->BUTTON_RIGHT:
+//     return "BUTTON_RIGHT";
+//   case this->BUTTON_DOWN:
+//     return "BUTTON_DOWN";
+//   case this->BUTTON_LEFT:
+//     return "BUTTON_LEFT";
+//   case this->BUTTON_A:
+//     return "BUTTON_A";
+//   case this->BUTTON_B:
+//     return "BUTTON_B";
+//   case this->BUTTON_START:
+//     return "BUTTON_START";
+//   case this->BUTTON_SELECT:
+//     return "BUTTON_SELECT";
+//   case this->BUTTON_COUNT:
+//     return "BUTTON_COUNT";
+//   }
+//   return "OUT OF RANGE getButton(uint8_t i)";
+// }

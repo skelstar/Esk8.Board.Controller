@@ -37,9 +37,7 @@ public:
   void debug();
   int address = I2C_ADDR;
   uint8_t buttonStates[BUTTON_COUNT];
-  ButtonEventCb _buttonPressedEventCb = nullptr;
-  ButtonEventCb _buttonReleasedEventCb = nullptr;
-=======
+
   ButtonEventCallback _buttonPressed_cb = nullptr;
   ButtonEventCallback _buttonReleased_cb = nullptr;
 
