@@ -27,6 +27,8 @@ const unsigned long PERIOD_500ms = 500;
 const unsigned long PERIOD_1S = 1000;
 const unsigned long PERIOD_2S = 2000;
 
+#define PRINT_TIMEOUT 1
+
 typedef void (*ResponseCallback1)(QueueBase packet, const char *queueName);
 
 namespace Response
@@ -96,6 +98,7 @@ namespace Queue1
 
     void send(T *payload, SentCallback sent_cb = nullptr)
     {
+      Serial.printf("---------------------------\n   WARNING: this is deprecated!!!\n---------------------------\n");
       if (_queue == nullptr)
       {
         Serial.printf("ERROR: queue not initialised! (%s)\n", name);
@@ -123,9 +126,27 @@ namespace Queue1
 
       payload->sent_time = millis();
       payload->event_id++;
+      payload->correlationId++;
     }
 
     void send_n(QueueBase *payload, SentCallback_r sent_cb = nullptr)
+    {
+      if (_queue == nullptr)
+      {
+        Serial.printf("ERROR: queue not initialised! (%s)\n", name);
+        return;
+      }
+      xQueueSendToFront(_queue, (void *)&payload, _ticks);
+
+      if (sent_cb != nullptr)
+        sent_cb(*payload, name);
+
+      payload->sent_time = millis();
+      payload->event_id++;
+      payload->correlationId++;
+    }
+
+    void reply(QueueBase *payload, SentCallback_r sent_cb = nullptr)
     {
       if (_queue == nullptr)
       {
