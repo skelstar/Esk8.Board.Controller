@@ -28,11 +28,6 @@ namespace QwiicButtonTask
 
   //=====================================================
 
-  Queue1::Manager<PrimaryButtonState> *createQueueManager(const char *name)
-  {
-    return new Queue1::Manager<PrimaryButtonState>(xPrimaryButtonQueueHandle, TICKS_5ms, name);
-  }
-
   bool takeMutex(SemaphoreHandle_t handle, TickType_t ticks = 10)
   {
     return handle != nullptr
@@ -53,8 +48,8 @@ namespace QwiicButtonTask
     if (mux_I2C == nullptr)
       DEBUG("WARNING! mux_I2C has not been initialised!");
 
-    primaryButtonQueue = createQueueManager("IRL primaryButtonQueue");
-    readNotfQueue = SendToBoardTimerTask::createQueueManager("IRL qwiickReadNotfQueue");
+    primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("IRL primaryButtonQueue");
+    readNotfQueue = Queue1::Manager<SendToBoardNotf>::create("IRL qwiickReadNotfQueue");
 
     bool init_button = false;
     do

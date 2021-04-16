@@ -6,8 +6,12 @@
 #include "Arduino.h"
 #endif
 
-#include <types/QueueBase.h>
+#include <types/PacketState.h>
+#include <types/SendToBoardNotf.h>
+#include <types/NintendoButtonEvent.h>
+#include <types/PrimaryButton.h>
 #include <types/Throttle.h>
+#include <types/QueueBase.h>
 
 const unsigned long SECONDS = 1000;
 const unsigned long MILLIS_S = 1;
@@ -36,8 +40,6 @@ namespace Response
 
 namespace Queue1
 {
-  const int HISTORY_LENGTH = 3;
-
   template <typename T>
   class Manager
   {
@@ -49,6 +51,32 @@ namespace Queue1
     T payload;
 
   public:
+    static Manager *create(const char *name, TickType_t ticks = TICKS_5ms)
+    {
+      if (std::is_same<T, SendToBoardNotf>::value)
+      {
+        return new Manager<T>(xSendToBoardQueueHandle, TICKS_5ms, name);
+      }
+      if (std::is_same<T, PrimaryButtonState>::value)
+      {
+        return new Manager<T>(xPrimaryButtonQueueHandle, TICKS_5ms, name);
+      }
+      if (std::is_same<T, ThrottleState>::value)
+      {
+        return new Manager<T>(xThrottleQueueHandle, TICKS_5ms, name);
+      }
+      if (std::is_same<T, PacketState>::value)
+      {
+        return new Manager<T>(xPacketStateQueueHandle, TICKS_5ms, name);
+      }
+      if (std::is_same<T, NintendoButtonEvent>::value)
+      {
+        return new Manager<T>(xNintendoControllerQueue, TICKS_5ms, name);
+      }
+      Serial.printf("ERROR: a queue has not been created for this type (%s)\n", name);
+      return nullptr;
+    }
+
     Manager(QueueHandle_t queue, TickType_t ticks, const char *p_name = nullptr)
     {
       if (queue == nullptr)
@@ -141,20 +169,15 @@ namespace Queue1
 
     T *peek()
     {
-      // TODO check for null queue
+      if (_queue == nullptr)
+      {
+        DEBUG("ERROR (peek): _queue is NULL");
+        return nullptr;
+      }
       T *new_pkt = nullptr;
       xQueuePeek(_queue, &(new_pkt), _ticks);
-      DEBUGMVAL("peek", new_pkt->correlationId);
       return new_pkt;
     }
-
-    // PrimaryButtonState *peek1(const char *name = nullptr)
-    // {
-    //   // TODO check for null queue
-    //   PrimaryButtonState *new_pkt = nullptr;
-    //   xQueuePeek(_queue, &(new_pkt), _ticks);
-    //   return new_pkt;
-    // }
 
     bool missedPacket()
     {
@@ -197,10 +220,8 @@ namespace Queue1
         _missedCallback = nullptr,
         _sentCallback = nullptr,
         _readCallback = nullptr;
-
-    T *_history[HISTORY_LENGTH];
-    uint8_t _historyIdx = 0;
   };
+
 } // namespace Queue
 
 template <typename T>

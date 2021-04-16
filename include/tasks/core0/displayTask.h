@@ -30,7 +30,7 @@ namespace Display
 
     setupLCD();
 
-    Queue1::Manager<PacketState> *readPacketQueue = BoardCommsTask::createQueueManager("(test)readPacketQueue");
+    Queue1::Manager<PacketState> *readPacketQueue = Queue1::Manager<PacketState>::create("(test)readPacketQueue");
 
     fsm_mgr.begin(&_fsm);
     fsm_mgr.setPrintStateCallback(printState);

@@ -8,14 +8,6 @@
 
 namespace NintendoClassicTask
 {
-  Queue1::Manager<NintendoButtonEvent> *createQueueManager(const char *name)
-  {
-    return new Queue1::Manager<NintendoButtonEvent>(xNintendoControllerQueue, TICKS_5ms, name);
-  }
-
-  // Queue1::Manager<NintendoButtonEvent> *nintendoControllerQueue = createQueueManager("IRL nintCtrlrQueue");
-  // Queue1::Manager<SendToBoardNotf> *readSendNotfQueue = SendToBoardTimerTask::createQueueManager("IRL(Nintendo) readSendNotfQueue");
-
   NintendoController classic;
 
   RTOSTaskManager mgr("NintendoClassicTask", 3000);

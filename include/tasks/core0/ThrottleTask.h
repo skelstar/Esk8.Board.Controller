@@ -36,20 +36,14 @@ namespace ThrottleTask
   {
     return primary_button.pressed;
   }
-
-  Queue1::Manager<ThrottleState> *createQueueManager(const char *name)
-  {
-    return new Queue1::Manager<ThrottleState>(xThrottleQueueHandle, TICKS_5ms, name);
-  }
-
   //================================================
   void task(void *pvParameters)
   {
     mgr.printStarted();
 
-    readNotfQueue = SendToBoardTimerTask::createQueueManager("readNotf");
-    throttleStateQueue = createQueueManager("IRL ThrottleState");
-    primaryButton = QwiicButtonTask::createQueueManager("IRL PrimaryButtonState");
+    readNotfQueue = Queue1::Manager<SendToBoardNotf>::create("readNotf");
+    throttleStateQueue = Queue1::Manager<ThrottleState>::create("IRL ThrottleState");
+    primaryButton = Queue1::Manager<PrimaryButtonState>::create("IRL PrimaryButtonState");
 
     // primaryButton->setMissedEventCallback([](uint16_t num_events) {
     //   Serial.printf("WARNING: missed %d events in primaryBtnQueue (ThrottleTask)\n", num_events);

@@ -40,11 +40,6 @@ namespace BoardCommsTask
       since_check_send_notf_queue;
 
   //----------------------------------------------------------
-  Queue1::Manager<PacketState> *createQueueManager(const char *name)
-  {
-    return new Queue1::Manager<PacketState>(xPacketStateQueueHandle, TICKS_5ms, name);
-  }
-  //----------------------------------------------------------
   void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   {
     VescData packet = boardClient.read();
@@ -108,8 +103,8 @@ namespace BoardCommsTask
 
     controller_packet.id = 0;
 
-    readNotfQueue = SendToBoardTimerTask::createQueueManager("IRL: BoardCommsTask readNotfQueue");
-    packetStateQueue = createQueueManager("(BoardCommsTask)packetStateQueue");
+    readNotfQueue = Queue1::Manager<SendToBoardNotf>::create("IRL: BoardCommsTask readNotfQueue");
+    packetStateQueue = Queue1::Manager<PacketState>::create("(BoardCommsTask)packetStateQueue");
 
     boardClient.begin(&network, boardPacketAvailable_cb, mux_SPI);
 

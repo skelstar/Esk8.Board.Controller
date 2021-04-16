@@ -1,6 +1,7 @@
 #pragma once
 
-#include <QueueManager.h>
+#include <VescData.h>
+#include <types/QueueBase.h>
 
 class PacketState : public QueueBase
 {

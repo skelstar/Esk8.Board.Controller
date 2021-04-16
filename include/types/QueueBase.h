@@ -10,8 +10,6 @@ const TickType_t TICKS_2s = 2000 / portTICK_PERIOD_MS;
 const TickType_t TICKS_3s = 3000 / portTICK_PERIOD_MS;
 const TickType_t TICKS_4s = 4000 / portTICK_PERIOD_MS;
 
-#include <types/QueueType.h>
-
 class QueueBase
 {
 public:

@@ -1,7 +1,9 @@
 #include <TaskBase.h>
 #include <QueueManager1.h>
+#include <types/SendToBoardNotf.h>
+#include <types/PrimaryButton.h>
 
-namespace BaseTaskTest
+namespace BaseTaskTest1
 {
   TaskBase *thisTask;
 
@@ -14,23 +16,19 @@ namespace BaseTaskTest
 
     void initialiseQueues()
     {
-      Serial.printf("%s Initialised Queues\n", thisTask->_name);
-      notfQueue = SendToBoardTimerTask::createQueueManager("(BaseTaskTest)NotfQueue");
-      primaryButtonQueue = QwiicButtonTask::createQueueManager("(BaseTaskTest)primaryButtonQueue");
+      notfQueue = Queue1::Manager<SendToBoardNotf>::create("(BaseTaskTest)NotfQueue");
+      primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(BaseTaskTest)primaryButtonQueue");
     }
 
     void initialise()
     {
-      Serial.printf("%s Initialised\n", thisTask->_name);
     }
 
     bool timeToDowork()
     {
       if (notfQueue->hasValue())
       {
-        DEBUGMVAL("timeToDOwOrk",
-                  notfQueue->payload.correlationId,
-                  notfQueue->payload.sent_time);
+        // DEBUGMVAL("timeToDOwOrk", notfQueue->payload.correlationId, notfQueue->payload.sent_time);
         state.correlationId = notfQueue->payload.correlationId;
         state.sent_time = notfQueue->payload.sent_time;
         // state.name = notfQueue->payload.name;
@@ -43,7 +41,7 @@ namespace BaseTaskTest
     {
       if (primaryButtonQueue == nullptr)
       {
-        DEBUG("ERROR: primaryButtonQueue is NULL");
+        Serial.printf("ERROR: primaryButtonQueue is NULL\n");
         return;
       }
       state.correlationId = notfQueue->payload.correlationId;
@@ -58,7 +56,7 @@ namespace BaseTaskTest
 
   void start()
   {
-    thisTask = new TaskBase("BaseTaskTest", 3000);
+    thisTask = new TaskBase("BaseTaskTest1", 3000);
     thisTask->setInitialiseCallback(initialise);
     thisTask->setInitialiseQueuesCallback(initialiseQueues);
     thisTask->setTimeToDoWorkCallback(timeToDowork);
@@ -67,5 +65,11 @@ namespace BaseTaskTest
 
     if (thisTask->rtos != nullptr)
       thisTask->rtos->create(task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);
+  }
+
+  void deleteTask(bool print = false)
+  {
+    if (thisTask != nullptr && thisTask->rtos != nullptr)
+      thisTask->rtos->deleteTask(print);
   }
 }
