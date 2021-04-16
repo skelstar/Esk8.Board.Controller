@@ -72,6 +72,8 @@ SemaphoreHandle_t mux_SPI;
 #include <tasks/core0/NintendoClassicTask.h>
 #include <tasks/core0/remoteTask.h>
 
+#include <tasks/core0/BaseTaskTest.h>
+
 RTOSTaskManager firstTask("FirstTask", 3000);
 RTOSTaskManager otherTask("OtherTask", 3000);
 
@@ -115,6 +117,8 @@ void printTestInstructions(const char *instructions)
 {
   Serial.printf("*** INSTR: %s\n", instructions);
 }
+
+Queue1::Manager<SendToBoardNotf> *sendNotfQueue1;
 
 void setUp()
 {
@@ -722,6 +726,8 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
   // ThrottleTask::mgr.create(ThrottleTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   BoardCommsTask::mgr.create(BoardCommsTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // NintendoClassicTask::mgr.create(NintendoClassicTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+
+  BaseTaskTest::start();
 
   // NintendoClassicTask::classic.setMockGetButtonEventCallback(mockNintendoClassicButtonPress);
 
