@@ -35,12 +35,11 @@ public:
   bool was_released(int button_index);
   uint8_t *get_buttons();
   void debug();
-  void setButtonPressedCb(ButtonEventCallback cb);
-  void setButtonReleasedCb(ButtonEventCallback cb);
-
-private:
   int address = I2C_ADDR;
   uint8_t buttonStates[BUTTON_COUNT];
+  ButtonEventCb _buttonPressedEventCb = nullptr;
+  ButtonEventCb _buttonReleasedEventCb = nullptr;
+=======
   ButtonEventCallback _buttonPressed_cb = nullptr;
   ButtonEventCallback _buttonReleased_cb = nullptr;
 
