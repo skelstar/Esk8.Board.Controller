@@ -19,6 +19,13 @@ public:
     rtos = new RTOSTaskManager(_name, /*stack*/ stackSize);
   }
 
+  bool enable(bool print = false)
+  {
+    if (print)
+      Serial.printf("[TASK: %s] enabled\n", _name);
+    enabled = true;
+  }
+
   void task(void *parameters)
   {
     rtos->printStarted();
@@ -46,6 +53,11 @@ public:
       vTaskDelay(5);
     }
     vTaskDelete(NULL);
+  }
+
+  void deleteTask(bool print = false)
+  {
+    rtos->deleteTask(print);
   }
 
   void setInitialiseCallback(VoidVoidCallback _cb)

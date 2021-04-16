@@ -106,12 +106,12 @@ public:
     return _enabled;
   }
 
-  void enable(bool e = true, bool print = false)
+  void enable(bool print = false)
   {
     if (print)
-      Serial.printf("[TASK]:%s %s\n", _task_name, e ? "enabled" : "disabled");
+      Serial.printf("[TASK]:%s %s\n", _task_name, "enabled");
     _reportedNotEnabled = false;
-    _enabled = e;
+    _enabled = true;
   }
 
 private:

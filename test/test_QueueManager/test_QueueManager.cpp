@@ -155,36 +155,35 @@ void test_calls_and_responds_in_same_task()
   elapsedMillis since_checked_queue, since_last_created;
 
   FirstTestObj firstObj;
-  OtherTestObj otherObj;
 
   counter = 0;
   firstObj.event_id = 0;
 
-  while (counter < 10)
+  while (counter < 5)
   {
-    if (since_last_created > 1000)
+    if (since_last_created > 200)
     {
+      Serial.printf("counter: %d\n", counter);
       since_last_created = 0;
-      sendQueue.send(&firstObj);
+      sendQueue.send_r(&firstObj, QueueBase::printSend);
 
       bool gotObj = false, timedout = false;
       do
       {
-        vTaskDelay(50);
         gotObj = readQueue.hasValue();
-        timedout = since_last_created > 500;
+        timedout = since_last_created > 200;
+        vTaskDelay(50);
       } while (!gotObj && !timedout);
 
-      TEST_ASSERT_FALSE(timedout);
-      TEST_ASSERT_TRUE(gotObj);
+      TEST_ASSERT_FALSE_MESSAGE(timedout, "Timed out");
+      TEST_ASSERT_TRUE_MESSAGE(gotObj, "Didn't get obj");
 
       counter++;
-      Serial.printf("counter: %d\n", counter);
     }
 
-    vTaskDelay(100);
+    vTaskDelay(10);
   }
-  TEST_ASSERT_TRUE(counter >= 10);
+  TEST_ASSERT_TRUE(counter >= 5);
 }
 
 namespace SendFirstObjOnInterval
@@ -201,7 +200,6 @@ namespace SendFirstObjOnInterval
 
     Queue1::Manager<FirstTestObj> sendQueue(xFirstQueueHandle, TICKS_5ms, "sendQueue");
 
-    ready = true;
     DEBUG("[TASK] SendFirstObjOnInterval_task ready!");
 
     FirstTestObj sentObj;
@@ -214,10 +212,11 @@ namespace SendFirstObjOnInterval
       {
         Serial.printf("---------------------\n");
         since_sent = 0;
-        unsigned long last_id = sentObj.event_id;
+        unsigned long last_correlationId = sentObj.correlationId;
 
-        sendQueue.send(&sentObj);
-        TEST_ASSERT_TRUE_MESSAGE(sentObj.event_id == last_id + 1, "firstObj.event_id did not get +1");
+        sendQueue.send_n(&sentObj, QueueBase::printSend);
+        ready = true;
+        TEST_ASSERT_TRUE_MESSAGE(sentObj.correlationId == last_correlationId + 1, "firstObj.correlationId did not get +1");
       }
 
       vTaskDelay(10);
@@ -236,7 +235,7 @@ void test_calls_from_one_task_and_reads_in_another()
   FirstTestObj firstObj;
   OtherTestObj otherObj;
 
-  unsigned long sendInterval = 3000;
+  unsigned long sendInterval = 200;
 
   xTaskCreatePinnedToCore(SendFirstObjOnInterval::task,
                           "SendFirstObjOnIntervalTask",
@@ -249,30 +248,37 @@ void test_calls_from_one_task_and_reads_in_another()
   counter = 0;
   firstObj.event_id = 0;
 
+  while (SendFirstObjOnInterval::ready == false)
+  {
+    vTaskDelay(5);
+  }
+
   elapsedMillis since_last_packet = 0;
 
-  while (counter < 10)
+  const int NUM_LOOPS = 5;
+
+  while (counter < NUM_LOOPS)
   {
     bool gotObj = false, timedout = false;
     do
     {
-      vTaskDelay(50);
+      vTaskDelay(10);
       gotObj = readQueue.hasValue();
       if (gotObj)
         since_last_packet = 0;
       timedout = since_last_packet > 1000;
     } while (!gotObj && !timedout);
 
-    TEST_ASSERT_FALSE(timedout);
-    TEST_ASSERT_TRUE(gotObj);
+    TEST_ASSERT_FALSE_MESSAGE(timedout, "TIMEDOUT");
+    TEST_ASSERT_TRUE_MESSAGE(gotObj, "Didn't getObj");
 
     counter++;
     Serial.printf("counter: %d\n", counter);
 
-    vTaskDelay(100);
+    vTaskDelay(sendInterval);
   }
 
-  TEST_ASSERT_TRUE(counter >= 10);
+  TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
 }
 
 void test_queue_hasValue()
@@ -287,11 +293,13 @@ void test_queue_hasValue()
   counter = 0;
   sendObj.event_id = 0;
 
-  while (counter < 5)
+  const int NUM_LOOPS = 5;
+
+  while (counter < NUM_LOOPS)
   {
     ulong sent_event_id = sendObj.event_id;
 
-    sendQueue.send(&sendObj);
+    sendQueue.send_n(&sendObj);
 
     TEST_ASSERT_TRUE(sent_event_id == sendObj.event_id - 1);
     DEBUG("PASS: event_id incremented");
@@ -312,7 +320,7 @@ void test_queue_hasValue()
     vTaskDelay(500);
   }
 
-  TEST_ASSERT_TRUE(counter >= 5);
+  TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
 }
 
 void testUtils_waitForNewResponse()
@@ -330,7 +338,7 @@ void testUtils_waitForNewResponse()
   while (counter < 5)
   {
     ulong sent_event_id = sendObj.event_id;
-    sendQueue.send(&sendObj);
+    sendQueue.send_n(&sendObj);
 
     TEST_ASSERT_TRUE(sent_event_id == sendObj.event_id - 1);
     DEBUG("PASS: event_id incremented");
@@ -354,7 +362,7 @@ void testUtils_waitForNewResponse()
   TEST_ASSERT_TRUE(counter >= 5);
 }
 
-void test_queue_hasEvent_updates_id()
+void test_queue_hasValue_updates_id()
 {
   Queue1::Manager<FirstTestObj> sendQueue(xFirstQueueHandle, TICKS_5ms, "sendQueue");
   Queue1::Manager<FirstTestObj> readQueue(xFirstQueueHandle, TICKS_5ms, "readQueue");
@@ -375,7 +383,7 @@ void test_queue_hasEvent_updates_id()
     since_last_packet = 0;
 
     og_event_id = firstObj.event_id;
-    sendQueue.send(&firstObj);
+    sendQueue.send_n(&firstObj);
     // test to see that event_id got bumped by +1
     TEST_ASSERT_TRUE_MESSAGE(firstObj.event_id == og_event_id + 1, "firstObj.event_id did not +1");
 
@@ -396,54 +404,13 @@ void test_queue_hasEvent_updates_id()
   TEST_ASSERT_TRUE(counter >= 10);
 }
 
-void testUtils_waitForNewResp_with_QueueType()
-{
-  Queue1::Manager<FirstTestObj> sendQueue(xFirstQueueHandle, TICKS_5ms, "sendQueue");
-  Queue1::Manager<FirstTestObj> readQueue(xFirstQueueHandle, TICKS_5ms, "readQueue");
-
-  printTestInstructions("Test calls from one task and reads in another using waitForNewResponse()");
-
-  FirstTestObj sendObj;
-
-  counter = 0;
-  sendObj.event_id = 0;
-
-  while (counter < 5)
-  {
-    DEBUG("--------------------------");
-
-    ulong sent_event_id = sendObj.event_id;
-
-    // send
-    sendQueue.send_r(&sendObj, QueueBase::printSend);
-
-    TEST_ASSERT_TRUE(sent_event_id == sendObj.event_id - 1);
-    DEBUG("PASS: event_id incremented");
-    DEBUGVAL(sent_event_id, sendObj.event_id);
-
-    // read/wait for new
-    uint8_t resp = waitForNew(&readQueue, PERIOD_100ms, QueueBase::printRead);
-    TEST_ASSERT_TRUE(resp == Response::OK);
-    DEBUG("PASS: waiting found packet");
-
-    resp = waitForNew(&readQueue, 100 * MILLIS_S, QueueBase::printRead);
-    TEST_ASSERT_TRUE(resp == Response::TIMEOUT);
-    DEBUG("PASS: waiting didn't find new packet");
-
-    counter++;
-    vTaskDelay(200);
-  }
-
-  TEST_ASSERT_TRUE(counter >= 5);
-}
-
 void testUtils_waitForNewResp_with_QueueType_from_Notification_task()
 {
   Queue1::Manager<SendToBoardNotf> *readNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(test)readNotfQueue");
 
   SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
 
-  SendToBoardTimerTask::setSendInterval(3 * SECONDS);
+  SendToBoardTimerTask::setSendInterval(PERIOD_500ms);
 
   printTestInstructions("Test testUtils_waitForNewResp_with_QueueType_from_Notification_task");
 
@@ -458,214 +425,19 @@ void testUtils_waitForNewResp_with_QueueType_from_Notification_task()
   {
     DEBUG("--------------------------");
 
-    uint8_t firstResp = waitForNew(readNotfQueue, 10 * SECONDS, QueueBase::printRead);
+    uint8_t firstResp = waitForNew(readNotfQueue, 1 * SECONDS, QueueBase::printRead);
+    TEST_ASSERT_TRUE_MESSAGE(firstResp == Response::OK, "firstResp was not OK");
 
     uint8_t secondResp = waitForNew(readNotfQueue, PERIOD_50ms, QueueBase::printRead);
-
-    TEST_ASSERT_TRUE_MESSAGE(firstResp == Response::OK, "firstResp was not OK");
     TEST_ASSERT_TRUE_MESSAGE(secondResp == Response::TIMEOUT, "secondResp was not TIMEOUT");
-    DEBUG("PASS: found Notf and didn't find it again");
 
     counter++;
-    vTaskDelay(200);
+    vTaskDelay(50);
   }
 
   TEST_ASSERT_TRUE(counter >= 5);
 }
 //-----------------------------
-
-namespace OtherObj
-{
-  RTOSTaskManager mgr("OtherObjTask_OG", 5000);
-
-  void taskOtherdObj(void *pvParameters)
-  {
-    mgr.printStarted();
-
-    OtherTestObj otherObj;
-
-    Queue1::Manager<SendToBoardNotf> readNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "(IRL)readNotf");
-    Queue1::Manager<OtherTestObj> sendOtherQueue(xOtherTestQueueHandle, TICKS_5ms, "(IRL)sendOther");
-
-    TEST_ASSERT_EQUAL_MESSAGE(((QueueBase)otherObj).event_id, otherObj.event_id, "Base does not have same id");
-    DEBUG("PASS: event_ids match from otherObj.event_id and base");
-
-    mgr.printReady();
-
-    elapsedMillis since_ready = 0;
-    while (since_ready > 100)
-    {
-    }
-
-    mgr.ready = true;
-
-    elapsedMillis since_check_for_notf = 0;
-
-    while (true)
-    {
-      if (since_check_for_notf > 100 && mgr.enabled())
-      {
-        since_check_for_notf = 0;
-
-        uint8_t response = waitForNew(&readNotfQueue, 100, QueueBase::printRead);
-        if (response == Response::OK)
-        {
-          sendOtherQueue.send_r(&otherObj, QueueBase::printSend);
-        }
-      }
-
-      mgr.healthCheck(10000);
-
-      vTaskDelay(10);
-    }
-    vTaskDelete(NULL);
-  }
-}
-
-void testUtils_waitForNewResp_with_notf_task_and_respond_task()
-{
-  Queue1::Manager<SendToBoardNotf> *readNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(test)readNotfQueue");
-  Queue1::Manager<OtherTestObj> *readOtherQueue = new Queue1::Manager<OtherTestObj>(xOtherTestQueueHandle, TICKS_5ms, "(test)readOtherQueue");
-
-  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
-  SendToBoardTimerTask::setSendInterval(3 * SECONDS);
-
-  OtherObj::mgr.create(OtherObj::taskOtherdObj, 0, 1);
-
-  printTestInstructions("testUtils_waitForNewResp_with_notf_task_and_respond_task");
-
-  while (SendToBoardTimerTask::mgr.ready == false ||
-         OtherObj::mgr.ready == false)
-    vTaskDelay(50);
-
-  OtherObj::mgr.enable();
-  SendToBoardTimerTask::mgr.enable();
-
-  counter = 0;
-
-  while (counter < 5)
-  {
-    DEBUG("--------------------------");
-
-    uint8_t firstResp = waitForNew(readNotfQueue, 10 * SECONDS);
-    TEST_ASSERT_TRUE_MESSAGE(firstResp == Response::OK, "firstResp was not OK");
-    DEBUG("PASS: found Notf");
-
-    uint8_t secondResp = waitForNew(readOtherQueue, PERIOD_100ms, QueueBase::printRead);
-    TEST_ASSERT_TRUE_MESSAGE(secondResp == Response::OK, "otherResp timed out after 100ms");
-    DEBUG("PASS: ...and otherObjTask responded");
-
-    counter++;
-    vTaskDelay(200);
-  }
-
-  OtherObj::mgr.deleteTask(PRINT_THIS);
-
-  TEST_ASSERT_TRUE(counter >= 5);
-}
-
-namespace OtherTask
-{
-  // RTOSTaskManager mgr("OtherTask", 5000);
-
-  void taskOther(void *pvParameters)
-  {
-    Serial.printf("Task: %s started\n", (const char *)pvParameters);
-
-    OtherTestObj otherObj;
-
-    char queueName[30];
-    sprintf(queueName, "(IRL)%s", (const char *)pvParameters);
-
-    Queue1::Manager<SendToBoardNotf> readNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, queueName);
-    Queue1::Manager<OtherTestObj> sendOtherQueue(xOtherTestQueueHandle, TICKS_5ms, queueName);
-
-    Serial.printf("Task: %s ready\n", (const char *)pvParameters);
-
-    elapsedMillis since_ready = 0;
-
-    while (since_ready > 100)
-      vTaskDelay(5);
-
-    elapsedMillis since_check_for_notf = 0;
-
-    while (true)
-    {
-      if (since_check_for_notf > 100)
-      {
-        since_check_for_notf = 0;
-
-        uint8_t response = waitForNew(&readNotfQueue, 100, QueueBase::printRead);
-        if (response == Response::OK)
-          sendOtherQueue.send_r(&otherObj); //, QueueBase::printSend);
-      }
-
-      vTaskDelay(10);
-    }
-    vTaskDelete(NULL);
-  }
-}
-
-void boxing_tasks()
-{
-  Queue1::Manager<SendToBoardNotf> *readNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(test)readNotfQueue");
-  Queue1::Manager<OtherTestObj> *readOtherQueue = new Queue1::Manager<OtherTestObj>(xOtherTestQueueHandle, TICKS_5ms, "(test)readOtherQueue");
-
-  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
-  SendToBoardTimerTask::setSendInterval(3 * SECONDS);
-
-#define NUM_OTHER_TASKS 3
-
-  int t = 0;
-  RTOSTaskManager *mgrs[NUM_OTHER_TASKS];
-
-  for (RTOSTaskManager *m : mgrs)
-  {
-    char taskName[20];
-    sprintf(taskName, "OtherTask#%d", t);
-
-    m = new RTOSTaskManager(taskName, 5000);
-
-    xTaskCreatePinnedToCore(OtherTask::taskOther,
-                            taskName,
-                            /*stack*/ 3000,
-                            /*params*/ (void *)&taskName,
-                            /*priority*/ t,
-                            /*handle*/ NULL,
-                            /*CORE*/ 0);
-    t++;
-
-    vTaskDelay(50);
-
-    m->enable(true, PRINT_THIS);
-  }
-
-  printTestInstructions("boxing_tasks");
-
-  SendToBoardTimerTask::mgr.enable();
-
-#define NUM_LOOPS 5
-  counter = 0;
-
-  while (counter < NUM_LOOPS)
-  {
-    DEBUG("--------------------------");
-
-    uint8_t notfResp = waitForNew(readNotfQueue, 10 * SECONDS);
-    TEST_ASSERT_TRUE_MESSAGE(notfResp == Response::OK, "notfResp was not OK");
-
-    uint8_t secondResp = waitForNew(readOtherQueue, 10 * SECONDS, QueueBase::printRead);
-    TEST_ASSERT_TRUE_MESSAGE(secondResp == Response::OK, "otherResp timed out after 10s");
-
-    counter++;
-    vTaskDelay(200);
-  }
-
-  for (RTOSTaskManager *m : mgrs)
-    m->deleteTask(PRINT_THIS);
-
-  TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
-}
 
 uint8_t mockNintendoClassicButtonPress()
 {
@@ -694,7 +466,7 @@ uint8_t mockNintendoClassicButtonPress()
   return (uint8_t)NintendoController::BUTTON_A;
 }
 
-void sendOutNotification_allTasksRespondWithCorrelationId()
+void sendOutNotification_TaskRespondsWithCurrentCorrelationId()
 {
   mux_I2C = xSemaphoreCreateMutex();
 
@@ -801,8 +573,6 @@ void sendOutNotification_allTasksRespondWithCorrelationId()
   TEST_ASSERT_TRUE(counter == NUM_TEST_LOOPS);
 
   BaseTaskTest1::deleteTask(PRINT_THIS);
-  // BoardCommsTask::mgr.deleteTask(PRINT_THIS);
-  // SendToBoardTimerTask::mgr.deleteTask(PRINT_THIS);
 }
 
 void setup()
@@ -814,16 +584,13 @@ void setup()
 
   UNITY_BEGIN();
 
-  // RUN_TEST(test_calls_and_responds_in_same_task);
-  // RUN_TEST(test_calls_from_one_task_and_reads_in_another);
-  // RUN_TEST(test_queue_hasValue);
-  // RUN_TEST(testUtils_waitForNewResponse);
-  // RUN_TEST(test_queue_hasEvent_updates_id);
-  // RUN_TEST(testUtils_waitForNewResp_with_QueueType);
-  // RUN_TEST(testUtils_waitForNewResp_with_QueueType_from_Notification_task);
-  // RUN_TEST(testUtils_waitForNewResp_with_notf_task_and_respond_task);
-  // RUN_TEST(boxing_tasks);
-  RUN_TEST(sendOutNotification_allTasksRespondWithCorrelationId);
+  RUN_TEST(test_calls_and_responds_in_same_task);
+  RUN_TEST(test_calls_from_one_task_and_reads_in_another);
+  RUN_TEST(test_queue_hasValue);
+  RUN_TEST(testUtils_waitForNewResponse);
+  RUN_TEST(test_queue_hasValue_updates_id);
+  RUN_TEST(testUtils_waitForNewResp_with_QueueType_from_Notification_task);
+  RUN_TEST(sendOutNotification_TaskRespondsWithCurrentCorrelationId);
 
   UNITY_END();
 }

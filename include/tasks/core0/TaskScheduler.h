@@ -3,49 +3,47 @@
 #include <types/SendToBoardNotf.h>
 #include <types/PrimaryButton.h>
 
-namespace BaseTaskTest1
+namespace TaskScheduler
 {
   TaskBase *thisTask;
 
   namespace
   {
-    Queue1::Manager<SendToBoardNotf> *notfQueue = nullptr;
-    Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
+    Queue1::Manager<SendToBoardNotf> *scheduleQueue = nullptr;
+
+    elapsedMillis since_last_notification;
+
+    unsigned long sendInterval = PERIOD_500ms;
+    bool printSendToSchedule = false;
+
+    SendToBoardNotf notification;
 
     PrimaryButtonState state;
 
     void initialiseQueues()
     {
-      notfQueue = Queue1::Manager<SendToBoardNotf>::create("(BaseTaskTest)NotfQueue");
-      primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(BaseTaskTest)primaryButtonQueue");
+      scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(TaskScheduler)NotfQueue");
     }
 
     void initialise()
     {
+      notification.correlationId = 0;
     }
 
     bool timeToDowork()
     {
-      if (notfQueue->hasValue())
-      {
-        // DEBUGMVAL("timeToDOwOrk", notfQueue->payload.correlationId, notfQueue->payload.sent_time);
-        state.correlationId = notfQueue->payload.correlationId;
-        state.sent_time = notfQueue->payload.sent_time;
-        // state.name = notfQueue->payload.name;
-        return true;
-      }
-      return false;
+      return since_last_notification > sendInterval && thisTask->enabled;
     }
 
     void doWork()
     {
-      if (primaryButtonQueue == nullptr)
+      if (scheduleQueue == nullptr)
       {
-        Serial.printf("ERROR: primaryButtonQueue is NULL\n");
+        Serial.printf("ERROR: scheduleQueue is NULL\n");
         return;
       }
-      state.correlationId = notfQueue->payload.correlationId;
-      primaryButtonQueue->reply(&state);
+      since_last_notification = 0;
+      scheduleQueue->send_r(&notification, printSendToSchedule ? QueueBase::printSend : nullptr);
     }
 
     void task(void *parameters)
@@ -56,7 +54,7 @@ namespace BaseTaskTest1
 
   void start()
   {
-    thisTask = new TaskBase("BaseTaskTest1", 3000);
+    thisTask = new TaskBase("TaskScheduler", 3000);
     thisTask->setInitialiseCallback(initialise);
     thisTask->setInitialiseQueuesCallback(initialiseQueues);
     thisTask->setTimeToDoWorkCallback(timeToDowork);
