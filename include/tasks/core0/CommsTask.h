@@ -7,14 +7,67 @@ namespace CommsTask
 {
   TaskBase *thisTask;
 
+#ifndef RADIO_OBJECTS
+#define RADIO_OBJECTS
+
+#include <RF24Network.h>
+#include <NRF24L01Lib.h>
+
+  NRF24L01Lib nrf24;
+
+  RF24 radio(NRF_CE, NRF_CS);
+  RF24Network network(radio);
+#endif
+
   namespace
   {
     Queue1::Manager<SendToBoardNotf> *scheduleQueue = nullptr;
     Queue1::Manager<PacketState> *packetStateQueue = nullptr;
 
-    PacketState state;
+    GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
 
-    bool printReplyToSchedule = false;
+    ControllerConfig controller_config;
+    ControllerData controller_packet;
+
+    BoardClass board;
+
+    PacketState packetState;
+
+    bool printReplyToSchedule = false,
+         printPeekSchedule = false;
+
+    //----------------------------------------------------------
+    void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
+    {
+      VescData packet = boardClient.read();
+      board.save(packet);
+
+      if (packet.reason == CONFIG_RESPONSE)
+      {
+        Serial.printf("CONFIG_RESPONSE id: %lu\n", packet.id);
+      }
+      DEBUGMVAL("boardPacketAvailable_cb", board.packet.id, controller_packet.id);
+      packetState.received(packet);
+      packetStateQueue->reply(&packetState, printReplyToSchedule ? QueueBase::printSend : nullptr);
+
+      vTaskDelay(10);
+    }
+    //----------------------------------------------------------
+    void sendPacketToBoard(bool print = false)
+    {
+      controller_packet.id++;
+      controller_packet.acknowledged = false;
+
+      if (print)
+        Serial.printf("sendPacketToBoard() id: %lu\n", controller_packet.id);
+
+      bool success = boardClient.sendTo(Packet::CONTROL, controller_packet);
+
+      packetState.sent(controller_packet);
+
+      if (success == false)
+        Serial.printf("Unable to send CONTROL packet to board id: %lu\n", controller_packet.id);
+    }
 
     void initialiseQueues()
     {
@@ -24,16 +77,25 @@ namespace CommsTask
 
     void initialise()
     {
-      state.correlationId = -1;
+      packetState.correlationId = -1;
+
+      boardClient.begin(&network, boardPacketAvailable_cb, mux_SPI);
     }
+
+    elapsedMillis since_checked_for_available, since_sent_to_board = 0;
 
     bool timeToDowork()
     {
-      uint8_t status = waitForNew(scheduleQueue, PERIOD_50ms, QueueBase::printRead);
+      uint8_t status = waitForNew(scheduleQueue, PERIOD_50ms, printPeekSchedule ? QueueBase::printRead : nullptr);
       if (status == Response::OK)
       {
-        state.correlationId = scheduleQueue->payload.correlationId;
-        state.sent_time = scheduleQueue->payload.sent_time;
+        packetState.correlationId = scheduleQueue->payload.correlationId;
+        packetState.sent_time = scheduleQueue->payload.sent_time;
+        return true;
+      }
+
+      if (since_checked_for_available > PERIOD_50ms)
+      {
         return true;
       }
       return false;
@@ -46,7 +108,23 @@ namespace CommsTask
         Serial.printf("ERROR: packetStateQueue is NULL\n");
         return;
       }
-      packetStateQueue->reply(&state, printReplyToSchedule ? QueueBase::printSend : nullptr);
+
+      // need to work out if we have a new packet to send or not (in case board doesnt respond)
+
+      sendPacketToBoard(PRINT_THIS);
+
+      DEBUGMVAL("sent to board (doWork)", controller_packet.id, board.packet.id);
+
+      bool responded = false;
+      while (since_sent_to_board < PERIOD_100ms && responded == false)
+      {
+        since_checked_for_available = 0;
+
+        boardClient.update();
+        vTaskDelay(10);
+      }
+      DEBUGMVAL("doneWork?()", controller_packet.id, board.packet.id);
+      packetStateQueue->reply(&packetState, printReplyToSchedule ? QueueBase::printSend : nullptr);
     }
 
     void task(void *parameters)

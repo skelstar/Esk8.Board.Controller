@@ -93,9 +93,6 @@ void usesTaskSchedulerAndNintendoController_withTaskBaseAnRealController_sendsPa
 {
   Wire.begin();
   // start tasks
-  TaskScheduler::start();
-  TaskScheduler::sendInterval = PERIOD_200ms;
-  TaskScheduler::printSendToSchedule = false;
 
   NintendoClassicTaskBase::start();
   NintendoClassicTaskBase::printReplyToSchedule = false;

@@ -122,6 +122,7 @@ namespace Queue1
       }
       xQueueSendToFront(_queue, (void *)&payload, _ticks);
 
+      vTaskDelay(1); // think there was a bug where it was incrementing before it was sent
       if (sent_cb != nullptr)
         sent_cb(*payload, name);
 
