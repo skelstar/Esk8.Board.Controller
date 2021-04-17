@@ -23,6 +23,7 @@ const unsigned long PERIOD_40ms = 40;
 const unsigned long PERIOD_50ms = 50;
 const unsigned long PERIOD_100ms = 100;
 const unsigned long PERIOD_200ms = 200;
+const unsigned long PERIOD_300ms = 300;
 const unsigned long PERIOD_500ms = 500;
 const unsigned long PERIOD_1S = 1000;
 const unsigned long PERIOD_2S = 2000;

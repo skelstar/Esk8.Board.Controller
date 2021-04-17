@@ -12,70 +12,71 @@
 #define PRINT_MUTEX_TAKE_FAIL 1
 static int counter = 0;
 
+// RTOS ENTITES-------------------
+
+QueueHandle_t xFirstQueueHandle;
+QueueHandle_t xOtherTestQueueHandle;
+
+QueueHandle_t xBoardPacketQueue;
+QueueHandle_t xNintendoControllerQueue;
+QueueHandle_t xPacketStateQueueHandle;
+QueueHandle_t xPrimaryButtonQueueHandle;
+QueueHandle_t xSendToBoardQueueHandle;
+QueueHandle_t xThrottleQueueHandle;
+
+SemaphoreHandle_t mux_I2C;
+SemaphoreHandle_t mux_SPI;
+
 #include <types.h>
 #include <rtosManager.h>
-#include <QueueManager.h>
-#include <MockedQwiicButton.h>
+#include <QueueManager1.h>
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
+#include <testUtils.h>
 
 MyMutex mutex_I2C;
 MyMutex mutex_SPI;
 
-xQueueHandle xBoardPacketQueue;
-Queue::Manager *boardPacketQueue = nullptr;
+#include <types/QueueBase.h>
+#include <types/PacketState.h>
+#include <types/SendToBoardNotf.h>
+#include <types/NintendoButtonEvent.h>
+#include <types/PrimaryButton.h>
+#include <types/Throttle.h>
 
-// xQueueHandle xSendToBoardQueueHandle;
-
-xQueueHandle xPacketStateQueueHandle;
-Queue::Manager *packetStateQueue = nullptr;
-
-xQueueHandle xPrimaryButtonQueueHandle;
-Queue::Manager *primaryButtonQueue = nullptr;
-
-xQueueHandle xStatsQueue;
-Queue::Manager *statsQueue = nullptr;
-
-class SendToBoardNotf : public QueueBase
-{
-public:
-  const char *name;
-};
-
-//----------------------------------
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
 #include <MockGenericClient.h>
+// #include <GenericClient.h>
 
-NRF24L01Lib nrf24;
+#define RADIO_OBJECTS
+// NRF24L01Lib nrf24;
 
-RF24 radio(NRF_CE, NRF_CS);
-RF24Network network(radio);
+// RF24 radio(NRF_CE, NRF_CS);
+// RF24Network network(radio);
+GenericClient<ControllerData, VescData> boardClient(01);
 
-#include <tasks/core0/BoardCommsTask.h>
-#include <tasks/core0/SendToBoardTimerTask.h>
-
-//----------------------------------
-#define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
-#define PRINT_THROTTLE 0
-
-#define TICKS_5ms 5 / portTICK_PERIOD_MS
-#define TICKS_10ms 10 / portTICK_PERIOD_MS
-#define TICKS_50ms 50 / portTICK_PERIOD_MS
-#define TICKS_100ms 100 / portTICK_PERIOD_MS
-
-#include <tasks/core0/remoteTask.h>
+#include <MockedQwiicButton.h>
+#include <MockNintendoController.h>
 
 #include <displayState.h>
 
-#include <tasks/core0/QwiicButtonTask.h>
-// #include <tasks/core0/NintendoClassicTask.h>
-// #include <tasks/core0/ThrottleTask.h>
-// #include <tasks/core0/debugTask.h>
-// #include <tasks/core0/DisplayTask.h>
+// TASKS ------------------------
 
-elapsedMillis since_checked_queue;
+#include <tasks/core0/SendToBoardTimerTask.h>
+#include <tasks/core0/DisplayTask.h>
+#include <tasks/core0/QwiicTaskBase.h>
+#include <tasks/core0/ThrottleTask.h>
+#include <tasks/core0/BoardCommsTask.h>
+#include <tasks/core0/NintendoClassicTask.h>
+#include <tasks/core0/remoteTask.h>
+
+#include <tasks/core0/BaseTaskTest1.h>
+#include <tasks/core0/TaskScheduler.h>
+#include <tasks/core0/CommsTask.h>
+
+//----------------------------------
 
 void printTestTitle(const char *name)
 {
@@ -89,86 +90,100 @@ void printTestInstructions(const char *instructions)
   Serial.printf("*** INSTR: %s\n", instructions);
 }
 
-PrimaryButtonState mockQwiicButtonStateResponse(ControllerData out)
-{
-  PrimaryButtonState state;
-  state.pressed = false;
-  return state;
-}
-
 void setUp()
 {
-  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
-  mutex_I2C.enabled = true;
+  DEBUG("----------------------------");
+  Serial.printf("    %s \n", __FILE__);
+  DEBUG("----------------------------");
 
+  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
+  xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
+  xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
-  primaryButtonQueue = new Queue::Manager(xPrimaryButtonQueueHandle, TICKS_5ms);
-  // Queue1::Manager<SendToBoardNotf> sendToBoardQueue(xSendToBoardQueueHandle, TICKS_5ms);
+  xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf *));
+  xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 }
 
 void tearDown()
 {
 }
 
-#define CORE_0 0
-#define PRIORITY_1 1
-
-void test_qwiic_button_pressed_then_released_via_queue()
+//-----------------------------------------------
+void usesTaskSchedulerAndQwiicButton_withTaskBasesAndMockButton_sendsPacketsAndRespondsOK()
 {
-  namespace qwiic_ = QwiicButtonTask;
+  // start tasks
+  TaskScheduler::start();
+  TaskScheduler::sendInterval = PERIOD_500ms;
+  TaskScheduler::printSendToSchedule = false;
 
-  unsigned long _last_queue_id = 0;
+  QwiicTaskBase::start();
+  QwiicTaskBase::printReplyToSchedule = true;
 
-  Wire.begin(); //Join I2C bus
+  // configure queues
+  Queue1::Manager<SendToBoardNotf> *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
+  Queue1::Manager<PrimaryButtonState> *primaryButtonStateQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaruButtonStateQueue");
 
-  qwiic_::mgr.create(QwiicButtonTask::task, CORE_0, PRIORITY_1);
+  // mocks
 
-  qwiic_::qwiicButton.setMockIsPressedCallback([] {
-    return counter % 2 == 0;
-  });
-
-  while (!QwiicButtonTask::mgr.ready)
+  // wait
+  while (TaskScheduler::thisTask->ready == false ||
+         QwiicTaskBase::thisTask->ready == false ||
+         false)
   {
-    vTaskDelay(5);
+    vTaskDelay(10);
   }
 
-  printTestInstructions("Will test primary button queue with qwiic mock button");
+  DEBUG("Tasks ready");
 
-  elapsedMillis since_checked_queue;
+  vTaskDelay(PERIOD_100ms);
 
-  while (counter < 6)
+  TaskScheduler::thisTask->enable(PRINT_THIS);
+  QwiicTaskBase::thisTask->enable(PRINT_THIS);
+
+  counter = 0;
+
+  const int NUM_LOOPS = 5;
+
+  while (counter < NUM_LOOPS)
   {
-    if (since_checked_queue > 500)
-    {
-      since_checked_queue = 0;
+    // confirm schedule packet on queue
+    uint8_t response = waitForNew(scheduleQueue, PERIOD_1S, nullptr, PRINT_TIMEOUT);
+    TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find schedule packet on the schedule queue");
 
-      PrimaryButtonState *state = primaryButtonQueue->peek<PrimaryButtonState>(__func__);
-      if (state != nullptr && !state->been_peeked(_last_queue_id))
-      {
-        _last_queue_id = state->event_id;
-        Serial.printf("counter: %lu and pressed: %s\n", counter, state->pressed ? "PRESSED" : "RELEASED");
-        TEST_ASSERT_EQUAL(counter % 2 == 0, state->pressed);
-      }
+    // check for response from Primary Button (Qwiic)
+    response = waitForNew(primaryButtonStateQueue, PERIOD_50ms, nullptr, PRINT_TIMEOUT);
+    TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find primaryButton on the queue");
+    TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.correlationId,
+                              primaryButtonStateQueue->payload.correlationId,
+                              "PrimaryButtonState correlationId does not match");
+    counter++;
 
-      counter++;
-    }
-    vTaskDelay(5);
+    vTaskDelay(10);
   }
+
+  TaskScheduler::thisTask->deleteTask(PRINT_THIS);
+  QwiicTaskBase::thisTask->deleteTask(PRINT_THIS);
+
+  TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
 }
+
+//===================================================================
 
 void setup()
 {
   delay(2000);
 
   Serial.begin(115200);
+  delay(100);
 
   UNITY_BEGIN();
 
-  RUN_TEST(test_qwiic_button_pressed_then_released_via_queue);
+  RUN_TEST(usesTaskSchedulerAndQwiicButton_withTaskBasesAndMockButton_sendsPacketsAndRespondsOK);
 
   UNITY_END();
 }
 
 void loop()
 {
+  vTaskDelete(NULL);
 }

@@ -18,8 +18,6 @@ namespace TaskScheduler
 
     SendToBoardNotf notification;
 
-    PrimaryButtonState state;
-
     void initialiseQueues()
     {
       scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(TaskScheduler)NotfQueue");
@@ -59,7 +57,6 @@ namespace TaskScheduler
     thisTask->setInitialiseQueuesCallback(initialiseQueues);
     thisTask->setTimeToDoWorkCallback(timeToDowork);
     thisTask->setDoWorkCallback(doWork);
-    thisTask->enabled = true;
 
     if (thisTask->rtos != nullptr)
       thisTask->rtos->create(task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);
