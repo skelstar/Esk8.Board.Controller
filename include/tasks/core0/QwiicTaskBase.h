@@ -7,14 +7,32 @@
 #include <SparkFun_Qwiic_Button.h>
 #endif
 
+bool take(SemaphoreHandle_t m_handle, TickType_t ticks = TICKS_5ms)
+{
+  if (m_handle != nullptr)
+    return (xSemaphoreTake(m_handle, (TickType_t)5) == pdPASS);
+  return false;
+}
+
+void give(SemaphoreHandle_t m_handle)
+{
+  if (m_handle != nullptr)
+    xSemaphoreGive(m_handle);
+}
+
 namespace QwiicTaskBase
 {
+  // prototypes
+  void connectToQwiicButton();
+
   TaskBase *thisTask;
 
   namespace
   {
     Queue1::Manager<SendToBoardNotf> *scheduleQueue = nullptr;
     Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
+
+    QwiicButton qwiicButton;
 
     PrimaryButtonState state;
 
@@ -29,6 +47,14 @@ namespace QwiicTaskBase
     void initialise()
     {
       state.correlationId = -1;
+
+      if (primaryButtonQueue == nullptr)
+        Serial.printf("ERROR: primaryButtonQueue is NULL\n");
+
+      if (mux_I2C == nullptr)
+        mux_I2C = xSemaphoreCreateMutex();
+
+      connectToQwiicButton();
     }
 
     bool timeToDowork()
@@ -45,11 +71,7 @@ namespace QwiicTaskBase
 
     void doWork()
     {
-      if (primaryButtonQueue == nullptr)
-      {
-        Serial.printf("ERROR: primaryButtonQueue is NULL\n");
-        return;
-      }
+      state.pressed = qwiicButton.isPressed();
       primaryButtonQueue->reply(&state, printReplyToSchedule ? QueueBase::printSend : nullptr);
     }
 
@@ -76,5 +98,22 @@ namespace QwiicTaskBase
   {
     if (thisTask != nullptr && thisTask->rtos != nullptr)
       thisTask->rtos->deleteTask(print);
+  }
+
+  //--------------------------------------------------
+  void connectToQwiicButton()
+  {
+    bool initButton = false;
+    do
+    {
+      if (take(mux_I2C, TICKS_100ms))
+      {
+        initButton = qwiicButton.begin();
+        if (!initButton)
+          Serial.printf("ERROR: couldn't init QwiicButton\n");
+        give(mux_I2C);
+      }
+    } while (initButton = false);
+    Serial.printf("Qwiic Button initialised\n");
   }
 }
