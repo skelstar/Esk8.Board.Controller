@@ -12,63 +12,51 @@
 #define PRINT_MUTEX_TAKE_FAIL 1
 static int counter = 0;
 
+// RTOS ENTITES-------------------
+
+QueueHandle_t xFirstQueueHandle;
+QueueHandle_t xOtherTestQueueHandle;
+
+QueueHandle_t xBoardPacketQueue;
+QueueHandle_t xNintendoControllerQueue;
+QueueHandle_t xPacketStateQueueHandle;
+QueueHandle_t xPrimaryButtonQueueHandle;
+QueueHandle_t xSendToBoardQueueHandle;
+QueueHandle_t xThrottleQueueHandle;
+
+SemaphoreHandle_t mux_I2C;
+SemaphoreHandle_t mux_SPI;
+
 #include <types.h>
 #include <rtosManager.h>
-#include <QueueManager.h>
-#include <MockNintendoController.h>
+#include <QueueManager1.h>
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
+#include <testUtils.h>
+#include <Wire.h>
 
 MyMutex mutex_I2C;
 MyMutex mutex_SPI;
 
-xQueueHandle xBoardPacketQueue;
-Queue::Manager *boardPacketQueue = nullptr;
+#include <types/QueueBase.h>
+#include <types/PacketState.h>
+#include <types/SendToBoardNotf.h>
+#include <types/NintendoButtonEvent.h>
+#include <types/PrimaryButton.h>
+#include <types/Throttle.h>
 
-xQueueHandle xSendToBoardQueueHandle;
-Queue::Manager *sendToBoardQueue = nullptr;
+#define RADIO_OBJECTS
 
-xQueueHandle xPacketStateQueueHandle;
-Queue::Manager *packetStateQueue = nullptr;
+// TASKS ------------------------
 
-xQueueHandle xPrimaryButtonQueueHandle;
-Queue::Manager *primaryButtonQueue = nullptr;
-
-xQueueHandle xStatsQueue;
-Queue::Manager *statsQueue = nullptr;
-
-xQueueHandle xNintendoControllerQueue;
-Queue::Manager *nintendoControllerQueue = nullptr;
-
-class SendToBoardNotf : public QueueBase
-{
-public:
-  const char *name;
-};
-
-#include <tasks/core0/SendToBoardTimerTask.h>
+#include <tasks/core0/QwiicTaskBase.h>
+#include <tasks/core0/BaseTaskTest1.h>
+#include <tasks/core0/TaskScheduler.h>
+#include <tasks/core0/CommsTask.h>
+#include <tasks/core0/NintendoClassicTaskBase.h>
 
 //----------------------------------
-#define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
-#define PRINT_THROTTLE 0
-
-#define TICKS_5ms 5 / portTICK_PERIOD_MS
-#define TICKS_10ms 10 / portTICK_PERIOD_MS
-#define TICKS_50ms 50 / portTICK_PERIOD_MS
-#define TICKS_100ms 100 / portTICK_PERIOD_MS
-
-#include <tasks/core0/remoteTask.h>
-
-#include <displayState.h>
-
-// #include <tasks/core0/QwiicButtonTask.h>
-#include <tasks/core0/NintendoClassicTask.h>
-// #include <tasks/core0/ThrottleTask.h>
-// #include <tasks/core0/debugTask.h>
-// #include <tasks/core0/DisplayTask.h>
-
-elapsedMillis since_checked_queue;
 
 void printTestTitle(const char *name)
 {
@@ -84,94 +72,107 @@ void printTestInstructions(const char *instructions)
 
 void setUp()
 {
-  mutex_I2C.create("i2c", /*default*/ TICKS_5ms);
-  mutex_I2C.enabled = true;
+  DEBUG("----------------------------");
+  Serial.printf("    %s \n", __FILE__);
+  DEBUG("----------------------------");
 
+  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
-  nintendoControllerQueue = new Queue::Manager(xNintendoControllerQueue, TICKS_5ms);
+  xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
+  xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
+  xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf *));
+  xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 }
 
 void tearDown()
 {
 }
 
-void test_qwiic_button_pressed_then_released_via_queue()
+//-----------------------------------------------
+void usesTaskSchedulerAndNintendoController_withTaskBaseAnRealController_sendsPacketsAndRespondsOK()
 {
-  namespace ninten_ = NintendoClassicTask;
+  Wire.begin();
+  // start tasks
+  TaskScheduler::start();
+  TaskScheduler::sendInterval = PERIOD_200ms;
+  TaskScheduler::printSendToSchedule = false;
 
-  unsigned long _last_queue_id = 0;
+  NintendoClassicTaskBase::start();
+  NintendoClassicTaskBase::printReplyToSchedule = false;
+  NintendoClassicTaskBase::printPeekSchedule = false;
 
-  Wire.begin(); //Join I2C bus
+  // configure queues
+  Queue1::Manager<SendToBoardNotf> *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
+  Queue1::Manager<NintendoButtonEvent> *nintendoButtonEventQueue = Queue1::Manager<NintendoButtonEvent>::create("(test)nintendoButtonEventQueue");
 
-  ninten_::mgr.create(ninten_::task, CORE_0, PRIORITY_1);
+  // mocks
+  // - NONE
 
-  ninten_::classic.setMockGetButtonEventCallback([] {
-    Serial.printf("counter: %d\n", counter);
-    switch (counter)
-    {
-    case 0:
-      Serial.printf("picking: %s\n", "BUTTON_LEFT");
-      return (uint8_t)NintendoController::BUTTON_LEFT;
-    case 1:
-      Serial.printf("picking: %s\n", "BUTTON_RIGHT");
-      return (uint8_t)NintendoController::BUTTON_RIGHT;
-    case 2:
-      Serial.printf("picking: %s\n", "BUTTON_UP");
-      return (uint8_t)NintendoController::BUTTON_UP;
-    case 3:
-      Serial.printf("picking: %s\n", "BUTTON_START");
-      return (uint8_t)NintendoController::BUTTON_START;
-    case 4:
-      Serial.printf("picking: %s\n", "BUTTON_DOWN");
-      return (uint8_t)NintendoController::BUTTON_DOWN;
-    case 5:
-      Serial.printf("picking: %s\n", "BUTTON_SELECT");
-      return (uint8_t)NintendoController::BUTTON_SELECT;
-    }
-    return (uint8_t)NintendoController::BUTTON_A;
-  });
-
-  while (!ninten_::mgr.ready)
+  // wait
+  while (TaskScheduler::thisTask->ready == false ||
+         NintendoClassicTaskBase::thisTask->ready == false ||
+         false)
   {
-    vTaskDelay(5);
+    vTaskDelay(10);
   }
 
-  printTestInstructions("Will cycle through 5 buttons: LEFT, RIGHT, UP, DOWN, START, SELECT");
+  DEBUG("Tasks ready");
 
-  elapsedMillis since_checked_queue;
+  vTaskDelay(PERIOD_100ms);
 
-  while (counter < 6)
+  TaskScheduler::thisTask->enable(PRINT_THIS);
+  NintendoClassicTaskBase::thisTask->enable(PRINT_THIS);
+
+  counter = 0;
+
+  const int NUM_LOOPS = 5;
+  elapsedMillis since_started_testing = 0;
+
+  while (since_started_testing < 8 * SECONDS)
   {
-    if (since_checked_queue > 500)
-    {
-      since_checked_queue = 0;
+    // confirm schedule packet on queue
+    uint8_t response = waitForNew(scheduleQueue, PERIOD_1S, nullptr, PRINT_TIMEOUT);
+    TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find schedule packet on the schedule queue");
 
-      NintendoButtonEvent *state = nintendoControllerQueue->peek<NintendoButtonEvent>(__func__);
-      if (state != nullptr && !state->been_peeked(_last_queue_id))
-      {
-        _last_queue_id = state->event_id;
-        Serial.printf("counter: %lu and button pressed: %s\n", counter, NintendoController::getButton(state->button));
-        // TEST_ASSERT_EQUAL(counter % 2 == 0, state->pressed);
-        counter++;
-      }
-    }
-    vTaskDelay(5);
+    // // check for resmary Button pressed: %s\n", pressed);
+    response = waitForNew(nintendoButtonEventQueue, PERIOD_20ms);
+    TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.correlationId,
+                              nintendoButtonEventQueue->payload.correlationId,
+                              "nintendoButtonEventQueue correlationId did not match");
+    if (nintendoButtonEventQueue->payload.changed &&
+        nintendoButtonEventQueue->payload.state == NintendoController::BUTTON_PRESSED)
+      Serial.printf("Nintendo button pressed: %s (took %lu to respond)\n",
+                    NintendoClassicTaskBase::getButtonName(nintendoButtonEventQueue->payload.button),
+                    nintendoButtonEventQueue->payload.getSinceSent());
+    counter++;
+
+    vTaskDelay(10);
   }
+
+  TaskScheduler::thisTask->deleteTask(PRINT_THIS);
+  NintendoClassicTaskBase::thisTask->deleteTask(PRINT_THIS);
+
+  TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
 }
+//-----------------------------------------------
+
+//===================================================================
 
 void setup()
 {
   delay(2000);
 
   Serial.begin(115200);
+  delay(100);
 
   UNITY_BEGIN();
 
-  RUN_TEST(test_qwiic_button_pressed_then_released_via_queue);
+  RUN_TEST(usesTaskSchedulerAndNintendoController_withTaskBaseAnRealController_sendsPacketsAndRespondsOK);
 
   UNITY_END();
 }
 
 void loop()
 {
+  vTaskDelete(NULL);
 }

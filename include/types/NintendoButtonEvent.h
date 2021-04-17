@@ -8,6 +8,7 @@ class NintendoButtonEvent : public QueueBase
 public:
   uint8_t button;
   uint8_t state;
+  bool changed;
 
 public:
   NintendoButtonEvent() : QueueBase()

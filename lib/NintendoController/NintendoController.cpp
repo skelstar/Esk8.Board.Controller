@@ -109,6 +109,7 @@ bool NintendoController::update(xSemaphoreHandle mutex, TickType_t ticks)
     giveMutex(mutex);
   }
 
+  bool buttonChanged = false;
   for (int i = 0; i < BUTTONS_NUMBER; i++)
   {
     this->old_buttons[i].pressed = this->buttons[i].pressed;
@@ -117,8 +118,10 @@ bool NintendoController::update(xSemaphoreHandle mutex, TickType_t ticks)
       _buttonPressed_cb(i);
     if (this->was_released(i) && _buttonReleased_cb != nullptr)
       _buttonReleased_cb(i);
+    // buttonChanged = buttonChanged || this->was_pressed(i); // TODO pass in flag to say whether we want release too || this->was_released(i);
+    buttonChanged = buttonChanged || this->was_pressed(i) || this->was_released(i);
   }
-  return true;
+  return buttonChanged;
 }
 
 bool NintendoController::is_pressed(int button_index)

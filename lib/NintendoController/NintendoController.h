@@ -22,6 +22,7 @@ public:
   static const int BUTTON_START = 10;
   static const int BUTTON_SELECT = 11;
   static const int BUTTON_COUNT = 12;
+  static const int BUTTON_NONE = 99;
 
   static const int BUTTON_PRESSED = 1;
   static const int BUTTON_RELEASED = 0;

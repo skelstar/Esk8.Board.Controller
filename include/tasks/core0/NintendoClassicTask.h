@@ -132,7 +132,7 @@ namespace NintendoClassicTask
     for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
       if (old_buttons[i] != new_buttons[i])
         return i;
-    return 99;
+    return NintendoController::BUTTON_NONE;
   }
 
   void init()
