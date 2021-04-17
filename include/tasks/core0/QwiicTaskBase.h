@@ -59,7 +59,9 @@ namespace QwiicTaskBase
 
     bool timeToDowork()
     {
-      uint8_t status = waitForNew(scheduleQueue, PERIOD_50ms, QueueBase::printRead);
+
+      uint8_t status = waitForNew(scheduleQueue, PERIOD_50ms,
+                                  printReplyToSchedule ? QueueBase::printRead : nullptr);
       if (status == Response::OK)
       {
         state.correlationId = scheduleQueue->payload.correlationId;
@@ -71,7 +73,11 @@ namespace QwiicTaskBase
 
     void doWork()
     {
-      state.pressed = qwiicButton.isPressed();
+      if (take(mux_I2C, TICKS_10ms))
+      {
+        state.pressed = qwiicButton.isPressed();
+        give(mux_I2C);
+      }
       primaryButtonQueue->reply(&state, printReplyToSchedule ? QueueBase::printSend : nullptr);
     }
 
@@ -106,14 +112,15 @@ namespace QwiicTaskBase
     bool initButton = false;
     do
     {
-      if (take(mux_I2C, TICKS_100ms))
+      if (take(mux_I2C, TICKS_10ms))
       {
         initButton = qwiicButton.begin();
         if (!initButton)
           Serial.printf("ERROR: couldn't init QwiicButton\n");
         give(mux_I2C);
       }
-    } while (initButton = false);
+      vTaskDelay(200);
+    } while (!initButton);
     Serial.printf("Qwiic Button initialised\n");
   }
 }
