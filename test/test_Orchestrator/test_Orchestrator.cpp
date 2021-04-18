@@ -42,13 +42,23 @@ SemaphoreHandle_t mux_SPI;
 #include <types/PrimaryButton.h>
 #include <types/Throttle.h>
 
-#include <MockedQwiicButton.h>
+#include <RF24Network.h>
+#include <NRF24L01Lib.h>
+#include <MockGenericClient.h>
+// #include <GenericClient.h>
 
 #define RADIO_OBJECTS
+// NRF24L01Lib nrf24;
+
+// RF24 radio(NRF_CE, NRF_CS);
+// RF24Network network(radio);
+GenericClient<ControllerData, VescData> boardClient(01);
+
+#include <MockedQwiicButton.h>
 
 // TASKS ------------------------
 // bases
-// #include <tasks/core0/CommsTask.h>
+#include <tasks/core0/CommsTask.h>
 #include <tasks/core0/NintendoClassicTaskBase.h>
 #include <tasks/core0/OrchestratorTask.h>
 #include <tasks/core0/QwiicTaskBase.h>
@@ -143,13 +153,13 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested()
 {
   // start tasks
   QwiicTaskBase::start();
-  // QwiicTaskBase::printPeekSchedule = false;
-  // QwiicTaskBase::printReplyToSchedule = true;
+  // QwiicTaskBase::printPeekSchedule = true;
+  QwiicTaskBase::printReplyToSchedule = true;
   QwiicTaskBase::thisTask->doWorkInterval = PERIOD_50ms;
 
   // configure queues
-  Queue1::Manager<SendToBoardNotf> *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
-  Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaryButtonQueue");
+  auto *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
+  auto *primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaryButtonQueue");
 
   // mocks
   QwiicTaskBase::qwiicButton.setMockIsPressedCallback([] {
@@ -165,7 +175,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested()
 
   DEBUG("Tasks ready");
 
-  QwiicTaskBase::thisTask->enable(PRINT_THIS);
+  // QwiicTaskBase::thisTask->enable(PRINT_THIS);
 
   vTaskDelay(PERIOD_500ms);
 
@@ -183,7 +193,125 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested()
     notification.command = counter % 2 == 0
                                ? QueueBase::Command::RESPOND
                                : QueueBase::Command::NONE;
+
     DEBUGMVAL("Before sending: ", millis(), notification.correlationId, notification.command);
+    vTaskDelay(PERIOD_20ms);
+    scheduleQueue->send_r(&notification, QueueBase::printSend);
+
+    vTaskDelay(TICKS_10ms);
+
+    QwiicTaskBase::thisTask->enable(PRINT_THIS);
+
+    // confirm schedule packet on queue
+    uint8_t response = waitForNew(scheduleQueue, PERIOD_1S);
+    TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response,
+                              "Didn't find schedule packet on the schedule queue");
+    TEST_ASSERT_EQUAL_MESSAGE(notification.command, scheduleQueue->payload.command,
+                              "Didn't get the correct command from the schedule queue");
+    Serial.printf("[PASS @%lums] Found packet on Schedule queue\n", millis());
+
+    vTaskDelay(TICKS_50ms);
+    // make sure no more packets on Schedule queue
+    response = waitForNew(scheduleQueue, PERIOD_50ms);
+    TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response,
+                              "Did find schedule packet on the schedule queue");
+    Serial.printf("[PASS @%lums] Didn't find another packet on Schedule queue\n", millis());
+
+    // confirm broadcast response
+    response = waitForNew(primaryButtonQueue, PERIOD_50ms);
+    if (notification.command == QueueBase::Command::RESPOND)
+    {
+      TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "Device was supposed to respond but timed out");
+      Serial.printf("[PASS @%lums] Responded on PrimaryButton queue\n", millis());
+    }
+    else
+    {
+      TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response, "Device was supposed to time out but responded");
+      Serial.printf("[PASS @%lums] Timedout on PrimaryButton queue\n", millis());
+    }
+
+    counter++;
+
+    counter = NUM_LOOPS;
+    // vTaskDelay(10000);
+    Serial.printf("%d----------------------------\n", counter);
+
+    vTaskDelay(10);
+  }
+
+  vTaskDelay(PERIOD_1S);
+
+  // OrchestratorTask::thisTask->deleteTask(PRINT_THIS);
+  // QwiicTaskBase::thisTask->deleteTask(PRINT_THIS);
+
+  vTaskDelay(PERIOD_1S);
+
+  TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
+}
+
+//-----------------------------------------------
+void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhenRequested()
+{
+  // start tasks
+  QwiicTaskBase::start();
+  // QwiicTaskBase::printPeekSchedule = false;
+  // QwiicTaskBase::printReplyToSchedule = true;
+  QwiicTaskBase::thisTask->doWorkInterval = PERIOD_50ms;
+
+  CommsTask::start();
+  CommsTask::thisTask->doWorkInterval = PERIOD_50ms;
+  CommsTask::printSendNewPacket = true;
+  CommsTask::printPeekSchedule = true;
+  CommsTask::SEND_TO_BOARD_INTERVAL_LOCAL = PERIOD_500ms;
+
+  // configure queues
+  auto *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
+  auto *primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaryButtonQueue");
+  auto *packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
+
+  // mocks ---
+  QwiicTaskBase::qwiicButton.setMockIsPressedCallback([] {
+    return false;
+  });
+
+  CommsTask::boardClient.mockResponseCallback([](ControllerData out) {
+    // DEBUG("mockMovingResponse called");
+    VescData mockresp;
+    mockresp.id = out.id;
+    mockresp.version = VERSION_BOARD_COMPAT;
+    mockresp.moving = false;
+    return mockresp;
+  });
+
+  // wait ---
+  while (QwiicTaskBase::thisTask->ready == false ||
+         CommsTask::thisTask->ready == false ||
+         false)
+  {
+    vTaskDelay(10);
+  }
+
+  DEBUG("Tasks ready");
+
+  QwiicTaskBase::thisTask->enable(PRINT_THIS);
+  CommsTask::thisTask->enable(PRINT_THIS);
+
+  vTaskDelay(PERIOD_500ms);
+
+  counter = 0;
+
+  // clear the queue
+  scheduleQueue->read();
+
+  SendToBoardNotf notification;
+
+  const int NUM_LOOPS = 5;
+
+  while (counter < NUM_LOOPS)
+  {
+    notification.command = counter % 2 == 0
+                               ? QueueBase::Command::RESPOND
+                               : QueueBase::Command::NONE;
     vTaskDelay(PERIOD_20ms);
     scheduleQueue->send_r(&notification, QueueBase::printSend);
 
@@ -197,28 +325,29 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested()
     // confirm broadcast response
     response = waitForNew(primaryButtonQueue, PERIOD_50ms);
     if (notification.command == QueueBase::Command::RESPOND)
-    {
-      TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "Device was supposed to respond but timed out");
-    }
+      TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "QwiicTask was supposed to respond but timed out");
     else
-    {
-      TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response, "Device was supposed to time out but responded");
-    }
+      TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response, "QwiicTask was supposed to time out but responded");
+
+    response = waitForNew(packetStateQueue, PERIOD_50ms);
+    if (notification.command == QueueBase::Command::RESPOND)
+      TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "CommsTask was supposed to respond but timed out");
+    else
+      TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response, "CommsTask was supposed to time out but responded");
 
     counter++;
 
-    Serial.printf("%d----------------------------\n", counter);
-
-    vTaskDelay(TICKS_500ms);
+    vTaskDelay(TICKS_1s);
   }
 
   vTaskDelay(PERIOD_1S);
 
-  OrchestratorTask::thisTask->deleteTask(PRINT_THIS);
+  OrchestratorTask::thisTask->deleteTask();
+  QwiicTaskBase::thisTask->deleteTask();
+  CommsTask::thisTask->deleteTask();
 
   TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
 }
-//-----------------------------------------------
 
 //===================================================================
 
@@ -231,8 +360,9 @@ void setup()
 
   UNITY_BEGIN();
 
-  RUN_TEST(OrchestratorTask_sendPacketsRegularly);
+  // RUN_TEST(OrchestratorTask_sendPacketsRegularly);
   RUN_TEST(OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested);
+  // RUN_TEST(OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhenRequested);
 
   UNITY_END();
 }
