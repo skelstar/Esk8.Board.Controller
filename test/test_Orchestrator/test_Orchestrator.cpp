@@ -232,21 +232,14 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested()
 
     counter++;
 
-    counter = NUM_LOOPS;
-    // vTaskDelay(10000);
     Serial.printf("%d----------------------------\n", counter);
 
     vTaskDelay(10);
   }
 
-  vTaskDelay(PERIOD_1S);
-
-  // OrchestratorTask::thisTask->deleteTask(PRINT_THIS);
-  // QwiicTaskBase::thisTask->deleteTask(PRINT_THIS);
-
-  vTaskDelay(PERIOD_1S);
-
   TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
+
+  QwiicTaskBase::thisTask->deleteTask(PRINT_THIS);
 }
 
 //-----------------------------------------------
