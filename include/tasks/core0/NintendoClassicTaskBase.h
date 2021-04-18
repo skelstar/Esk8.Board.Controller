@@ -28,7 +28,7 @@ namespace NintendoClassicTaskBase
 
   TaskBase *thisTask;
 
-  namespace
+  namespace _p
   {
     Queue1::Manager<SendToBoardNotf> *scheduleQueue = nullptr;
     Queue1::Manager<NintendoButtonEvent> *nintendoButtonQueue = nullptr;
@@ -38,8 +38,6 @@ namespace NintendoClassicTaskBase
     NintendoButtonEvent buttonEvent;
 
     uint8_t last_buttons[NintendoController::BUTTON_COUNT];
-
-    bool printReplyToSchedule = false, printPeekSchedule = false;
 
     void initialiseQueues()
     {
@@ -51,6 +49,8 @@ namespace NintendoClassicTaskBase
     {
       buttonEvent.correlationId = -1;
 
+      if (scheduleQueue == nullptr)
+        Serial.printf("ERROR: scheduleQueue is NULL\n");
       if (nintendoButtonQueue == nullptr)
         Serial.printf("ERROR: nintendoButtonQueue is NULL\n");
 
@@ -60,23 +60,25 @@ namespace NintendoClassicTaskBase
       connectToNintendoController();
     }
 
+    elapsedMillis since_last_did_work = 0;
+
     bool timeToDowork()
     {
-      uint8_t status = waitForNew(scheduleQueue, PERIOD_50ms,
-                                  printPeekSchedule
-                                      ? QueueBase::printRead
-                                      : nullptr);
-      if (status == Response::OK)
-      {
-        buttonEvent.correlationId = scheduleQueue->payload.correlationId;
-        buttonEvent.sent_time = scheduleQueue->payload.sent_time;
-        return true;
-      }
-      return false;
+      return since_last_did_work > thisTask->doWorkInterval && thisTask->enabled;
     }
 
     void doWork()
     {
+      bool OK = scheduleQueue->hasValue();
+      // uint8_t status = waitForNew(scheduleQueue, PERIOD_50ms, thisTask->printPeekSchedule ? QueueBase::printRead : nullptr);
+      // DEBUGMVAL("doWork", scheduleQueue->payload.correlationId, scheduleQueue->payload.command);
+      if (OK && scheduleQueue->payload.command == QueueBase::RESPOND)
+      {
+        buttonEvent.correlationId = scheduleQueue->payload.correlationId;
+        buttonEvent.sent_time = scheduleQueue->payload.sent_time;
+        nintendoButtonQueue->reply(&buttonEvent, thisTask->printReplyToSchedule ? QueueBase::printReply : nullptr);
+      }
+
       buttonEvent.changed = classic.update(mux_I2C, TICKS_50ms);
       buttonEvent.button = NintendoController::BUTTON_NONE;
       if (buttonEvent.changed)
@@ -88,15 +90,13 @@ namespace NintendoClassicTaskBase
           // something changed, send
           buttonEvent.button = button_that_changed;
           buttonEvent.state = new_buttons[button_that_changed];
+
+          nintendoButtonQueue->send_r(&buttonEvent, thisTask->printReplyToSchedule ? QueueBase::printSend : nullptr);
         }
         // save
         for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
           last_buttons[i] = new_buttons[i];
       }
-      nintendoButtonQueue->reply(&buttonEvent,
-                                 printReplyToSchedule
-                                     ? QueueBase::printSend
-                                     : nullptr);
     }
 
     void task(void *parameters)
@@ -108,14 +108,13 @@ namespace NintendoClassicTaskBase
   void start()
   {
     thisTask = new TaskBase("QwiicTaskBase", 3000);
-    thisTask->setInitialiseCallback(initialise);
-    thisTask->setInitialiseQueuesCallback(initialiseQueues);
-    thisTask->setTimeToDoWorkCallback(timeToDowork);
-    thisTask->setDoWorkCallback(doWork);
-    thisTask->enabled = true;
+    thisTask->setInitialiseCallback(_p::initialise);
+    thisTask->setInitialiseQueuesCallback(_p::initialiseQueues);
+    thisTask->setTimeToDoWorkCallback(_p::timeToDowork);
+    thisTask->setDoWorkCallback(_p::doWork);
 
     if (thisTask->rtos != nullptr)
-      thisTask->rtos->create(task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);
+      thisTask->rtos->create(_p::task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);
   }
 
   void deleteTask(bool print = false)
@@ -132,7 +131,7 @@ namespace NintendoClassicTaskBase
     {
       if (take(mux_I2C, TICKS_10ms))
       {
-        initialised = classic.init();
+        initialised = _p::classic.init();
         if (!initialised)
           Serial.printf("ERROR: couldn't init Nintendo Controller\n");
         give(mux_I2C);

@@ -29,6 +29,7 @@ public:
   {
     event_id = 0;
     name = "not set";
+    correlationId = -1;
   }
 
   bool been_peeked(unsigned long prev_id)

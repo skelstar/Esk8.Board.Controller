@@ -29,6 +29,9 @@ public:
   const char *_name = "Task has not name";
   bool ready = false, enabled = false;
   unsigned long doWorkInterval = PERIOD_10ms;
+  bool printSendToQueue = false,
+       printReplyToSchedule = false,
+       printPeekSchedule = false;
 
 public:
   TaskBase(const char *name, uint16_t stackSize)
@@ -67,6 +70,7 @@ public:
       {
         if (_timeToDoWork_cb != nullptr && _timeToDoWork_cb())
         {
+          since_last_did_work = 0;
           if (_doWork_cb != nullptr)
             _doWork_cb();
         }

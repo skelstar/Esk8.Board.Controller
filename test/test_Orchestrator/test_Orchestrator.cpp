@@ -45,6 +45,7 @@ SemaphoreHandle_t mux_SPI;
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
 #include <MockGenericClient.h>
+// #include <MockNintendoController.h>
 // #include <GenericClient.h>
 
 #define RADIO_OBJECTS
@@ -250,6 +251,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested()
 
 void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhenRequested()
 {
+  Wire.begin();
   // start tasks
   QwiicTaskBase::start();
   // QwiicTaskBase::printPeekSchedule = false;
@@ -257,16 +259,23 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
   QwiicTaskBase::thisTask->doWorkInterval = PERIOD_50ms;
 
   CommsTask::start();
-  CommsTask::thisTask->doWorkInterval = PERIOD_50ms;
-  // CommsTask::printSendNewPacket = true;
+  CommsTask::thisTask->doWorkInterval = PERIOD_100ms;
+  // CommsTask::thisTask->printSendToQueue = true;
+  // CommsTask::thisTask->printReplyToSchedule = true;
   // CommsTask::printPeekSchedule = true;
   // CommsTask::printSentPacketToBoard = true;
   CommsTask::SEND_TO_BOARD_INTERVAL_LOCAL = PERIOD_500ms;
+
+  namespace nt_ = NintendoClassicTaskBase;
+  nt_::start();
+  nt_::thisTask->doWorkInterval = PERIOD_50ms;
+  // nt_::thisTask->printReplyToSchedule = true;
 
   // configure queues
   auto *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
   auto *primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaryButtonQueue");
   auto *packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
+  auto *nintendoQueue = Queue1::Manager<NintendoButtonEvent>::create("(test)nintendoQueue");
 
   // mocks ---
   QwiicTaskBase::qwiicButton.setMockIsPressedCallback([] {
@@ -285,6 +294,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
   // wait ---
   while (QwiicTaskBase::thisTask->ready == false ||
          CommsTask::thisTask->ready == false ||
+         nt_::thisTask->ready == false ||
          false)
   {
     vTaskDelay(10);
@@ -294,6 +304,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
 
   QwiicTaskBase::thisTask->enable(PRINT_THIS);
   CommsTask::thisTask->enable(PRINT_THIS);
+  nt_::thisTask->enable(PRINT_THIS);
 
   vTaskDelay(PERIOD_500ms);
 
@@ -323,7 +334,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
     TEST_ASSERT_EQUAL_MESSAGE(notification.command, scheduleQueue->payload.command, "Didn't get the correct command from the schedule queue");
     printPASS("Found schedule packet on queue");
 
-    // confirm broadcast response
+    // confirm primaryButtonQueue response
     response = waitForNew(primaryButtonQueue, PERIOD_50ms);
     if (notification.command == QueueBase::Command::RESPOND)
       TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "QwiicTask was supposed to respond but timed out");
@@ -331,12 +342,29 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
       TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response, "QwiicTask was supposed to time out but responded");
     printPASS("Found response packet on primaryButtonQueue, or didn't");
 
-    response = waitForNew(packetStateQueue, PERIOD_50ms);
+    // confirm packetState responded
+    response = waitForNew(packetStateQueue, PERIOD_100ms);
     if (notification.command == QueueBase::Command::RESPOND)
+    {
       TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "CommsTask was supposed to respond but timed out");
+    }
+    else if (notification.correlationId != packetStateQueue->payload.correlationId)
+    {
+      TEST_ASSERT_NOT_EQUAL(notification.correlationId, packetStateQueue->payload.correlationId);
+    }
     else
+    {
       TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response, "CommsTask was supposed to time out but responded");
+    }
     printPASS("Found response packet on packetStateQueue, or didn't");
+
+    // confirm nintendoQueue responded
+    response = waitForNew(nintendoQueue, PERIOD_100ms);
+    if (notification.command == QueueBase::Command::RESPOND)
+      TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "NintendoTask was supposed to respond but timed out");
+    else
+      TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response, "NintendoTask was supposed to time out but responded");
+    printPASS("Found response packet on nintendoQueue, or didn't");
 
     counter++;
 

@@ -33,9 +33,7 @@ namespace CommsTask
 
     PacketState packetState;
 
-    bool printSendNewPacket = false,
-         printPeekSchedule = false,
-         printSentPacketToBoard = false;
+    bool printSentPacketToBoard = false;
     unsigned long SEND_TO_BOARD_INTERVAL_LOCAL = SEND_TO_BOARD_INTERVAL;
 
     //----------------------------------------------------------
@@ -49,7 +47,8 @@ namespace CommsTask
       {
         Serial.printf("CONFIG_RESPONSE id: %lu\n", packet.id);
       }
-      packetStateQueue->reply(&packetState, printSendNewPacket ? QueueBase::printSend : nullptr);
+      packetState.correlationId = 99;
+      // packetStateQueue->send_r(&packetState, thisTask->printSendToQueue ? QueueBase::printSend : nullptr);
 
       vTaskDelay(10);
     }
@@ -69,20 +68,20 @@ namespace CommsTask
       if (success == false)
         Serial.printf("Unable to send CONTROL packet to board id: %lu\n", controller_packet.id);
     }
-
+    //----------------------------------------------------------
     void initialiseQueues()
     {
       scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(CommsTask)NotfQueue");
       packetStateQueue = Queue1::Manager<PacketState>::create("(CommsTask)PacketStateQueue");
     }
-
+    //----------------------------------------------------------
     void initialise()
     {
       packetState.correlationId = -1;
 
       boardClient.begin(&network, boardPacketAvailable_cb, mux_SPI);
     }
-
+    //----------------------------------------------------------
     elapsedMillis since_checked_for_available, since_sent_to_board = 0;
     elapsedMillis since_last_did_work = 0;
 
@@ -90,7 +89,7 @@ namespace CommsTask
     {
       return since_last_did_work > PERIOD_50ms && thisTask->enabled;
     }
-
+    //----------------------------------------------------------
     void doWork()
     {
       since_last_did_work = 0;
@@ -104,11 +103,12 @@ namespace CommsTask
       boardClient.update();
 
       // resonse request from Orchestrator
-      uint8_t status = waitForNew(scheduleQueue, PERIOD_50ms, printPeekSchedule ? QueueBase::printRead : nullptr);
+      uint8_t status = waitForNew(scheduleQueue, PERIOD_50ms, thisTask->printPeekSchedule ? QueueBase::printRead : nullptr);
       if (status == Response::OK && scheduleQueue->payload.command == QueueBase::RESPOND)
       {
         packetState.correlationId = scheduleQueue->payload.correlationId;
         packetState.sent_time = scheduleQueue->payload.sent_time;
+        packetStateQueue->reply(&packetState, thisTask->printReplyToSchedule ? QueueBase::printReply : nullptr);
       }
 
       if (since_sent_to_board > SEND_TO_BOARD_INTERVAL_LOCAL)
@@ -118,7 +118,7 @@ namespace CommsTask
         sendPacketToBoard();
       }
     }
-
+    //----------------------------------------------------------
     void task(void *parameters)
     {
       thisTask->task(parameters);
