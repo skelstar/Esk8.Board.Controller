@@ -13,6 +13,24 @@ public:
   typedef bool (*BoolVoidCallback)();
 
 public:
+  Queue1::Manager<SendToBoardNotf> *sendNotfQueue;
+  Queue1::Manager<PrimaryButtonState> *readPrimaryButtonQueue;
+  Queue1::Manager<ThrottleState> *readThrottleQueue;
+  Queue1::Manager<PacketState> *readPacketStateQueue;
+  Queue1::Manager<NintendoButtonEvent> *readNintendoQueue;
+
+  VoidVoidCallback _initialise_cb = nullptr;
+  VoidVoidCallback _initialiseQueues_cb = nullptr;
+  VoidVoidCallback _createTask_cb = nullptr;
+  BoolVoidCallback _timeToDoWork_cb = nullptr;
+  VoidVoidCallback _doWork_cb = nullptr;
+
+public:
+  const char *_name = "Task has not name";
+  bool ready = false, enabled = false;
+  unsigned long doWorkInterval = PERIOD_10ms;
+
+public:
   TaskBase(const char *name, uint16_t stackSize)
   {
     _name = name;
@@ -41,15 +59,20 @@ public:
     while (!enabled)
       vTaskDelay(TICKS_5ms);
 
+    elapsedMillis since_last_did_work = 0;
+
     while (true)
     {
-      if (_timeToDoWork_cb != nullptr && _timeToDoWork_cb())
+      if (since_last_did_work > doWorkInterval)
       {
-        if (_doWork_cb != nullptr)
-          _doWork_cb();
+        if (_timeToDoWork_cb != nullptr && _timeToDoWork_cb())
+        {
+          if (_doWork_cb != nullptr)
+            _doWork_cb();
+        }
+        else if (_timeToDoWork_cb == nullptr)
+          Serial.printf("ERROR: _timeToDoWork callback is NULL\n");
       }
-      else if (_timeToDoWork_cb == nullptr)
-        Serial.printf("ERROR: _timeToDoWork callback is NULL\n");
       vTaskDelay(5);
     }
     vTaskDelete(NULL);
@@ -84,19 +107,4 @@ public:
   {
     _doWork_cb = _cb;
   }
-
-  Queue1::Manager<SendToBoardNotf> *sendNotfQueue;
-  Queue1::Manager<PrimaryButtonState> *readPrimaryButtonQueue;
-  Queue1::Manager<ThrottleState> *readThrottleQueue;
-  Queue1::Manager<PacketState> *readPacketStateQueue;
-  Queue1::Manager<NintendoButtonEvent> *readNintendoQueue;
-
-  VoidVoidCallback _initialise_cb = nullptr;
-  VoidVoidCallback _initialiseQueues_cb = nullptr;
-  VoidVoidCallback _createTask_cb = nullptr;
-  BoolVoidCallback _timeToDoWork_cb = nullptr;
-  VoidVoidCallback _doWork_cb = nullptr;
-
-  const char *_name = "Task has not name";
-  bool ready = false, enabled = false;
 };

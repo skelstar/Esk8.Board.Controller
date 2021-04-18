@@ -18,7 +18,7 @@
 --------------------------------------------------
 
 ### Tasks
-- SendToBoardTimerTask
+- OrchestratorTask
   - Provides:
     - SendToBoardNotf
   - Consumes:

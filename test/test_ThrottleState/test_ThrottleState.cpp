@@ -44,7 +44,7 @@ xQueueHandle xThrottleQueueHandle;
 
 #include <tasks/core0/QwiicButtonTask.h>
 #include <tasks/core0/ThrottleTask.h>
-#include <tasks/core0/SendToBoardTimerTask.h>
+#include <tasks/core0/OrchestratorTask.h>
 
 elapsedMillis since_checked_queue;
 
@@ -77,7 +77,7 @@ void tearDown()
 void test_ThrottleTask_sends_when_SendToBoardTask_triggers()
 {
   namespace throttleTask = ThrottleTask;
-  namespace sendNotfTask = SendToBoardTimerTask;
+  namespace sendNotfTask = OrchestratorTask;
 
   Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
   // Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueueHandle, TICKS_5ms, "(test)PrimButtonQueue");
@@ -152,7 +152,7 @@ void test_ThrottleTask_sends_when_SendToBoardTask_triggers()
 void test_throttle_limting_with_primary_button_not_held()
 {
   namespace throttleTask = ThrottleTask;
-  namespace sendNotfTask = SendToBoardTimerTask;
+  namespace sendNotfTask = OrchestratorTask;
 
   Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
   Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "sendNotfQueue");
@@ -226,7 +226,7 @@ void test_throttle_limting_with_primary_button_not_held()
 void test_throttle_not_limting_when_primary_button_is_held()
 {
   namespace throttleTask = ThrottleTask;
-  namespace sendNotfTask = SendToBoardTimerTask;
+  namespace sendNotfTask = OrchestratorTask;
 
   Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
   Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "sendNotfQueue");
@@ -307,7 +307,7 @@ void test_throttle_not_limting_when_primary_button_is_held()
 void test_throttle_limts_then_does_not_limit()
 {
   namespace throttleTask = ThrottleTask;
-  namespace sendNotfTask = SendToBoardTimerTask;
+  namespace sendNotfTask = OrchestratorTask;
 
   Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
   Queue1::Manager<SendToBoardNotf> sendNotfQueue(xSendToBoardQueueHandle, TICKS_5ms, "sendNotfQueue");

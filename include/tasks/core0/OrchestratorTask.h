@@ -3,24 +3,24 @@
 #include <types/SendToBoardNotf.h>
 #include <types/PrimaryButton.h>
 
-namespace TaskScheduler
+namespace OrchestratorTask
 {
   TaskBase *thisTask;
 
   namespace
   {
-    Queue1::Manager<SendToBoardNotf> *scheduleQueue = nullptr;
+    Queue1::Manager<SendToBoardNotf> *orchestratorQueue = nullptr;
 
     elapsedMillis since_last_notification;
 
     unsigned long sendInterval = PERIOD_500ms;
-    bool printSendToSchedule = false;
+    bool printSendToQueue = false;
 
     SendToBoardNotf notification;
 
     void initialiseQueues()
     {
-      scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(TaskScheduler)NotfQueue");
+      orchestratorQueue = Queue1::Manager<SendToBoardNotf>::create("(OrchestratorTask)orchestratorQueue");
     }
 
     void initialise()
@@ -35,13 +35,13 @@ namespace TaskScheduler
 
     void doWork()
     {
-      if (scheduleQueue == nullptr)
+      if (orchestratorQueue == nullptr)
       {
-        Serial.printf("ERROR: scheduleQueue is NULL\n");
+        Serial.printf("ERROR: orchestratorQueue is NULL\n");
         return;
       }
       since_last_notification = 0;
-      scheduleQueue->send_r(&notification, printSendToSchedule ? QueueBase::printSend : nullptr);
+      orchestratorQueue->send_r(&notification, printSendToQueue ? QueueBase::printSend : nullptr);
     }
 
     void task(void *parameters)
@@ -52,7 +52,7 @@ namespace TaskScheduler
 
   void start()
   {
-    thisTask = new TaskBase("TaskScheduler", 3000);
+    thisTask = new TaskBase("OrchestratorTask", 3000);
     thisTask->setInitialiseCallback(initialise);
     thisTask->setInitialiseQueuesCallback(initialiseQueues);
     thisTask->setTimeToDoWorkCallback(timeToDowork);

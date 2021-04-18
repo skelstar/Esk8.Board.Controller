@@ -64,7 +64,7 @@ GenericClient<ControllerData, VescData> boardClient(01);
 
 // TASKS ------------------------
 
-#include <tasks/core0/SendToBoardTimerTask.h>
+#include <tasks/core0/OrchestratorTask.h>
 #include <tasks/core0/DisplayTask.h>
 #include <tasks/core0/QwiicTaskBase.h>
 #include <tasks/core0/ThrottleTask.h>
@@ -117,17 +117,17 @@ void tearDown()
 void usesSendNotfTimer_sendsPacketsOK()
 {
   // start tasks
-  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
-  SendToBoardTimerTask::setSendInterval(PERIOD_500ms, PRINT_THIS);
+  OrchestratorTask::mgr.create(OrchestratorTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  OrchestratorTask::setSendInterval(PERIOD_500ms, PRINT_THIS);
 
   // configure queues
   Queue1::Manager<SendToBoardNotf> *readNoftQueue = Queue1::Manager<SendToBoardNotf>::create("(test)readNotfQueue");
 
   // wait
-  while (SendToBoardTimerTask::mgr.ready == false)
+  while (OrchestratorTask::mgr.ready == false)
     vTaskDelay(10);
 
-  SendToBoardTimerTask::mgr.enable(PRINT_THIS);
+  OrchestratorTask::mgr.enable(PRINT_THIS);
 
   DEBUG("Tasks ready");
 
@@ -146,7 +146,7 @@ void usesSendNotfTimer_sendsPacketsOK()
     vTaskDelay(10);
   }
 
-  SendToBoardTimerTask::mgr.deleteTask(PRINT_THIS);
+  OrchestratorTask::mgr.deleteTask(PRINT_THIS);
 
   TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
 }

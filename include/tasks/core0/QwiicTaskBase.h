@@ -36,7 +36,7 @@ namespace QwiicTaskBase
 
     PrimaryButtonState state;
 
-    bool printReplyToSchedule = false;
+    bool printReplyToSchedule = false, printPeekSchedule = false;
 
     void initialiseQueues()
     {
@@ -59,14 +59,17 @@ namespace QwiicTaskBase
 
     bool timeToDowork()
     {
-
       uint8_t status = waitForNew(scheduleQueue, PERIOD_50ms,
-                                  printReplyToSchedule ? QueueBase::printRead : nullptr);
+                                  printPeekSchedule ? QueueBase::printRead : nullptr);
       if (status == Response::OK)
       {
-        state.correlationId = scheduleQueue->payload.correlationId;
-        state.sent_time = scheduleQueue->payload.sent_time;
-        return true;
+        DEBUGMVAL("timeToDoWork", millis(), scheduleQueue->payload.correlationId, scheduleQueue->payload.command);
+        if (scheduleQueue->payload.command == QueueBase::Command::RESPOND)
+        {
+          state.correlationId = scheduleQueue->payload.correlationId;
+          state.sent_time = scheduleQueue->payload.sent_time;
+          return true;
+        }
       }
       return false;
     }
@@ -78,7 +81,7 @@ namespace QwiicTaskBase
         state.pressed = qwiicButton.isPressed();
         give(mux_I2C);
       }
-      primaryButtonQueue->reply(&state, printReplyToSchedule ? QueueBase::printSend : nullptr);
+      primaryButtonQueue->reply(&state, printReplyToSchedule ? QueueBase::printReply : nullptr);
     }
 
     void task(void *parameters)

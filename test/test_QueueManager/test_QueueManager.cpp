@@ -64,7 +64,7 @@ GenericClient<ControllerData, VescData> boardClient(01);
 
 // TASKS ------------------------
 
-#include <tasks/core0/SendToBoardTimerTask.h>
+#include <tasks/core0/OrchestratorTask.h>
 #include <tasks/core0/DisplayTask.h>
 #include <tasks/core0/QwiicButtonTask.h>
 #include <tasks/core0/ThrottleTask.h>
@@ -104,7 +104,7 @@ public:
 //----------------------------------
 // #include <tasks/core0/QwiicButtonTask.h>
 // #include <tasks/core0/ThrottleTask.h>
-// #include <tasks/core0/SendToBoardTimerTask.h>
+// #include <tasks/core0/OrchestratorTask.h>
 
 void printTestTitle(const char *name)
 {
@@ -408,16 +408,16 @@ void testUtils_waitForNewResp_with_QueueType_from_Notification_task()
 {
   Queue1::Manager<SendToBoardNotf> *readNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(test)readNotfQueue");
 
-  SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  OrchestratorTask::mgr.create(OrchestratorTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
 
-  SendToBoardTimerTask::setSendInterval(PERIOD_500ms);
+  OrchestratorTask::setSendInterval(PERIOD_500ms);
 
   printTestInstructions("Test testUtils_waitForNewResp_with_QueueType_from_Notification_task");
 
-  while (SendToBoardTimerTask::mgr.ready == false)
+  while (OrchestratorTask::mgr.ready == false)
     vTaskDelay(50);
 
-  SendToBoardTimerTask::mgr.enable();
+  OrchestratorTask::mgr.enable();
 
   counter = 0;
 
@@ -489,7 +489,7 @@ void sendOutNotification_TaskRespondsWithCurrentCorrelationId()
   Queue1::Manager<SendToBoardNotf> *read_NotfQueue = Queue1::Manager<SendToBoardNotf>::create("test)read_NotfQueue");
   Queue1::Manager<PrimaryButtonState> *primaryButton = Queue1::Manager<PrimaryButtonState>::create("test)primaryButton");
 
-  // SendToBoardTimerTask::mgr.create(SendToBoardTimerTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
+  // OrchestratorTask::mgr.create(OrchestratorTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // Display::mgr.create(Display::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // QwiicButtonTask::mgr.create(QwiicButtonTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
   // ThrottleTask::mgr.create(ThrottleTask::task, /*CORE*/ 0, /*PRIORITY*/ 1);
@@ -500,11 +500,11 @@ void sendOutNotification_TaskRespondsWithCurrentCorrelationId()
 
   // NintendoClassicTask::classic.setMockGetButtonEventCallback(mockNintendoClassicButtonPress);
 
-  // SendToBoardTimerTask::setSendInterval(3 * SECONDS);
+  // OrchestratorTask::setSendInterval(3 * SECONDS);
 
   printTestInstructions("Test testUtils_waitForNewResp_with_QueueType_from_Notification_task");
 
-  while ( // SendToBoardTimerTask::mgr.ready == false ||
+  while ( // OrchestratorTask::mgr.ready == false ||
       //  Display::mgr.ready == false ||
       //  QwiicButtonTask::mgr.ready == false ||
       //  ThrottleTask::mgr.ready == false ||
@@ -524,7 +524,7 @@ void sendOutNotification_TaskRespondsWithCurrentCorrelationId()
 
   DEBUG("Tasks ready!");
 
-  SendToBoardTimerTask::mgr.enable(PRINT_THIS);
+  OrchestratorTask::mgr.enable(PRINT_THIS);
   // BoardCommsTask::mgr.enable(PRINT_THIS);
 
   SendToBoardNotf notification;

@@ -167,11 +167,11 @@ namespace Queue1
     // this will clear the queue
     T read()
     {
-      T e = nullptr;
+      T e;
       if (_queue != NULL && xQueueReceive(_queue, &e, _ticks) == pdPASS)
       {
-        if (_readCallback != nullptr)
-          _readCallback(e);
+        // if (_readCallback != nullptr)
+        //   _readCallback(e);
         return (T)e;
       }
       return (T)e;
