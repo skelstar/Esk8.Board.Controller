@@ -2,7 +2,6 @@
 
 #include <Arduino.h>
 #include <RTOSTaskManager.h>
-#include <QueueManager.h>
 
 class TaskBase
 {
