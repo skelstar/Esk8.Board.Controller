@@ -90,12 +90,6 @@ void printTestInstructions(const char *instructions)
   Serial.printf("*** INSTR: %s\n", instructions);
 }
 
-// Queue1::Manager<SendToBoardNotf> *sendNotfQueue;
-// Queue1::Manager<PrimaryButtonState> *primaryButtonQueue;
-// Queue1::Manager<ThrottleState> *readThrottleQueue;
-// Queue1::Manager<PacketState> *readPacketStateQueue;
-// Queue1::Manager<NintendoButtonEvent> *readNintendoQueue;
-
 void setUp()
 {
   DEBUG("----------------------------");
@@ -128,8 +122,8 @@ void usesTaskScheduler_repliesWithPacketsOK()
   CommsTask::printPeekSchedule = true;
 
   // configure queues
-  Queue1::Manager<SendToBoardNotf> *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
-  Queue1::Manager<PacketState> *packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
+  auto *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
+  auto *packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
 
   // wait
   while (TaskScheduler::thisTask->ready == false ||
@@ -193,8 +187,8 @@ void usesTaskScheduler_withMockGenericClient_repliesWithCorrectData()
   CommsTask::printPeekSchedule = false;
 
   // configure queues
-  Queue1::Manager<SendToBoardNotf> *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
-  Queue1::Manager<PacketState> *packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
+  auto *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
+  auto *packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
 
   // mocks
   CommsTask::boardClient.mockResponseCallback(mockMovingResponse);

@@ -62,7 +62,6 @@ GenericClient<ControllerData, VescData> boardClient(01);
 #include <tasks/core0/NintendoClassicTaskBase.h>
 #include <tasks/core0/OrchestratorTask.h>
 #include <tasks/core0/QwiicTaskBase.h>
-// #include <tasks/core0/TaskScheduler.h>
 
 //----------------------------------
 
@@ -100,6 +99,11 @@ void setUp()
 
 void tearDown()
 {
+}
+
+void printPASS(const char *message)
+{
+  Serial.printf("[PASS @%lums] %s\n", millis(), message);
 }
 
 //-----------------------------------------------
@@ -208,26 +212,26 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested()
                               "Didn't find schedule packet on the schedule queue");
     TEST_ASSERT_EQUAL_MESSAGE(notification.command, scheduleQueue->payload.command,
                               "Didn't get the correct command from the schedule queue");
-    Serial.printf("[PASS @%lums] Found packet on Schedule queue\n", millis());
+    printPASS("Found packet on Schedule queue");
 
     vTaskDelay(TICKS_50ms);
     // make sure no more packets on Schedule queue
     response = waitForNew(scheduleQueue, PERIOD_50ms);
     TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response,
                               "Did find schedule packet on the schedule queue");
-    Serial.printf("[PASS @%lums] Didn't find another packet on Schedule queue\n", millis());
+    printPASS("Didn't find another packet on Schedule queue");
 
     // confirm broadcast response
     response = waitForNew(primaryButtonQueue, PERIOD_50ms);
     if (notification.command == QueueBase::Command::RESPOND)
     {
       TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "Device was supposed to respond but timed out");
-      Serial.printf("[PASS @%lums] Responded on PrimaryButton queue\n", millis());
+      printPASS("Responded on PrimaryButton queue");
     }
     else
     {
       TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response, "Device was supposed to time out but responded");
-      Serial.printf("[PASS @%lums] Timedout on PrimaryButton queue\n", millis());
+      printPASS("(correctly) timedout on PrimaryButton queue");
     }
 
     counter++;
@@ -243,6 +247,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested()
 }
 
 //-----------------------------------------------
+
 void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhenRequested()
 {
   // start tasks
@@ -253,8 +258,9 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
 
   CommsTask::start();
   CommsTask::thisTask->doWorkInterval = PERIOD_50ms;
-  CommsTask::printSendNewPacket = true;
-  CommsTask::printPeekSchedule = true;
+  // CommsTask::printSendNewPacket = true;
+  // CommsTask::printPeekSchedule = true;
+  // CommsTask::printSentPacketToBoard = true;
   CommsTask::SEND_TO_BOARD_INTERVAL_LOCAL = PERIOD_500ms;
 
   // configure queues
@@ -305,15 +311,17 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
     notification.command = counter % 2 == 0
                                ? QueueBase::Command::RESPOND
                                : QueueBase::Command::NONE;
+
+    // send
     vTaskDelay(PERIOD_20ms);
+    DEBUG("-----------");
     scheduleQueue->send_r(&notification, QueueBase::printSend);
 
     // confirm schedule packet on queue
-    uint8_t response = waitForNew(scheduleQueue, PERIOD_1S);
-    TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response,
-                              "Didn't find schedule packet on the schedule queue");
-    TEST_ASSERT_EQUAL_MESSAGE(notification.command, scheduleQueue->payload.command,
-                              "Didn't get the correct command from the schedule queue");
+    uint8_t response = waitForNew(scheduleQueue, PERIOD_50ms);
+    TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "Didn't find schedule packet on the schedule queue");
+    TEST_ASSERT_EQUAL_MESSAGE(notification.command, scheduleQueue->payload.command, "Didn't get the correct command from the schedule queue");
+    printPASS("Found schedule packet on queue");
 
     // confirm broadcast response
     response = waitForNew(primaryButtonQueue, PERIOD_50ms);
@@ -321,12 +329,14 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
       TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "QwiicTask was supposed to respond but timed out");
     else
       TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response, "QwiicTask was supposed to time out but responded");
+    printPASS("Found response packet on primaryButtonQueue, or didn't");
 
     response = waitForNew(packetStateQueue, PERIOD_50ms);
     if (notification.command == QueueBase::Command::RESPOND)
       TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "CommsTask was supposed to respond but timed out");
     else
       TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response, "CommsTask was supposed to time out but responded");
+    printPASS("Found response packet on packetStateQueue, or didn't");
 
     counter++;
 
@@ -335,7 +345,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
 
   vTaskDelay(PERIOD_1S);
 
-  OrchestratorTask::thisTask->deleteTask();
+  // OrchestratorTask::thisTask->deleteTask();
   QwiicTaskBase::thisTask->deleteTask();
   CommsTask::thisTask->deleteTask();
 
@@ -354,8 +364,8 @@ void setup()
   UNITY_BEGIN();
 
   // RUN_TEST(OrchestratorTask_sendPacketsRegularly);
-  RUN_TEST(OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested);
-  // RUN_TEST(OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhenRequested);
+  // RUN_TEST(OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested);
+  RUN_TEST(OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhenRequested);
 
   UNITY_END();
 }

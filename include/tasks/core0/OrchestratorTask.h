@@ -25,7 +25,7 @@ namespace OrchestratorTask
 
     void initialise()
     {
-      notification.correlationId = 0;
+      notification.correlationId = -1;
     }
 
     bool timeToDowork()

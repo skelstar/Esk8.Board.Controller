@@ -63,7 +63,6 @@ namespace QwiicTaskBase
                                   printPeekSchedule ? QueueBase::printRead : nullptr);
       if (status == Response::OK)
       {
-        DEBUGMVAL("timeToDoWork", millis(), scheduleQueue->payload.correlationId, scheduleQueue->payload.command);
         if (scheduleQueue->payload.command == QueueBase::Command::RESPOND)
         {
           state.correlationId = scheduleQueue->payload.correlationId;
@@ -97,7 +96,6 @@ namespace QwiicTaskBase
     thisTask->setInitialiseQueuesCallback(initialiseQueues);
     thisTask->setTimeToDoWorkCallback(timeToDowork);
     thisTask->setDoWorkCallback(doWork);
-    thisTask->enabled = true;
 
     if (thisTask->rtos != nullptr)
       thisTask->rtos->create(task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);

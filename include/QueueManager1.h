@@ -115,6 +115,7 @@ namespace Queue1
 
     void send_r(T *payload, SentCallback_r sent_cb = nullptr)
     {
+      payload->correlationId++;
       if (_queue == nullptr)
       {
         Serial.printf("ERROR: queue not initialised! (%s)\n", name);
@@ -128,7 +129,6 @@ namespace Queue1
 
       payload->sent_time = millis();
       payload->event_id++;
-      payload->correlationId++;
     }
 
     void send_n(QueueBase *payload, SentCallback_r sent_cb = nullptr)

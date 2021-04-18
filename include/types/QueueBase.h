@@ -19,7 +19,7 @@ public:
     RESPOND,
   };
 
-  unsigned long event_id = 0, latency = 0, correlationId = 0;
+  unsigned long event_id = 0, latency = 0, correlationId = -1;
   const char *name = nullptr;
   unsigned long sent_time;
   Command command = NONE;

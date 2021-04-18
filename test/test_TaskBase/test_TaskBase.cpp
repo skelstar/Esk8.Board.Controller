@@ -199,7 +199,7 @@ void usesTaskSchedulerAndCommsTask_withTaskBases_sendsPacketsAndRespondsOK()
   TaskScheduler::printSendToSchedule = false;
 
   CommsTask::start();
-  CommsTask::printReplyToSchedule = true;
+  CommsTask::printSendNewPacket = true;
 
   // configure queues
   Queue1::Manager<SendToBoardNotf> *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
@@ -252,7 +252,7 @@ void usesTaskSchedulerAndCommsTaskAndQwiicButton_withTaskBases_sendsPacketsAndRe
   TaskScheduler::printSendToSchedule = false;
 
   CommsTask::start();
-  CommsTask::printReplyToSchedule = true;
+  CommsTask::printSendNewPacket = true;
 
   QwiicTaskBase::start();
   QwiicTaskBase::printReplyToSchedule = true;
