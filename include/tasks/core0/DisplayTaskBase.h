@@ -8,6 +8,7 @@
 #include <displayState.h>
 #include <TFT_eSPI.h>
 #include <tft.h>
+#include <printFormatStrings.h>
 
 namespace DisplayTaskBase
 {
@@ -35,6 +36,21 @@ namespace DisplayTaskBase
       displayEventQueue = Queue1::Manager<DisplayEvent>::create("(DisplayBase)DisplayEventQueue");
     }
 
+    void printState(uint16_t id)
+    {
+      if (PRINT_DISP_STATE)
+        Serial.printf(PRINT_STATE_FORMAT, "DISP", Display::stateID(id));
+    }
+
+    void printTrigger(uint16_t ev)
+    {
+      // if (PRINT_DISP_STATE_EVENT &&
+      //     !(_fsm.revisit() && ev == Display::TR_STOPPED) &&
+      //     !(_fsm.revisit() && ev == Display::TR_MOVING) &&
+      //     !(_fsm.getCurrentStateId() == Display::ST_OPTION_PUSH_TO_START && ev == Display::TR_STOPPED))
+      Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "DISP", Display::getTrigger(ev));
+    }
+
     void initialise()
     {
       if (scheduleQueue == nullptr ||
@@ -46,6 +62,16 @@ namespace DisplayTaskBase
 
       if (mux_SPI == nullptr)
         mux_SPI = xSemaphoreCreateMutex();
+
+      setupLCD();
+
+      Display::fsm_mgr.begin(&Display::_fsm);
+      Display::fsm_mgr.setPrintStateCallback(printState);
+      Display::fsm_mgr.setPrintTriggerCallback(printTrigger);
+
+      Display::addTransitions();
+
+      Display::_fsm.run_machine();
     }
 
     elapsedMillis since_last_did_work = 0;
@@ -62,6 +88,8 @@ namespace DisplayTaskBase
       // TODO logic for NO_CORRELATION
       if (OK && scheduleQueue->payload.command == QueueBase::RESPOND)
         thisTask->respondToOrchestrator<DisplayEvent>(scheduleQueue->payload, displayEvent, displayEventQueue);
+
+      Display::_fsm.run_machine();
     }
 
     void task(void *parameters)
