@@ -107,7 +107,7 @@ namespace NintendoClassicTaskBase
 
   void start()
   {
-    thisTask = new TaskBase("QwiicTaskBase", 3000);
+    thisTask = new TaskBase("NintendoClassicTaskBase", 3000);
     thisTask->setInitialiseCallback(_p::initialise);
     thisTask->setInitialiseQueuesCallback(_p::initialiseQueues);
     thisTask->setTimeToDoWorkCallback(_p::timeToDowork);

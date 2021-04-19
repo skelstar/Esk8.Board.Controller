@@ -12,11 +12,11 @@ public:
   typedef bool (*BoolVoidCallback)();
 
 public:
-  Queue1::Manager<SendToBoardNotf> *sendNotfQueue;
-  Queue1::Manager<PrimaryButtonState> *readPrimaryButtonQueue;
-  Queue1::Manager<ThrottleState> *readThrottleQueue;
-  Queue1::Manager<PacketState> *readPacketStateQueue;
-  Queue1::Manager<NintendoButtonEvent> *readNintendoQueue;
+  // Queue1::Manager<SendToBoardNotf> *sendNotfQueue;
+  // Queue1::Manager<PrimaryButtonState> *readPrimaryButtonQueue;
+  // Queue1::Manager<ThrottleState> *readThrottleQueue;
+  // Queue1::Manager<PacketState> *readPacketStateQueue;
+  // Queue1::Manager<NintendoButtonEvent> *readNintendoQueue;
 
   VoidVoidCallback _initialise_cb = nullptr;
   VoidVoidCallback _initialiseQueues_cb = nullptr;
@@ -84,6 +84,15 @@ public:
   void deleteTask(bool print = false)
   {
     rtos->deleteTask(print);
+  }
+
+  template <typename T>
+  void respondToOrchestrator(SendToBoardNotf payload, T data, Queue1::Manager<T> *queue)
+  {
+    data.correlationId = payload.correlationId;
+    data.sent_time = payload.sent_time;
+
+    queue->reply(&data, printReplyToSchedule ? QueueBase::printReply : nullptr);
   }
 
   void setInitialiseCallback(VoidVoidCallback _cb)

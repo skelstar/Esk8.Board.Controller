@@ -13,12 +13,7 @@
 
 // RTOS ENTITES-------------------
 
-QueueHandle_t xBoardPacketQueue;
-QueueHandle_t xNintendoControllerQueue;
-QueueHandle_t xPacketStateQueueHandle;
-QueueHandle_t xPrimaryButtonQueueHandle;
-QueueHandle_t xSendToBoardQueueHandle;
-QueueHandle_t xThrottleQueueHandle;
+#include <tasks/queues/queues.h>
 
 SemaphoreHandle_t mux_I2C;
 SemaphoreHandle_t mux_SPI;
@@ -32,14 +27,12 @@ SemaphoreHandle_t mux_SPI;
 #include <testUtils.h>
 #include <Wire.h>
 
-// MyMutex mutex_I2C;
-// MyMutex mutex_SPI;
-
-#include <types/QueueBase.h>
-#include <types/PacketState.h>
-#include <types/SendToBoardNotf.h>
+#include <types/DisplayEvent.h>
 #include <types/NintendoButtonEvent.h>
+#include <types/PacketState.h>
 #include <types/PrimaryButton.h>
+#include <types/QueueBase.h>
+#include <types/SendToBoardNotf.h>
 #include <types/Throttle.h>
 
 #include <RF24Network.h>
@@ -63,6 +56,7 @@ GenericClient<ControllerData, VescData> boardClient(01);
 #include <tasks/core0/NintendoClassicTaskBase.h>
 #include <tasks/core0/OrchestratorTask.h>
 #include <tasks/core0/QwiicTaskBase.h>
+#include <tasks/core0/DisplayTaskBase.h>
 
 //----------------------------------
 
@@ -89,6 +83,7 @@ void setUp()
   DEBUG("----------------------------");
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
+  xDisplayQueueHandle = xQueueCreate(1, sizeof(DisplayEvent *));
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
   xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
@@ -266,13 +261,17 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
   // CommsTask::printSentPacketToBoard = true;
   CommsTask::SEND_TO_BOARD_INTERVAL_LOCAL = PERIOD_500ms;
 
-  namespace nt_ = NintendoClassicTaskBase;
-  nt_::start();
-  nt_::thisTask->doWorkInterval = PERIOD_50ms;
-  // nt_::thisTask->printReplyToSchedule = true;
+  namespace dt_ = DisplayTaskBase;
+  dt_::start(PERIOD_10ms);
+
+  namespace nct_ = NintendoClassicTaskBase;
+  nct_::start();
+  nct_::thisTask->doWorkInterval = PERIOD_50ms;
+  // nct_::thisTask->printReplyToSchedule = true;
 
   // configure queues
   auto *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
+  auto *displayEventQueue = Queue1::Manager<DisplayEvent>::create("(test)displayEventQueue");
   auto *primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaryButtonQueue");
   auto *packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
   auto *nintendoQueue = Queue1::Manager<NintendoButtonEvent>::create("(test)nintendoQueue");
@@ -294,7 +293,8 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
   // wait ---
   while (QwiicTaskBase::thisTask->ready == false ||
          CommsTask::thisTask->ready == false ||
-         nt_::thisTask->ready == false ||
+         nct_::thisTask->ready == false ||
+         dt_::thisTask->ready == false ||
          false)
   {
     vTaskDelay(10);
@@ -304,7 +304,8 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
 
   QwiicTaskBase::thisTask->enable(PRINT_THIS);
   CommsTask::thisTask->enable(PRINT_THIS);
-  nt_::thisTask->enable(PRINT_THIS);
+  nct_::thisTask->enable(PRINT_THIS);
+  dt_::thisTask->enable(PRINT_THIS);
 
   vTaskDelay(PERIOD_500ms);
 
@@ -314,6 +315,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
   scheduleQueue->read();
 
   SendToBoardNotf notification;
+  notification.correlationId = SendToBoardNotf::NO_CORRELATION + 1;
 
   const int NUM_LOOPS = 5;
 
@@ -365,6 +367,14 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
     else
       TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response, "NintendoTask was supposed to time out but responded");
     printPASS("Found response packet on nintendoQueue, or didn't");
+
+    // confirm displayTask responded
+    response = waitForNew(displayEventQueue, PERIOD_100ms);
+    if (notification.command == QueueBase::Command::RESPOND)
+      TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "DisplayTask was supposed to respond but timed out");
+    else
+      TEST_ASSERT_EQUAL_MESSAGE(Response::TIMEOUT, response, "DisplayTask was supposed to time out but responded");
+    printPASS("Found response packet on displayEventQueue, or didn't");
 
     counter++;
 

@@ -12,6 +12,7 @@
 #include <types/PrimaryButton.h>
 #include <types/Throttle.h>
 #include <types/QueueBase.h>
+#include <types/DisplayEvent.h>
 
 const unsigned long SECONDS = 1000;
 const unsigned long MILLIS_S = 1;
@@ -76,7 +77,11 @@ namespace Queue1
       {
         return new Manager<T>(xNintendoControllerQueue, TICKS_5ms, name);
       }
-      Serial.printf("ERROR: a queue has not been created for this type (%s)\n", name);
+      if (std::is_same<T, DisplayEvent>::value)
+      {
+        return new Manager<T>(xDisplayQueueHandle, TICKS_5ms, name);
+      }
+      Serial.printf("ERROR: (Manager::create) a queue has not been created for this type (%s)\n", name);
       return nullptr;
     }
 

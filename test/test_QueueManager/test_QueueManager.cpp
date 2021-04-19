@@ -17,12 +17,7 @@ static int counter = 0;
 QueueHandle_t xFirstQueueHandle;
 QueueHandle_t xOtherTestQueueHandle;
 
-QueueHandle_t xBoardPacketQueue;
-QueueHandle_t xNintendoControllerQueue;
-QueueHandle_t xPacketStateQueueHandle;
-QueueHandle_t xPrimaryButtonQueueHandle;
-QueueHandle_t xSendToBoardQueueHandle;
-QueueHandle_t xThrottleQueueHandle;
+#include <tasks/queues/queues.h>
 
 SemaphoreHandle_t mux_I2C;
 SemaphoreHandle_t mux_SPI;
@@ -71,8 +66,6 @@ GenericClient<ControllerData, VescData> boardClient(01);
 #include <tasks/core0/BoardCommsTask.h>
 #include <tasks/core0/NintendoClassicTask.h>
 #include <tasks/core0/remoteTask.h>
-
-#include <tasks/core0/BaseTaskTest1.h>
 
 RTOSTaskManager firstTask("FirstTask", 3000);
 RTOSTaskManager otherTask("OtherTask", 3000);
