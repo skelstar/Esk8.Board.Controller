@@ -47,7 +47,7 @@ namespace Display
   //-----------------------------------------------------
   void screen_searching()
   {
-    if (mutex_SPI.take(__func__))
+    if (take(mux_SPI))
     {
       tft.setTextDatum(TL_DATUM);
       tft.fillScreen(TFT_DEFAULT_BG);
@@ -89,13 +89,13 @@ namespace Display
         y += 30;
         tft.drawString("- push to start", 10, y);
       }
-      mutex_SPI.give(__func__);
+      give(mux_SPI);
     }
   }
   //-----------------------------------------------------
   void screenWhenDisconnected()
   {
-    if (mutex_SPI.take(__func__))
+    if (take(mux_SPI))
     {
       uint8_t y = 0;
       tft.fillScreen(TFT_BLACK);
@@ -140,14 +140,14 @@ namespace Display
         s = s.substr(0, 20) + "..."; // truncate and add "..."
       tft.drawString(s.c_str(), LCD_WIDTH / 2, y);
 
-      mutex_SPI.give(__func__);
+      give(mux_SPI);
     }
   }
   //-----------------------------------------------------
 
   // void screenSoftwareStats()
   // {
-  //   if (mutex_SPI.take(__func__))
+  //   if (take(mux_SPI))
   //   {
   //     // tft.fillScreen(TFT_DEFAULT_BG);
   //     // tft.setFreeFont(FONT_LG);
@@ -168,7 +168,7 @@ namespace Display
   //     // tft.drawString(branch, MARGIN + tft.textWidth("br: ") + xmargin, line1);
   //     // tft.drawString(build, MARGIN + tft.textWidth("bld: ") + xmargin, line2);
 
-  //     mutex_SPI.give(__func__);
+  //     give(mux_SPI);
   //   }
   // }
 
@@ -179,7 +179,7 @@ namespace Display
 
   void screenBoardBattery(float batteryVolts)
   {
-    if (mutex_SPI.take(__func__))
+    if (take(mux_SPI))
     {
       // uint8_t percent = getBatteryPercentage(batteryVolts);
       // tft.fillScreen(TFT_DEFAULT_BG);
@@ -214,14 +214,14 @@ namespace Display
       //     BATTERY_HEIGHT - BORDER_SIZE * 4,
       //     colour);
 
-      mutex_SPI.give(__func__);
+      give(mux_SPI);
     }
   }
   //-----------------------------------------------------
   template <typename T>
   void screenPropValue(char *propName, const char *value)
   {
-    if (mutex_SPI.take(__func__))
+    if (take(mux_SPI))
     {
       tft.fillScreen(TFT_DEFAULT_BG);
       lcd_messageBase(propName, /*y*/ 20, Aligned::ALIGNED_CENTRE, FontSize::LG, TFT_DARKGREY);
@@ -248,14 +248,14 @@ namespace Display
       tft.setTextColor(TFT_DARKGREY);
       tft.drawString("long hold | tap ->", LCD_WIDTH / 2, LCD_HEIGHT - 5);
 
-      mutex_SPI.give(__func__);
+      give(mux_SPI);
     }
   }
   //-----------------------------------------------------
 
   void screenOneMetricWithStripe(float value, char *title, uint32_t stripeColour, bool init, uint32_t bgColour)
   {
-    if (mutex_SPI.take(__func__))
+    if (take(mux_SPI))
     {
       uint8_t x_right = 200,
               y = 30;
@@ -282,7 +282,7 @@ namespace Display
       int w = chunkyDigit->getWidth(buff);
       chunkyDigit->draw_float(x_right - w, /*y*/ y + 25, buff);
 
-      mutex_SPI.give(__func__);
+      give(mux_SPI);
     }
   }
 
@@ -290,7 +290,7 @@ namespace Display
 
   void simpleStoppedScreen(const char *text, uint32_t colour)
   {
-    if (mutex_SPI.take(__func__))
+    if (take(mux_SPI))
     {
       uint8_t y = 0;
       tft.fillScreen(TFT_BLACK);
@@ -327,14 +327,14 @@ namespace Display
         s = s.substr(0, 20) + "..."; // truncate and add "..."
       tft.drawString(s.c_str(), LCD_WIDTH / 2, y);
 
-      mutex_SPI.give(__func__);
+      give(mux_SPI);
     }
   }
   //-----------------------------------------------------
 
   void simpleMovingScreen()
   {
-    if (mutex_SPI.take(__func__))
+    if (take(mux_SPI))
     {
       uint8_t y = 0;
       tft.fillScreen(TFT_BLACK);
@@ -346,14 +346,14 @@ namespace Display
       tft.drawString("MOVING", LCD_WIDTH / 2, y);
       y += tft.fontHeight();
 
-      mutex_SPI.give(__func__);
+      give(mux_SPI);
     }
   }
   //-----------------------------------------------------
 
   void screenWhenMoving(bool init = false)
   {
-    if (mutex_SPI.take(__func__))
+    if (take(mux_SPI))
     {
       // screenOneMetricWithStripe(
       //     board.packet.motorCurrent,
@@ -362,14 +362,14 @@ namespace Display
       //     init,
       //     TFT_DEFAULT_BG);
 
-      mutex_SPI.give(__func__);
+      give(mux_SPI);
     }
   }
   //-----------------------------------------------------
 
   void screenNeedToAckResets(Stats::ResetsType type)
   {
-    if (mutex_SPI.take(__func__))
+    if (take(mux_SPI))
     {
       char buff[10];
       uint32_t bgColour = 0;
@@ -401,14 +401,14 @@ namespace Display
       int y = LCD_HEIGHT - chunkyDigit->getHeight() - 20;
       chunkyDigit->draw_float(x, y, buff);
 
-      mutex_SPI.give(__func__);
+      give(mux_SPI);
     }
   }
   //-----------------------------------------------------
 
   void screenBoardNotCompatible(float boardVersion)
   {
-    if (mutex_SPI.take(__func__))
+    if (take(mux_SPI))
     {
       tft.fillScreen(TFT_NAVY);
       tft.setFreeFont(FONT_LG);
@@ -422,7 +422,7 @@ namespace Display
       sprintf(buff, "is v%.1f not v%.1f", boardVersion, VERSION_BOARD_COMPAT);
       tft.drawString(buff, /*x*/ LCD_WIDTH / 2, /*y*/ line1 += lineheight);
 
-      mutex_SPI.give(__func__);
+      give(mux_SPI);
     }
   }
 

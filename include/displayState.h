@@ -1,3 +1,4 @@
+#pragma once
 
 #define LCD_WIDTH 240
 #define LCD_HEIGHT 135
@@ -14,7 +15,7 @@
 
 //------------------------------------------------------------
 
-namespace DispState
+namespace Display
 {
   enum Trigger
   {
@@ -60,11 +61,8 @@ namespace DispState
     }
     return OUT_OF_RANGE;
   }
-} // namespace DispState
 
-namespace Display
-{
-  DispState::Trigger lastDispEvent;
+  Trigger lastDispEvent;
 
   elapsedMillis sinceShowingOptionScreen;
 
@@ -110,7 +108,7 @@ namespace Display
     return "OUT OF RANGE: Display::stateID()";
   }
 
-  FsmManager<DispState::Trigger> fsm_mgr;
+  FsmManager<Trigger> fsm_mgr;
 
   //---------------------------------------------------------------
   State stateDisconnected(
@@ -134,7 +132,7 @@ namespace Display
       ST_STOPPED_SCREEN,
       [] {
         // don't need TR_UPDATE at this stage
-        if (fsm_mgr.lastEvent() == DispState::TR_UPDATE)
+        if (fsm_mgr.lastEvent() == Display::TR_UPDATE)
           return;
 
         fsm_mgr.printState(ST_STOPPED_SCREEN);
@@ -154,7 +152,7 @@ namespace Display
       ST_MOVING_SCREEN,
       [] {
         // don't need UPDATE at this stage
-        if (fsm_mgr.lastEvent() == DispState::TR_UPDATE)
+        if (fsm_mgr.lastEvent() == Display::TR_UPDATE)
           return;
 
         fsm_mgr.printState(ST_MOVING_SCREEN);
@@ -188,13 +186,13 @@ namespace Display
         sinceShowingOptionScreen = 0;
         switch (fsm_mgr.lastEvent())
         {
-        case DispState::TR_MENU_BUTTON_CLICKED:
+        case Display::TR_MENU_BUTTON_CLICKED:
         {
           bool enabled = featureService.get<bool>(FeatureType::PUSH_TO_START);
           screenPropValue<bool>("Push to start", enabled ? "ON" : "OFF");
           break;
         }
-        case DispState::TR_SELECT_BUTTON_CLICK:
+        case Display::TR_SELECT_BUTTON_CLICK:
         {
           sinceShowingOptionScreen = 0;
           bool enabled = featureService.get<bool>(FeatureType::PUSH_TO_START);
@@ -203,12 +201,12 @@ namespace Display
           break;
         }
         default:
-          Serial.printf("Unhandled event: %s\n", DispState::getTrigger(fsm_mgr.lastEvent()));
+          Serial.printf("Unhandled event: %s\n", Display::getTrigger(fsm_mgr.lastEvent()));
         }
       },
       [] {
         if (sinceShowingOptionScreen > OPTION_SCREEN_TIMEOUT)
-          fsm_mgr.trigger(DispState::TR_OPTION_TIMED_OUT);
+          fsm_mgr.trigger(Display::TR_OPTION_TIMED_OUT);
       },
       NULL);
   //---------------------------------------------------------------
@@ -226,32 +224,32 @@ namespace Display
   void addTransitions()
   {
     // ST_DISCONNECTED
-    _fsm.add_transition(&stStopped, &stateDisconnected, DispState::TR_DISCONNECTED, NULL);
-    _fsm.add_transition(&stMoving, &stateDisconnected, DispState::TR_DISCONNECTED, NULL);
+    _fsm.add_transition(&stStopped, &stateDisconnected, Display::TR_DISCONNECTED, NULL);
+    _fsm.add_transition(&stMoving, &stateDisconnected, Display::TR_DISCONNECTED, NULL);
 
     // Options
-    _fsm.add_transition(&stStopped, &stOptionPushToStart, DispState::TR_MENU_BUTTON_CLICKED, NULL);
-    _fsm.add_transition(&stOptionPushToStart, &stStopped, DispState::TR_MENU_BUTTON_CLICKED, NULL);
-    _fsm.add_transition(&stOptionPushToStart, &stOptionPushToStart, DispState::TR_SELECT_BUTTON_CLICK, NULL);
-    _fsm.add_transition(&stOptionPushToStart, &stStopped, DispState::TR_OPTION_TIMED_OUT, NULL);
+    _fsm.add_transition(&stStopped, &stOptionPushToStart, Display::TR_MENU_BUTTON_CLICKED, NULL);
+    _fsm.add_transition(&stOptionPushToStart, &stStopped, Display::TR_MENU_BUTTON_CLICKED, NULL);
+    _fsm.add_transition(&stOptionPushToStart, &stOptionPushToStart, Display::TR_SELECT_BUTTON_CLICK, NULL);
+    _fsm.add_transition(&stOptionPushToStart, &stStopped, Display::TR_OPTION_TIMED_OUT, NULL);
 
     // TR_MOVING
-    _fsm.add_transition(&stateDisconnected, &stMoving, DispState::TR_MOVING, NULL);
-    _fsm.add_transition(&stStopped, &stMoving, DispState::TR_MOVING, NULL);
+    _fsm.add_transition(&stateDisconnected, &stMoving, Display::TR_MOVING, NULL);
+    _fsm.add_transition(&stStopped, &stMoving, Display::TR_MOVING, NULL);
 
     // TR_STOPPED
-    _fsm.add_transition(&stateDisconnected, &stStopped, DispState::TR_STOPPED, NULL);
-    _fsm.add_transition(&stMoving, &stStopped, DispState::TR_STOPPED, NULL);
+    _fsm.add_transition(&stateDisconnected, &stStopped, Display::TR_STOPPED, NULL);
+    _fsm.add_transition(&stMoving, &stStopped, Display::TR_STOPPED, NULL);
 
     // TR_REMOTE_BATTERY_CHANGED
-    _fsm.add_transition(&stStopped, &stStopped, DispState::TR_REMOTE_BATTERY_CHANGED, NULL);
-    _fsm.add_transition(&stateDisconnected, &stateDisconnected, DispState::TR_REMOTE_BATTERY_CHANGED, NULL);
+    _fsm.add_transition(&stStopped, &stStopped, Display::TR_REMOTE_BATTERY_CHANGED, NULL);
+    _fsm.add_transition(&stateDisconnected, &stateDisconnected, Display::TR_REMOTE_BATTERY_CHANGED, NULL);
 
     // UPDATE
-    _fsm.add_transition(&stStopped, &stStopped, DispState::TR_UPDATE, NULL);
-    _fsm.add_transition(&stMoving, &stMoving, DispState::TR_UPDATE, NULL);
+    _fsm.add_transition(&stStopped, &stStopped, Display::TR_UPDATE, NULL);
+    _fsm.add_transition(&stMoving, &stMoving, Display::TR_UPDATE, NULL);
 
     // TR_VERSION_DOESNT_MATCH
-    _fsm.add_transition(&stateDisconnected, &stBoardVersionDoesntMatchScreen, DispState::TR_VERSION_DOESNT_MATCH, NULL);
+    _fsm.add_transition(&stateDisconnected, &stBoardVersionDoesntMatchScreen, Display::TR_VERSION_DOESNT_MATCH, NULL);
   }
 } // namespace Display

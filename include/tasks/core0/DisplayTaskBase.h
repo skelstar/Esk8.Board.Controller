@@ -1,22 +1,16 @@
+#pragma once
+
 #include <TaskBase.h>
 #include <tasks/queues/queues.h>
 #include <types/SendToBoardNotf.h>
 #include <types/DisplayEvent.h>
 
+#include <displayState.h>
+#include <TFT_eSPI.h>
+#include <tft.h>
+
 namespace DisplayTaskBase
 {
-  bool take(SemaphoreHandle_t m_handle, TickType_t ticks = TICKS_5ms)
-  {
-    if (m_handle != nullptr)
-      return (xSemaphoreTake(m_handle, (TickType_t)5) == pdPASS);
-    return false;
-  }
-
-  void give(SemaphoreHandle_t m_handle)
-  {
-    if (m_handle != nullptr)
-      xSemaphoreGive(m_handle);
-  }
 
   // prototypes
 

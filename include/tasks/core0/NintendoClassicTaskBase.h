@@ -9,18 +9,18 @@
 
 namespace NintendoClassicTaskBase
 {
-  bool take(SemaphoreHandle_t m_handle, TickType_t ticks = TICKS_5ms)
-  {
-    if (m_handle != nullptr)
-      return (xSemaphoreTake(m_handle, (TickType_t)5) == pdPASS);
-    return false;
-  }
+  // bool take(SemaphoreHandle_t m_handle, TickType_t ticks = TICKS_5ms)
+  // {
+  //   if (m_handle != nullptr)
+  //     return (xSemaphoreTake(m_handle, (TickType_t)5) == pdPASS);
+  //   return false;
+  // }
 
-  void give(SemaphoreHandle_t m_handle)
-  {
-    if (m_handle != nullptr)
-      xSemaphoreGive(m_handle);
-  }
+  // void give(SemaphoreHandle_t m_handle)
+  // {
+  //   if (m_handle != nullptr)
+  //     xSemaphoreGive(m_handle);
+  // }
   // prototypes
   void connectToNintendoController();
   uint8_t button_changed(uint8_t *new_buttons, uint8_t *old_buttons);
