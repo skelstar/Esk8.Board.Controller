@@ -14,6 +14,9 @@ namespace DisplayTaskBase
 {
 
   // prototypes
+  void printState(uint16_t id);
+  void printTrigger(uint16_t ev);
+  void handlePacketState(PacketState payload);
 
   TaskBase *thisTask;
 
@@ -26,7 +29,7 @@ namespace DisplayTaskBase
     Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
     Queue1::Manager<NintendoButtonEvent> *nintendoClassicQueue = nullptr;
     Queue1::Manager<DisplayEvent> *displayEventQueue = nullptr;
-
+    //--------------------------------
     void initialiseQueues()
     {
       scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(DisplayBase)ScheduleQueue");
@@ -35,22 +38,7 @@ namespace DisplayTaskBase
       nintendoClassicQueue = Queue1::Manager<NintendoButtonEvent>::create("(DisplayBase)NintendoClassicQueue");
       displayEventQueue = Queue1::Manager<DisplayEvent>::create("(DisplayBase)DisplayEventQueue");
     }
-
-    void printState(uint16_t id)
-    {
-      if (PRINT_DISP_STATE)
-        Serial.printf(PRINT_STATE_FORMAT, "DISP", Display::stateID(id));
-    }
-
-    void printTrigger(uint16_t ev)
-    {
-      // if (PRINT_DISP_STATE_EVENT &&
-      //     !(_fsm.revisit() && ev == Display::TR_STOPPED) &&
-      //     !(_fsm.revisit() && ev == Display::TR_MOVING) &&
-      //     !(_fsm.getCurrentStateId() == Display::ST_OPTION_PUSH_TO_START && ev == Display::TR_STOPPED))
-      Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "DISP", Display::getTrigger(ev));
-    }
-
+    //--------------------------------
     void initialise()
     {
       if (scheduleQueue == nullptr ||
@@ -80,16 +68,19 @@ namespace DisplayTaskBase
     {
       return since_last_did_work > thisTask->doWorkInterval && thisTask->enabled;
     }
-
+    //--------------------------------
     void doWork()
     {
-      bool OK = scheduleQueue->hasValue();
-
       // TODO logic for NO_CORRELATION
-      if (OK && scheduleQueue->payload.command == QueueBase::RESPOND)
+      if (scheduleQueue->hasValue() && scheduleQueue->payload.command == QueueBase::RESPOND)
         thisTask->respondToOrchestrator<DisplayEvent>(scheduleQueue->payload, displayEvent, displayEventQueue);
 
-      Display::_fsm.run_machine();
+      if (packetStateQueue->hasValue())
+        handlePacketState(packetStateQueue->payload);
+
+      if (nintendoClassicQueue->hasValue())
+
+        Display::_fsm.run_machine();
     }
 
     void task(void *parameters)
@@ -97,7 +88,7 @@ namespace DisplayTaskBase
       thisTask->task(parameters);
     }
   }
-
+  //--------------------------------
   void start(unsigned long doWorkInterval)
   {
     thisTask = new TaskBase("DisplayTaskBase", 3000);
@@ -111,12 +102,52 @@ namespace DisplayTaskBase
     if (thisTask->rtos != nullptr)
       thisTask->rtos->create(_p::task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);
   }
-
+  //--------------------------------------------------
   void deleteTask(bool print = false)
   {
     if (thisTask != nullptr && thisTask->rtos != nullptr)
       thisTask->rtos->deleteTask(print);
   }
+  //==================================================
 
-  //--------------------------------------------------
+  void printState(uint16_t id)
+  {
+    if (PRINT_DISP_STATE)
+      Serial.printf(PRINT_STATE_FORMAT, "DISP", Display::stateID(id));
+  }
+
+  void printTrigger(uint16_t ev)
+  {
+    // if (PRINT_DISP_STATE_EVENT &&
+    //     !(_fsm.revisit() && ev == Display::TR_STOPPED) &&
+    //     !(_fsm.revisit() && ev == Display::TR_MOVING) &&
+    //     !(_fsm.getCurrentStateId() == Display::ST_OPTION_PUSH_TO_START && ev == Display::TR_STOPPED))
+    Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "DISP", Display::getTrigger(ev));
+  }
+
+  void handlePacketState(PacketState payload)
+  {
+    if (payload.version != (float)VERSION_BOARD_COMPAT &&
+        !Display::fsm_mgr.currentStateIs(Display::ST_BOARD_VERSION_DOESNT_MATCH_SCREEN))
+    {
+      Serial.printf("%.1f %.1f\n", payload.version, (float)VERSION_BOARD_COMPAT);
+      Display::fsm_mgr.trigger(Display::TR_VERSION_DOESNT_MATCH);
+    }
+    else if (payload.connected())
+    {
+      if (!Display::fsm_mgr.currentStateIs(Display::ST_MOVING_SCREEN) && payload.moving)
+        Display::fsm_mgr.trigger(Display::Trigger::TR_MOVING);
+      else if (!Display::fsm_mgr.currentStateIs(Display::ST_STOPPED_SCREEN) && !payload.moving)
+        Display::fsm_mgr.trigger(Display::Trigger::TR_STOPPED);
+    }
+    else
+      // offline
+      Display::fsm_mgr.trigger(Display::TR_DISCONNECTED);
+  }
+
+  void handleNintendoButtonEvent(NintendoButtonEvent payload)
+  {
+    if (payload.button == NintendoController::BUTTON_START)
+      Display::fsm_mgr.trigger(Display::TR_MENU_BUTTON_CLICKED);
+  }
 }
