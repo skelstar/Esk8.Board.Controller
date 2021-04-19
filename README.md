@@ -24,40 +24,46 @@
   - Consumes:
     - _N/A_
 - BoardCommsTask
-  - Provides:
-    - PacketState
   - Consumes:
     - SendToBoardNotf
+      - sends packet to board
+  - loops on own cadence (50ms?)
+  - on update: sends PacketState to queue
 - Display
   - Provides:
-    - _N/A_
+    - DisplayEvent (selecting certain properties)
+      - property id
+      - property value (integer?)
   - Consumes:
-    - SendToBoardNotf (maybe?)
-    - PacketState
+    - PacketState (for online/offline)
+    - PrimaryButtonState
+    - NintendoClassic
+    - ThrottleState
 - NintendoClassicTask
   - Provides:
     - NintendoButtonEvent
   - Consumes:
-    - SendToBoardNotf
-    - PacketState
+    - SendToBoardNotf (response)
+    - PacketState (maybe enable/disable?)
   - Special:
     - turns on/off when start/stop
 - QwiicButtonTask
   - Provides:
     - PrimaryButtonState
   - Consumes:
-    - SendToBoardNotf
+    - SendToBoardNotf (response)
 - RemoteTask
   - Provides:
-    - BatteryInfo
+    - BatteryInfo (not very often, maybe when stopped?)
   - Consumes:
     - SendToBoardNotf
+    - PacketState (start/stop)
 - StatsTask
   - Provides:
     - _N/A_
   - Consumes:
     - SendToBoardNotf
-    - PacketState
+    - PacketState (start/stop)
   - Special:
     - turns on/off when start/stop
 
