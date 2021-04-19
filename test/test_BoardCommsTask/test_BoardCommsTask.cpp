@@ -138,7 +138,7 @@ void usesTaskScheduler_repliesWithPacketsOK()
   while (counter < NUM_LOOPS)
   {
     // check for Notf
-    uint8_t response = waitForNew(scheduleQueue, PERIOD_1S, nullptr, PRINT_TIMEOUT);
+    uint8_t response = waitForNew(scheduleQueue, PERIOD_1s, nullptr, PRINT_TIMEOUT);
     TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find notification on the queue");
 
     // check for packet response
@@ -206,7 +206,7 @@ void usesTaskScheduler_withMockGenericClient_repliesWithCorrectData()
   while (counter < NUM_LOOPS)
   {
     // check for Notf
-    uint8_t response = waitForNew(scheduleQueue, PERIOD_1S, nullptr, PRINT_TIMEOUT);
+    uint8_t response = waitForNew(scheduleQueue, PERIOD_1s, nullptr, PRINT_TIMEOUT);
     TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find notification on the queue");
 
     // check for packet response

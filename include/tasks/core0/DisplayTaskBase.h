@@ -62,11 +62,13 @@ namespace DisplayTaskBase
       Display::_fsm.run_machine();
     }
 
-    elapsedMillis since_last_did_work = 0;
+    elapsedMillis since_last_did_work = 0, since_checked_online = 0;
 
     bool timeToDowork()
     {
-      return since_last_did_work > thisTask->doWorkInterval && thisTask->enabled;
+      return (since_last_did_work > thisTask->doWorkInterval ||
+              since_checked_online > PERIOD_1s) &&
+             thisTask->enabled;
     }
     //--------------------------------
     void doWork()
@@ -75,8 +77,9 @@ namespace DisplayTaskBase
       if (scheduleQueue->hasValue() && scheduleQueue->payload.command == QueueBase::RESPOND)
         thisTask->respondToOrchestrator<DisplayEvent>(scheduleQueue->payload, displayEvent, displayEventQueue);
 
-      if (packetStateQueue->hasValue())
-        handlePacketState(packetStateQueue->payload);
+      packetStateQueue->hasValue();
+      // will check for online regardless of anything being new on the queue
+      handlePacketState(packetStateQueue->payload);
 
       if (nintendoClassicQueue->hasValue())
 
@@ -113,16 +116,16 @@ namespace DisplayTaskBase
   void printState(uint16_t id)
   {
     if (PRINT_DISP_STATE)
-      Serial.printf(PRINT_STATE_FORMAT, "DISP", Display::stateID(id));
+      Serial.printf(PRINT_STATE_FORMAT, "DISP", millis(), Display::stateID(id));
   }
 
   void printTrigger(uint16_t ev)
   {
-    // if (PRINT_DISP_STATE_EVENT &&
-    //     !(_fsm.revisit() && ev == Display::TR_STOPPED) &&
-    //     !(_fsm.revisit() && ev == Display::TR_MOVING) &&
-    //     !(_fsm.getCurrentStateId() == Display::ST_OPTION_PUSH_TO_START && ev == Display::TR_STOPPED))
-    Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "DISP", Display::getTrigger(ev));
+    if (PRINT_DISP_STATE_EVENT &&
+        !(Display::_fsm.revisit() && ev == Display::TR_STOPPED) &&
+        !(Display::_fsm.revisit() && ev == Display::TR_MOVING) &&
+        !(Display::_fsm.getCurrentStateId() == Display::ST_OPTION_PUSH_TO_START && ev == Display::TR_STOPPED))
+      Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "DISP", millis(), Display::getTrigger(ev));
   }
 
   void handlePacketState(PacketState payload)
@@ -140,7 +143,7 @@ namespace DisplayTaskBase
       else if (!Display::fsm_mgr.currentStateIs(Display::ST_STOPPED_SCREEN) && !payload.moving)
         Display::fsm_mgr.trigger(Display::Trigger::TR_STOPPED);
     }
-    else
+    else if (!Display::fsm_mgr.currentStateIs(Display::ST_DISCONNECTED))
       // offline
       Display::fsm_mgr.trigger(Display::TR_DISCONNECTED);
   }

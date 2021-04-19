@@ -135,7 +135,7 @@ void OrchestratorTask_sendPacketsRegularly()
   while (counter < NUM_LOOPS)
   {
     // confirm schedule packet on queue
-    uint8_t response = waitForNew(scheduleQueue, PERIOD_1S, nullptr, PRINT_TIMEOUT);
+    uint8_t response = waitForNew(scheduleQueue, PERIOD_1s, nullptr, PRINT_TIMEOUT);
     TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find schedule packet on the schedule queue");
 
     counter++;
@@ -203,7 +203,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested()
     QwiicTaskBase::thisTask->enable(PRINT_THIS);
 
     // confirm schedule packet on queue
-    uint8_t response = waitForNew(scheduleQueue, PERIOD_1S);
+    uint8_t response = waitForNew(scheduleQueue, PERIOD_1s);
     TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response,
                               "Didn't find schedule packet on the schedule queue");
     TEST_ASSERT_EQUAL_MESSAGE(notification.command, scheduleQueue->payload.command,
@@ -262,7 +262,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
   CommsTask::SEND_TO_BOARD_INTERVAL_LOCAL = PERIOD_500ms;
 
   namespace dt_ = DisplayTaskBase;
-  dt_::start(PERIOD_10ms);
+  dt_::start(PERIOD_50ms);
 
   namespace nct_ = NintendoClassicTaskBase;
   nct_::start();
@@ -381,7 +381,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
     vTaskDelay(TICKS_1s);
   }
 
-  vTaskDelay(PERIOD_1S);
+  vTaskDelay(PERIOD_1s);
 
   // OrchestratorTask::thisTask->deleteTask();
   QwiicTaskBase::thisTask->deleteTask();

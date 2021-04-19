@@ -133,7 +133,7 @@ void usesSendNotfTimer_sendsPacketsOK()
   while (counter < NUM_LOOPS)
   {
     // check for Notf
-    uint8_t response = waitForNew(readNoftQueue, PERIOD_1S, nullptr, PRINT_TIMEOUT);
+    uint8_t response = waitForNew(readNoftQueue, PERIOD_1s, nullptr, PRINT_TIMEOUT);
     TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find notification on the queue");
 
     counter++;
@@ -173,7 +173,7 @@ void usesTaskScheduler_withTaskBase_sendsPacketsOK()
   while (counter < NUM_LOOPS)
   {
     // check for Notf
-    uint8_t response = waitForNew(readNoftQueue, PERIOD_1S, nullptr, PRINT_TIMEOUT);
+    uint8_t response = waitForNew(readNoftQueue, PERIOD_1s, nullptr, PRINT_TIMEOUT);
     TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find notification on the queue");
 
     counter++;
@@ -281,7 +281,7 @@ void usesTaskSchedulerAndCommsTaskAndQwiicButton_withTaskBases_sendsPacketsAndRe
   while (counter < NUM_LOOPS)
   {
     // confirm schedule packet on queue
-    uint8_t response = waitForNew(scheduleQueue, PERIOD_1S, nullptr, PRINT_TIMEOUT);
+    uint8_t response = waitForNew(scheduleQueue, PERIOD_1s, nullptr, PRINT_TIMEOUT);
     TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find schedule packet on the schedule queue");
 
     // check for response from CommsTask

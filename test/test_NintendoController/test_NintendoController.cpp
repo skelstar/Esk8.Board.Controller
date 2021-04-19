@@ -123,7 +123,7 @@ void usesTaskSchedulerAndNintendoController_withTaskBaseAnRealController_sendsPa
   while (since_started_testing < 8 * SECONDS)
   {
     // confirm schedule packet on queue
-    uint8_t response = waitForNew(scheduleQueue, PERIOD_1S, nullptr, PRINT_TIMEOUT);
+    uint8_t response = waitForNew(scheduleQueue, PERIOD_1s, nullptr, PRINT_TIMEOUT);
     TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find schedule packet on the schedule queue");
 
     // // check for resmary Button pressed: %s\n", pressed);
