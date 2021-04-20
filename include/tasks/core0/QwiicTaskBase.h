@@ -46,8 +46,6 @@ namespace QwiicTaskBase
 
     void initialise()
     {
-      state.correlationId = -1;
-
       if (primaryButtonQueue == nullptr)
         Serial.printf("ERROR: primaryButtonQueue is NULL\n");
 
@@ -65,7 +63,7 @@ namespace QwiicTaskBase
       {
         if (scheduleQueue->payload.command == QueueBase::Command::RESPOND)
         {
-          state.correlationId = scheduleQueue->payload.correlationId;
+          state.event_id = scheduleQueue->payload.event_id;
           state.sent_time = scheduleQueue->payload.sent_time;
           return true;
         }

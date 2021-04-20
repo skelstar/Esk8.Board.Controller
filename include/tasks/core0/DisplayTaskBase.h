@@ -73,10 +73,6 @@ namespace DisplayTaskBase
     //--------------------------------
     void doWork()
     {
-      // TODO logic for NO_CORRELATION
-      if (scheduleQueue->hasValue() && scheduleQueue->payload.command == QueueBase::RESPOND)
-        thisTask->respondToOrchestrator<DisplayEvent>(scheduleQueue->payload, displayEvent, displayEventQueue);
-
       packetStateQueue->hasValue();
       // will check for online regardless of anything being new on the queue
       if (packetStateQueue->payload.event_id > 0)

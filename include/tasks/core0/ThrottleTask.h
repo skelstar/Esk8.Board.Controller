@@ -69,7 +69,7 @@ namespace ThrottleTask
         {
           DEBUG("Throttle has notf");
           // since_checked_throttle = 0;
-          //     throttleStateQueue->payload.correlationId = readNotfQueue->payload.correlationId;
+          //     throttleStateQueue->payload.event_id = readNotfQueue->payload.event_id;
 
           //     if (primaryButton->hasValue())
           //     {

@@ -35,8 +35,6 @@ namespace NintendoClassicTaskBase
 
     void initialise()
     {
-      buttonEvent.correlationId = -1;
-
       if (scheduleQueue == nullptr)
         Serial.printf("ERROR: scheduleQueue is NULL\n");
       if (nintendoButtonQueue == nullptr)
@@ -57,16 +55,6 @@ namespace NintendoClassicTaskBase
 
     void doWork()
     {
-      bool OK = scheduleQueue->hasValue();
-      // uint8_t status = waitForNew(scheduleQueue, PERIOD_50ms, thisTask->printPeekSchedule ? QueueBase::printRead : nullptr);
-      // DEBUGMVAL("doWork", scheduleQueue->payload.correlationId, scheduleQueue->payload.command);
-      if (OK && scheduleQueue->payload.command == QueueBase::RESPOND)
-      {
-        buttonEvent.correlationId = scheduleQueue->payload.correlationId;
-        buttonEvent.sent_time = scheduleQueue->payload.sent_time;
-        nintendoButtonQueue->reply(&buttonEvent, thisTask->printReplyToSchedule ? QueueBase::printReply : nullptr);
-      }
-
       buttonEvent.changed = classic.update(mux_I2C, TICKS_50ms);
       buttonEvent.button = NintendoController::BUTTON_NONE;
       if (buttonEvent.changed)

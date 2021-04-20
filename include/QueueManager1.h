@@ -104,7 +104,6 @@ namespace Queue1
 
     void send(T *payload, SentCallback_r sent_cb = nullptr)
     {
-      payload->correlationId++;
       if (_queue == nullptr)
       {
         Serial.printf("ERROR: queue not initialised! (%s)\n", name);
@@ -149,16 +148,13 @@ namespace Queue1
       return (T)e;
     }
 
-    need to change to event_id !!!
-
-        bool
-        hasValue()
+    bool hasValue()
     {
       T *result = this->peek();
-      if (result != nullptr && ((QueueBase *)result)->correlationId != _last_event_id)
+      if (result != nullptr && ((QueueBase *)result)->event_id != _last_event_id)
       {
-        // _checkForMissedEvents(((QueueBase *)result)->correlationId);
-        _last_event_id = ((QueueBase *)result)->correlationId;
+        // _checkForMissedEvents(((QueueBase *)result)->event_id);
+        _last_event_id = ((QueueBase *)result)->event_id;
         payload = *result;
         return true;
       }

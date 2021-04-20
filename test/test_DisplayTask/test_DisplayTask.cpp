@@ -55,7 +55,6 @@ GenericClient<ControllerData, VescData> boardClient(01);
 // bases
 #include <tasks/core0/CommsTask.h>
 #include <tasks/core0/NintendoClassicTaskBase.h>
-#include <tasks/core0/OrchestratorTask.h>
 #include <tasks/core0/QwiicTaskBase.h>
 #include <tasks/core0/DisplayTaskBase.h>
 
@@ -215,7 +214,6 @@ void DisplayTask_stuff()
 
   vTaskDelay(PERIOD_1s);
 
-  // OrchestratorTask::thisTask->deleteTask();
   qwiicT_::thisTask->deleteTask();
   commsT_::thisTask->deleteTask();
   dispt_::thisTask->deleteTask();
@@ -235,8 +233,6 @@ void setup()
 
   UNITY_BEGIN();
 
-  // RUN_TEST(OrchestratorTask_sendPacketsRegularly);
-  // RUN_TEST(OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested);
   RUN_TEST(DisplayTask_stuff);
 
   UNITY_END();

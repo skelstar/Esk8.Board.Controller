@@ -59,7 +59,6 @@ GenericClient<ControllerData, VescData> boardClient(01);
 
 // TASKS ------------------------
 
-// #include <tasks/core0/OrchestratorTask.h>
 // #include <tasks/core0/DisplayTask.h>
 // #include <tasks/core0/QwiicTaskBase.h>
 // #include <tasks/core0/ThrottleTask.h>
@@ -145,7 +144,7 @@ void usesTaskScheduler_repliesWithPacketsOK()
     response = waitForNew(packetStateQueue, PERIOD_50ms, nullptr, PRINT_TIMEOUT);
     PacketState payload = packetStateQueue->payload;
     TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "Didn't find the PacketState on the queue");
-    TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.correlationId, payload.correlationId, "Didn't find the correct correlationId");
+    TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.event_id, payload.event_id, "Didn't find the correct event_id");
 
     counter++;
 
@@ -213,7 +212,7 @@ void usesTaskScheduler_withMockGenericClient_repliesWithCorrectData()
     response = waitForNew(packetStateQueue, PERIOD_50ms, nullptr, PRINT_TIMEOUT);
     PacketState payload = packetStateQueue->payload;
     TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "Didn't find the PacketState on the queue");
-    TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.correlationId, payload.correlationId, "Didn't find the correct correlationId");
+    TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.event_id, payload.event_id, "Didn't find the correct event_id");
 
     counter++;
 

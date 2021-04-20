@@ -60,7 +60,6 @@ RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
 
 #include <tasks/core0/BoardCommsTask.h>
-#include <tasks/core0/OrchestratorTask.h>
 
 //----------------------------------
 #define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
@@ -268,7 +267,6 @@ void test_display_remote_battery()
   Display::mgr.create(Display::task, CORE_0, PRIORITY_1);
   Remote::mgr.create(Remote::task, CORE_0, PRIORITY_1);
   BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_3);
-  OrchestratorTask::mgr.create(OrchestratorTask::task, CORE_1, PRIORITY_3);
 
   BoardCommsTask::boardClient.mockResponseCallback(mockMovingResponse);
   BoardCommsTask::mgr.enable();
@@ -284,8 +282,6 @@ void test_display_remote_battery()
 
   unsigned long last_id = -1;
   BoardClass board;
-
-  OrchestratorTask::mgr.enable();
 
   while (1)
   {
@@ -314,7 +310,6 @@ void test_mocked_client_responds_to_controller_packets_correctly()
   printTestTitle(__func__);
 
   BoardCommsTask::mgr.create(BoardCommsTask::task, CORE_1, PRIORITY_4);
-  OrchestratorTask::mgr.create(OrchestratorTask::task, CORE_1, PRIORITY_3);
 
   // pass in controller_packet
   BoardCommsTask::boardClient.mockResponseCallback([](ControllerData out) {
@@ -327,15 +322,12 @@ void test_mocked_client_responds_to_controller_packets_correctly()
 
   while (
       !BoardCommsTask::mgr.ready ||
-      !OrchestratorTask::mgr.ready)
   {
     vTaskDelay(5);
   }
 
-  OrchestratorTask::setSendInterval(1000);
 
   BoardCommsTask::mgr.enable();
-  OrchestratorTask::mgr.enable();
 
   Serial.printf("Tasks ready\n");
 

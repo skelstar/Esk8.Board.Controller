@@ -127,7 +127,7 @@ namespace BoardCommsTask
         if (readNotfQueue->hasValue())
         {
           packetState.latency = 0;
-          packetState.correlationId = readNotfQueue->payload.correlationId;
+          packetState.event_id = readNotfQueue->payload.event_id;
 
           sendPacketToBoard();
         }

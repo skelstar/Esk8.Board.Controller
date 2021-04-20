@@ -83,7 +83,7 @@ namespace QwiicButtonTask
             state.pressed = qwiicButton.isPressed();
             giveMutex(mux_I2C);
           }
-          state.correlationId = readNotfQueue->payload.correlationId;
+          state.event_id = readNotfQueue->payload.event_id;
 
           primaryButtonQueue->send(&state);
         }

@@ -80,15 +80,6 @@ public:
     rtos->deleteTask(print);
   }
 
-  template <typename T>
-  void respondToOrchestrator(SendToBoardNotf payload, T data, Queue1::Manager<T> *queue)
-  {
-    data.correlationId = payload.correlationId;
-    data.sent_time = payload.sent_time;
-
-    queue->reply(&data, printReplyToSchedule ? QueueBase::printReply : nullptr);
-  }
-
   void setInitialiseCallback(VoidVoidCallback _cb)
   {
     _initialise_cb = _cb;

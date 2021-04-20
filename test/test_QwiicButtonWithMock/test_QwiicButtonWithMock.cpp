@@ -59,7 +59,6 @@
 
 // // TASKS ------------------------
 
-// #include <tasks/core0/OrchestratorTask.h>
 // #include <tasks/core0/DisplayTask.h>
 // #include <tasks/core0/QwiicTaskBase.h>
 // #include <tasks/core0/ThrottleTask.h>
@@ -149,9 +148,9 @@
 //     // check for response from Primary Button (Qwiic)
 //     response = waitForNew(primaryButtonStateQueue, PERIOD_50ms, nullptr, PRINT_TIMEOUT);
 //     TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find primaryButton on the queue");
-//     TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.correlationId,
-//                               primaryButtonStateQueue->payload.correlationId,
-//                               "PrimaryButtonState correlationId does not match");
+//     TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.event_id,
+//                               primaryButtonStateQueue->payload.event_id,
+//                               "PrimaryButtonState event_id does not match");
 //     counter++;
 
 //     vTaskDelay(10);

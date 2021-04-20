@@ -128,9 +128,9 @@ void usesTaskSchedulerAndNintendoController_withTaskBaseAnRealController_sendsPa
 
     // // check for resmary Button pressed: %s\n", pressed);
     response = waitForNew(nintendoButtonEventQueue, PERIOD_20ms);
-    TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.correlationId,
-                              nintendoButtonEventQueue->payload.correlationId,
-                              "nintendoButtonEventQueue correlationId did not match");
+    TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.event_id,
+                              nintendoButtonEventQueue->payload.event_id,
+                              "nintendoButtonEventQueue event_id did not match");
     if (nintendoButtonEventQueue->payload.changed &&
         nintendoButtonEventQueue->payload.state == NintendoController::BUTTON_PRESSED)
       Serial.printf("Nintendo button pressed: %s (took %lu to respond)\n",

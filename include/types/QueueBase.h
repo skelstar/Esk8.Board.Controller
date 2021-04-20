@@ -19,7 +19,7 @@ public:
     RESPOND,
   };
 
-  unsigned long event_id = 0, latency = 0, correlationId = -1;
+  unsigned long event_id = 0, latency = 0;
   const char *name = nullptr;
   unsigned long sent_time;
   Command command = NONE;
@@ -29,7 +29,6 @@ public:
   {
     event_id = 0;
     name = "not set";
-    correlationId = -1;
   }
 
   bool been_peeked(unsigned long prev_id)
@@ -49,29 +48,29 @@ public:
 
   static void printSend(QueueBase b, const char *queueName = nullptr)
   {
-    Serial.printf("[Queue|%s| SEND |%lums] correlationID: %lu %s\n",
+    Serial.printf("[Queue|%s| SEND |%lums] event_id: %lu %s\n",
                   queueName != nullptr ? queueName : b.name,
                   millis(),
-                  b.correlationId,
+                  b.event_id,
                   b.command == RESPOND ? "RESPOND" : "");
   }
 
   static void printReply(QueueBase b, const char *queueName = nullptr)
   {
-    Serial.printf("[Queue|%s| REPLY |%lums] correlationID: %lu %s (took %lums)\n",
+    Serial.printf("[Queue|%s| REPLY |%lums] event_id: %lu %s (took %lums)\n",
                   queueName != nullptr ? queueName : b.name,
                   millis(),
-                  b.correlationId,
+                  b.event_id,
                   b.command == RESPOND ? "RESPONSE" : "",
                   b.getSinceSent());
   }
 
   static void printRead(QueueBase b, const char *queueName = nullptr)
   {
-    Serial.printf("[Queue|%s| READ |%lums] correlationId: %lu after %lums %s\n",
+    Serial.printf("[Queue|%s| READ |%lums] event_id: %lu after %lums %s\n",
                   queueName != nullptr ? queueName : b.name,
                   millis(),
-                  b.correlationId,
+                  b.event_id,
                   b.getSinceSent(),
                   b.command == RESPOND ? "RESPOND" : "");
   }

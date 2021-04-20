@@ -18,11 +18,6 @@
 --------------------------------------------------
 
 ### Tasks
-- OrchestratorTask
-  - Provides:
-    - SendToBoardNotf
-  - Consumes:
-    - _N/A_
 - BoardCommsTask
   - Consumes:
     - SendToBoardNotf

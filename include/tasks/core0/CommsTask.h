@@ -47,7 +47,6 @@ namespace CommsTask
       {
         Serial.printf("CONFIG_RESPONSE id: %lu\n", packet.id);
       }
-      packetState.correlationId = SendToBoardNotf::NO_CORRELATION;
       packetStateQueue->send(&packetState, thisTask->printSendToQueue ? QueueBase::printSend : nullptr);
 
       vTaskDelay(10);
@@ -83,8 +82,6 @@ namespace CommsTask
         return;
       }
 
-      packetState.correlationId = -1;
-
       packetStateQueue->read(); // clear the queue
 
       boardClient.begin(&network, boardPacketAvailable_cb, mux_SPI);
@@ -103,15 +100,6 @@ namespace CommsTask
       since_last_did_work = 0;
 
       boardClient.update();
-
-      // resonse request from Orchestrator
-      uint8_t status = waitForNew(scheduleQueue, PERIOD_50ms, thisTask->printPeekSchedule ? QueueBase::printRead : nullptr);
-      if (status == Response::OK && scheduleQueue->payload.command == QueueBase::RESPOND)
-      {
-        packetState.correlationId = scheduleQueue->payload.correlationId;
-        packetState.sent_time = scheduleQueue->payload.sent_time;
-        packetStateQueue->reply(&packetState, thisTask->printReplyToSchedule ? QueueBase::printReply : nullptr);
-      }
 
       if (since_sent_to_board > SEND_TO_BOARD_INTERVAL_LOCAL)
       {

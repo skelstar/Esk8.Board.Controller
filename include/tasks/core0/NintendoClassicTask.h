@@ -61,7 +61,7 @@ namespace NintendoClassicTask
         //   //     last_buttons[i] = new_buttons[i];
         //   //   }
         //   // }
-        //   // ev.correlationId = readSendNotfQueue->payload.correlationId;
+        //   // ev.event_id = readSendNotfQueue->payload.event_id;
         //   // nintendoControllerQueue->send(&ev);
         // }
       }
