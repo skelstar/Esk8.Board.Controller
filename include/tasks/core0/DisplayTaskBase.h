@@ -12,11 +12,11 @@
 
 namespace DisplayTaskBase
 {
-
   // prototypes
   void printState(uint16_t id);
   void printTrigger(uint16_t ev);
   void handlePacketState(PacketState payload);
+  void handleNintendoButtonEvent(NintendoButtonEvent payload);
 
   TaskBase *thisTask;
 
@@ -83,8 +83,9 @@ namespace DisplayTaskBase
         handlePacketState(packetStateQueue->payload);
 
       if (nintendoClassicQueue->hasValue())
+        handleNintendoButtonEvent(nintendoClassicQueue->payload);
 
-        Display::_fsm.run_machine();
+      Display::_fsm.run_machine();
     }
 
     void task(void *parameters)
@@ -131,13 +132,14 @@ namespace DisplayTaskBase
 
   void handlePacketState(PacketState payload)
   {
-    Serial.printf("[Disp:%lums] packet.version: %.1f, connected: %d\n", millis(), payload.version, payload.connected());
+    // check version
     if (payload.version != (float)VERSION_BOARD_COMPAT &&
         !Display::fsm_mgr.currentStateIs(Display::ST_BOARD_VERSION_DOESNT_MATCH_SCREEN))
     {
       Serial.printf("%.1f %.1f\n", payload.version, (float)VERSION_BOARD_COMPAT);
       Display::fsm_mgr.trigger(Display::TR_VERSION_DOESNT_MATCH);
     }
+    // connected
     else if (payload.connected())
     {
       if (!Display::fsm_mgr.currentStateIs(Display::ST_MOVING_SCREEN) && payload.moving)
@@ -154,5 +156,8 @@ namespace DisplayTaskBase
   {
     if (payload.button == NintendoController::BUTTON_START)
       Display::fsm_mgr.trigger(Display::TR_MENU_BUTTON_CLICKED);
+
+    if (payload.button != NintendoController::BUTTON_NONE)
+      Serial.printf("BUTTON: %s\n", NintendoClassicTaskBase::getButtonName(payload.button));
   }
 }

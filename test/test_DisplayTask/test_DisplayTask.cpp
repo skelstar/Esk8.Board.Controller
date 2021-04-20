@@ -157,8 +157,8 @@ void DisplayTask_stuff()
     VescData mockresp;
     mockresp.id = out.id;
     mockresp.version = VERSION_BOARD_COMPAT;
-    mockresp.moving = false;
-    // Serial.printf("[%lu] mockMovingResponse called, version: %.1f\n", millis(), mockresp.version);
+    mockresp.moving = counter >= 3 ? true : false;
+    Serial.printf("[%lu] mockMovingResponse called, moving: %d\n", millis(), mockresp.moving);
     return mockresp;
   });
 
@@ -192,6 +192,19 @@ void DisplayTask_stuff()
   while (counter < NUM_LOOPS)
   {
     // send
+
+    if (counter == 1)
+    {
+      TEST_ASSERT_TRUE_MESSAGE(Display::fsm_mgr.currentStateIs(Display::ST_STOPPED_SCREEN), "Display is not showing STOPPED screen");
+    }
+    else if (counter == 2)
+    {
+      TEST_ASSERT_TRUE_MESSAGE(Display::fsm_mgr.currentStateIs(Display::ST_OPTION_PUSH_TO_START), "Display is not showing OPTION_PUSH_TO_START screen");
+    }
+    else if (counter == 4)
+    {
+      TEST_ASSERT_TRUE_MESSAGE(Display::fsm_mgr.currentStateIs(Display::ST_MOVING_SCREEN), "Display is not showing MOVING screen");
+    }
 
     Serial.printf("Counter: %d\n", counter);
 

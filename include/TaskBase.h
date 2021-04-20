@@ -12,12 +12,6 @@ public:
   typedef bool (*BoolVoidCallback)();
 
 public:
-  // Queue1::Manager<SendToBoardNotf> *sendNotfQueue;
-  // Queue1::Manager<PrimaryButtonState> *readPrimaryButtonQueue;
-  // Queue1::Manager<ThrottleState> *readThrottleQueue;
-  // Queue1::Manager<PacketState> *readPacketStateQueue;
-  // Queue1::Manager<NintendoButtonEvent> *readNintendoQueue;
-
   VoidVoidCallback _initialise_cb = nullptr;
   VoidVoidCallback _initialiseQueues_cb = nullptr;
   VoidVoidCallback _createTask_cb = nullptr;

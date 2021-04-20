@@ -149,7 +149,10 @@ namespace Queue1
       return (T)e;
     }
 
-    bool hasValue()
+    need to change to event_id !!!
+
+        bool
+        hasValue()
     {
       T *result = this->peek();
       if (result != nullptr && ((QueueBase *)result)->correlationId != _last_event_id)
