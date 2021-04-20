@@ -115,13 +115,16 @@ namespace CommsTask
     }
   }
 
-  void start()
+  void start(ulong doWorkInterval, ulong sendToBoardInterval)
   {
     thisTask = new TaskBase("CommsTask", 3000);
     thisTask->setInitialiseCallback(initialise);
     thisTask->setInitialiseQueuesCallback(initialiseQueues);
     thisTask->setTimeToDoWorkCallback(timeToDowork);
     thisTask->setDoWorkCallback(doWork);
+
+    thisTask->doWorkInterval = doWorkInterval;
+    SEND_TO_BOARD_INTERVAL_LOCAL = sendToBoardInterval;
 
     if (thisTask->rtos != nullptr)
       thisTask->rtos->create(task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);

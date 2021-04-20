@@ -87,13 +87,15 @@ namespace QwiicTaskBase
     }
   }
 
-  void start()
+  void start(ulong doWorkInterval)
   {
     thisTask = new TaskBase("QwiicTaskBase", 3000);
     thisTask->setInitialiseCallback(initialise);
     thisTask->setInitialiseQueuesCallback(initialiseQueues);
     thisTask->setTimeToDoWorkCallback(timeToDowork);
     thisTask->setDoWorkCallback(doWork);
+
+    thisTask->doWorkInterval = doWorkInterval;
 
     if (thisTask->rtos != nullptr)
       thisTask->rtos->create(task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);

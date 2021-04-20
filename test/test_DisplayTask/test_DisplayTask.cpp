@@ -58,18 +58,19 @@ GenericClient<ControllerData, VescData> boardClient(01);
 #include <tasks/core0/QwiicTaskBase.h>
 #include <tasks/core0/DisplayTaskBase.h>
 
+/* #region test */
 Queue1::Manager<SendToBoardNotf> *scheduleQueue = nullptr;
 Queue1::Manager<DisplayEvent> *displayEventQueue = nullptr;
 Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
 Queue1::Manager<PacketState> *packetStateQueue = nullptr;
 Queue1::Manager<NintendoButtonEvent> *nintendoQueue = nullptr;
+/* #endregion */
 
 //----------------------------------
 
 static int counter = 0;
 elapsedMillis since_started_testing = 0;
 
-//----------------------------------
 void printTestTitle(const char *name)
 {
   Serial.printf("-------------------------------------------\n");
@@ -81,6 +82,11 @@ void printTestInstructions(const char *instructions)
 {
   Serial.printf("*** INSTR: %s\n", instructions);
 }
+
+namespace qwiicT_ = QwiicTaskBase;
+namespace commsT_ = CommsTask;
+namespace dispt_ = DisplayTaskBase;
+namespace nct_ = NintendoClassicTaskBase;
 
 void setUp()
 {
@@ -103,11 +109,24 @@ void setUp()
   packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
   nintendoQueue = Queue1::Manager<NintendoButtonEvent>::create("(test)nintendoQueue");
 
+  /* #region  tasks */
+
+  qwiicT_::start(/*work*/ PERIOD_100ms);
+  commsT_::start(/*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
+  nct_::start(/*work*/ PERIOD_50ms);
+  dispt_::start(/*work*/ PERIOD_50ms);
+
+  /* #endregion */
+
   counter = 0;
 }
 
 void tearDown()
 {
+  qwiicT_::thisTask->deleteTask();
+  commsT_::thisTask->deleteTask();
+  dispt_::thisTask->deleteTask();
+  nct_::thisTask->deleteTask();
 }
 
 void printPASS(const char *message)
@@ -117,30 +136,86 @@ void printPASS(const char *message)
 
 //-----------------------------------------------
 
-void DisplayTask_stuff()
+void BoardIsStopped_whenMoving_showsTheMovingScreen()
 {
   Wire.begin();
-  // start tasks
-  namespace qwiicT_ = QwiicTaskBase;
-  qwiicT_::start();
-  qwiicT_::thisTask->doWorkInterval = PERIOD_50ms;
 
-  namespace commsT_ = CommsTask;
-  commsT_::start();
-  commsT_::thisTask->doWorkInterval = PERIOD_100ms;
-  commsT_::SEND_TO_BOARD_INTERVAL_LOCAL = PERIOD_200ms;
-  // commsT_::thisTask->printSendToQueue = true;
-
-  namespace dispt_ = DisplayTaskBase;
-  dispt_::start(PERIOD_50ms);
   dispt_::settings.printState = true;
   dispt_::settings.printTrigger = true;
 
-  namespace nct_ = NintendoClassicTaskBase;
-  nct_::start();
-  nct_::thisTask->doWorkInterval = PERIOD_50ms;
+  /* #region  Mocks */
 
-  // mocks ---
+  commsT_::boardClient.mockResponseCallback([](ControllerData out) {
+    VescData mockresp;
+    mockresp.id = out.id;
+    mockresp.version = VERSION_BOARD_COMPAT;
+    mockresp.moving = counter >= 2;
+    // Serial.printf("[%lu] mockMovingResponse called, moving: %d\n", millis(), mockresp.moving);
+    return mockresp;
+  });
+
+  /* #endregion */
+
+  while (
+      //qwiicT_::thisTask->ready == false ||
+      commsT_::thisTask->ready == false ||
+      nct_::thisTask->ready == false ||
+      dispt_::thisTask->ready == false ||
+      false)
+  {
+    vTaskDelay(10);
+  }
+  DEBUG("Tasks ready");
+
+  /* #region  enable tasks */
+
+  // qwiicT_::thisTask->enable(PRINT_THIS);
+  commsT_::thisTask->enable(PRINT_THIS);
+  nct_::thisTask->enable(PRINT_THIS);
+  dispt_::thisTask->enable(PRINT_THIS);
+
+  /* #endregion */
+
+  vTaskDelay(PERIOD_500ms);
+
+  counter = 0;
+
+  const int NUM_LOOPS = 5;
+
+  // tests
+  while (counter < NUM_LOOPS)
+  {
+    if (counter == 1)
+    {
+      TEST_ASSERT_TRUE_MESSAGE(Display::fsm_mgr.currentStateIs(Display::ST_STOPPED_SCREEN), "Display is not showing STOPPED screen");
+    }
+    else if (counter > 2)
+    {
+      TEST_ASSERT_TRUE_MESSAGE(Display::fsm_mgr.currentStateIs(Display::ST_MOVING_SCREEN), "Display is not showing MOVING screen");
+    }
+
+    Serial.printf("Counter: %d\n", counter);
+
+    counter++;
+
+    vTaskDelay(TICKS_1s);
+  }
+
+  vTaskDelay(PERIOD_1s);
+
+  TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
+}
+//-----------------------------------------------
+
+void NintendoStartButton_whenPressed_opensPushToStartScreen()
+{
+  Wire.begin();
+
+  dispt_::settings.printState = true;
+  dispt_::settings.printTrigger = true;
+
+  /* #region  Mocks */
+
   qwiicT_::qwiicButton.setMockIsPressedCallback([] {
     return false;
   });
@@ -158,42 +233,42 @@ void DisplayTask_stuff()
     VescData mockresp;
     mockresp.id = out.id;
     mockresp.version = VERSION_BOARD_COMPAT;
-    mockresp.moving = counter >= 3 ? true : false;
+    mockresp.moving = false;
     // Serial.printf("[%lu] mockMovingResponse called, moving: %d\n", millis(), mockresp.moving);
     return mockresp;
   });
 
-  // wait for tasks ---
-  while (qwiicT_::thisTask->ready == false ||
-         commsT_::thisTask->ready == false ||
-         nct_::thisTask->ready == false ||
-         dispt_::thisTask->ready == false ||
-         false)
+  /* #endregion */
+
+  while (
+      //qwiicT_::thisTask->ready == false ||
+      commsT_::thisTask->ready == false ||
+      nct_::thisTask->ready == false ||
+      dispt_::thisTask->ready == false ||
+      false)
   {
     vTaskDelay(10);
   }
-
   DEBUG("Tasks ready");
 
-  // enable tasks ---
-  qwiicT_::thisTask->enable(PRINT_THIS);
+  /* #region  enable tasks */
+
+  // qwiicT_::thisTask->enable(PRINT_THIS);
   commsT_::thisTask->enable(PRINT_THIS);
   nct_::thisTask->enable(PRINT_THIS);
   dispt_::thisTask->enable(PRINT_THIS);
+
+  /* #endregion */
 
   vTaskDelay(PERIOD_500ms);
 
   counter = 0;
 
-  // clear the queue
-  scheduleQueue->read();
-
   const int NUM_LOOPS = 5;
 
+  // tests
   while (counter < NUM_LOOPS)
   {
-    // send
-
     if (counter == 1)
     {
       TEST_ASSERT_TRUE_MESSAGE(Display::fsm_mgr.currentStateIs(Display::ST_STOPPED_SCREEN), "Display is not showing STOPPED screen");
@@ -204,7 +279,7 @@ void DisplayTask_stuff()
     }
     else if (counter == 4)
     {
-      TEST_ASSERT_TRUE_MESSAGE(Display::fsm_mgr.currentStateIs(Display::ST_MOVING_SCREEN), "Display is not showing MOVING screen");
+      TEST_ASSERT_TRUE_MESSAGE(Display::fsm_mgr.currentStateIs(Display::ST_STOPPED_SCREEN), "Display is not showing MOVING screen");
     }
 
     Serial.printf("Counter: %d\n", counter);
@@ -215,11 +290,6 @@ void DisplayTask_stuff()
   }
 
   vTaskDelay(PERIOD_1s);
-
-  qwiicT_::thisTask->deleteTask();
-  commsT_::thisTask->deleteTask();
-  dispt_::thisTask->deleteTask();
-  nct_::thisTask->deleteTask();
 
   TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
 }
@@ -235,7 +305,8 @@ void setup()
 
   UNITY_BEGIN();
 
-  RUN_TEST(DisplayTask_stuff);
+  RUN_TEST(BoardIsStopped_whenMoving_showsTheMovingScreen);
+  // RUN_TEST(NintendoStartButton_whenPressed_opensPushToStartScreen);
 
   UNITY_END();
 }

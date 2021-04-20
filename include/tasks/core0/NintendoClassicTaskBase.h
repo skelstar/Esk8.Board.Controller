@@ -81,13 +81,15 @@ namespace NintendoClassicTaskBase
     }
   }
 
-  void start()
+  void start(ulong doWorkInterval)
   {
     thisTask = new TaskBase("NintendoClassicTaskBase", 3000);
     thisTask->setInitialiseCallback(_p::initialise);
     thisTask->setInitialiseQueuesCallback(_p::initialiseQueues);
     thisTask->setTimeToDoWorkCallback(_p::timeToDowork);
     thisTask->setDoWorkCallback(_p::doWork);
+
+    thisTask->doWorkInterval = doWorkInterval;
 
     if (thisTask->rtos != nullptr)
       thisTask->rtos->create(_p::task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);

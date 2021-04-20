@@ -57,20 +57,26 @@ public:
 
   bool init()
   {
+    if (_mockGetButtonEventCallback == nullptr)
+      DEBUG("ERROR: MockNintendoController _mockGetButtonEventCallback has not been initiailised!");
+
     return true;
   }
 
+  /*
+  returns true if new button pressed
+  */
   bool update(xSemaphoreHandle mutex, TickType_t ticks)
   {
-    uint8_t button = _mockGetButtonEventCallback != nullptr ? _mockGetButtonEventCallback() : 0;
+    uint8_t buttonPressed = _mockGetButtonEventCallback != nullptr
+                                ? _mockGetButtonEventCallback()
+                                : BUTTON_NONE;
 
-    if (_mockGetButtonEventCallback == nullptr)
-      DEBUG("ERROR: _mockGetButtonEventCallback has not been initiailised!");
-
-    if (buttonStates[button] != 1)
+    // check just pressed
+    if (buttonStates[buttonPressed] != 1)
     {
       for (int i = 0; i < BUTTON_COUNT; i++)
-        buttonStates[i] = button == i;
+        buttonStates[i] = buttonPressed == i;
       return true;
     }
     return false;

@@ -22,7 +22,7 @@ public:
 
   bool isPressed()
   {
-    return _mockedIsPressedCallback();
+    return _mockedIsPressedCallback != nullptr && _mockedIsPressedCallback();
   }
 
   bool isConnected()
