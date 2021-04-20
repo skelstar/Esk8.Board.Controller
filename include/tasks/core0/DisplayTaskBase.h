@@ -22,6 +22,12 @@ namespace DisplayTaskBase
 
   DisplayEvent displayEvent;
 
+  struct Config
+  {
+    bool printTrigger = false;
+    bool printState = false;
+  } settings;
+
   namespace _p
   {
     Queue1::Manager<SendToBoardNotf> *scheduleQueue = nullptr;
@@ -113,13 +119,13 @@ namespace DisplayTaskBase
 
   void printState(uint16_t id)
   {
-    if (PRINT_DISP_STATE)
+    if (settings.printState)
       Serial.printf(PRINT_STATE_FORMAT, "DISP", millis(), Display::stateID(id));
   }
 
   void printTrigger(uint16_t ev)
   {
-    if (PRINT_DISP_STATE_EVENT &&
+    if (settings.printTrigger &&
         !(Display::_fsm.revisit() && ev == Display::TR_STOPPED) &&
         !(Display::_fsm.revisit() && ev == Display::TR_MOVING) &&
         !(Display::_fsm.getCurrentStateId() == Display::ST_OPTION_PUSH_TO_START && ev == Display::TR_STOPPED))

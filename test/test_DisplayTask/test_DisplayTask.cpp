@@ -129,10 +129,12 @@ void DisplayTask_stuff()
   commsT_::start();
   commsT_::thisTask->doWorkInterval = PERIOD_100ms;
   commsT_::SEND_TO_BOARD_INTERVAL_LOCAL = PERIOD_200ms;
-  commsT_::thisTask->printSendToQueue = true;
+  // commsT_::thisTask->printSendToQueue = true;
 
   namespace dispt_ = DisplayTaskBase;
   dispt_::start(PERIOD_50ms);
+  dispt_::settings.printState = true;
+  dispt_::settings.printTrigger = true;
 
   namespace nct_ = NintendoClassicTaskBase;
   nct_::start();
@@ -157,7 +159,7 @@ void DisplayTask_stuff()
     mockresp.id = out.id;
     mockresp.version = VERSION_BOARD_COMPAT;
     mockresp.moving = counter >= 3 ? true : false;
-    Serial.printf("[%lu] mockMovingResponse called, moving: %d\n", millis(), mockresp.moving);
+    // Serial.printf("[%lu] mockMovingResponse called, moving: %d\n", millis(), mockresp.moving);
     return mockresp;
   });
 
