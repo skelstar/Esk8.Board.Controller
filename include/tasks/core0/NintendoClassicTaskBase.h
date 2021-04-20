@@ -2,25 +2,13 @@
 #include <QueueManager1.h>
 #include <types/SendToBoardNotf.h>
 
-#ifndef NintendoController
+#ifndef NintendoController_h
 // in case a mock is being used
 #include <NintendoController.h>
 #endif
 
 namespace NintendoClassicTaskBase
 {
-  // bool take(SemaphoreHandle_t m_handle, TickType_t ticks = TICKS_5ms)
-  // {
-  //   if (m_handle != nullptr)
-  //     return (xSemaphoreTake(m_handle, (TickType_t)5) == pdPASS);
-  //   return false;
-  // }
-
-  // void give(SemaphoreHandle_t m_handle)
-  // {
-  //   if (m_handle != nullptr)
-  //     xSemaphoreGive(m_handle);
-  // }
   // prototypes
   void connectToNintendoController();
   uint8_t button_changed(uint8_t *new_buttons, uint8_t *old_buttons);
@@ -28,12 +16,12 @@ namespace NintendoClassicTaskBase
 
   TaskBase *thisTask;
 
+  NintendoController classic;
+
   namespace _p
   {
     Queue1::Manager<SendToBoardNotf> *scheduleQueue = nullptr;
     Queue1::Manager<NintendoButtonEvent> *nintendoButtonQueue = nullptr;
-
-    NintendoController classic;
 
     NintendoButtonEvent buttonEvent;
 
@@ -131,7 +119,7 @@ namespace NintendoClassicTaskBase
     {
       if (take(mux_I2C, TICKS_10ms))
       {
-        initialised = _p::classic.init();
+        initialised = classic.init();
         if (!initialised)
           Serial.printf("ERROR: couldn't init Nintendo Controller\n");
         give(mux_I2C);

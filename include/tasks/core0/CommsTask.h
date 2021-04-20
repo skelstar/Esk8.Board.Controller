@@ -47,8 +47,8 @@ namespace CommsTask
       {
         Serial.printf("CONFIG_RESPONSE id: %lu\n", packet.id);
       }
-      packetState.correlationId = 99;
-      // packetStateQueue->send_r(&packetState, thisTask->printSendToQueue ? QueueBase::printSend : nullptr);
+      packetState.correlationId = SendToBoardNotf::NO_CORRELATION;
+      packetStateQueue->send_r(&packetState, thisTask->printSendToQueue ? QueueBase::printSend : nullptr);
 
       vTaskDelay(10);
     }
@@ -77,6 +77,12 @@ namespace CommsTask
     //----------------------------------------------------------
     void initialise()
     {
+      if (packetStateQueue == nullptr || scheduleQueue == nullptr)
+      {
+        Serial.printf("ERROR: packetStateQueue or schduleQueue is NULL\n");
+        return;
+      }
+
       packetState.correlationId = -1;
 
       boardClient.begin(&network, boardPacketAvailable_cb, mux_SPI);
@@ -93,12 +99,6 @@ namespace CommsTask
     void doWork()
     {
       since_last_did_work = 0;
-
-      if (packetStateQueue == nullptr || scheduleQueue == nullptr)
-      {
-        Serial.printf("ERROR: packetStateQueue or schduleQueue is NULL\n");
-        return;
-      }
 
       boardClient.update();
 

@@ -52,7 +52,7 @@ MyMutex mutex_SPI;
 // RF24Network network(radio);
 GenericClient<ControllerData, VescData> boardClient(01);
 
-#include <MockedQwiicButton.h>
+#include <MockQwiicButton.h>
 #include <MockNintendoController.h>
 
 #include <displayState.h>

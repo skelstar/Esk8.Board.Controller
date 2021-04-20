@@ -55,7 +55,10 @@ public:
   typedef void (*ButtonEventCallback)(uint8_t button);
   typedef uint8_t (*MockGetButtonEventCallback)();
 
-  bool init();
+  bool init()
+  {
+    return true;
+  }
 
   bool update(xSemaphoreHandle mutex, TickType_t ticks)
   {

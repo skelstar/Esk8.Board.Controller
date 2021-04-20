@@ -129,7 +129,7 @@ namespace Display
     if (board->version != (float)VERSION_BOARD_COMPAT &&
         !fsm_mgr.currentStateIs(Display::ST_BOARD_VERSION_DOESNT_MATCH_SCREEN))
     {
-      Serial.printf("%.1f %.1f\n", board->version, (float)VERSION_BOARD_COMPAT);
+      Serial.printf("board: %.1f compat: %.1f\n", board->version, (float)VERSION_BOARD_COMPAT);
       fsm_mgr.trigger(DispState::TR_VERSION_DOESNT_MATCH);
     }
     else if (board->connected())

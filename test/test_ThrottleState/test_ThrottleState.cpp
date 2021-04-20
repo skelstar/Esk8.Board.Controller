@@ -25,7 +25,7 @@ static int counter = 0;
 #include <types/Throttle.h>
 
 #include <MockMagThrottle.h>
-#include <MockedQwiicButton.h>
+#include <MockQwiicButton.h>
 
 MyMutex mutex_I2C;
 MyMutex mutex_SPI;

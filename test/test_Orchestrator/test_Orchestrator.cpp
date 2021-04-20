@@ -48,7 +48,7 @@ SemaphoreHandle_t mux_SPI;
 // RF24Network network(radio);
 GenericClient<ControllerData, VescData> boardClient(01);
 
-#include <MockedQwiicButton.h>
+#include <MockQwiicButton.h>
 
 // TASKS ------------------------
 // bases
@@ -261,8 +261,8 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
   // CommsTask::printSentPacketToBoard = true;
   CommsTask::SEND_TO_BOARD_INTERVAL_LOCAL = PERIOD_500ms;
 
-  namespace dt_ = DisplayTaskBase;
-  dt_::start(PERIOD_50ms);
+  namespace dispt_ = DisplayTaskBase;
+  dispt_::start(PERIOD_50ms);
 
   namespace nct_ = NintendoClassicTaskBase;
   nct_::start();
@@ -294,7 +294,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
   while (QwiicTaskBase::thisTask->ready == false ||
          CommsTask::thisTask->ready == false ||
          nct_::thisTask->ready == false ||
-         dt_::thisTask->ready == false ||
+         dispt_::thisTask->ready == false ||
          false)
   {
     vTaskDelay(10);
@@ -305,7 +305,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
   QwiicTaskBase::thisTask->enable(PRINT_THIS);
   CommsTask::thisTask->enable(PRINT_THIS);
   nct_::thisTask->enable(PRINT_THIS);
-  dt_::thisTask->enable(PRINT_THIS);
+  dispt_::thisTask->enable(PRINT_THIS);
 
   vTaskDelay(PERIOD_500ms);
 
