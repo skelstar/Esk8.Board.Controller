@@ -69,7 +69,7 @@ namespace QwiicButtonTask
     mgr.printReady();
 
     // state.pressed = qwiicButton.isPressed();
-    // primaryButtonQueue->send_r(&state, QueueBase::printSend);
+    // primaryButtonQueue->send(&state, QueueBase::printSend);
 
     while (true)
     {
@@ -85,7 +85,7 @@ namespace QwiicButtonTask
           }
           state.correlationId = readNotfQueue->payload.correlationId;
 
-          primaryButtonQueue->send_r(&state);
+          primaryButtonQueue->send(&state);
         }
       }
 

@@ -62,7 +62,7 @@ namespace NintendoClassicTask
         //   //   }
         //   // }
         //   // ev.correlationId = readSendNotfQueue->payload.correlationId;
-        //   // nintendoControllerQueue->send_r(&ev);
+        //   // nintendoControllerQueue->send(&ev);
         // }
       }
 

@@ -79,7 +79,7 @@ namespace NintendoClassicTaskBase
           buttonEvent.button = button_that_changed;
           buttonEvent.state = new_buttons[button_that_changed];
 
-          nintendoButtonQueue->send_r(&buttonEvent, thisTask->printReplyToSchedule ? QueueBase::printSend : nullptr);
+          nintendoButtonQueue->send(&buttonEvent, thisTask->printReplyToSchedule ? QueueBase::printSend : nullptr);
         }
         // save
         for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)

@@ -102,23 +102,7 @@ namespace Queue1
       xQueueSendToFront(_queue, (void *)&payload, _ticks);
     }
 
-    void send(T *payload, SentCallback sent_cb = nullptr)
-    {
-      Serial.printf("---------------------------\n   WARNING: this is deprecated!!!\n---------------------------\n");
-      if (_queue == nullptr)
-      {
-        Serial.printf("ERROR: queue not initialised! (%s)\n", name);
-        return;
-      }
-      xQueueSendToFront(_queue, (void *)&payload, _ticks);
-
-      if (sent_cb != nullptr)
-        sent_cb(*payload);
-
-      payload->event_id++;
-    }
-
-    void send_r(T *payload, SentCallback_r sent_cb = nullptr)
+    void send(T *payload, SentCallback_r sent_cb = nullptr)
     {
       payload->correlationId++;
       if (_queue == nullptr)
@@ -134,23 +118,6 @@ namespace Queue1
 
       payload->sent_time = millis();
       payload->event_id++;
-    }
-
-    void send_n(QueueBase *payload, SentCallback_r sent_cb = nullptr)
-    {
-      if (_queue == nullptr)
-      {
-        Serial.printf("ERROR: queue not initialised! (%s)\n", name);
-        return;
-      }
-      xQueueSendToFront(_queue, (void *)&payload, _ticks);
-
-      if (sent_cb != nullptr)
-        sent_cb(*payload, name);
-
-      payload->sent_time = millis();
-      payload->event_id++;
-      payload->correlationId++;
     }
 
     void reply(QueueBase *payload, SentCallback_r sent_cb = nullptr)

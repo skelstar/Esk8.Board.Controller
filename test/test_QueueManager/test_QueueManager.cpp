@@ -158,7 +158,7 @@ void test_calls_and_responds_in_same_task()
     {
       Serial.printf("counter: %d\n", counter);
       since_last_created = 0;
-      sendQueue.send_r(&firstObj, QueueBase::printSend);
+      sendQueue.send(&firstObj, QueueBase::printSend);
 
       bool gotObj = false, timedout = false;
       do
@@ -207,7 +207,7 @@ namespace SendFirstObjOnInterval
         since_sent = 0;
         unsigned long last_correlationId = sentObj.correlationId;
 
-        sendQueue.send_n(&sentObj, QueueBase::printSend);
+        sendQueue.send(&sentObj, QueueBase::printSend);
         ready = true;
         TEST_ASSERT_TRUE_MESSAGE(sentObj.correlationId == last_correlationId + 1, "firstObj.correlationId did not get +1");
       }
@@ -292,7 +292,7 @@ void test_queue_hasValue()
   {
     ulong sent_event_id = sendObj.event_id;
 
-    sendQueue.send_n(&sendObj);
+    sendQueue.send(&sendObj);
 
     TEST_ASSERT_TRUE(sent_event_id == sendObj.event_id - 1);
     DEBUG("PASS: event_id incremented");
@@ -331,7 +331,7 @@ void testUtils_waitForNewResponse()
   while (counter < 5)
   {
     ulong sent_event_id = sendObj.event_id;
-    sendQueue.send_n(&sendObj);
+    sendQueue.send(&sendObj);
 
     TEST_ASSERT_TRUE(sent_event_id == sendObj.event_id - 1);
     DEBUG("PASS: event_id incremented");
@@ -376,7 +376,7 @@ void test_queue_hasValue_updates_id()
     since_last_packet = 0;
 
     og_event_id = firstObj.event_id;
-    sendQueue.send_n(&firstObj);
+    sendQueue.send(&firstObj);
     // test to see that event_id got bumped by +1
     TEST_ASSERT_TRUE_MESSAGE(firstObj.event_id == og_event_id + 1, "firstObj.event_id did not +1");
 
@@ -538,7 +538,7 @@ uint8_t mockNintendoClassicButtonPress()
 //     DEBUG("--------------------------");
 //     notification.sent_time = millis();
 //     notification.correlationId++;
-//     sendNotfQueue->send_n(&notification, QueueBase::printSend);
+//     sendNotfQueue->send(&notification, QueueBase::printSend);
 
 //     vTaskDelay(TICKS_100ms);
 

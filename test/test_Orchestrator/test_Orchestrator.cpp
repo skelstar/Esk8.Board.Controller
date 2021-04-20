@@ -196,7 +196,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested()
 
     DEBUGMVAL("Before sending: ", millis(), notification.correlationId, notification.command);
     vTaskDelay(PERIOD_20ms);
-    scheduleQueue->send_r(&notification, QueueBase::printSend);
+    scheduleQueue->send(&notification, QueueBase::printSend);
 
     vTaskDelay(TICKS_10ms);
 
@@ -328,7 +328,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhe
     // send
     vTaskDelay(PERIOD_20ms);
     DEBUG("-----------");
-    scheduleQueue->send_r(&notification, QueueBase::printSend);
+    scheduleQueue->send(&notification, QueueBase::printSend);
 
     // confirm schedule packet on queue
     uint8_t response = waitForNew(scheduleQueue, PERIOD_50ms);

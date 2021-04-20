@@ -80,7 +80,7 @@ namespace ThrottleTask
 
           //     uint8_t raw_throttle = MagneticThrottle::get();
           //     throttle.val = raw_throttle;
-          //     throttleStateQueue->send_r(&throttle, QueueBase::printSend);
+          //     throttleStateQueue->send(&throttle, QueueBase::printSend);
         }
       }
       mgr.healthCheck(5000);

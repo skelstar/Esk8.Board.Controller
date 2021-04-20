@@ -48,7 +48,7 @@ namespace CommsTask
         Serial.printf("CONFIG_RESPONSE id: %lu\n", packet.id);
       }
       packetState.correlationId = SendToBoardNotf::NO_CORRELATION;
-      packetStateQueue->send_r(&packetState, thisTask->printSendToQueue ? QueueBase::printSend : nullptr);
+      packetStateQueue->send(&packetState, thisTask->printSendToQueue ? QueueBase::printSend : nullptr);
 
       vTaskDelay(10);
     }

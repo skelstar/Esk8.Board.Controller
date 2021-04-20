@@ -86,7 +86,7 @@ namespace BoardCommsTask
 
     packetState.sent(controller_packet);
 
-    packetStateQueue->send_r(&packetState, QueueBase::printSend);
+    packetStateQueue->send(&packetState, QueueBase::printSend);
 
     if (success == false)
       Serial.printf("Unable to send CONTROL packet to board id: %lu\n", controller_packet.id);

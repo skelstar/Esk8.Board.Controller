@@ -41,7 +41,7 @@ namespace OrchestratorTask
         return;
       }
       since_last_notification = 0;
-      orchestratorQueue->send_r(&notification, printSendToQueue ? QueueBase::printSend : nullptr);
+      orchestratorQueue->send(&notification, printSendToQueue ? QueueBase::printSend : nullptr);
     }
 
     void task(void *parameters)
