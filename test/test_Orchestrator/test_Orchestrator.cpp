@@ -244,7 +244,7 @@ void OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested()
 
 //-----------------------------------------------
 
-void OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhenRequested()
+void DisplayTask_stuff()
 {
   Wire.begin();
   // start tasks
@@ -403,7 +403,7 @@ void setup()
 
   // RUN_TEST(OrchestratorTask_sendPacketsRegularly);
   // RUN_TEST(OrchestratorTask_usesBroadcastToGetResponses_getsResponseswhenRequested);
-  RUN_TEST(OrchestratorTask_usesBroadcastToGetResponses_getsResponsesFromOtherTaskswhenRequested);
+  RUN_TEST(DisplayTask_stuff);
 
   UNITY_END();
 }

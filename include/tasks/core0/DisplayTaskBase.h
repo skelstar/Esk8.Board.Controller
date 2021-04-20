@@ -79,7 +79,8 @@ namespace DisplayTaskBase
 
       packetStateQueue->hasValue();
       // will check for online regardless of anything being new on the queue
-      handlePacketState(packetStateQueue->payload);
+      if (packetStateQueue->payload.event_id > 0)
+        handlePacketState(packetStateQueue->payload);
 
       if (nintendoClassicQueue->hasValue())
 
@@ -130,6 +131,7 @@ namespace DisplayTaskBase
 
   void handlePacketState(PacketState payload)
   {
+    Serial.printf("[Disp:%lums] packet.version: %.1f, connected: %d\n", millis(), payload.version, payload.connected());
     if (payload.version != (float)VERSION_BOARD_COMPAT &&
         !Display::fsm_mgr.currentStateIs(Display::ST_BOARD_VERSION_DOESNT_MATCH_SCREEN))
     {

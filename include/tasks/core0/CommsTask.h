@@ -85,6 +85,8 @@ namespace CommsTask
 
       packetState.correlationId = -1;
 
+      packetStateQueue->read(); // clear the queue
+
       boardClient.begin(&network, boardPacketAvailable_cb, mux_SPI);
     }
     //----------------------------------------------------------
