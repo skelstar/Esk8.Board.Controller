@@ -57,9 +57,9 @@ GenericClient<ControllerData, VescData> boardClient(01);
 #include <tasks/core0/NintendoClassicTaskBase.h>
 #include <tasks/core0/QwiicTaskBase.h>
 #include <tasks/core0/DisplayTaskBase.h>
+#include <tasks/core0/ThrottleTaskBase.h>
 
-/* #region test */
-Queue1::Manager<SendToBoardNotf> *scheduleQueue = nullptr;
+/* #region queue managers */
 Queue1::Manager<DisplayEvent> *displayEventQueue = nullptr;
 Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
 Queue1::Manager<PacketState> *packetStateQueue = nullptr;
@@ -69,7 +69,6 @@ Queue1::Manager<NintendoButtonEvent> *nintendoQueue = nullptr;
 //----------------------------------
 
 static int counter = 0;
-elapsedMillis since_started_testing = 0;
 
 void printTestTitle(const char *name)
 {
@@ -103,7 +102,6 @@ void setUp()
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 
   // configure queues
-  scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
   displayEventQueue = Queue1::Manager<DisplayEvent>::create("(test)displayEventQueue");
   primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaryButtonQueue");
   packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
@@ -123,10 +121,10 @@ void setUp()
 
 void tearDown()
 {
-  qwiicT_::thisTask->deleteTask();
-  commsT_::thisTask->deleteTask();
-  dispt_::thisTask->deleteTask();
-  nct_::thisTask->deleteTask();
+  qwiicT_::thisTask->deleteTask(PRINT_THIS);
+  commsT_::thisTask->deleteTask(PRINT_THIS);
+  dispt_::thisTask->deleteTask(PRINT_THIS);
+  nct_::thisTask->deleteTask(PRINT_THIS);
 }
 
 void printPASS(const char *message)

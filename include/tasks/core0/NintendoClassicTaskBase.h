@@ -20,7 +20,6 @@ namespace NintendoClassicTaskBase
 
   namespace _p
   {
-    Queue1::Manager<SendToBoardNotf> *scheduleQueue = nullptr;
     Queue1::Manager<NintendoButtonEvent> *nintendoButtonQueue = nullptr;
 
     NintendoButtonEvent buttonEvent;
@@ -29,14 +28,11 @@ namespace NintendoClassicTaskBase
 
     void initialiseQueues()
     {
-      scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(NintendoClassicTaskBase)scheduleQueue");
       nintendoButtonQueue = Queue1::Manager<NintendoButtonEvent>::create("(NintendoClassicTaskBase)nintendoButtonQueue");
     }
 
     void initialise()
     {
-      if (scheduleQueue == nullptr)
-        Serial.printf("ERROR: scheduleQueue is NULL\n");
       if (nintendoButtonQueue == nullptr)
         Serial.printf("ERROR: nintendoButtonQueue is NULL\n");
 
@@ -50,7 +46,7 @@ namespace NintendoClassicTaskBase
 
     bool timeToDowork()
     {
-      return since_last_did_work > thisTask->doWorkInterval && thisTask->enabled;
+      return true;
     }
 
     void doWork()

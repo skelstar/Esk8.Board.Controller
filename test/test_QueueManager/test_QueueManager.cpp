@@ -109,7 +109,6 @@ void printTestInstructions(const char *instructions)
   Serial.printf("*** INSTR: %s\n", instructions);
 }
 
-Queue1::Manager<SendToBoardNotf> *sendNotfQueue;
 Queue1::Manager<PrimaryButtonState> *primaryButtonQueue;
 Queue1::Manager<ThrottleState> *readThrottleQueue;
 Queue1::Manager<PacketState> *readPacketStateQueue;
@@ -397,8 +396,6 @@ void test_queue_hasValue_updates_id()
 
 void testUtils_waitForNewResp_with_QueueType_from_Notification_task()
 {
-  Queue1::Manager<SendToBoardNotf> *readNotfQueue = new Queue1::Manager<SendToBoardNotf>(xSendToBoardQueueHandle, TICKS_5ms, "(test)readNotfQueue");
-
   printTestInstructions("Test testUtils_waitForNewResp_with_QueueType_from_Notification_task");
 
   counter = 0;

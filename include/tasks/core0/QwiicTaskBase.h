@@ -7,19 +7,6 @@
 #include <SparkFun_Qwiic_Button.h>
 #endif
 
-// bool take(SemaphoreHandle_t m_handle, TickType_t ticks = TICKS_5ms)
-// {
-//   if (m_handle != nullptr)
-//     return (xSemaphoreTake(m_handle, (TickType_t)5) == pdPASS);
-//   return false;
-// }
-
-// void give(SemaphoreHandle_t m_handle)
-// {
-//   if (m_handle != nullptr)
-//     xSemaphoreGive(m_handle);
-// }
-
 namespace QwiicTaskBase
 {
   // prototypes
@@ -29,7 +16,6 @@ namespace QwiicTaskBase
 
   namespace
   {
-    Queue1::Manager<SendToBoardNotf> *scheduleQueue = nullptr;
     Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
 
     QwiicButton qwiicButton;
@@ -40,7 +26,6 @@ namespace QwiicTaskBase
 
     void initialiseQueues()
     {
-      scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(QwiicTaskBase)scheduleQueue");
       primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(QwiicTaskBase)primaryButtonQueue");
     }
 
@@ -55,24 +40,16 @@ namespace QwiicTaskBase
       connectToQwiicButton();
     }
 
+    elapsedMillis since_last_did_work = 0;
+
     bool timeToDowork()
     {
-      uint8_t status = waitForNew(scheduleQueue, PERIOD_50ms,
-                                  printPeekSchedule ? QueueBase::printRead : nullptr);
-      if (status == Response::OK)
-      {
-        if (scheduleQueue->payload.command == QueueBase::Command::RESPOND)
-        {
-          state.event_id = scheduleQueue->payload.event_id;
-          state.sent_time = scheduleQueue->payload.sent_time;
-          return true;
-        }
-      }
-      return false;
+      return true;
     }
 
     void doWork()
     {
+      since_last_did_work = 0;
       if (take(mux_I2C, TICKS_10ms))
       {
         state.pressed = qwiicButton.isPressed();

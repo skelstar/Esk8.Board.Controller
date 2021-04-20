@@ -153,7 +153,7 @@ namespace Queue1
       T *result = this->peek();
       if (result != nullptr && ((QueueBase *)result)->event_id != _last_event_id)
       {
-        // _checkForMissedEvents(((QueueBase *)result)->event_id);
+        _checkForMissedEvents(((QueueBase *)result)->event_id);
         _last_event_id = ((QueueBase *)result)->event_id;
         payload = *result;
         return true;
@@ -165,7 +165,7 @@ namespace Queue1
     {
       if (_queue == nullptr)
       {
-        DEBUG("ERROR (peek): _queue is NULL");
+        Serial.printf("ERROR (peek): _queue is NULL: %s\n", name);
         return nullptr;
       }
       T *new_pkt = nullptr;

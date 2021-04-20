@@ -94,15 +94,13 @@ void usesTaskSchedulerAndNintendoController_withTaskBaseAnRealController_sendsPa
   NintendoClassicTaskBase::printPeekSchedule = false;
 
   // configure queues
-  Queue1::Manager<SendToBoardNotf> *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
   Queue1::Manager<NintendoButtonEvent> *nintendoButtonEventQueue = Queue1::Manager<NintendoButtonEvent>::create("(test)nintendoButtonEventQueue");
 
   // mocks
   // - NONE
 
   // wait
-  while (TaskScheduler::thisTask->ready == false ||
-         NintendoClassicTaskBase::thisTask->ready == false ||
+  while (NintendoClassicTaskBase::thisTask->ready == false ||
          false)
   {
     vTaskDelay(10);
@@ -112,7 +110,6 @@ void usesTaskSchedulerAndNintendoController_withTaskBaseAnRealController_sendsPa
 
   vTaskDelay(PERIOD_100ms);
 
-  TaskScheduler::thisTask->enable(PRINT_THIS);
   NintendoClassicTaskBase::thisTask->enable(PRINT_THIS);
 
   counter = 0;
@@ -122,10 +119,6 @@ void usesTaskSchedulerAndNintendoController_withTaskBaseAnRealController_sendsPa
 
   while (since_started_testing < 8 * SECONDS)
   {
-    // confirm schedule packet on queue
-    uint8_t response = waitForNew(scheduleQueue, PERIOD_1s, nullptr, PRINT_TIMEOUT);
-    TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find schedule packet on the schedule queue");
-
     // // check for resmary Button pressed: %s\n", pressed);
     response = waitForNew(nintendoButtonEventQueue, PERIOD_20ms);
     TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.event_id,

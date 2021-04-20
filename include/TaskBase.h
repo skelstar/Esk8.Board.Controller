@@ -25,6 +25,7 @@ public:
   bool printSendToQueue = false,
        printReplyToSchedule = false,
        printPeekSchedule = false;
+  elapsedMillis since_last_did_work = 0;
 
 public:
   TaskBase(const char *name, uint16_t stackSize)
@@ -55,11 +56,9 @@ public:
     while (!enabled)
       vTaskDelay(TICKS_5ms);
 
-    elapsedMillis since_last_did_work = 0;
-
     while (true)
     {
-      if (since_last_did_work > doWorkInterval)
+      if (since_last_did_work > doWorkInterval && enabled)
       {
         if (_timeToDoWork_cb != nullptr && _timeToDoWork_cb())
         {
@@ -68,7 +67,7 @@ public:
             _doWork_cb();
         }
         else if (_timeToDoWork_cb == nullptr)
-          Serial.printf("ERROR: _timeToDoWork callback is NULL\n");
+          Serial.printf("ERROR: _timeToDoWork callback is NULL (%s)\n", _name);
       }
       vTaskDelay(5);
     }

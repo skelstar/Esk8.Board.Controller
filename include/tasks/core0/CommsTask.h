@@ -21,7 +21,6 @@ namespace CommsTask
 
   namespace
   {
-    Queue1::Manager<SendToBoardNotf> *scheduleQueue = nullptr;
     Queue1::Manager<PacketState> *packetStateQueue = nullptr;
 
     GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
@@ -70,18 +69,11 @@ namespace CommsTask
     //----------------------------------------------------------
     void initialiseQueues()
     {
-      scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(CommsTask)NotfQueue");
       packetStateQueue = Queue1::Manager<PacketState>::create("(CommsTask)PacketStateQueue");
     }
     //----------------------------------------------------------
     void initialise()
     {
-      if (packetStateQueue == nullptr || scheduleQueue == nullptr)
-      {
-        Serial.printf("ERROR: packetStateQueue or schduleQueue is NULL\n");
-        return;
-      }
-
       packetStateQueue->read(); // clear the queue
 
       boardClient.begin(&network, boardPacketAvailable_cb, mux_SPI);
@@ -92,13 +84,11 @@ namespace CommsTask
 
     bool timeToDowork()
     {
-      return since_last_did_work > PERIOD_50ms && thisTask->enabled;
+      return true;
     }
     //----------------------------------------------------------
     void doWork()
     {
-      since_last_did_work = 0;
-
       boardClient.update();
 
       if (since_sent_to_board > SEND_TO_BOARD_INTERVAL_LOCAL)

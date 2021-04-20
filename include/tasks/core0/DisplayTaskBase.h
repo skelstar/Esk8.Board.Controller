@@ -30,7 +30,6 @@ namespace DisplayTaskBase
 
   namespace _p
   {
-    Queue1::Manager<SendToBoardNotf> *scheduleQueue = nullptr;
     Queue1::Manager<PacketState> *packetStateQueue = nullptr;
     Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
     Queue1::Manager<NintendoButtonEvent> *nintendoClassicQueue = nullptr;
@@ -38,7 +37,6 @@ namespace DisplayTaskBase
     //--------------------------------
     void initialiseQueues()
     {
-      scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(DisplayBase)ScheduleQueue");
       packetStateQueue = Queue1::Manager<PacketState>::create("(DisplayBase)PacketStateQueue");
       primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(DisplayBase)PrimaryButtonQueue");
       nintendoClassicQueue = Queue1::Manager<NintendoButtonEvent>::create("(DisplayBase)NintendoClassicQueue");
@@ -47,8 +45,7 @@ namespace DisplayTaskBase
     //--------------------------------
     void initialise()
     {
-      if (scheduleQueue == nullptr ||
-          packetStateQueue == nullptr ||
+      if (packetStateQueue == nullptr ||
           primaryButtonQueue == nullptr ||
           nintendoClassicQueue == nullptr ||
           displayEventQueue == nullptr)
@@ -72,9 +69,7 @@ namespace DisplayTaskBase
 
     bool timeToDowork()
     {
-      return (since_last_did_work > thisTask->doWorkInterval ||
-              since_checked_online > PERIOD_1s) &&
-             thisTask->enabled;
+      return since_checked_online > PERIOD_1s && thisTask->enabled;
     }
     //--------------------------------
     void doWork()

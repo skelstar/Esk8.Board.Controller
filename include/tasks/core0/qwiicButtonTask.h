@@ -21,7 +21,6 @@ namespace QwiicButtonTask
   PrimaryButtonState state;
 
   Queue1::Manager<PrimaryButtonState> *primaryButtonQueue;
-  Queue1::Manager<SendToBoardNotf> *readNotfQueue;
 
   const unsigned long CHECK_QUEUE_INTERVAL = 50;
   const unsigned long CHECK_BUTTON_INTERVAL = 500;
@@ -49,7 +48,6 @@ namespace QwiicButtonTask
       DEBUG("WARNING! mux_I2C has not been initialised!");
 
     primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("IRL primaryButtonQueue");
-    readNotfQueue = Queue1::Manager<SendToBoardNotf>::create("IRL qwiickReadNotfQueue");
 
     bool init_button = false;
     do

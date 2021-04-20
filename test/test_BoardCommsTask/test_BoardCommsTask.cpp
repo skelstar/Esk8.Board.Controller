@@ -59,17 +59,6 @@ GenericClient<ControllerData, VescData> boardClient(01);
 
 // TASKS ------------------------
 
-// #include <tasks/core0/DisplayTask.h>
-// #include <tasks/core0/QwiicTaskBase.h>
-// #include <tasks/core0/ThrottleTask.h>
-// #include <tasks/core0/BoardCommsTask.h>
-// #include <tasks/core0/NintendoClassicTask.h>
-// #include <tasks/core0/remoteTask.h>
-
-#include <tasks/core0/BaseTaskTest1.h>
-#include <tasks/core0/TaskScheduler.h>
-#include <tasks/core0/CommsTask.h>
-
 //----------------------------------
 
 void printTestTitle(const char *name)
@@ -116,7 +105,6 @@ void usesTaskScheduler_repliesWithPacketsOK()
   CommsTask::printPeekSchedule = true;
 
   // configure queues
-  auto *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
   auto *packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
 
   // wait
