@@ -6,13 +6,12 @@
 #include "Arduino.h"
 #endif
 
-#include <types/PacketState.h>
-#include <types/SendToBoardNotf.h>
-#include <types/NintendoButtonEvent.h>
-#include <types/PrimaryButton.h>
-#include <types/Throttle.h>
-#include <types/QueueBase.h>
-#include <types/DisplayEvent.h>
+#include <tasks/queues/types/PacketState.h>
+#include <tasks/queues/types/NintendoButtonEvent.h>
+#include <tasks/queues/types/PrimaryButton.h>
+#include <tasks/queues/types/Throttle.h>
+#include <tasks/queues/types/QueueBase.h>
+#include <tasks/queues/types/DisplayEvent.h>
 
 const unsigned long SECONDS = 1000;
 const unsigned long MILLIS_S = 1;
@@ -57,10 +56,6 @@ namespace Queue1
   public:
     static Manager *create(const char *name, TickType_t ticks = TICKS_5ms)
     {
-      if (std::is_same<T, SendToBoardNotf>::value)
-      {
-        return new Manager<T>(xSendToBoardQueueHandle, TICKS_5ms, name);
-      }
       if (std::is_same<T, PrimaryButtonState>::value)
       {
         return new Manager<T>(xPrimaryButtonQueueHandle, TICKS_5ms, name);

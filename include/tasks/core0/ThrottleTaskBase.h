@@ -1,10 +1,11 @@
+#pragma once
+
 #include <TaskBase.h>
 #include <QueueManager1.h>
-#include <types/SendToBoardNotf.h>
 
 #ifndef MAGNETIC_THROTTLE_H
 // in case a mock is being used
-DEBUG("Using real MagThrottle library");
+// DEBUG("Using real MagThrottle library");
 #include <MagThrottle.h>
 #endif
 

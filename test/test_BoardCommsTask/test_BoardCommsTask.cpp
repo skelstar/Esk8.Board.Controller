@@ -10,14 +10,12 @@
 #include "Debug.hpp"
 
 #define PRINT_MUTEX_TAKE_FAIL 1
-static int counter = 0;
+// TODO pass in to ThrottleBase
 
 // RTOS ENTITES-------------------
 
-QueueHandle_t xFirstQueueHandle;
-QueueHandle_t xOtherTestQueueHandle;
-
 #include <tasks/queues/queues.h>
+#include <tasks/queues/types/root.h>
 
 SemaphoreHandle_t mux_I2C;
 SemaphoreHandle_t mux_SPI;
@@ -28,36 +26,28 @@ SemaphoreHandle_t mux_SPI;
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
-#include <testUtils.h>
+// #include <Wire.h>
 
-MyMutex mutex_I2C;
-MyMutex mutex_SPI;
+// Mocks
+#include <MockQwiicButton.h>
+#include <MockNintendoController.h>
+#include <MockMagThrottle.h>
 
-#include <types/QueueBase.h>
-#include <types/PacketState.h>
-#include <types/SendToBoardNotf.h>
-#include <types/NintendoButtonEvent.h>
-#include <types/PrimaryButton.h>
-#include <types/Throttle.h>
-
-#include <RF24Network.h>
-#include <NRF24L01Lib.h>
+#define RADIO_OBJECTS 1
 #include <MockGenericClient.h>
-// #include <GenericClient.h>
-
-#define RADIO_OBJECTS
-// NRF24L01Lib nrf24;
-
-// RF24 radio(NRF_CE, NRF_CS);
-// RF24Network network(radio);
-GenericClient<ControllerData, VescData> boardClient(01);
-
-// #include <MockQwiicButton.h>
-// #include <MockNintendoController.h>
-
-// #include <displayState.h>
+RF24 radio(NRF_CE, NRF_CS);
+RF24Network network(radio);
+NRF24L01Lib nrf24;
 
 // TASKS ------------------------
+
+#include <tasks/root.h>
+#include <tasks/queues/Managers.h>
+#include <testUtils.h>
+
+//----------------------------------
+
+static int counter = 0;
 
 //----------------------------------
 
@@ -80,137 +70,72 @@ void setUp()
   DEBUG("----------------------------");
 
   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
+  xDisplayQueueHandle = xQueueCreate(1, sizeof(DisplayEvent *));
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
   xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
-  xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf *));
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
+
+  // configure queues
+  displayEventQueue = Queue1::Manager<DisplayEvent>::create("(test)displayEventQueue");
+  primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaryButtonQueue");
+  packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
+  nintendoQueue = Queue1::Manager<NintendoButtonEvent>::create("(test)nintendoQueue");
+  throttleQueue = Queue1::Manager<ThrottleState>::create("(test)throttleQueue");
+
+  QwiicTaskBase::start(/*work*/ PERIOD_100ms);
+  BoardCommsTask::start(/*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
+  NintendoClassicTaskBase::start(/*work*/ PERIOD_50ms);
+  DisplayTaskBase::start(/*work*/ PERIOD_50ms);
+  ThrottleTaskBase::start(/*work*/ PERIOD_200ms);
 }
 
 void tearDown()
 {
+  QwiicTaskBase::thisTask->deleteTask(PRINT_THIS);
+  BoardCommsTask::thisTask->deleteTask(PRINT_THIS);
+  NintendoClassicTaskBase::thisTask->deleteTask(PRINT_THIS);
+  DisplayTaskBase::thisTask->deleteTask(PRINT_THIS);
+  ThrottleTaskBase::thisTask->deleteTask(PRINT_THIS);
 }
 
 //===================================================================
 
-void usesTaskScheduler_repliesWithPacketsOK()
-{
-  // start tasks
-  TaskScheduler::start();
-  TaskScheduler::sendInterval = PERIOD_500ms;
-  TaskScheduler::printSendToSchedule = true;
-
-  CommsTask::start();
-  CommsTask::printReplyToSchedule = true;
-  CommsTask::printPeekSchedule = true;
-
-  // configure queues
-  auto *packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
-
-  // wait
-  while (TaskScheduler::thisTask->ready == false ||
-         CommsTask::thisTask->ready == false ||
-         false)
-    vTaskDelay(10);
-
-  DEBUG("Tasks ready");
-
-  TaskScheduler::thisTask->enable();
-  CommsTask::thisTask->enable();
-
-  counter = 0;
-
-  const int NUM_LOOPS = 5;
-
-  while (counter < NUM_LOOPS)
-  {
-    // check for Notf
-    uint8_t response = waitForNew(scheduleQueue, PERIOD_1s, nullptr, PRINT_TIMEOUT);
-    TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find notification on the queue");
-
-    // check for packet response
-    response = waitForNew(packetStateQueue, PERIOD_50ms, nullptr, PRINT_TIMEOUT);
-    PacketState payload = packetStateQueue->payload;
-    TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "Didn't find the PacketState on the queue");
-    TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.event_id, payload.event_id, "Didn't find the correct event_id");
-
-    counter++;
-
-    vTaskDelay(10);
-  }
-
-  TaskScheduler::thisTask->deleteTask();
-  CommsTask::thisTask->deleteTask();
-
-  TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
-}
-
-//-------------------------------------------------------
-
 VescData mockMovingResponse(ControllerData out)
 {
-  // DEBUG("mockMovingResponse called");
+  DEBUG("mockMovingResponse called");
   VescData mockresp;
   mockresp.id = out.id;
   mockresp.version = VERSION_BOARD_COMPAT;
   mockresp.moving = false;
   return mockresp;
 }
+// void waitForTasksReady()
+// {
+//   while (
+//       BoardCommsTask::thisTask->ready == false ||
+//       NintendoClassicTaskBase::thisTask->ready == false ||
+//       QwiicTaskBase::thisTask->ready == false ||
+//       DisplayTaskBase::thisTask->ready == false ||
+//       ThrottleTaskBase::thisTask->ready == false)
+//     vTaskDelay(PERIOD_10ms);
+// }
 
-void usesTaskScheduler_withMockGenericClient_repliesWithCorrectData()
+void BoardCommsTask_withMockGenericClient_repliesWithCorrectData()
 {
-  // start tasks
-  TaskScheduler::start();
-  TaskScheduler::sendInterval = PERIOD_500ms;
-  TaskScheduler::printSendToSchedule = true;
+  // tasks are running
 
-  CommsTask::start();
-  CommsTask::printReplyToSchedule = true;
-  CommsTask::printPeekSchedule = false;
+  // Mocks
+  BoardCommsTask::boardClient.mockResponseCallback(mockMovingResponse);
+  BoardCommsTask::printSentPacketToBoard = true;
 
-  // configure queues
-  auto *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
-  auto *packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
+  Test::waitForTasksReady();
+  Test::enableAllTasks();
 
-  // mocks
-  CommsTask::boardClient.mockResponseCallback(mockMovingResponse);
+  vTaskDelay(TICKS_500ms);
 
-  // wait
-  while (TaskScheduler::thisTask->ready == false ||
-         CommsTask::thisTask->ready == false ||
-         false)
-    vTaskDelay(10);
-
-  DEBUG("Tasks ready");
-
-  TaskScheduler::thisTask->enable();
-  CommsTask::thisTask->enable();
-
-  counter = 0;
-
-  const int NUM_LOOPS = 5;
-
-  while (counter < NUM_LOOPS)
-  {
-    // check for Notf
-    uint8_t response = waitForNew(scheduleQueue, PERIOD_1s, nullptr, PRINT_TIMEOUT);
-    TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find notification on the queue");
-
-    // check for packet response
-    response = waitForNew(packetStateQueue, PERIOD_50ms, nullptr, PRINT_TIMEOUT);
-    PacketState payload = packetStateQueue->payload;
-    TEST_ASSERT_EQUAL_MESSAGE(Response::OK, response, "Didn't find the PacketState on the queue");
-    TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.event_id, payload.event_id, "Didn't find the correct event_id");
-
-    counter++;
-
-    vTaskDelay(10);
-  }
-
-  TaskScheduler::thisTask->deleteTask();
-  CommsTask::thisTask->deleteTask();
-
-  TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
+  TEST_ASSERT_TRUE(packetStateQueue->hasValue());
+  TEST_ASSERT_EQUAL(VERSION_BOARD_COMPAT, packetStateQueue->payload.version);
 }
 
 //===================================================================
@@ -224,8 +149,7 @@ void setup()
 
   UNITY_BEGIN();
 
-  // RUN_TEST(usesTaskScheduler_repliesWithPacketsOK);
-  RUN_TEST(usesTaskScheduler_withMockGenericClient_repliesWithCorrectData);
+  RUN_TEST(BoardCommsTask_withMockGenericClient_repliesWithCorrectData);
 
   UNITY_END();
 }

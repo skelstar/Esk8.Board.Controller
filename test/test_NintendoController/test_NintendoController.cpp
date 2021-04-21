@@ -34,21 +34,18 @@ SemaphoreHandle_t mux_SPI;
 MyMutex mutex_I2C;
 MyMutex mutex_SPI;
 
-#include <types/QueueBase.h>
-#include <types/PacketState.h>
-#include <types/SendToBoardNotf.h>
-#include <types/NintendoButtonEvent.h>
-#include <types/PrimaryButton.h>
-#include <types/Throttle.h>
+#include <tasks/queues/types/QueueBase.h>
+#include <tasks/queues/types/PacketState.h>
+#include <tasks/queues/types/NintendoButtonEvent.h>
+#include <tasks/queues/types/PrimaryButton.h>
+#include <tasks/queues/types/Throttle.h>
 
 #define RADIO_OBJECTS
 
 // TASKS ------------------------
 
 #include <tasks/core0/QwiicTaskBase.h>
-#include <tasks/core0/BaseTaskTest1.h>
-#include <tasks/core0/TaskScheduler.h>
-#include <tasks/core0/CommsTask.h>
+#include <tasks/core0/BoardCommsTask.h>
 #include <tasks/core0/NintendoClassicTaskBase.h>
 
 //----------------------------------
@@ -75,7 +72,6 @@ void setUp()
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
   xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
-  xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf *));
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 }
 

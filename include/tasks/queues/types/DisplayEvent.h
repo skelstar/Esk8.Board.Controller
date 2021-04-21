@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QueueManager1.h>
+#include <tasks/queues/types/QueueBase.h>
 
 class DisplayEvent : public QueueBase
 {

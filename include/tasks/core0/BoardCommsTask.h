@@ -1,29 +1,30 @@
+#pragma once
+
 #include <TaskBase.h>
 #include <QueueManager1.h>
-#include <types/SendToBoardNotf.h>
-#include <types/PacketState.h>
+#include <tasks/queues/types/root.h>
 
-namespace CommsTask
+namespace BoardCommsTask
 {
   TaskBase *thisTask;
 
 #ifndef RADIO_OBJECTS
-#define RADIO_OBJECTS
 
-#include <RF24Network.h>
 #include <NRF24L01Lib.h>
+#include <GenericClient.h>
 
   NRF24L01Lib nrf24;
 
   RF24 radio(NRF_CE, NRF_CS);
   RF24Network network(radio);
+
 #endif
+
+  GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
 
   namespace
   {
     Queue1::Manager<PacketState> *packetStateQueue = nullptr;
-
-    GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
 
     ControllerConfig controller_config;
     ControllerData controller_packet;
@@ -69,7 +70,7 @@ namespace CommsTask
     //----------------------------------------------------------
     void initialiseQueues()
     {
-      packetStateQueue = Queue1::Manager<PacketState>::create("(CommsTask)PacketStateQueue");
+      packetStateQueue = Queue1::Manager<PacketState>::create("(BoardCommsTask)PacketStateQueue");
     }
     //----------------------------------------------------------
     void initialise()
@@ -107,7 +108,7 @@ namespace CommsTask
 
   void start(ulong doWorkInterval, ulong sendToBoardInterval)
   {
-    thisTask = new TaskBase("CommsTask", 3000);
+    thisTask = new TaskBase("BoardCommsTask", 3000);
     thisTask->setInitialiseCallback(initialise);
     thisTask->setInitialiseQueuesCallback(initialiseQueues);
     thisTask->setTimeToDoWorkCallback(timeToDowork);

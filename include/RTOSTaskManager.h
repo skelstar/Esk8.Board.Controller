@@ -59,11 +59,8 @@ public:
     if (running)
     {
       if (print)
-      {
-        Serial.printf("------------------------\n");
-        Serial.printf("DELETING %s!\n", _task_name);
-        Serial.printf("------------------------\n");
-      }
+        Serial.printf("[TASK %lums DELETING %s!\n", millis(), _task_name);
+
       vTaskDelay(100);
       vTaskDelete(_taskHandle);
     }

@@ -14,6 +14,7 @@
 // RTOS ENTITES-------------------
 
 #include <tasks/queues/queues.h>
+#include <tasks/queues/types/root.h>
 
 SemaphoreHandle_t mux_I2C;
 SemaphoreHandle_t mux_SPI;
@@ -27,44 +28,24 @@ SemaphoreHandle_t mux_SPI;
 #include <testUtils.h>
 #include <Wire.h>
 
-#include <types/DisplayEvent.h>
-#include <types/NintendoButtonEvent.h>
-#include <types/PacketState.h>
-#include <types/PrimaryButton.h>
-#include <types/QueueBase.h>
-#include <types/SendToBoardNotf.h>
-#include <types/Throttle.h>
-
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
 
 // mocks
-#include <MockGenericClient.h>
 #include <MockNintendoController.h>
 #include <MockQwiicButton.h>
 // #include <GenericClient.h>
 
 #define RADIO_OBJECTS
-// NRF24L01Lib nrf24;
-
-// RF24 radio(NRF_CE, NRF_CS);
-// RF24Network network(radio);
-GenericClient<ControllerData, VescData> boardClient(01);
+#include <MockGenericClient.h>
+RF24 radio(NRF_CE, NRF_CS);
+RF24Network network(radio);
+NRF24L01Lib nrf24;
 
 // TASKS ------------------------
-// bases
-#include <tasks/core0/CommsTask.h>
-#include <tasks/core0/NintendoClassicTaskBase.h>
-#include <tasks/core0/QwiicTaskBase.h>
-#include <tasks/core0/DisplayTaskBase.h>
-#include <tasks/core0/ThrottleTaskBase.h>
 
-/* #region queue managers */
-Queue1::Manager<DisplayEvent> *displayEventQueue = nullptr;
-Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
-Queue1::Manager<PacketState> *packetStateQueue = nullptr;
-Queue1::Manager<NintendoButtonEvent> *nintendoQueue = nullptr;
-/* #endregion */
+#include <tasks/root.h>
+#include <tasks/queues/Managers.h>
 
 //----------------------------------
 
@@ -83,7 +64,7 @@ void printTestInstructions(const char *instructions)
 }
 
 namespace qwiicT_ = QwiicTaskBase;
-namespace commsT_ = CommsTask;
+namespace commsT_ = BoardCommsTask;
 namespace dispt_ = DisplayTaskBase;
 namespace nct_ = NintendoClassicTaskBase;
 
@@ -98,7 +79,6 @@ void setUp()
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
   xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
-  xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf *));
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 
   // configure queues

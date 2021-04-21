@@ -6,7 +6,7 @@
 #include <SparkFun_Qwiic_Button.h>
 #endif
 
-#include <types/PrimaryButton.h>
+#include <tasks/queues/types/PrimaryButton.h>
 
 //------------------------------------------
 

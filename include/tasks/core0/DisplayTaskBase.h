@@ -2,8 +2,7 @@
 
 #include <TaskBase.h>
 #include <tasks/queues/queues.h>
-#include <types/SendToBoardNotf.h>
-#include <types/DisplayEvent.h>
+#include <tasks/queues/types/DisplayEvent.h>
 
 #include <displayState.h>
 #include <TFT_eSPI.h>

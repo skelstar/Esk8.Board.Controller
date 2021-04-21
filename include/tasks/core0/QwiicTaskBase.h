@@ -1,6 +1,7 @@
+#pragma once
+
 #include <TaskBase.h>
 #include <QueueManager1.h>
-#include <types/SendToBoardNotf.h>
 
 // incase we aren't using a mock in a test
 #ifndef __SparkFun_Qwiic_Button_H__

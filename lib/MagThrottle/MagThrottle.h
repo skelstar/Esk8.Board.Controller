@@ -11,6 +11,10 @@
 #include <FastMap.h>
 #include <Fsm.h>
 
+#ifndef PRINT_THROTTLE
+#define PRINT_THROTTLE 1
+#endif
+
 namespace MagneticThrottle
 {
   // https://ams.com/documents/20143/36005/AS5600_DS000365_5-00.pdf
@@ -73,10 +77,10 @@ namespace MagneticThrottle
   {
     float deg = _centre;
     // TODO is this the bext way to handle this?
-    if (mutex_I2C.take("MagneticThrottle: update", TICKS_100ms))
+    if (take(mux_I2C, TICKS_100ms))
     {
       deg = _convertRawAngleToDegrees(ams5600.getRawAngle());
-      mutex_I2C.give("MagneticThrottle: update"); // 1ms
+      give(mux_I2C);
     }
     float adj = deg;
     float delta = getDelta(deg, _prev_deg);
@@ -138,10 +142,10 @@ namespace MagneticThrottle
 
   void centre()
   {
-    if (mutex_I2C.take(__func__, TICKS_50ms))
+    if (take(mux_I2C, TICKS_50ms))
     {
       _centre = _convertRawAngleToDegrees(ams5600.getRawAngle());
-      mutex_I2C.give(__func__);
+      give(mux_I2C);
     }
     _raw_throttle = _centre;
     _throttle = 127;
@@ -167,7 +171,7 @@ namespace MagneticThrottle
 
   bool connect()
   {
-    if (mutex_I2C.take(__func__, TICKS_50ms))
+    if (take(mux_I2C, TICKS_50ms))
     {
       if (ams5600.detectMagnet() == 0)
       {
@@ -186,7 +190,7 @@ namespace MagneticThrottle
           vTaskDelay(200);
         }
       }
-      mutex_I2C.give(__func__);
+      give(mux_I2C);
     }
     return true;
   }

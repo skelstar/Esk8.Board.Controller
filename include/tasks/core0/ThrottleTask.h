@@ -1,9 +1,9 @@
 #pragma once
 
 #include <QueueManager1.h>
-#include <types/PrimaryButton.h>
+#include <tasks/queues/types/PrimaryButton.h>
 #include <utils.h>
-#include <types/Throttle.h>
+#include <tasks/queues/types/Throttle.h>
 
 #ifndef PRINT_THROTTLE
 #define PRINT_THROTTLE 0
@@ -26,7 +26,6 @@ namespace ThrottleTask
 
   const unsigned long CHECK_THROTTLE_INTERVAL = 200;
 
-  Queue1::Manager<SendToBoardNotf> *readNotfQueue = nullptr;
   Queue1::Manager<ThrottleState> *throttleStateQueue = nullptr;
   Queue1::Manager<PrimaryButtonState> *primaryButton = nullptr;
 
@@ -41,7 +40,6 @@ namespace ThrottleTask
   {
     mgr.printStarted();
 
-    readNotfQueue = Queue1::Manager<SendToBoardNotf>::create("readNotf");
     throttleStateQueue = Queue1::Manager<ThrottleState>::create("IRL ThrottleState");
     primaryButton = Queue1::Manager<PrimaryButtonState>::create("IRL PrimaryButtonState");
 

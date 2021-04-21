@@ -14,6 +14,7 @@
 // RTOS ENTITES-------------------
 
 #include <tasks/queues/queues.h>
+#include <tasks/queues/types/root.h>
 
 SemaphoreHandle_t mux_I2C;
 SemaphoreHandle_t mux_SPI;
@@ -24,48 +25,26 @@ SemaphoreHandle_t mux_SPI;
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
-#include <testUtils.h>
+// #include <testUtils.h>
 #include <Wire.h>
-
-#include <types/DisplayEvent.h>
-#include <types/NintendoButtonEvent.h>
-#include <types/PacketState.h>
-#include <types/PrimaryButton.h>
-#include <types/QueueBase.h>
-#include <types/SendToBoardNotf.h>
-#include <types/Throttle.h>
 
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
 
 // mocks
-#include <MockGenericClient.h>
 #include <MockNintendoController.h>
 #include <MockQwiicButton.h>
 #include <MockMagThrottle.h>
 
-#define RADIO_OBJECTS
-// NRF24L01Lib nrf24;
-
-// RF24 radio(NRF_CE, NRF_CS);
-// RF24Network network(radio);
-GenericClient<ControllerData, VescData> boardClient(01);
+#define RADIO_OBJECTS 1
+#include <MockGenericClient.h>
+RF24 radio(NRF_CE, NRF_CS);
+RF24Network network(radio);
+NRF24L01Lib nrf24;
 
 // TASKS ------------------------
-// bases
-#include <tasks/core0/CommsTask.h>
-#include <tasks/core0/NintendoClassicTaskBase.h>
-#include <tasks/core0/QwiicTaskBase.h>
-#include <tasks/core0/DisplayTaskBase.h>
-#include <tasks/core0/ThrottleTaskBase.h>
-
-/* #region queue managers */
-Queue1::Manager<DisplayEvent> *displayEventQueue = nullptr;
-Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
-Queue1::Manager<PacketState> *packetStateQueue = nullptr;
-Queue1::Manager<NintendoButtonEvent> *nintendoQueue = nullptr;
-Queue1::Manager<ThrottleState> *throttleQueue = nullptr;
-/* #endregion */
+#include <tasks/root.h>
+#include <tasks/queues/Managers.h>
 
 //----------------------------------
 #define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
@@ -88,7 +67,7 @@ void printTestInstructions(const char *instructions)
 }
 
 namespace qwiicT_ = QwiicTaskBase;
-namespace commsT_ = CommsTask;
+namespace commsT_ = BoardCommsTask;
 namespace dispt_ = DisplayTaskBase;
 namespace nct_ = NintendoClassicTaskBase;
 namespace throttle_ = ThrottleTaskBase;
@@ -119,7 +98,7 @@ void setUp()
   commsT_::start(/*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
   nct_::start(/*work*/ PERIOD_50ms);
   dispt_::start(/*work*/ PERIOD_50ms);
-  throttle_::start(/*work*/ PERIOD_200ms);
+  ThrottleTaskBase::start(/*work*/ PERIOD_200ms);
 
   /* #endregion */
 
@@ -128,10 +107,11 @@ void setUp()
 
 void tearDown()
 {
-  qwiicT_::thisTask->deleteTask(PRINT_THIS);
-  commsT_::thisTask->deleteTask(PRINT_THIS);
-  dispt_::thisTask->deleteTask(PRINT_THIS);
-  nct_::thisTask->deleteTask(PRINT_THIS);
+  qwiicT_::thisTask->deleteTask();
+  commsT_::thisTask->deleteTask();
+  dispt_::thisTask->deleteTask();
+  nct_::thisTask->deleteTask();
+  ThrottleTaskBase::thisTask->deleteTask();
 }
 
 VescData mockBoardStoppedResponse(ControllerData out)

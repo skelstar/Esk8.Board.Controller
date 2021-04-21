@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Wire.h>
-#include <types/NintendoButtonEvent.h>
+#include <tasks/queues/types/NintendoButtonEvent.h>
 #ifndef NintendoController
 #include <NintendoController.h>
 #endif

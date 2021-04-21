@@ -1,6 +1,7 @@
+#pragma once
+
 #include <TaskBase.h>
 #include <QueueManager1.h>
-#include <types/SendToBoardNotf.h>
 
 #ifndef NintendoController_h
 // in case a mock is being used

@@ -33,12 +33,11 @@
 // MyMutex mutex_I2C;
 // MyMutex mutex_SPI;
 
-// #include <types/QueueBase.h>
-// #include <types/PacketState.h>
-// #include <types/SendToBoardNotf.h>
-// #include <types/NintendoButtonEvent.h>
-// #include <types/PrimaryButton.h>
-// #include <types/Throttle.h>
+// #include <tasks/queues/types/QueueBase.h>
+// #include <tasks/queues/types/PacketState.h>
+// #include <tasks/queues/types/NintendoButtonEvent.h>
+// #include <tasks/queues/types/PrimaryButton.h>
+// #include <tasks/queues/types/Throttle.h>
 
 // #include <RF24Network.h>
 // #include <NRF24L01Lib.h>
@@ -66,7 +65,7 @@
 // #include <tasks/core0/NintendoClassicTask.h>
 // #include <tasks/core0/remoteTask.h>
 
-// #include <tasks/core0/CommsTask.h>
+// #include <tasks/core0/BoardCommsTask.h>
 
 // //----------------------------------
 
@@ -92,7 +91,6 @@
 //   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
 //   xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
 //   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
-//   xSendToBoardQueueHandle = xQueueCreate(1, sizeof(SendToBoardNotf *));
 //   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 // }
 
@@ -112,7 +110,6 @@
 //   QwiicTaskBase::printReplyToSchedule = true;
 
 //   // configure queues
-//   Queue1::Manager<SendToBoardNotf> *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
 //   Queue1::Manager<PrimaryButtonState> *primaryButtonStateQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaruButtonStateQueue");
 
 //   // mocks
@@ -173,7 +170,6 @@
 //   QwiicTaskBase::printReplyToSchedule = true;
 
 //   // configure queues
-//   Queue1::Manager<SendToBoardNotf> *scheduleQueue = Queue1::Manager<SendToBoardNotf>::create("(test)scheduleQueue");
 //   Queue1::Manager<PrimaryButtonState> *primaryButtonStateQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaruButtonStateQueue");
 
 //   // mocks
