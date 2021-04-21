@@ -33,7 +33,7 @@ SemaphoreHandle_t mux_SPI;
 #include <MockNintendoController.h>
 #include <MockMagThrottle.h>
 
-#define RADIO_OBJECTS 1
+#define RADIO_OBJECTS
 #include <MockGenericClient.h>
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);

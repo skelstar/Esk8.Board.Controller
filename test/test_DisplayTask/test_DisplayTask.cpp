@@ -51,18 +51,6 @@ NRF24L01Lib nrf24;
 
 static int counter = 0;
 
-void printTestTitle(const char *name)
-{
-  Serial.printf("-------------------------------------------\n");
-  Serial.printf("  TEST: %s\n", name);
-  Serial.printf("-------------------------------------------\n");
-}
-
-void printTestInstructions(const char *instructions)
-{
-  Serial.printf("*** INSTR: %s\n", instructions);
-}
-
 void setUp()
 {
   DEBUG("----------------------------");
@@ -98,11 +86,6 @@ void tearDown()
   NintendoClassicTaskBase::thisTask->deleteTask(PRINT_THIS);
   DisplayTaskBase::thisTask->deleteTask(PRINT_THIS);
   ThrottleTaskBase::thisTask->deleteTask(PRINT_THIS);
-}
-
-void printPASS(const char *message)
-{
-  Serial.printf("[PASS @%lums] %s\n", millis(), message);
 }
 
 //-----------------------------------------------

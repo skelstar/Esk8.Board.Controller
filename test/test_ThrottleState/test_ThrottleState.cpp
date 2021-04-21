@@ -25,7 +25,6 @@ SemaphoreHandle_t mux_SPI;
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
-// #include <testUtils.h>
 #include <Wire.h>
 
 #include <RF24Network.h>
@@ -45,6 +44,7 @@ NRF24L01Lib nrf24;
 // TASKS ------------------------
 #include <tasks/root.h>
 #include <tasks/queues/Managers.h>
+#include <testUtils.h>
 
 //----------------------------------
 #define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
@@ -52,75 +52,14 @@ NRF24L01Lib nrf24;
 
 static int counter = 0;
 
-elapsedMillis since_checked_queue;
-
-void printTestTitle(const char *name)
-{
-  Serial.printf("-------------------------------------------\n");
-  Serial.printf("  TEST: %s\n", name);
-  Serial.printf("-------------------------------------------\n");
-}
-
-void printTestInstructions(const char *instructions)
-{
-  Serial.printf("*** INSTR: %s\n", instructions);
-}
-
-namespace qwiicT_ = QwiicTaskBase;
-namespace commsT_ = BoardCommsTask;
-namespace dispt_ = DisplayTaskBase;
-namespace nct_ = NintendoClassicTaskBase;
-namespace throttle_ = ThrottleTaskBase;
-
 void setUp()
 {
-  DEBUG("----------------------------");
-  Serial.printf("    %s \n", __FILE__);
-  DEBUG("----------------------------");
-
-  xDisplayQueueHandle = xQueueCreate(1, sizeof(DisplayEvent *));
-  xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
-  xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
-  xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
-  xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
-
-  // configure queues
-  displayEventQueue = Queue1::Manager<DisplayEvent>::create("(test)displayEventQueue");
-  primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaryButtonQueue");
-  packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
-  nintendoQueue = Queue1::Manager<NintendoButtonEvent>::create("(test)nintendoQueue");
-  throttleQueue = Queue1::Manager<ThrottleState>::create("(test)throttleQueue");
-
-  /* #region  tasks */
-
-  qwiicT_::start(/*work*/ PERIOD_100ms);
-  commsT_::start(/*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
-  nct_::start(/*work*/ PERIOD_50ms);
-  dispt_::start(/*work*/ PERIOD_50ms);
-  ThrottleTaskBase::start(/*work*/ PERIOD_200ms);
-
-  /* #endregion */
-
-  counter = 0;
+  Test::setupAllTheTasks();
 }
 
 void tearDown()
 {
-  qwiicT_::thisTask->deleteTask();
-  commsT_::thisTask->deleteTask();
-  dispt_::thisTask->deleteTask();
-  nct_::thisTask->deleteTask();
-  ThrottleTaskBase::thisTask->deleteTask();
-}
-
-VescData mockBoardStoppedResponse(ControllerData out)
-{
-  VescData mockresp;
-  mockresp.id = out.id;
-  mockresp.version = VERSION_BOARD_COMPAT;
-  mockresp.moving = false;
-  // Serial.printf("[%lu] mockMovingResponse called, moving: %d\n", millis(), mockresp.moving);
-  return mockresp;
+  Test::tearDownAllTheTasks();
 }
 
 void ThrottleZero_boardReportsStopped()
@@ -135,38 +74,22 @@ void ThrottleZero_boardReportsStopped()
   MagneticThrottle::setThrottleEnabledCb([] {
     return true;
   });
-  qwiicT_::qwiicButton.setMockIsPressedCallback([] {
+  QwiicTaskBase::qwiicButton.setMockIsPressedCallback([] {
     return false;
   });
-  commsT_::boardClient.mockResponseCallback(mockBoardStoppedResponse);
+  BoardCommsTask::boardClient.mockResponseCallback(Test::mockBoardStoppedResponse);
 
-  /* #endregion */
+  Test::waitForTasksReady();
 
-  while (
-      qwiicT_::thisTask->ready == false ||
-      commsT_::thisTask->ready == false ||
-      nct_::thisTask->ready == false ||
-      dispt_::thisTask->ready == false ||
-      throttle_::thisTask->ready == false)
-    vTaskDelay(TICKS_5ms);
+  Test::enableAllTasks();
 
-  /* #region  enable tasks */
-  qwiicT_::thisTask->enable(PRINT_THIS);
-  commsT_::thisTask->enable(PRINT_THIS);
-  nct_::thisTask->enable(PRINT_THIS);
-  dispt_::thisTask->enable(PRINT_THIS);
-  throttle_::thisTask->enable();
-
-  Serial.printf("%lums\n", millis());
   vTaskDelay(TICKS_1s);
-  Serial.printf("%lums\n", millis());
-  /* #endregion */
 
   TEST_ASSERT_TRUE_MESSAGE(throttleQueue->hasValue(), "throttleQueue does not have a value");
   TEST_ASSERT_TRUE_MESSAGE(throttleQueue->payload.val == 127, "throttleQueue value is not 127");
 }
 
-void test_throttle_limting_with_primary_button_not_held()
+void test_ThrottleTaskBaselimting_with_primary_button_not_held()
 {
 
   // Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
@@ -180,7 +103,7 @@ void test_throttle_limting_with_primary_button_not_held()
   //   return _throttle;
   // });
 
-  // while (!throttle_::thisTask->ready)
+  // while (!ThrottleTaskBase::thisTask->ready)
   // {
   //   vTaskDelay(5);
   // }
@@ -227,69 +150,69 @@ void test_throttle_limting_with_primary_button_not_held()
   // TEST_ASSERT_TRUE(counter == 6);
 }
 
-void test_throttle_not_limting_when_primary_button_is_held()
+void test_ThrottleTaskBasenot_limting_when_primary_button_is_held()
 {
-  static uint8_t _throttle = 127;
-  static uint8_t _s_Steps[] = {50, 60, 120, 127, 130, 140};
+  // static uint8_t _throttle = 127;
+  // static uint8_t _s_Steps[] = {50, 60, 120, 127, 130, 140};
 
-  MagneticThrottle::setGetThrottleCb([] {
-    _throttle = _s_Steps[counter];
-    return _throttle;
-  });
+  // MagneticThrottle::setGetThrottleCb([] {
+  //   _throttle = _s_Steps[counter];
+  //   return _throttle;
+  // });
 
-  while (!throttle_::thisTask->ready)
-  {
-    vTaskDelay(5);
-  }
+  // while (!ThrottleTaskBase::thisTask->ready)
+  // {
+  //   vTaskDelay(5);
+  // }
 
-  PrimaryButtonState state;
-  state.pressed = 1;
+  // PrimaryButtonState state;
+  // state.pressed = 1;
 
-  primaryButtonQueue->send(&state); //, printSentToQueue);
+  // primaryButtonQueue->send(&state); //, printSentToQueue);
 
-  printTestInstructions("Tests the throttle stays normal when primary button is held");
+  // printTestInstructions("Tests the throttle stays normal when primary button is held");
 
-  elapsedMillis since_checked_queue;
+  // elapsedMillis since_checked_queue;
 
-  counter = 0;
-  Serial.printf("------------------------------------\n");
+  // counter = 0;
+  // Serial.printf("------------------------------------\n");
 
-  while (counter < 6)
-  {
-    // if (since_checked_queue > 10)
-    // {
-    //   since_checked_queue = 0;
-    //   if (sendNotfQueue.hasValue())
-    //   {
-    //     bool gotResp = false, timedout = false;
-    //     do
-    //     {
-    //       gotResp = throttleQueue.hasValue();
-    //       if (gotResp)
-    //       {
-    //         since_checked_queue = 0;
-    //         Serial.printf("Got response from throttleQueue, throttle=%d\n", throttleQueue.payload.val);
-    //       }
-    //       timedout = since_checked_queue > 500;
-    //       vTaskDelay(5);
-    //     } while (!gotResp && !timedout);
+  // while (counter < 6)
+  // {
+  //   // if (since_checked_queue > 10)
+  //   // {
+  //   //   since_checked_queue = 0;
+  //   //   if (sendNotfQueue.hasValue())
+  //   //   {
+  //   //     bool gotResp = false, timedout = false;
+  //   //     do
+  //   //     {
+  //   //       gotResp = throttleQueue.hasValue();
+  //   //       if (gotResp)
+  //   //       {
+  //   //         since_checked_queue = 0;
+  //   //         Serial.printf("Got response from throttleQueue, throttle=%d\n", throttleQueue.payload.val);
+  //   //       }
+  //   //       timedout = since_checked_queue > 500;
+  //   //       vTaskDelay(5);
+  //   //     } while (!gotResp && !timedout);
 
-    //     TEST_ASSERT_FALSE(timedout);
-    //     TEST_ASSERT_TRUE(gotResp);
-    //     uint8_t expected = _s_Steps[counter];
-    //     TEST_ASSERT_EQUAL(expected, throttleQueue.payload.val);
-    //     Serial.printf("------------------------------------\n");
+  //   //     TEST_ASSERT_FALSE(timedout);
+  //   //     TEST_ASSERT_TRUE(gotResp);
+  //   //     uint8_t expected = _s_Steps[counter];
+  //   //     TEST_ASSERT_EQUAL(expected, throttleQueue.payload.val);
+  //   //     Serial.printf("------------------------------------\n");
 
-    //     counter++;
-    //   }
-    // }
-    vTaskDelay(100);
-  }
+  //   //     counter++;
+  //   //   }
+  //   // }
+  //   vTaskDelay(100);
+  // }
 
   TEST_ASSERT_TRUE(counter == 6);
 }
 
-void test_throttle_limts_then_does_not_limit()
+void test_ThrottleTaskBaselimts_then_does_not_limit()
 {
   // Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
   // Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueueHandle, TICKS_5ms, "(test)PrimButtonQueue");
@@ -303,7 +226,7 @@ void test_throttle_limts_then_does_not_limit()
   //   return _throttle;
   // });
 
-  // while (!throttle_::thisTask->ready)
+  // while (!ThrottleTaskBase::thisTask->ready)
   // {
   //   vTaskDelay(5);
   // }
@@ -370,9 +293,9 @@ void setup()
 
   RUN_TEST(ThrottleZero_boardReportsStopped);
   // RUN_TEST(test_ThrottleTask_sends_when_SendToBoardTask_triggers);
-  // RUN_TEST(test_throttle_limting_with_primary_button_not_held);
-  // RUN_TEST(test_throttle_not_limting_when_primary_button_is_held);
-  // RUN_TEST(test_throttle_limts_then_does_not_limit);
+  // RUN_TEST(test_ThrottleTaskBaselimting_with_primary_button_not_held);
+  // RUN_TEST(test_ThrottleTaskBasenot_limting_when_primary_button_is_held);
+  // RUN_TEST(test_ThrottleTaskBaselimts_then_does_not_limit);
 
   UNITY_END();
 }

@@ -1,175 +1,112 @@
-// #include <Arduino.h>
-// #include <unity.h>
+#include <Arduino.h>
+#include <unity.h>
 
-// #define DEBUG_SERIAL 1
+#define DEBUG_SERIAL 1
 
-// #ifdef DEBUG_SERIAL
-// #define DEBUG_OUT Serial
-// #endif
-// #define PRINTSTREAM_FALLBACK
-// #include "Debug.hpp"
+#ifdef DEBUG_SERIAL
+#define DEBUG_OUT Serial
+#endif
+#define PRINTSTREAM_FALLBACK
+#include "Debug.hpp"
 
-// #define PRINT_MUTEX_TAKE_FAIL 1
-// static int counter = 0;
+#define PRINT_MUTEX_TAKE_FAIL 1
 
-// // RTOS ENTITES-------------------
+// RTOS ENTITES-------------------
 
-// QueueHandle_t xFirstQueueHandle;
-// QueueHandle_t xOtherTestQueueHandle;
+#include <tasks/queues/queues.h>
+#include <tasks/queues/types/root.h>
 
-// #include <tasks/queues/queues.h>
+SemaphoreHandle_t mux_I2C;
+SemaphoreHandle_t mux_SPI;
 
-// SemaphoreHandle_t mux_I2C;
-// SemaphoreHandle_t mux_SPI;
+#include <types.h>
+#include <rtosManager.h>
+#include <QueueManager1.h>
+#include <elapsedMillis.h>
+#include <RTOSTaskManager.h>
+#include <BoardClass.h>
+#include <Wire.h>
 
-// #include <types.h>
-// #include <rtosManager.h>
-// #include <QueueManager1.h>
-// #include <elapsedMillis.h>
-// #include <RTOSTaskManager.h>
-// #include <BoardClass.h>
-// #include <testUtils.h>
-// #include <Wire.h>
+#include <RF24Network.h>
+#include <NRF24L01Lib.h>
 
-// MyMutex mutex_I2C;
-// MyMutex mutex_SPI;
+// mocks
+#include <MockNintendoController.h>
+// #include <MockQwiicButton.h>
+#include <MockMagThrottle.h>
 
-// #include <tasks/queues/types/QueueBase.h>
-// #include <tasks/queues/types/PacketState.h>
-// #include <tasks/queues/types/NintendoButtonEvent.h>
-// #include <tasks/queues/types/PrimaryButton.h>
-// #include <tasks/queues/types/Throttle.h>
+#define RADIO_OBJECTS 1
+#include <MockGenericClient.h>
+RF24 radio(NRF_CE, NRF_CS);
+RF24Network network(radio);
+NRF24L01Lib nrf24;
 
-// #define RADIO_OBJECTS
-// // NRF24L01Lib nrf24;
+// TASKS ------------------------
+#include <tasks/root.h>
+#include <tasks/queues/Managers.h>
+#include <testUtils.h>
 
-// // #include <MockQwiicButton.h>
+//----------------------------------
+#define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
+#define PRINT_THROTTLE 0
 
-// // #include <displayState.h>
+static int counter = 0;
 
-// // TASKS ------------------------
+void setUp()
+{
+  Test::setupAllTheTasks();
+}
 
-// // #include <tasks/core0/DisplayTask.h>
-// // #include <tasks/core0/ThrottleTask.h>
-// // #include <tasks/core0/BoardCommsTask.h>
-// // #include <tasks/core0/NintendoClassicTask.h>
-// // #include <tasks/core0/remoteTask.h>
+void tearDown()
+{
+  Test::tearDownAllTheTasks();
+}
 
-// #include <tasks/core0/QwiicTaskBase.h>
-// #include <tasks/core0/BoardCommsTask.h>
+//-----------------------------------------------
+void usesTaskSchedulerAndQwiicButton_withTaskBasesAnRealButton_sendsPacketsAndRespondsOK()
+{
+  Wire.begin();
+  // start tasks
 
-// //----------------------------------
+  Test::waitForTasksReady();
 
-// void printTestTitle(const char *name)
-// {
-//   Serial.printf("-------------------------------------------\n");
-//   Serial.printf("  TEST: %s\n", name);
-//   Serial.printf("-------------------------------------------\n");
-// }
+  Test::enableAllTasks();
 
-// void printTestInstructions(const char *instructions)
-// {
-//   Serial.printf("*** INSTR: %s\n", instructions);
-// }
+  elapsedMillis since_started_testing = 0;
 
-// void setUp()
-// {
-//   DEBUG("----------------------------");
-//   Serial.printf("    %s \n", __FILE__);
-//   DEBUG("----------------------------");
+  bool primaryButtonPressed = false;
 
-//   xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
-//   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
-//   xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
-//   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
-//   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
-// }
+  while (since_started_testing < 5 * SECONDS &&
+         primaryButtonPressed == false)
+  {
+    if (primaryButtonQueue->hasValue() && primaryButtonQueue->payload.pressed)
+    {
+      primaryButtonPressed = true;
+    }
 
-// void tearDown()
-// {
-// }
+    vTaskDelay(TICKS_100ms);
+  }
 
-// //-----------------------------------------------
-// void usesTaskSchedulerAndQwiicButton_withTaskBasesAnRealButton_sendsPacketsAndRespondsOK()
-// {
-//   Wire.begin();
-//   // start tasks
-//   TaskScheduler::start();
-//   TaskScheduler::sendInterval = PERIOD_500ms;
-//   TaskScheduler::printSendToSchedule = false;
+  TEST_ASSERT_TRUE(primaryButtonPressed);
+}
 
-//   QwiicTaskBase::start();
-//   QwiicTaskBase::printReplyToSchedule = false;
+//===================================================================
 
-//   // configure queues
-//   Queue1::Manager<PrimaryButtonState> *primaryButtonStateQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaruButtonStateQueue");
+void setup()
+{
+  delay(2000);
 
-//   // mocks
+  Serial.begin(115200);
+  delay(100);
 
-//   // wait
-//   while (TaskScheduler::thisTask->ready == false ||
-//          QwiicTaskBase::thisTask->ready == false ||
-//          false)
-//   {
-//     vTaskDelay(10);
-//   }
+  UNITY_BEGIN();
 
-//   DEBUG("Tasks ready");
+  RUN_TEST(usesTaskSchedulerAndQwiicButton_withTaskBasesAnRealButton_sendsPacketsAndRespondsOK);
 
-//   vTaskDelay(PERIOD_100ms);
+  UNITY_END();
+}
 
-//   TaskScheduler::thisTask->enable(PRINT_THIS);
-//   QwiicTaskBase::thisTask->enable(PRINT_THIS);
-
-//   counter = 0;
-
-//   const int NUM_LOOPS = 5;
-//   elapsedMillis since_started_testing = 0;
-
-//   while (since_started_testing < 8 * SECONDS)
-//   {
-//     // confirm schedule packet on queue
-//     uint8_t response = waitForNew(scheduleQueue, PERIOD_1s, nullptr, PRINT_TIMEOUT);
-//     TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find schedule packet on the schedule queue");
-
-//     // check for response from Primary Button (Qwiic)
-//     response = waitForNew(primaryButtonStateQueue, PERIOD_50ms, nullptr, PRINT_TIMEOUT);
-//     TEST_ASSERT_TRUE_MESSAGE(response == Response::OK, "Didn't find primaryButton on the queue");
-//     TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.event_id,
-//                               primaryButtonStateQueue->payload.event_id,
-//                               "PrimaryButtonState event_id does not match");
-
-//     const char *pressed = primaryButtonStateQueue->payload.pressed == true ? "YES" : " - ";
-//     Serial.printf("Primary Button pressed: %s\n", pressed);
-//     counter++;
-
-//     vTaskDelay(10);
-//   }
-
-//   TaskScheduler::thisTask->deleteTask(PRINT_THIS);
-//   QwiicTaskBase::thisTask->deleteTask(PRINT_THIS);
-
-//   TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
-// }
-// //-----------------------------------------------
-
-// //===================================================================
-
-// void setup()
-// {
-//   delay(2000);
-
-//   Serial.begin(115200);
-//   delay(100);
-
-//   UNITY_BEGIN();
-
-//   RUN_TEST(usesTaskSchedulerAndQwiicButton_withTaskBasesAnRealButton_sendsPacketsAndRespondsOK);
-
-//   UNITY_END();
-// }
-
-// void loop()
-// {
-//   vTaskDelete(NULL);
-// }
+void loop()
+{
+  vTaskDelete(NULL);
+}

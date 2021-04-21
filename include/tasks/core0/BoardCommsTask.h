@@ -10,13 +10,9 @@ namespace BoardCommsTask
 
 #ifndef RADIO_OBJECTS
 
-#include <NRF24L01Lib.h>
-#include <GenericClient.h>
-
-  NRF24L01Lib nrf24;
-
   RF24 radio(NRF_CE, NRF_CS);
   RF24Network network(radio);
+  NRF24L01Lib nrf24;
 
 #endif
 

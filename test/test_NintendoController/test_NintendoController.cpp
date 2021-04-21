@@ -10,14 +10,9 @@
 #include "Debug.hpp"
 
 #define PRINT_MUTEX_TAKE_FAIL 1
-static int counter = 0;
-
-// RTOS ENTITES-------------------
-
-QueueHandle_t xFirstQueueHandle;
-QueueHandle_t xOtherTestQueueHandle;
 
 #include <tasks/queues/queues.h>
+#include <tasks/queues/types/root.h>
 
 SemaphoreHandle_t mux_I2C;
 SemaphoreHandle_t mux_SPI;
@@ -28,111 +23,76 @@ SemaphoreHandle_t mux_SPI;
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
-#include <testUtils.h>
 #include <Wire.h>
 
-MyMutex mutex_I2C;
-MyMutex mutex_SPI;
+// Mocks ----
+// #include <MockNintendoController.h>
+// #include <MockQwiicButton.h>
+// #include <GenericClient.h>
 
-#include <tasks/queues/types/QueueBase.h>
-#include <tasks/queues/types/PacketState.h>
-#include <tasks/queues/types/NintendoButtonEvent.h>
-#include <tasks/queues/types/PrimaryButton.h>
-#include <tasks/queues/types/Throttle.h>
-
-#define RADIO_OBJECTS
+// #define RADIO_OBJECTS
+// // #include <MockGenericClient.h>
+// RF24 radio(NRF_CE, NRF_CS);
+// RF24Network network(radio);
+// NRF24L01Lib nrf24;
 
 // TASKS ------------------------
 
-#include <tasks/core0/QwiicTaskBase.h>
-#include <tasks/core0/BoardCommsTask.h>
-#include <tasks/core0/NintendoClassicTaskBase.h>
+#include <tasks/root.h>
+#include <tasks/queues/Managers.h>
+#include <testUtils.h>
 
 //----------------------------------
 
-void printTestTitle(const char *name)
-{
-  Serial.printf("-------------------------------------------\n");
-  Serial.printf("  TEST: %s\n", name);
-  Serial.printf("-------------------------------------------\n");
-}
-
-void printTestInstructions(const char *instructions)
-{
-  Serial.printf("*** INSTR: %s\n", instructions);
-}
+static int counter = 0;
 
 void setUp()
 {
-  DEBUG("----------------------------");
-  Serial.printf("    %s \n", __FILE__);
-  DEBUG("----------------------------");
-
-  xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
-  xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
-  xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
-  xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
+  Test::setupAllTheTasks();
 }
 
 void tearDown()
 {
+  Test::tearDownAllTheTasks();
 }
 
 //-----------------------------------------------
 void usesTaskSchedulerAndNintendoController_withTaskBaseAnRealController_sendsPacketsAndRespondsOK()
 {
   Wire.begin();
+
   // start tasks
-
-  NintendoClassicTaskBase::start();
-  NintendoClassicTaskBase::printReplyToSchedule = false;
-  NintendoClassicTaskBase::printPeekSchedule = false;
-
-  // configure queues
-  Queue1::Manager<NintendoButtonEvent> *nintendoButtonEventQueue = Queue1::Manager<NintendoButtonEvent>::create("(test)nintendoButtonEventQueue");
 
   // mocks
   // - NONE
 
   // wait
-  while (NintendoClassicTaskBase::thisTask->ready == false ||
-         false)
-  {
-    vTaskDelay(10);
-  }
+  Test::waitForTasksReady();
 
-  DEBUG("Tasks ready");
+  Test::enableAllTasks();
 
   vTaskDelay(PERIOD_100ms);
-
-  NintendoClassicTaskBase::thisTask->enable(PRINT_THIS);
 
   counter = 0;
 
   const int NUM_LOOPS = 5;
   elapsedMillis since_started_testing = 0;
 
+  bool read_start_button = false;
+  Test::printTestInstructions("Press the START button in the next 8 seconds");
+
   while (since_started_testing < 8 * SECONDS)
   {
-    // // check for resmary Button pressed: %s\n", pressed);
-    response = waitForNew(nintendoButtonEventQueue, PERIOD_20ms);
-    TEST_ASSERT_EQUAL_MESSAGE(scheduleQueue->payload.event_id,
-                              nintendoButtonEventQueue->payload.event_id,
-                              "nintendoButtonEventQueue event_id did not match");
-    if (nintendoButtonEventQueue->payload.changed &&
-        nintendoButtonEventQueue->payload.state == NintendoController::BUTTON_PRESSED)
-      Serial.printf("Nintendo button pressed: %s (took %lu to respond)\n",
-                    NintendoClassicTaskBase::getButtonName(nintendoButtonEventQueue->payload.button),
-                    nintendoButtonEventQueue->payload.getSinceSent());
-    counter++;
+    if (nintendoQueue->hasValue())
+    {
+      if (nintendoQueue->payload.button == (uint8_t)NintendoController::BUTTON_START)
+        read_start_button = true;
+    }
 
     vTaskDelay(10);
   }
 
-  TaskScheduler::thisTask->deleteTask(PRINT_THIS);
-  NintendoClassicTaskBase::thisTask->deleteTask(PRINT_THIS);
-
-  TEST_ASSERT_TRUE(counter >= NUM_LOOPS);
+  TEST_ASSERT_TRUE(read_start_button);
 }
 //-----------------------------------------------
 

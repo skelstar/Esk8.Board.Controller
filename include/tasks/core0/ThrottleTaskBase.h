@@ -11,6 +11,7 @@
 
 namespace ThrottleTaskBase
 {
+  bool printWarnings = false;
   // prototypes
   TaskBase *thisTask;
 
@@ -57,8 +58,8 @@ namespace ThrottleTaskBase
       }
 
       // check magthrottle
-      MagneticThrottle::update(PRINT_THIS);
-      throttleQueue->send(&throttle, QueueBase::printSend);
+      MagneticThrottle::update(printWarnings);
+      throttleQueue->send(&throttle);
     }
 
     void task(void *parameters)
