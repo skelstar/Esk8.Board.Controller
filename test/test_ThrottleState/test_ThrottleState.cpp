@@ -78,7 +78,6 @@ void setUp()
   Serial.printf("    %s \n", __FILE__);
   DEBUG("----------------------------");
 
-  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   xDisplayQueueHandle = xQueueCreate(1, sizeof(DisplayEvent *));
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
   xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));

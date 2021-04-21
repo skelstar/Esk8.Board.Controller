@@ -25,7 +25,6 @@ SemaphoreHandle_t mux_SPI;
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
-#include <testUtils.h>
 #include <Wire.h>
 
 #include <RF24Network.h>
@@ -46,6 +45,7 @@ NRF24L01Lib nrf24;
 
 #include <tasks/root.h>
 #include <tasks/queues/Managers.h>
+#include <testUtils.h>
 
 //----------------------------------
 
@@ -63,18 +63,12 @@ void printTestInstructions(const char *instructions)
   Serial.printf("*** INSTR: %s\n", instructions);
 }
 
-namespace qwiicT_ = QwiicTaskBase;
-namespace commsT_ = BoardCommsTask;
-namespace dispt_ = DisplayTaskBase;
-namespace nct_ = NintendoClassicTaskBase;
-
 void setUp()
 {
   DEBUG("----------------------------");
   Serial.printf("    %s \n", __FILE__);
   DEBUG("----------------------------");
 
-  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   xDisplayQueueHandle = xQueueCreate(1, sizeof(DisplayEvent *));
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
   xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
@@ -86,25 +80,24 @@ void setUp()
   primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaryButtonQueue");
   packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
   nintendoQueue = Queue1::Manager<NintendoButtonEvent>::create("(test)nintendoQueue");
+  throttleQueue = Queue1::Manager<ThrottleState>::create("(test)throttleQueue");
 
-  /* #region  tasks */
-
-  qwiicT_::start(/*work*/ PERIOD_100ms);
-  commsT_::start(/*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
-  nct_::start(/*work*/ PERIOD_50ms);
-  dispt_::start(/*work*/ PERIOD_50ms);
-
-  /* #endregion */
+  QwiicTaskBase::start(/*work*/ PERIOD_100ms);
+  BoardCommsTask::start(/*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
+  NintendoClassicTaskBase::start(/*work*/ PERIOD_50ms);
+  DisplayTaskBase::start(/*work*/ PERIOD_50ms);
+  ThrottleTaskBase::start(/*work*/ PERIOD_200ms);
 
   counter = 0;
 }
 
 void tearDown()
 {
-  qwiicT_::thisTask->deleteTask(PRINT_THIS);
-  commsT_::thisTask->deleteTask(PRINT_THIS);
-  dispt_::thisTask->deleteTask(PRINT_THIS);
-  nct_::thisTask->deleteTask(PRINT_THIS);
+  QwiicTaskBase::thisTask->deleteTask(PRINT_THIS);
+  BoardCommsTask::thisTask->deleteTask(PRINT_THIS);
+  NintendoClassicTaskBase::thisTask->deleteTask(PRINT_THIS);
+  DisplayTaskBase::thisTask->deleteTask(PRINT_THIS);
+  ThrottleTaskBase::thisTask->deleteTask(PRINT_THIS);
 }
 
 void printPASS(const char *message)
@@ -113,17 +106,16 @@ void printPASS(const char *message)
 }
 
 //-----------------------------------------------
-
 void BoardIsStopped_whenMoving_showsTheMovingScreen()
 {
   Wire.begin();
 
-  dispt_::settings.printState = true;
-  dispt_::settings.printTrigger = true;
+  DisplayTaskBase::settings.printState = true;
+  DisplayTaskBase::settings.printTrigger = true;
 
   /* #region  Mocks */
 
-  commsT_::boardClient.mockResponseCallback([](ControllerData out) {
+  BoardCommsTask::boardClient.mockResponseCallback([](ControllerData out) {
     VescData mockresp;
     mockresp.id = out.id;
     mockresp.version = VERSION_BOARD_COMPAT;
@@ -135,10 +127,10 @@ void BoardIsStopped_whenMoving_showsTheMovingScreen()
   /* #endregion */
 
   while (
-      //qwiicT_::thisTask->ready == false ||
-      commsT_::thisTask->ready == false ||
-      nct_::thisTask->ready == false ||
-      dispt_::thisTask->ready == false ||
+      QwiicTaskBase::thisTask->ready == false ||
+      BoardCommsTask::thisTask->ready == false ||
+      NintendoClassicTaskBase::thisTask->ready == false ||
+      DisplayTaskBase::thisTask->ready == false ||
       false)
   {
     vTaskDelay(10);
@@ -147,10 +139,10 @@ void BoardIsStopped_whenMoving_showsTheMovingScreen()
 
   /* #region  enable tasks */
 
-  // qwiicT_::thisTask->enable(PRINT_THIS);
-  commsT_::thisTask->enable(PRINT_THIS);
-  nct_::thisTask->enable(PRINT_THIS);
-  dispt_::thisTask->enable(PRINT_THIS);
+  QwiicTaskBase::thisTask->enable(PRINT_THIS);
+  BoardCommsTask::thisTask->enable(PRINT_THIS);
+  NintendoClassicTaskBase::thisTask->enable(PRINT_THIS);
+  DisplayTaskBase::thisTask->enable(PRINT_THIS);
 
   /* #endregion */
 
@@ -189,16 +181,16 @@ void NintendoStartButton_whenPressed_opensPushToStartScreen()
 {
   Wire.begin();
 
-  dispt_::settings.printState = true;
-  dispt_::settings.printTrigger = true;
+  DisplayTaskBase::settings.printState = true;
+  DisplayTaskBase::settings.printTrigger = true;
 
   /* #region  Mocks */
 
-  qwiicT_::qwiicButton.setMockIsPressedCallback([] {
+  QwiicTaskBase::qwiicButton.setMockIsPressedCallback([] {
     return false;
   });
 
-  nct_::classic.setMockGetButtonEventCallback([] {
+  NintendoClassicTaskBase::classic.setMockGetButtonEventCallback([] {
     switch (counter)
     {
     case 2:
@@ -207,7 +199,7 @@ void NintendoStartButton_whenPressed_opensPushToStartScreen()
     return (uint8_t)NintendoController::BUTTON_NONE;
   });
 
-  commsT_::boardClient.mockResponseCallback([](ControllerData out) {
+  BoardCommsTask::boardClient.mockResponseCallback([](ControllerData out) {
     VescData mockresp;
     mockresp.id = out.id;
     mockresp.version = VERSION_BOARD_COMPAT;
@@ -218,25 +210,9 @@ void NintendoStartButton_whenPressed_opensPushToStartScreen()
 
   /* #endregion */
 
-  while (
-      //qwiicT_::thisTask->ready == false ||
-      commsT_::thisTask->ready == false ||
-      nct_::thisTask->ready == false ||
-      dispt_::thisTask->ready == false ||
-      false)
-  {
-    vTaskDelay(10);
-  }
-  DEBUG("Tasks ready");
+  Test::waitForTasksReady();
 
-  /* #region  enable tasks */
-
-  // qwiicT_::thisTask->enable(PRINT_THIS);
-  commsT_::thisTask->enable(PRINT_THIS);
-  nct_::thisTask->enable(PRINT_THIS);
-  dispt_::thisTask->enable(PRINT_THIS);
-
-  /* #endregion */
+  Test::enableAllTasks();
 
   vTaskDelay(PERIOD_500ms);
 

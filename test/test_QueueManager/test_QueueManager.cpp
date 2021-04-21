@@ -122,7 +122,6 @@ void setUp()
   xFirstQueueHandle = xQueueCreate(1, sizeof(FirstTestObj *));
   xOtherTestQueueHandle = xQueueCreate(1, sizeof(OtherTestObj *));
 
-  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
   xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));

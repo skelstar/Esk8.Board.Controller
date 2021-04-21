@@ -1,6 +1,5 @@
 #pragma once
 
-QueueHandle_t xBoardPacketQueue;
 QueueHandle_t xNintendoControllerQueue;
 QueueHandle_t xPacketStateQueueHandle;
 QueueHandle_t xPrimaryButtonQueueHandle;

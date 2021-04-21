@@ -69,7 +69,6 @@ void setUp()
   Serial.printf("    %s \n", __FILE__);
   DEBUG("----------------------------");
 
-  xBoardPacketQueue = xQueueCreate(1, sizeof(BoardClass *));
   xDisplayQueueHandle = xQueueCreate(1, sizeof(DisplayEvent *));
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
   xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
@@ -110,16 +109,6 @@ VescData mockMovingResponse(ControllerData out)
   mockresp.moving = false;
   return mockresp;
 }
-// void waitForTasksReady()
-// {
-//   while (
-//       BoardCommsTask::thisTask->ready == false ||
-//       NintendoClassicTaskBase::thisTask->ready == false ||
-//       QwiicTaskBase::thisTask->ready == false ||
-//       DisplayTaskBase::thisTask->ready == false ||
-//       ThrottleTaskBase::thisTask->ready == false)
-//     vTaskDelay(PERIOD_10ms);
-// }
 
 void BoardCommsTask_withMockGenericClient_repliesWithCorrectData()
 {
