@@ -11,12 +11,10 @@
 #include <FastMap.h>
 #include <Fsm.h>
 
-#ifndef PRINT_THROTTLE
-#define PRINT_THROTTLE 1
-#endif
-
 namespace MagneticThrottle
 {
+  bool printThrottle = false;
+
   // https://ams.com/documents/20143/36005/AS5600_DS000365_5-00.pdf
   AMS_5600 ams5600;
 
@@ -120,7 +118,7 @@ namespace MagneticThrottle
         _throttle = 127;
       }
 
-      if (PRINT_THROTTLE || force_print)
+      if (printThrottle || force_print)
       {
         char b[50];
         _throttleString(abs(delta), _throttle, b);
@@ -130,7 +128,7 @@ namespace MagneticThrottle
         Serial.printf("  %s \n", b);
       }
     }
-    else if (PRINT_THROTTLE || force_print)
+    else if (printThrottle || force_print)
     {
       Serial.printf("%s ", transition ? "EDGE" : "----");
       Serial.printf("| delta_limit (%.1f) EXCEEDED!!! ", delta);
@@ -158,6 +156,12 @@ namespace MagneticThrottle
     _throttleEnabled_cb = cb;
   }
 
+  /*
+  - sweep: the full range of sweep in degrees
+  - max_delta_limit: the most num degrees in one sample period
+  - min_delta_limit: the min num degrees in one sample period (to prevent drift)
+  - direction: DIR_CLOCKWISE or DIR_ANIT_CLOCKWISE
+  */
   void init(float sweep, float max_delta_limit, float min_delta_limit, uint8_t direction)
   {
     _sweep = sweep;

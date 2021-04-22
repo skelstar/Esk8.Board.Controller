@@ -30,11 +30,11 @@ SemaphoreHandle_t mux_SPI;
 // #include <MockQwiicButton.h>
 // #include <GenericClient.h>
 
-// #define RADIO_OBJECTS
-// // #include <MockGenericClient.h>
-// RF24 radio(NRF_CE, NRF_CS);
-// RF24Network network(radio);
-// NRF24L01Lib nrf24;
+#define RADIO_OBJECTS
+#include <MockGenericClient.h>
+RF24 radio(NRF_CE, NRF_CS);
+RF24Network network(radio);
+NRF24L01Lib nrf24;
 
 // TASKS ------------------------
 
@@ -48,7 +48,7 @@ static int counter = 0;
 
 void setUp()
 {
-  Test::setupAllTheTasks();
+  Test::setupAllTheTasks(__FILE__);
 }
 
 void tearDown()
@@ -62,6 +62,9 @@ void usesTaskSchedulerAndNintendoController_withTaskBaseAnRealController_sendsPa
   Wire.begin();
 
   // start tasks
+  ThrottleTaskBase::printWarnings = false;
+  MagneticThrottle::printThrottle = false;
+  BoardCommsTask::printWarnings = false;
 
   // mocks
   // - NONE
@@ -75,13 +78,12 @@ void usesTaskSchedulerAndNintendoController_withTaskBaseAnRealController_sendsPa
 
   counter = 0;
 
-  const int NUM_LOOPS = 5;
   elapsedMillis since_started_testing = 0;
 
   bool read_start_button = false;
   Test::printTestInstructions("Press the START button in the next 8 seconds");
 
-  while (since_started_testing < 8 * SECONDS)
+  while (since_started_testing < 8 * SECONDS && read_start_button == false)
   {
     if (nintendoQueue->hasValue())
     {

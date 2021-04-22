@@ -11,7 +11,7 @@
 
 namespace ThrottleTaskBase
 {
-  bool printWarnings = false;
+  bool printWarnings = true;
   // prototypes
   TaskBase *thisTask;
 

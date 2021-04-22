@@ -32,16 +32,18 @@ namespace MagneticThrottle
     return _throttle;
   }
 
-  void update(bool force_print = false)
+  void update(bool printWarnings = false)
   {
     if (_throttleEnabled_cb == nullptr)
     {
-      Serial.printf("ERROR: throttleEnabledCallback is not set!!!\n");
+      if (printWarnings)
+        Serial.printf("ERROR: throttleEnabledCallback is not set!!!\n");
       return;
     }
     if (_getThrottle_cb == nullptr)
     {
-      Serial.printf("ERROR: getThrottle is not set!!!\n");
+      if (printWarnings)
+        Serial.printf("ERROR: getThrottle is not set!!!\n");
       return;
     }
 

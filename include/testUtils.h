@@ -35,16 +35,29 @@ namespace Test
     ThrottleTaskBase::thisTask->enable(print);
   }
 
+  void printLine(const char *start, int dashes = 10)
+  {
+    Serial.print(start);
+    int i = 0;
+    while (i++ < dashes)
+      Serial.print("-");
+    Serial.println();
+  }
+
   void printTestInstructions(const char *instructions)
   {
+    const char *st = "*** ";
+    printLine(st, strlen(instructions) + 7);
     Serial.printf("*** INSTR: %s\n", instructions);
+    printLine(st, strlen(instructions) + 7);
   }
 
   void printTestTitle(const char *name)
   {
-    Serial.printf("-------------------------------------------\n");
-    Serial.printf("  TEST: %s\n", name);
-    Serial.printf("-------------------------------------------\n");
+    const char *st = "*** ";
+    printLine(st, strlen(name) + 7);
+    Serial.printf("*** TEST: %s\n", name);
+    printLine(st, strlen(name) + 7);
   }
 
   void printPASS(const char *message)
@@ -52,10 +65,10 @@ namespace Test
     Serial.printf("[PASS @%lums] %s\n", millis(), message);
   }
 
-  void setupAllTheTasks()
+  void setupAllTheTasks(const char *file = "File not provided")
   {
     DEBUG("----------------------------");
-    Serial.printf("    %s \n", __FILE__);
+    Serial.printf("    %s \n", file);
     DEBUG("----------------------------");
 
     xDisplayQueueHandle = xQueueCreate(1, sizeof(DisplayEvent *));

@@ -52,7 +52,7 @@ static int counter = 0;
 
 void setUp()
 {
-  Test::setupAllTheTasks();
+  Test::setupAllTheTasks(__FILE__);
 }
 
 void tearDown()

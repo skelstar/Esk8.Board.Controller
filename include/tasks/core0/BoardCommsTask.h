@@ -6,6 +6,8 @@
 
 namespace BoardCommsTask
 {
+  bool printWarnings = false;
+
   TaskBase *thisTask;
 
 #ifndef RADIO_OBJECTS
@@ -74,6 +76,7 @@ namespace BoardCommsTask
       packetStateQueue->read(); // clear the queue
 
       boardClient.begin(&network, boardPacketAvailable_cb, mux_SPI);
+      boardClient.printWarnings = printWarnings;
     }
     //----------------------------------------------------------
     elapsedMillis since_checked_for_available, since_sent_to_board = 0;
