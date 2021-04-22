@@ -1,7 +1,5 @@
 #pragma once
 
-#include <QueueManager.h>
-
 //------------------------------------------
 class PrimaryButtonState : public QueueBase
 {

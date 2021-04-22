@@ -1,7 +1,8 @@
 #pragma once
 
 #include <TaskBase.h>
-#include <QueueManager1.h>
+#include <QueueManager.h>
+#include <tasks/queues/QueueFactory.h>
 
 // incase we aren't using a mock in a test
 #ifndef __SparkFun_Qwiic_Button_H__
@@ -65,7 +66,7 @@ namespace QwiicTaskBase
     }
   }
 
-  void start(ulong doWorkInterval)
+  void start(uint8_t priority, ulong doWorkInterval)
   {
     thisTask = new TaskBase("QwiicTaskBase", 3000);
     thisTask->setInitialiseCallback(initialise);
@@ -76,7 +77,7 @@ namespace QwiicTaskBase
     thisTask->doWorkInterval = doWorkInterval;
 
     if (thisTask->rtos != nullptr)
-      thisTask->rtos->create(task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);
+      thisTask->rtos->create(task, CORE_0, priority, WITH_HEALTHCHECK);
   }
 
   void deleteTask(bool print = false)

@@ -1,8 +1,9 @@
 #pragma once
 
 #include <TaskBase.h>
-#include <QueueManager1.h>
+#include <QueueManager.h>
 #include <tasks/queues/types/root.h>
+#include <tasks/queues/QueueFactory.h>
 
 namespace BoardCommsTask
 {
@@ -10,12 +11,18 @@ namespace BoardCommsTask
 
   TaskBase *thisTask;
 
-#ifndef RADIO_OBJECTS
+  // #ifndef RADIO_OBJECTS
 
+#ifndef NRF24L01Lib_h
+#include <NRF24L01Lib.h>
+#endif
   RF24 radio(NRF_CE, NRF_CS);
   RF24Network network(radio);
   NRF24L01Lib nrf24;
+  // #endif
 
+#ifndef MOCK_GENERIC_CLIENT
+#include <GenericClient.h>
 #endif
 
   GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
@@ -76,7 +83,7 @@ namespace BoardCommsTask
       packetStateQueue->read(); // clear the queue
 
       boardClient.begin(&network, boardPacketAvailable_cb, mux_SPI);
-      boardClient.printWarnings = printWarnings;
+      // boardClient.printWarnings = printWarnings;
     }
     //----------------------------------------------------------
     elapsedMillis since_checked_for_available, since_sent_to_board = 0;
@@ -105,7 +112,7 @@ namespace BoardCommsTask
     }
   }
 
-  void start(ulong doWorkInterval, ulong sendToBoardInterval)
+  void start(uint8_t priority, ulong doWorkInterval, ulong sendToBoardInterval)
   {
     thisTask = new TaskBase("BoardCommsTask", 3000);
     thisTask->setInitialiseCallback(initialise);
@@ -117,7 +124,7 @@ namespace BoardCommsTask
     SEND_TO_BOARD_INTERVAL_LOCAL = sendToBoardInterval;
 
     if (thisTask->rtos != nullptr)
-      thisTask->rtos->create(task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);
+      thisTask->rtos->create(task, CORE_1, priority, WITH_HEALTHCHECK);
   }
 
   void deleteTask(bool print = false)

@@ -2,7 +2,8 @@
 
 // #include <tasks/root.h>
 // #include <tasks/queues/types/root.h>
-#include <QueueManager1.h>
+#include <QueueManager.h>
+#include <tasks/queues/QueueFactory.h>
 
 // #define ASSERT(condition, message)                                                        \
 //   do                                                                                      \
@@ -88,11 +89,11 @@ namespace Test
     nintendoQueue = Queue1::Manager<NintendoButtonEvent>::create("(test)nintendoQueue");
     throttleQueue = Queue1::Manager<ThrottleState>::create("(test)throttleQueue");
 
-    QwiicTaskBase::start(/*work*/ PERIOD_100ms);
-    BoardCommsTask::start(/*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
-    NintendoClassicTaskBase::start(/*work*/ PERIOD_50ms);
-    DisplayTaskBase::start(/*work*/ PERIOD_50ms);
-    ThrottleTaskBase::start(/*work*/ PERIOD_200ms);
+    QwiicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms);
+    BoardCommsTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
+    NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
+    DisplayTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
+    ThrottleTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_200ms);
   }
 
   void tearDownAllTheTasks()
@@ -113,5 +114,4 @@ namespace Test
     // Serial.printf("[%lu] mockMovingResponse called, moving: %d\n", millis(), mockresp.moving);
     return mockresp;
   }
-
 } // end namespace

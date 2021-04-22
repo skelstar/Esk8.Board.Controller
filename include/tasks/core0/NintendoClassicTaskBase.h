@@ -1,7 +1,8 @@
 #pragma once
 
 #include <TaskBase.h>
-#include <QueueManager1.h>
+#include <QueueManager.h>
+#include <tasks/queues/QueueFactory.h>
 
 #ifndef NintendoController_h
 // in case a mock is being used
@@ -81,7 +82,7 @@ namespace NintendoClassicTaskBase
     }
   }
 
-  void start(ulong doWorkInterval)
+  void start(uint8_t priority, ulong doWorkInterval)
   {
     thisTask = new TaskBase("NintendoClassicTaskBase", 3000);
     thisTask->setInitialiseCallback(_p::initialise);
@@ -92,7 +93,7 @@ namespace NintendoClassicTaskBase
     thisTask->doWorkInterval = doWorkInterval;
 
     if (thisTask->rtos != nullptr)
-      thisTask->rtos->create(_p::task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);
+      thisTask->rtos->create(_p::task, CORE_0, priority, WITH_HEALTHCHECK);
   }
 
   void deleteTask(bool print = false)

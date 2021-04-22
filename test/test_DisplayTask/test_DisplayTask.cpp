@@ -21,7 +21,7 @@ SemaphoreHandle_t mux_SPI;
 
 #include <types.h>
 #include <rtosManager.h>
-#include <QueueManager1.h>
+#include <QueueManager.h>
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
@@ -45,6 +45,7 @@ NRF24L01Lib nrf24;
 
 #include <tasks/root.h>
 #include <tasks/queues/Managers.h>
+#include <tasks/queues/QueueFactory.h>
 #include <testUtils.h>
 
 //----------------------------------

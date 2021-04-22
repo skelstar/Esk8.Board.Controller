@@ -6,6 +6,7 @@
 #include <printFormatStrings.h>
 
 #include <tasks/core0/BoardCommsTask.h>
+#include <tasks/queues/QueueFactory.h>
 
 #ifndef PRINT_DISP_STATE
 #define PRINT_DISP_STATE 0

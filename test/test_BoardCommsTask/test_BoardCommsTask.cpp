@@ -15,6 +15,7 @@
 // RTOS ENTITES-------------------
 
 #include <tasks/queues/queues.h>
+#include <tasks/queues/QueueFactory.h>
 #include <tasks/queues/types/root.h>
 
 SemaphoreHandle_t mux_I2C;
@@ -22,7 +23,7 @@ SemaphoreHandle_t mux_SPI;
 
 #include <types.h>
 #include <rtosManager.h>
-#include <QueueManager1.h>
+#include <QueueManager.h>
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>

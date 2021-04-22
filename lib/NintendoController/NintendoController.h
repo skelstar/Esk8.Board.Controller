@@ -29,7 +29,7 @@ public:
 
   typedef void (*ButtonEventCallback)(uint8_t button);
 
-  bool init();
+  bool init(bool printWarnings = true);
   bool update(xSemaphoreHandle mutex, TickType_t ticks);
   bool is_pressed(int button_index);
   bool was_pressed(int button_index);

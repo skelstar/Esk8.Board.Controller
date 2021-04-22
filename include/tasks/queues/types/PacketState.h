@@ -2,6 +2,7 @@
 
 #include <VescData.h>
 #include <tasks/queues/types/QueueBase.h>
+#include <elapsedMillis.h>
 
 class PacketState : public QueueBase
 {

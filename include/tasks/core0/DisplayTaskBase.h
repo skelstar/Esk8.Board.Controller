@@ -3,6 +3,7 @@
 #include <TaskBase.h>
 #include <tasks/queues/queues.h>
 #include <tasks/queues/types/DisplayEvent.h>
+#include <tasks/queues/QueueFactory.h>
 
 #include <displayState.h>
 #include <TFT_eSPI.h>
@@ -90,7 +91,7 @@ namespace DisplayTaskBase
     }
   }
   //--------------------------------
-  void start(unsigned long doWorkInterval)
+  void start(uint8_t priority, unsigned long doWorkInterval)
   {
     thisTask = new TaskBase("DisplayTaskBase", 3000);
     thisTask->setInitialiseQueuesCallback(_p::initialiseQueues);
@@ -101,7 +102,7 @@ namespace DisplayTaskBase
     thisTask->doWorkInterval = doWorkInterval > PERIOD_10ms ? doWorkInterval : PERIOD_10ms;
 
     if (thisTask->rtos != nullptr)
-      thisTask->rtos->create(_p::task, CORE_0, TASK_PRIORITY_1, WITH_HEALTHCHECK);
+      thisTask->rtos->create(_p::task, CORE_0, priority, WITH_HEALTHCHECK);
   }
   //--------------------------------------------------
   void deleteTask(bool print = false)

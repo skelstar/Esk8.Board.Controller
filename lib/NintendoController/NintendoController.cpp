@@ -9,7 +9,7 @@
 #define PRINT_MUTEX_GIVE_SUCCESS 0
 #endif
 
-bool NintendoController::init()
+bool NintendoController::init(bool printWarnings)
 {
   // Not required for NES mini controller
   // See http://wiibrew.org/wiki/Wiimote/Extension_Controllers

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <tasks/queues/types/QueueBase.h>
-#include <QueueManager.h>
 
 class NintendoButtonEvent : public QueueBase
 {
