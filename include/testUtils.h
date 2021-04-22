@@ -46,18 +46,22 @@ namespace Test
 
   void printTestInstructions(const char *instructions)
   {
+    vTaskDelay(TICKS_500ms);
     const char *st = "*** ";
     printLine(st, strlen(instructions) + 7);
     Serial.printf("*** INSTR: %s\n", instructions);
     printLine(st, strlen(instructions) + 7);
+    vTaskDelay(TICKS_500ms);
   }
 
   void printTestTitle(const char *name)
   {
+    vTaskDelay(TICKS_500ms);
     const char *st = "*** ";
     printLine(st, strlen(name) + 7);
     Serial.printf("*** TEST: %s\n", name);
     printLine(st, strlen(name) + 7);
+    vTaskDelay(TICKS_500ms);
   }
 
   void printPASS(const char *message)

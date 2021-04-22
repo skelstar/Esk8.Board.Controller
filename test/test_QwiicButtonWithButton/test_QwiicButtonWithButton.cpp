@@ -68,6 +68,11 @@ void usesTaskSchedulerAndQwiicButton_withTaskBasesAnRealButton_sendsPacketsAndRe
   Wire.begin();
   // start tasks
 
+  NintendoClassicTaskBase::printWarnings = false;
+  ThrottleTaskBase::printWarnings = false;
+
+  Test::printTestInstructions("Click the primaryButton to satify the test");
+
   Test::waitForTasksReady();
 
   Test::enableAllTasks();

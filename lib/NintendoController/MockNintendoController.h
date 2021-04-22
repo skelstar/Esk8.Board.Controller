@@ -55,9 +55,9 @@ public:
   typedef void (*ButtonEventCallback)(uint8_t button);
   typedef uint8_t (*MockGetButtonEventCallback)();
 
-  bool init()
+  bool init(bool printWarnings = true)
   {
-    if (_mockGetButtonEventCallback == nullptr)
+    if (_mockGetButtonEventCallback == nullptr && printWarnings)
       DEBUG("ERROR: MockNintendoController _mockGetButtonEventCallback has not been initiailised!");
 
     return true;

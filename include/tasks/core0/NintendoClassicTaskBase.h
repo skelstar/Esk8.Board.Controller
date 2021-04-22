@@ -10,6 +10,8 @@
 
 namespace NintendoClassicTaskBase
 {
+  bool printWarnings = true;
+
   // prototypes
   void connectToNintendoController();
   uint8_t button_changed(uint8_t *new_buttons, uint8_t *old_buttons);
@@ -107,7 +109,7 @@ namespace NintendoClassicTaskBase
     {
       if (take(mux_I2C, TICKS_10ms))
       {
-        initialised = classic.init();
+        initialised = classic.init(printWarnings);
         if (!initialised)
           Serial.printf("ERROR: couldn't init Nintendo Controller\n");
         give(mux_I2C);
