@@ -11,19 +11,13 @@ namespace BoardCommsTask
 
   TaskBase *thisTask;
 
-  // #ifndef RADIO_OBJECTS
-
-  // #ifndef NRF24L01Lib_h
-  // #endif
-
   RF24 radio(NRF_CE, NRF_CS, RF24_SPI_SPEED);
   RF24Network network(radio);
   NRF24L01Lib nrf24;
-  // #endif
 
-// #ifndef MOCK_GENERIC_CLIENT
+#ifndef MOCK_GENERIC_CLIENT
 #include <GenericClient.h>
-  // #endif
+#endif
 
   GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
 

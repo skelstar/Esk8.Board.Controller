@@ -7,6 +7,7 @@
 #define PRINTSTREAM_FALLBACK
 #include "Debug.hpp"
 
+#include <tasks/queues/queues.h>
 #include <tasks/queues/types/root.h>
 
 SemaphoreHandle_t mux_I2C;
@@ -32,93 +33,6 @@ SemaphoreHandle_t mux_SPI;
 
 #include <tasks/root.h>
 #include <tasks/queues/Managers.h>
-// #include <testUtils.h>
-
-// #include <Fsm.h>
-// #include <FsmManager.h>
-
-// #include <constants.h>
-
-// Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
-
-// #include <RF24Network.h>
-// #include <NRF24L01Lib.h>
-// #include <GenericClient.h>
-
-// #define RADIO_OBJECTS
-// NRF24L01Lib nrf24;
-
-// RF24 radio(NRF_CE, NRF_CS);
-// RF24Network network(radio);
-// GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
-
-// #include <Preferences.h>
-// #include <BatteryLib.h>
-// #include <QueueManager.h>
-// #include <RTOSTaskManager.h>
-
-//------------------------------------------------------------
-// #include "rtosManager.h"
-
-// xQueueHandle xBoardPacketQueue;
-// Queue::Manager *boardPacketQueue;
-
-// xQueueHandle xStatsQueue;
-// Queue::Manager *statsQueue;
-
-// xQueueHandle xPerihperals;
-// Queue::Manager *peripheralsQueue;
-
-// xQueueHandle xPrimaryButtonQueueHandle;
-// Queue::Manager *primaryButtonQueue = nullptr;
-
-// MyMutex mutex_I2C;
-// MyMutex mutex_SPI;
-
-//------------------------------------------------------------
-
-// ControllerData controller_packet;
-// ControllerConfig controller_config;
-
-// #include <BoardClass.h>
-
-// BoardClass board;
-
-// nsPeripherals::Peripherals *peripherals;
-
-//------------------------------------------------------------------
-
-// #include <FeatureService.h>
-
-//------------------------------------------------------------------
-
-// prototypes
-// void boardPacketAvailable_cb(uint16_t from_id, uint8_t t);
-// void waitForTasksToBeReady();
-
-// void boardConnectedState_cb();
-// void printSentToBoard_cb(ControllerData data);
-// void printRecvFromBoard_cb(VescData data);
-
-// void boardClientInit()
-// {
-//   boardClient.begin(&network, boardPacketAvailable_cb, mutex_SPI.handle());
-//   boardClient.setConnectedStateChangeCallback(boardConnectedState_cb);
-//   boardClient.setSentPacketCallback(printSentToBoard_cb);
-//   boardClient.setReadPacketCallback(printRecvFromBoard_cb);
-// }
-
-// #ifdef COMMS_M5ATOM
-// GenericClient<uint16_t, uint16_t> m5AtomClient(COMMS_M5ATOM);
-// void m5AtomClientInit()
-// {
-//   m5AtomClient.begin(&network, [](uint16_t from, uint8_t type) {
-//     uint16_t packet = m5AtomClient.read();
-//     Serial.printf("rx %d from M5Atom!\n", packet);
-//     m5AtomClient.sendTo(0, packet);
-//   });
-// }
-// #endif
 
 //------------------------------------------------------------------
 
@@ -127,57 +41,9 @@ SemaphoreHandle_t mux_SPI;
 #endif
 //------------------------------------------------------------------
 
-// elapsedMillis
-//     sinceSentToBoard,
-//     sinceLastBoardPacketRx,
-//     sinceSentRequest,
-//     since_read_trigger,
-//     sinceBoardConnected,
-//     sinceStoredSnapshot;
-
-// int oldCounter = 0;
-
-// prototypes
-// void sendToBoard();
-
-//------------------------------------------------------------------
-
-// #include <tasks/core0/statsTask.h>
-// #include <tasks/core0/remoteTask.h>
 #include <utils.h>
 
-// #include <tasks/core0/NintendoClassicTask.h>
-
-// #include <tasks/core0/ThrottleTask.h>
-
-// #if (USING_DISPLAY == 1)
-// #include <displayState.h>
-// #include <tasks/core0/DisplayTask.h>
-// #endif
-
-// #if (USING_LED == 1)
-// #include <tasks/core0/ledTask.h>
-// #endif
-
-// #if (USING_DEBUG_TASK == 1)
-// #include <tasks/core0/debugTask.h>
-// #endif
-
-// #include <tasks/core0/commsStateTask.h>
-// #include <nrf_comms.h>
-
-// #if (USING_QWIIC_BUTTON_TASK == 1)
-// #include <tasks/core0/QwiicButtonTask.h>
-// #endif
-
-// #include <peripherals.h>
-// #include <tasks/core0/peripheralsTask.h>
-
-// #include <assert.h>
-// #define __ASSERT_USE_STDERR
-
 void createQueues();
-void createQueueManagers();
 void startTasks();
 void configureTasks();
 void waitForTasks();
@@ -201,6 +67,8 @@ void setup()
 #endif
   vTaskDelay(100);
 
+  createQueues();
+
   startTasks();
 
   configureTasks();
@@ -218,6 +86,15 @@ void loop()
 }
 
 //------------------------------------------------------------------
+
+void createQueues()
+{
+  xDisplayQueueHandle = xQueueCreate(1, sizeof(DisplayEvent *));
+  xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
+  xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
+  xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
+  xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
+}
 
 void startTasks()
 {
