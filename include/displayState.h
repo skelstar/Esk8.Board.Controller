@@ -17,6 +17,8 @@
 
 namespace Display
 {
+  float _g_BoardVersion = 0.0;
+
   enum Trigger
   {
     TR_NO_EVENT = 0,
@@ -171,7 +173,7 @@ namespace Display
       ST_BOARD_VERSION_DOESNT_MATCH_SCREEN,
       [] {
         fsm_mgr.printState(ST_BOARD_VERSION_DOESNT_MATCH_SCREEN);
-        // screenBoardNotCompatible(board.packet.version);
+        screenBoardNotCompatible(_g_BoardVersion);
       },
       NULL,
       NULL);

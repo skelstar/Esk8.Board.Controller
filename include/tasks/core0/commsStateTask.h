@@ -92,7 +92,7 @@ namespace Comms
     commsFsm.begin(&fsm);
     commsFsm.setPrintStateCallback([](uint16_t id) {
       if (PRINT_COMMS_STATE)
-        Serial.printf(PRINT_STATE_FORMAT, "COMMS", getStateName(id));
+        Serial.printf(PRINT_FSM_STATE_FORMAT, "COMMS", getStateName(id));
     });
     commsFsm.setPrintTriggerCallback([](uint16_t ev) {
       if (PRINT_COMMS_STATE_EVENT && ev != 0 && ev != PKT_RXD)

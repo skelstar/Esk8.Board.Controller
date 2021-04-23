@@ -108,6 +108,9 @@ void startTasks()
 void configureTasks()
 {
   ThrottleTaskBase::printWarnings = false;
+
+  DisplayTaskBase::settings.printState = true;
+  DisplayTaskBase::settings.printTrigger = true;
 }
 
 void waitForTasks()

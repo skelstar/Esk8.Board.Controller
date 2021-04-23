@@ -116,7 +116,7 @@ namespace DisplayTaskBase
   void printState(uint16_t id)
   {
     if (settings.printState)
-      Serial.printf(PRINT_STATE_FORMAT, "DISP", millis(), Display::stateID(id));
+      Serial.printf(PRINT_FSM_STATE_FORMAT, "DISP", millis(), Display::stateID(id));
   }
 
   void printTrigger(uint16_t ev)
@@ -135,6 +135,7 @@ namespace DisplayTaskBase
         !Display::fsm_mgr.currentStateIs(Display::ST_BOARD_VERSION_DOESNT_MATCH_SCREEN))
     {
       Serial.printf("%.1f %.1f\n", payload.version, (float)VERSION_BOARD_COMPAT);
+      Display::_g_BoardVersion = payload.version;
       Display::fsm_mgr.trigger(Display::TR_VERSION_DOESNT_MATCH);
     }
     // connected
