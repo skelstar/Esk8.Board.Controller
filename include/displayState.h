@@ -199,7 +199,7 @@ namespace Display
           sinceShowingOptionScreen = 0;
           bool enabled = featureService.get<bool>(FeatureType::PUSH_TO_START);
           featureService.set(PUSH_TO_START, !enabled);
-          screenPropValue<bool>("Push to start", !enabled ? "ON" : "OFF");
+          screenPropValue<bool>("Push to start", enabled == false ? "ON" : "OFF");
           break;
         }
         default:

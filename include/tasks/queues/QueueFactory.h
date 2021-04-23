@@ -14,6 +14,10 @@
 template <typename T>
 Queue1::Manager<T> *createQueue(const char *name, TickType_t ticks = TICKS_5ms)
 {
+  if (std::is_same<T, BatteryInfo>::value)
+  {
+    return new Queue1::Manager<T>(xBatteryInfo, TICKS_5ms, name);
+  }
   if (std::is_same<T, PrimaryButtonState>::value)
   {
     return new Queue1::Manager<T>(xPrimaryButtonQueueHandle, TICKS_5ms, name);
