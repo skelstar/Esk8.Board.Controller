@@ -11,9 +11,9 @@ namespace BoardCommsTask
 
   TaskBase *thisTask;
 
+  NRF24L01Lib nrf24;
   RF24 radio(NRF_CE, NRF_CS, RF24_SPI_SPEED);
   RF24Network network(radio);
-  NRF24L01Lib nrf24;
 
 #ifndef MOCK_GENERIC_CLIENT
 #include <GenericClient.h>
@@ -46,6 +46,8 @@ namespace BoardCommsTask
       {
         Serial.printf("CONFIG_RESPONSE id: %lu\n", packet.id);
       }
+      // Serial.printf("[BoardComms|%lu] packet.id: %lu\n", packet.id);
+
       packetStateQueue->send(&packetState, thisTask->printSendToQueue ? QueueBase::printSend : nullptr);
 
       vTaskDelay(10);
@@ -64,7 +66,7 @@ namespace BoardCommsTask
       packetState.sent(controller_packet);
 
       if (success == false)
-        Serial.printf("Unable to send CONTROL packet to board id: %lu\n", controller_packet.id);
+        Serial.printf("Unable to send CONTROL packet to board, id: %lu\n", controller_packet.id);
     }
     //----------------------------------------------------------
     void initialiseQueues()
@@ -75,6 +77,8 @@ namespace BoardCommsTask
     void initialise()
     {
       packetStateQueue->read(); // clear the queue
+
+      nrf24.begin(&radio, &network, COMMS_CONTROLLER);
 
       boardClient.begin(&network, boardPacketAvailable_cb, mux_SPI);
       // boardClient.printWarnings = printWarnings;

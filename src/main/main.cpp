@@ -107,6 +107,7 @@ void startTasks()
 
 void configureTasks()
 {
+  ThrottleTaskBase::printWarnings = false;
 }
 
 void waitForTasks()
