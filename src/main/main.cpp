@@ -28,6 +28,7 @@ SemaphoreHandle_t mux_SPI;
 #include <rom/rtc.h> // for reset reason
 #include <shared-utils.h>
 #include <types.h>
+#include <constants.h>
 
 // TASKS ------------------------
 
@@ -69,9 +70,9 @@ void setup()
 
   createQueues();
 
-  startTasks();
-
   configureTasks();
+
+  startTasks();
 
   waitForTasks();
 
@@ -96,6 +97,15 @@ void createQueues()
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 }
 
+void configureTasks()
+{
+  ThrottleTaskBase::settings.printWarnings = false;
+  ThrottleTaskBase::settings.printThrottle = PRINT_THROTTLE;
+
+  DisplayTaskBase::settings.printState = PRINT_DISP_STATE;
+  DisplayTaskBase::settings.printTrigger = PRINT_DISP_STATE_EVENT;
+}
+
 void startTasks()
 {
   BoardCommsTask::start(TASK_PRIORITY_4, /*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
@@ -103,14 +113,6 @@ void startTasks()
   NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
   QwiicTaskBase::start(TASK_PRIORITY_2, /*work*/ PERIOD_100ms);
   ThrottleTaskBase::start(TASK_PRIORITY_4, /*work*/ PERIOD_200ms);
-}
-
-void configureTasks()
-{
-  ThrottleTaskBase::printWarnings = false;
-
-  DisplayTaskBase::settings.printState = true;
-  DisplayTaskBase::settings.printTrigger = true;
 }
 
 void waitForTasks()

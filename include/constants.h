@@ -26,75 +26,36 @@ enum ButtonClickType
 
 //------------------------------------------------------------
 
-namespace Comms
-{
-  enum Event
-  {
-    NO_EVENT = 0,
-    PKT_RXD,
-    BOARD_TIMEDOUT,
-    BOARD_FIRST_PACKET,
-    Length
-  };
+// namespace Comms
+// {
+//   enum Event
+//   {
+//     NO_EVENT = 0,
+//     PKT_RXD,
+//     BOARD_TIMEDOUT,
+//     BOARD_FIRST_PACKET,
+//     Length
+//   };
 
-  const char *getEventName(uint8_t ev)
-  {
-    switch (ev)
-    {
-    case NO_EVENT:
-      return "NO_EVENT";
-    case PKT_RXD:
-      return "PKT_RXD";
-    case BOARD_TIMEDOUT:
-      return "BOARD_TIMEDOUT";
-    case BOARD_FIRST_PACKET:
-      return "BOARD_FIRST_PACKET";
-    }
-    return "Out of range (Comms::getEventName())";
-  }
-} // namespace Comms
+//   const char *getEventName(uint8_t ev)
+//   {
+//     switch (ev)
+//     {
+//     case NO_EVENT:
+//       return "NO_EVENT";
+//     case PKT_RXD:
+//       return "PKT_RXD";
+//     case BOARD_TIMEDOUT:
+//       return "BOARD_TIMEDOUT";
+//     case BOARD_FIRST_PACKET:
+//       return "BOARD_FIRST_PACKET";
+//     }
+//     return "Out of range (Comms::getEventName())";
+//   }
+// } // namespace Comms
 
 //------------------------------------------------------------
 
-namespace nsPeripherals
-{
-  enum Event
-  {
-    NO_EVENT = 0,
-    EV_THROTTLE,
-    EV_PRIMARY_BUTTON,
-    EV_CLASSIC_BUTTON,
-  };
-
-  const char *getEvent(uint8_t ev)
-  {
-    switch (ev)
-    {
-
-    case NO_EVENT:
-      return "NO_EVENT";
-    case EV_THROTTLE:
-      return "EV_THROTTLE";
-    case EV_PRIMARY_BUTTON:
-      return "EV_PRIMARY_BUTTON";
-    case EV_CLASSIC_BUTTON:
-      return "EV_CLASSIC_BUTTON";
-    }
-    return "OUT OF RANGE getEvent()";
-  }
-
-  class Peripherals
-  {
-  public:
-    unsigned long id = 0;
-    uint8_t primary_button = 0;
-    uint8_t throttle = 127;
-    uint8_t classicButtons[NintendoController::BUTTON_COUNT];
-    uint8_t event = Event::NO_EVENT;
-  };
-}
-
-//-----------------------------------------------------
 // build flag defaults
 
 #ifndef PRINT_COMMS_STATE

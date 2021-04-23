@@ -12,7 +12,11 @@
 
 namespace ThrottleTaskBase
 {
-  bool printWarnings = true;
+  struct Config
+  {
+    bool printWarnings = true;
+    bool printThrottle = false;
+  } settings;
   // prototypes
   TaskBase *thisTask;
 
@@ -42,6 +46,7 @@ namespace ThrottleTaskBase
 
       MagneticThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, THROTTLE_DIRECTION);
       MagneticThrottle::setThrottleEnabledCb(throttleEnabled_cb);
+      MagneticThrottle::printThrottle = settings.printThrottle;
     }
 
     bool timeToDowork()
@@ -59,7 +64,7 @@ namespace ThrottleTaskBase
       }
 
       // check magthrottle
-      MagneticThrottle::update(printWarnings);
+      MagneticThrottle::update(settings.printWarnings);
       throttleQueue->send(&throttle);
     }
 
