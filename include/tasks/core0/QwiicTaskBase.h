@@ -13,6 +13,7 @@ namespace QwiicTaskBase
 {
   // prototypes
   void connectToQwiicButton();
+  bool printSendToQueue = false;
 
   TaskBase *thisTask;
 
@@ -57,7 +58,7 @@ namespace QwiicTaskBase
         state.pressed = qwiicButton.isPressed();
         give(mux_I2C);
       }
-      primaryButtonQueue->send(&state, printReplyToSchedule ? QueueBase::printReply : nullptr);
+      primaryButtonQueue->send(&state, printSendToQueue ? QueueBase::printSend : nullptr);
     }
 
     void task(void *parameters)

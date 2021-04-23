@@ -24,7 +24,6 @@ public:
   bool ready = false, enabled = false;
   unsigned long doWorkInterval = PERIOD_10ms;
   bool printSendToQueue = false,
-       printReplyToSchedule = false,
        printPeekSchedule = false;
   elapsedMillis since_last_did_work = 0;
 

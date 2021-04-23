@@ -302,20 +302,18 @@ namespace Display
       tft.drawString(text, LCD_WIDTH / 2, y);
       y += tft.fontHeight();
 
-      if (USING_REMOTE)
-      { // remote battery
-        // const int batteryWidth = 50;
-        // y += 15;
-        // uint8_t percent = Remote::battery.chargePercent;
-        // drawSmallBattery(percent, LCD_WIDTH / 2 - 5, y, batteryWidth, TR_DATUM, Remote::battery.isCharging);
+      // remote battery
+      const int batteryWidth = 50;
+      y += 15;
+      uint8_t percent = Display::_g_RemoteBattery.percent;
+      drawSmallBattery(percent, LCD_WIDTH / 2 - 5, y, batteryWidth, TR_DATUM, Display::_g_RemoteBattery.charging);
 
-        // char buff[10];
-        // sprintf(buff, "%0.1fv", Remote::battery.getVolts());
-        // tft.setTextDatum(TL_DATUM);
-        // tft.setFreeFont(FONT_LG);
-        // tft.setTextColor(TFT_DARKGREY);
-        // tft.drawString(buff, LCD_WIDTH / 2 + 5, y - 4);
-      }
+      char buff[10];
+      sprintf(buff, "%0.1fv", Display::_g_RemoteBattery.volts);
+      tft.setTextDatum(TL_DATUM);
+      tft.setFreeFont(FONT_LG);
+      tft.setTextColor(TFT_DARKGREY);
+      tft.drawString(buff, LCD_WIDTH / 2 + 5, y - 4);
 
       y += 30;
       tft.setTextColor(TFT_DARKGREY);

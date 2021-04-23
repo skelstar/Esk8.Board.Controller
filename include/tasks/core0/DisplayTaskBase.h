@@ -174,8 +174,14 @@ namespace DisplayTaskBase
 
   void handleBatteryQueue(BatteryInfo battery)
   {
+    bool changed = Display::_g_RemoteBattery.volts != battery.volts;
     Display::_g_RemoteBattery.charging = battery.charging;
     Display::_g_RemoteBattery.percent = battery.percent;
     Display::_g_RemoteBattery.volts = battery.volts;
+
+    Serial.printf("handleBatteryQueue: volts=%.1f changed=%d\n", battery.volts, changed);
+
+    if (changed)
+      Display::fsm_mgr.trigger(Display::TR_REMOTE_BATTERY_CHANGED);
   }
 }

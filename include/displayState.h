@@ -7,6 +7,11 @@
 //------------------------------------------------------------
 
 // BatteryInfo *remote;
+namespace Display
+{
+  float _g_BoardVersion = 0.0;
+  BatteryInfo _g_RemoteBattery;
+}
 
 #include <FsmManager.h>
 #include <screens.h>
@@ -17,9 +22,6 @@
 
 namespace Display
 {
-  float _g_BoardVersion = 0.0;
-  BatteryInfo _g_RemoteBattery;
-
   enum Trigger
   {
     TR_NO_EVENT = 0,
