@@ -128,28 +128,35 @@ namespace DisplayTaskBase
       Serial.printf(PRINT_FSM_TRIGGER_FORMAT, "DISP", millis(), Display::getTrigger(ev));
   }
 
-  void handlePacketState(PacketState payload)
+#define NOT_IN_STATE(x) !Display::fsm_mgr.currentStateIs(x)
+
+  void handlePacketState(PacketState board)
   {
-    // check version
-    if (payload.version != (float)VERSION_BOARD_COMPAT &&
-        !Display::fsm_mgr.currentStateIs(Display::ST_BOARD_VERSION_DOESNT_MATCH_SCREEN))
+    if (board.connected() == true)
     {
-      Serial.printf("%.1f %.1f\n", payload.version, (float)VERSION_BOARD_COMPAT);
-      Display::_g_BoardVersion = payload.version;
-      Display::fsm_mgr.trigger(Display::TR_VERSION_DOESNT_MATCH);
-    }
-    // connected
-    else if (payload.connected())
-    {
-      if (!Display::fsm_mgr.currentStateIs(Display::ST_MOVING_SCREEN) && payload.moving)
+      // check version
+      if (board.version != (float)VERSION_BOARD_COMPAT &&
+          !Display::fsm_mgr.currentStateIs(Display::ST_BOARD_VERSION_DOESNT_MATCH_SCREEN))
+      {
+        Serial.printf("%.1f %.1f\n", board.version, (float)VERSION_BOARD_COMPAT);
+        Display::_g_BoardVersion = board.version;
+        Display::fsm_mgr.trigger(Display::TR_VERSION_DOESNT_MATCH);
+      }
+      // moving
+      else if (NOT_IN_STATE(Display::ST_MOVING_SCREEN) && board.moving)
+      {
         Display::fsm_mgr.trigger(Display::Trigger::TR_MOVING);
-      else if (!Display::fsm_mgr.currentStateIs(Display::ST_STOPPED_SCREEN) && !payload.moving)
+      }
+      // stopped
+      else if (NOT_IN_STATE(Display::ST_STOPPED_SCREEN) && !board.moving)
+      {
         Display::fsm_mgr.trigger(Display::Trigger::TR_STOPPED);
+      }
     }
     // offline
     else
     {
-      if (!Display::fsm_mgr.currentStateIs(Display::ST_DISCONNECTED))
+      if (NOT_IN_STATE(Display::ST_DISCONNECTED))
       {
         Display::fsm_mgr.trigger(Display::TR_DISCONNECTED);
       }
