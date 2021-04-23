@@ -33,6 +33,7 @@ public:
   void received(VescData packet)
   {
     _reply_packet_id = packet.id;
+    _since_responded = 0;
     version = packet.version;
     moving = packet.moving;
   }
@@ -46,7 +47,7 @@ public:
   {
     return packet_id == 0 || // ignore first packet
            packet_id == _reply_packet_id ||
-           _since_sent < 200;
+           _since_responded < 200;
   }
 
   static void print(PacketState item, const char *preamble = nullptr)
@@ -60,6 +61,6 @@ public:
   }
 
 private:
-  elapsedMillis _since_sent;
+  elapsedMillis _since_sent, _since_responded;
   unsigned long _reply_packet_id;
 };

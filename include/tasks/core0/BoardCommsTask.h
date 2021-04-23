@@ -34,6 +34,11 @@ namespace BoardCommsTask
 
     bool printSentPacketToBoard = false;
     unsigned long SEND_TO_BOARD_INTERVAL_LOCAL = SEND_TO_BOARD_INTERVAL;
+    elapsedMillis
+        since_checked_for_available,
+        since_last_response,
+        since_sent_to_board = 0,
+        since_last_did_work = 0;
 
     //----------------------------------------------------------
     void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
@@ -49,6 +54,7 @@ namespace BoardCommsTask
       // Serial.printf("[BoardComms|%lu] packet.id: %lu\n", packet.id);
 
       packetStateQueue->send(&packetState, thisTask->printSendToQueue ? QueueBase::printSend : nullptr);
+      since_last_response = 0;
 
       vTaskDelay(10);
     }
@@ -65,7 +71,7 @@ namespace BoardCommsTask
 
       packetState.sent(controller_packet);
 
-      if (success == false)
+      if (!success)
         Serial.printf("Unable to send CONTROL packet to board, id: %lu\n", controller_packet.id);
     }
     //----------------------------------------------------------
@@ -84,8 +90,6 @@ namespace BoardCommsTask
       // boardClient.printWarnings = printWarnings;
     }
     //----------------------------------------------------------
-    elapsedMillis since_checked_for_available, since_sent_to_board = 0;
-    elapsedMillis since_last_did_work = 0;
 
     bool timeToDowork()
     {
@@ -101,6 +105,11 @@ namespace BoardCommsTask
         since_sent_to_board = 0;
 
         sendPacketToBoard();
+      }
+
+      if (since_last_response > SEND_TO_BOARD_INTERVAL_LOCAL)
+      {
+        packetStateQueue->send(&packetState);
       }
     }
     //----------------------------------------------------------

@@ -145,9 +145,14 @@ namespace DisplayTaskBase
       else if (!Display::fsm_mgr.currentStateIs(Display::ST_STOPPED_SCREEN) && !payload.moving)
         Display::fsm_mgr.trigger(Display::Trigger::TR_STOPPED);
     }
-    else if (!Display::fsm_mgr.currentStateIs(Display::ST_DISCONNECTED))
-      // offline
-      Display::fsm_mgr.trigger(Display::TR_DISCONNECTED);
+    // offline
+    else
+    {
+      if (!Display::fsm_mgr.currentStateIs(Display::ST_DISCONNECTED))
+      {
+        Display::fsm_mgr.trigger(Display::TR_DISCONNECTED);
+      }
+    }
   }
 
   void handleNintendoButtonEvent(NintendoButtonEvent payload)
