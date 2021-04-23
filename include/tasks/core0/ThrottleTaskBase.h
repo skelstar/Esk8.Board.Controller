@@ -31,8 +31,8 @@ namespace ThrottleTaskBase
 
     void initialiseQueues()
     {
-      primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(throttle)primaryButtonQueue");
-      throttleQueue = Queue1::Manager<ThrottleState>::create("(throttle)throttleQueue");
+      primaryButtonQueue = createQueue<PrimaryButtonState>("(throttle)primaryButtonQueue");
+      throttleQueue = createQueue<ThrottleState>("(throttle)throttleQueue");
     }
 
     void initialise()

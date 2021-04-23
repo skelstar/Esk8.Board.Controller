@@ -67,10 +67,10 @@ namespace Display
 
       // BatteryLib remote_batt(BATTERY_MEASURE_PIN);
 
-      uint8_t w = 40,
-              h = 20,
-              x1 = LCD_WIDTH - w - 5, /*margin*/
-          y1 = 5;                     /*margin*/
+      // uint8_t w = 40,
+      // h = 20,
+      // x1 = LCD_WIDTH - w - 5, /*margin*/
+      // y1 = 5; /*margin*/
       // remote_batt.setup(NULL);
       // remote_batt.update();
 

@@ -96,7 +96,7 @@ namespace Comms
     });
     commsFsm.setPrintTriggerCallback([](uint16_t ev) {
       if (PRINT_COMMS_STATE_EVENT && ev != 0 && ev != PKT_RXD)
-        Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "COMMS", getEventName(ev));
+        Serial.printf(PRINT_FSM_TRIGGER_FORMAT, "COMMS", getEventName(ev));
     });
 
     addTransitions();

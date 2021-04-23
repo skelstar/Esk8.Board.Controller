@@ -24,11 +24,11 @@ namespace QwiicTaskBase
 
     PrimaryButtonState state;
 
-    bool printReplyToSchedule = false, printPeekSchedule = false;
+    bool printReplyToSchedule = false;
 
     void initialiseQueues()
     {
-      primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(QwiicTaskBase)primaryButtonQueue");
+      primaryButtonQueue = createQueue<PrimaryButtonState>("(QwiicTaskBase)primaryButtonQueue");
     }
 
     void initialise()

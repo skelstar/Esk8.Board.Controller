@@ -83,11 +83,11 @@ namespace Test
     xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 
     // configure queues
-    displayEventQueue = Queue1::Manager<DisplayEvent>::create("(test)displayEventQueue");
-    primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaryButtonQueue");
-    packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
-    nintendoQueue = Queue1::Manager<NintendoButtonEvent>::create("(test)nintendoQueue");
-    throttleQueue = Queue1::Manager<ThrottleState>::create("(test)throttleQueue");
+    displayEventQueue = createQueue<DisplayEvent>("(test)displayEventQueue");
+    primaryButtonQueue = createQueue<PrimaryButtonState>("(test)primaryButtonQueue");
+    packetStateQueue = createQueue<PacketState>("(test)packetStateQueue");
+    nintendoQueue = createQueue<NintendoButtonEvent>("(test)nintendoQueue");
+    throttleQueue = createQueue<ThrottleState>("(test)throttleQueue");
 
     QwiicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms);
     BoardCommsTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);

@@ -9,6 +9,7 @@
 #include <TFT_eSPI.h>
 #include <tft.h>
 #include <printFormatStrings.h>
+#include <NintendoController.h>
 
 namespace DisplayTaskBase
 {
@@ -37,10 +38,10 @@ namespace DisplayTaskBase
     //--------------------------------
     void initialiseQueues()
     {
-      packetStateQueue = Queue1::Manager<PacketState>::create("(DisplayBase)PacketStateQueue");
-      primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(DisplayBase)PrimaryButtonQueue");
-      nintendoClassicQueue = Queue1::Manager<NintendoButtonEvent>::create("(DisplayBase)NintendoClassicQueue");
-      displayEventQueue = Queue1::Manager<DisplayEvent>::create("(DisplayBase)DisplayEventQueue");
+      packetStateQueue = createQueue<PacketState>("(DisplayBase)PacketStateQueue");
+      primaryButtonQueue = createQueue<PrimaryButtonState>("(DisplayBase)PrimaryButtonQueue");
+      nintendoClassicQueue = createQueue<NintendoButtonEvent>("(DisplayBase)NintendoClassicQueue");
+      displayEventQueue = createQueue<DisplayEvent>("(DisplayBase)DisplayEventQueue");
     }
     //--------------------------------
     void initialise()
@@ -124,7 +125,7 @@ namespace DisplayTaskBase
         !(Display::_fsm.revisit() && ev == Display::TR_STOPPED) &&
         !(Display::_fsm.revisit() && ev == Display::TR_MOVING) &&
         !(Display::_fsm.getCurrentStateId() == Display::ST_OPTION_PUSH_TO_START && ev == Display::TR_STOPPED))
-      Serial.printf(PRINT_sFSM_sTRIGGER_FORMAT, "DISP", millis(), Display::getTrigger(ev));
+      Serial.printf(PRINT_FSM_TRIGGER_FORMAT, "DISP", millis(), Display::getTrigger(ev));
   }
 
   void handlePacketState(PacketState payload)
@@ -155,6 +156,6 @@ namespace DisplayTaskBase
       Display::fsm_mgr.trigger(Display::TR_MENU_BUTTON_CLICKED);
 
     if (payload.button != NintendoController::BUTTON_NONE)
-      Serial.printf("BUTTON: %s\n", NintendoClassicTaskBase::getButtonName(payload.button));
+      Serial.printf("BUTTON: %s\n", NintendoController::getButtonName(payload.button));
   }
 }

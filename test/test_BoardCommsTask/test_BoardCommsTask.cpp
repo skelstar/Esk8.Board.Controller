@@ -28,6 +28,7 @@ SemaphoreHandle_t mux_SPI;
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
 // #include <Wire.h>
+#include <NRF24L01Lib.h>
 
 // Mocks
 #include <MockQwiicButton.h>
@@ -77,17 +78,17 @@ void setUp()
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 
   // configure queues
-  displayEventQueue = Queue1::Manager<DisplayEvent>::create("(test)displayEventQueue");
-  primaryButtonQueue = Queue1::Manager<PrimaryButtonState>::create("(test)primaryButtonQueue");
-  packetStateQueue = Queue1::Manager<PacketState>::create("(test)packetStateQueue");
-  nintendoQueue = Queue1::Manager<NintendoButtonEvent>::create("(test)nintendoQueue");
-  throttleQueue = Queue1::Manager<ThrottleState>::create("(test)throttleQueue");
+  displayEventQueue = createQueue<DisplayEvent>("(test)displayEventQueue");
+  primaryButtonQueue = createQueue<PrimaryButtonState>("(test)primaryButtonQueue");
+  packetStateQueue = createQueue<PacketState>("(test)packetStateQueue");
+  nintendoQueue = createQueue<NintendoButtonEvent>("(test)nintendoQueue");
+  throttleQueue = createQueue<ThrottleState>("(test)throttleQueue");
 
-  QwiicTaskBase::start(/*work*/ PERIOD_100ms);
-  BoardCommsTask::start(/*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
-  NintendoClassicTaskBase::start(/*work*/ PERIOD_50ms);
-  DisplayTaskBase::start(/*work*/ PERIOD_50ms);
-  ThrottleTaskBase::start(/*work*/ PERIOD_200ms);
+  QwiicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms);
+  BoardCommsTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
+  NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
+  DisplayTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
+  ThrottleTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_200ms);
 }
 
 void tearDown()

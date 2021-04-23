@@ -16,7 +16,7 @@ namespace NintendoClassicTaskBase
   // prototypes
   void connectToNintendoController();
   uint8_t button_changed(uint8_t *new_buttons, uint8_t *old_buttons);
-  const char *getButtonName(uint8_t button);
+  // const char *getButtonName(uint8_t button);
 
   TaskBase *thisTask;
 
@@ -32,7 +32,7 @@ namespace NintendoClassicTaskBase
 
     void initialiseQueues()
     {
-      nintendoButtonQueue = Queue1::Manager<NintendoButtonEvent>::create("(NintendoClassicTaskBase)nintendoButtonQueue");
+      nintendoButtonQueue = createQueue<NintendoButtonEvent>("(NintendoClassicTaskBase)nintendoButtonQueue");
     }
 
     void initialise()
@@ -128,31 +128,31 @@ namespace NintendoClassicTaskBase
     return 99;
   }
 
-  const char *getButtonName(uint8_t button)
-  {
-    switch (button)
-    {
-    case NintendoController::BUTTON_UP:
-      return "BUTTON_UP";
-    case NintendoController::BUTTON_RIGHT:
-      return "BUTTON_RIGHT";
-    case NintendoController::BUTTON_DOWN:
-      return "BUTTON_DOWN";
-    case NintendoController::BUTTON_LEFT:
-      return "BUTTON_LEFT";
-    case NintendoController::BUTTON_A:
-      return "BUTTON_A";
-    case NintendoController::BUTTON_B:
-      return "BUTTON_B";
-    case NintendoController::BUTTON_START:
-      return "BUTTON_START";
-    case NintendoController::BUTTON_SELECT:
-      return "BUTTON_SELECT";
-    case NintendoController::BUTTON_COUNT:
-      return "BUTTON_COUNT";
-    case NintendoController::BUTTON_NONE:
-      return "BUTTON_NONE";
-    }
-    return "OUT OF RANGE: getButtonName()";
-  }
+  // const char *getButtonName(uint8_t button)
+  // {
+  //   switch (button)
+  //   {
+  //   case NintendoController::BUTTON_UP:
+  //     return "BUTTON_UP";
+  //   case NintendoController::BUTTON_RIGHT:
+  //     return "BUTTON_RIGHT";
+  //   case NintendoController::BUTTON_DOWN:
+  //     return "BUTTON_DOWN";
+  //   case NintendoController::BUTTON_LEFT:
+  //     return "BUTTON_LEFT";
+  //   case NintendoController::BUTTON_A:
+  //     return "BUTTON_A";
+  //   case NintendoController::BUTTON_B:
+  //     return "BUTTON_B";
+  //   case NintendoController::BUTTON_START:
+  //     return "BUTTON_START";
+  //   case NintendoController::BUTTON_SELECT:
+  //     return "BUTTON_SELECT";
+  //   case NintendoController::BUTTON_COUNT:
+  //     return "BUTTON_COUNT";
+  //   case NintendoController::BUTTON_NONE:
+  //     return "BUTTON_NONE";
+  //   }
+  //   return "OUT OF RANGE: getButtonName()";
+  // }
 }

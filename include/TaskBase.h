@@ -34,7 +34,7 @@ public:
     rtos = new RTOSTaskManager(_name, /*stack*/ stackSize);
   }
 
-  bool enable(bool print = false)
+  void enable(bool print = false)
   {
     if (print)
       Serial.printf("[TASK: %s] enabled\n", _name);
