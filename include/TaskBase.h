@@ -15,6 +15,7 @@ public:
   VoidVoidCallback _initialise_cb = nullptr;
   VoidVoidCallback _initialiseQueues_cb = nullptr;
   VoidVoidCallback _createTask_cb = nullptr;
+  VoidVoidCallback _firstTask_cb = nullptr;
   BoolVoidCallback _timeToDoWork_cb = nullptr;
   VoidVoidCallback _doWork_cb = nullptr;
 
@@ -56,6 +57,9 @@ public:
     while (!enabled)
       vTaskDelay(TICKS_5ms);
 
+    if (_firstTask_cb != nullptr)
+      _firstTask_cb();
+
     while (true)
     {
       if (since_last_did_work > doWorkInterval && enabled)
@@ -92,6 +96,11 @@ public:
   void setCreateTaskCallback(VoidVoidCallback _cb)
   {
     _createTask_cb = _cb;
+  }
+
+  void setFirstTaskCallback(VoidVoidCallback _cb)
+  {
+    _firstTask_cb = _cb;
   }
 
   void setTimeToDoWorkCallback(BoolVoidCallback _cb)

@@ -18,6 +18,7 @@ namespace DisplayTaskBase
   void printTrigger(uint16_t ev);
   void handlePacketState(PacketState payload);
   void handleNintendoButtonEvent(NintendoButtonEvent payload);
+  void handleBatteryQueue(BatteryInfo battery);
 
   TaskBase *thisTask;
 
@@ -31,6 +32,7 @@ namespace DisplayTaskBase
 
   namespace _p
   {
+    Queue1::Manager<BatteryInfo> *batteryQueue = nullptr;
     Queue1::Manager<PacketState> *packetStateQueue = nullptr;
     Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
     Queue1::Manager<NintendoButtonEvent> *nintendoClassicQueue = nullptr;
@@ -38,6 +40,7 @@ namespace DisplayTaskBase
     //--------------------------------
     void initialiseQueues()
     {
+      batteryQueue = createQueue<BatteryInfo>("(DisplayTask)BatteryInfo");
       packetStateQueue = createQueue<PacketState>("(DisplayBase)PacketStateQueue");
       primaryButtonQueue = createQueue<PrimaryButtonState>("(DisplayBase)PrimaryButtonQueue");
       nintendoClassicQueue = createQueue<NintendoButtonEvent>("(DisplayBase)NintendoClassicQueue");
@@ -46,12 +49,6 @@ namespace DisplayTaskBase
     //--------------------------------
     void initialise()
     {
-      if (packetStateQueue == nullptr ||
-          primaryButtonQueue == nullptr ||
-          nintendoClassicQueue == nullptr ||
-          displayEventQueue == nullptr)
-        Serial.printf("[TASK:%s] one of the queues is NULL\n", thisTask->_name);
-
       if (mux_SPI == nullptr)
         mux_SPI = xSemaphoreCreateMutex();
 
@@ -65,23 +62,26 @@ namespace DisplayTaskBase
 
       Display::_fsm.run_machine();
     }
+    //--------------------------------
 
     elapsedMillis since_last_did_work = 0, since_checked_online = 0;
 
     bool timeToDowork()
     {
-      return since_checked_online > PERIOD_1s && thisTask->enabled;
+      return since_checked_online > PERIOD_1s;
     }
     //--------------------------------
     void doWork()
     {
-      packetStateQueue->hasValue();
       // will check for online regardless of anything being new on the queue
-      if (packetStateQueue->payload.event_id > 0)
+      if (packetStateQueue->hasValue() && packetStateQueue->payload.event_id > 0)
         handlePacketState(packetStateQueue->payload);
 
       if (nintendoClassicQueue->hasValue())
         handleNintendoButtonEvent(nintendoClassicQueue->payload);
+
+      if (batteryQueue->hasValue())
+        handleBatteryQueue(batteryQueue->payload);
 
       Display::_fsm.run_machine();
     }
@@ -170,5 +170,12 @@ namespace DisplayTaskBase
 
     if (payload.button != NintendoController::BUTTON_NONE)
       Serial.printf("BUTTON: %s\n", NintendoController::getButtonName(payload.button));
+  }
+
+  void handleBatteryQueue(BatteryInfo battery)
+  {
+    Display::_g_RemoteBattery.charging = battery.charging;
+    Display::_g_RemoteBattery.percent = battery.percent;
+    Display::_g_RemoteBattery.volts = battery.volts;
   }
 }

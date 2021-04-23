@@ -11,8 +11,6 @@ namespace RemoteTask
 {
   bool printWarnings = true;
 
-  // prototypes
-
   TaskBase *thisTask;
 
   BatteryLib battery(BATTERY_MEASURE_PIN);
@@ -23,6 +21,9 @@ namespace RemoteTask
 
   namespace _p
   {
+    // prototypes
+    void doWork();
+
     Queue1::Manager<BatteryInfo> *remoteBatteryQueue = nullptr;
 
     void initialiseQueues()
@@ -33,6 +34,11 @@ namespace RemoteTask
     void initialise()
     {
       battery.setup(nullptr);
+    }
+
+    void firstTask()
+    {
+      doWork();
     }
 
     elapsedMillis since_last_did_work = 0;
@@ -66,6 +72,7 @@ namespace RemoteTask
     thisTask = new TaskBase("RemoteTask", 3000);
     thisTask->setInitialiseCallback(_p::initialise);
     thisTask->setInitialiseQueuesCallback(_p::initialiseQueues);
+    thisTask->setFirstTaskCallback(_p::firstTask);
     thisTask->setTimeToDoWorkCallback(_p::timeToDowork);
     thisTask->setDoWorkCallback(_p::doWork);
 

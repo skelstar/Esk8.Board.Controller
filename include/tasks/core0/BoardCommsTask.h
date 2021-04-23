@@ -82,6 +82,9 @@ namespace BoardCommsTask
     //----------------------------------------------------------
     void initialise()
     {
+      if (mux_SPI == nullptr)
+        mux_SPI = xSemaphoreCreateMutex();
+
       packetStateQueue->read(); // clear the queue
 
       nrf24.begin(&radio, &network, COMMS_CONTROLLER);

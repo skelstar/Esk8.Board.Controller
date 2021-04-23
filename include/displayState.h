@@ -18,6 +18,7 @@
 namespace Display
 {
   float _g_BoardVersion = 0.0;
+  BatteryInfo _g_RemoteBattery;
 
   enum Trigger
   {
