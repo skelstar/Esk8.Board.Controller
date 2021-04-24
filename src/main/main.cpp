@@ -115,7 +115,7 @@ void startTasks()
 {
   boardCommsTask.start(TASK_PRIORITY_4, /*work*/ PERIOD_100ms, BoardComms::task1);
   displayTask.start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms, Display::task1);
-  NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
+  nintendoClassTask.start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms, nsNintendoClassicTask::task1);
   QwiicTaskBase::start(TASK_PRIORITY_2, /*work*/ PERIOD_100ms);
   throttleTask.start(TASK_PRIORITY_4, /*work*/ PERIOD_200ms, nsThrottleTask::task1);
 
@@ -128,7 +128,7 @@ void waitForTasks()
   while (
       boardCommsTask.ready == false ||
       displayTask.ready == false ||
-      NintendoClassicTaskBase::thisTask->ready == false ||
+      nintendoClassTask.ready == false ||
       QwiicTaskBase::thisTask->ready == false ||
       remoteTask.ready == false ||
       throttleTask.ready == false ||
@@ -140,7 +140,7 @@ void enableTasks(bool print)
 {
   boardCommsTask.enable(print);
   displayTask.enable(print);
-  NintendoClassicTaskBase::thisTask->enable(print);
+  nintendoClassTask.enable(print);
   QwiicTaskBase::thisTask->enable(print);
   remoteTask.enable(print);
   throttleTask.enable(print);

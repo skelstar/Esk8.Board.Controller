@@ -4,12 +4,6 @@
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 
-// #ifndef MAGNETIC_THROTTLE_H
-// // in case a mock is being used
-// // DEBUG("Using real MagThrottle library");
-// #include <MagThrottle.h>
-// #endif
-
 namespace nsThrottleTask
 {
   PrimaryButtonState primaryButton;
