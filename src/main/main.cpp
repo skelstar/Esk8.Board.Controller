@@ -102,6 +102,7 @@ void configureTasks()
 {
   ThrottleTaskBase::settings.printWarnings = false;
   ThrottleTaskBase::settings.printThrottle = PRINT_THROTTLE;
+  boardCommsTask.SEND_TO_BOARD_INTERVAL_LOCAL = SEND_TO_BOARD_INTERVAL;
 
   displayTask.p_printState = PRINT_DISP_STATE;
   displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
@@ -109,7 +110,7 @@ void configureTasks()
 
 void startTasks()
 {
-  BoardCommsTask::start(TASK_PRIORITY_4, /*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
+  boardCommsTask.start(TASK_PRIORITY_4, /*work*/ PERIOD_100ms, BoardComms::task1);
   displayTask.start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms, Display::task1);
   NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
   QwiicTaskBase::start(TASK_PRIORITY_2, /*work*/ PERIOD_100ms);
@@ -122,7 +123,7 @@ void startTasks()
 void waitForTasks()
 {
   while (
-      BoardCommsTask::thisTask->ready == false ||
+      boardCommsTask.ready == false ||
       displayTask.ready == false ||
       NintendoClassicTaskBase::thisTask->ready == false ||
       QwiicTaskBase::thisTask->ready == false ||
@@ -134,7 +135,7 @@ void waitForTasks()
 
 void enableTasks(bool print)
 {
-  BoardCommsTask::thisTask->enable(print);
+  boardCommsTask.enable(print);
   displayTask.enable(print);
   NintendoClassicTaskBase::thisTask->enable(print);
   QwiicTaskBase::thisTask->enable(print);

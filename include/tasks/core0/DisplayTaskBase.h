@@ -166,3 +166,13 @@ public:
       Display::fsm_mgr.trigger(Display::TR_REMOTE_BATTERY_CHANGED);
   }
 };
+
+DisplayTask displayTask;
+
+namespace Display
+{
+  void task1(void *parameters)
+  {
+    displayTask.task(parameters);
+  }
+}

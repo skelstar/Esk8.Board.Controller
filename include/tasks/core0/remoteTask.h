@@ -71,3 +71,13 @@ public:
       rtos->deleteTask(print);
   }
 };
+
+RemoteTask remoteTask;
+
+namespace Remote
+{
+  void task1(void *parameters)
+  {
+    remoteTask.task(parameters);
+  }
+}
