@@ -10,7 +10,7 @@
 #include <MagThrottle.h>
 #endif
 
-namespace ThrottleTaskBase
+namespace ThrottleTask
 {
   struct Config
   {

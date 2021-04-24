@@ -54,8 +54,7 @@ public:
     remote.volts = battery->getVolts();
 
     remoteBatteryQueue->send(&remote);
-
-    remote.print("[RemoteTask]");
+    // remote.print("[RemoteTask]");
   }
 
   void start(uint8_t priority, ulong p_doWorkInterval, TaskFunction_t taskRef)

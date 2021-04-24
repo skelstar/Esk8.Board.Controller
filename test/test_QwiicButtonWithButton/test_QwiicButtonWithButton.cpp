@@ -69,7 +69,7 @@ void usesTaskSchedulerAndQwiicButton_withTaskBasesAnRealButton_sendsPacketsAndRe
   // start tasks
 
   NintendoClassicTaskBase::printWarnings = false;
-  ThrottleTaskBase::printWarnings = false;
+  ThrottleTask::printWarnings = false;
 
   Test::printTestInstructions("Click the primaryButton to satify the test");
 

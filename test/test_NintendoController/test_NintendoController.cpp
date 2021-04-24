@@ -62,7 +62,7 @@ void usesTaskSchedulerAndNintendoController_withTaskBaseAnRealController_sendsPa
   Wire.begin();
 
   // start tasks
-  ThrottleTaskBase::printWarnings = false;
+  ThrottleTask::printWarnings = false;
   MagneticThrottle::printThrottle = false;
   BoardCommsTask::printWarnings = false;
 

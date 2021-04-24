@@ -62,7 +62,7 @@ void tearDown()
 
 void hasValue_responds_with_correct_value()
 {
-  ThrottleTaskBase::printWarnings = false;
+  ThrottleTask::printWarnings = false;
 
   BoardCommsTask::boardClient.mockResponseCallback(Test::mockBoardStoppedResponse);
 

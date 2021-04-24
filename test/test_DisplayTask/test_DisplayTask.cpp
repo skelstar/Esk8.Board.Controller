@@ -75,7 +75,7 @@ void setUp()
   BoardCommsTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
   NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
   DisplayTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
-  ThrottleTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_200ms);
+  ThrottleTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_200ms);
 
   counter = 0;
 }
@@ -86,7 +86,7 @@ void tearDown()
   BoardCommsTask::thisTask->deleteTask(PRINT_THIS);
   NintendoClassicTaskBase::thisTask->deleteTask(PRINT_THIS);
   DisplayTaskBase::thisTask->deleteTask(PRINT_THIS);
-  ThrottleTaskBase::thisTask->deleteTask(PRINT_THIS);
+  ThrottleTask::thisTask->deleteTask(PRINT_THIS);
 }
 
 //-----------------------------------------------

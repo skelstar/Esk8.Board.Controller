@@ -23,7 +23,7 @@ namespace Test
         NintendoClassicTaskBase::thisTask->ready == false ||
         QwiicTaskBase::thisTask->ready == false ||
         DisplayTaskBase::thisTask->ready == false ||
-        ThrottleTaskBase::thisTask->ready == false)
+        ThrottleTask::thisTask->ready == false)
       vTaskDelay(PERIOD_10ms);
   }
 
@@ -33,7 +33,7 @@ namespace Test
     NintendoClassicTaskBase::thisTask->enable(print);
     QwiicTaskBase::thisTask->enable(print);
     DisplayTaskBase::thisTask->enable(print);
-    ThrottleTaskBase::thisTask->enable(print);
+    ThrottleTask::thisTask->enable(print);
   }
 
   void printLine(const char *start, int dashes = 10)
@@ -93,7 +93,7 @@ namespace Test
     BoardCommsTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
     NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
     DisplayTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
-    ThrottleTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_200ms);
+    ThrottleTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_200ms);
   }
 
   void tearDownAllTheTasks()
@@ -102,7 +102,7 @@ namespace Test
     BoardCommsTask::thisTask->deleteTask(PRINT_THIS);
     NintendoClassicTaskBase::thisTask->deleteTask(PRINT_THIS);
     DisplayTaskBase::thisTask->deleteTask(PRINT_THIS);
-    ThrottleTaskBase::thisTask->deleteTask(PRINT_THIS);
+    ThrottleTask::thisTask->deleteTask(PRINT_THIS);
   }
 
   VescData mockBoardStoppedResponse(ControllerData out)

@@ -89,7 +89,7 @@ void ThrottleZero_boardReportsStopped()
   TEST_ASSERT_TRUE_MESSAGE(throttleQueue->payload.val == 127, "throttleQueue value is not 127");
 }
 
-void test_ThrottleTaskBaselimting_with_primary_button_not_held()
+void test_ThrottleTasklimting_with_primary_button_not_held()
 {
 
   // Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
@@ -103,7 +103,7 @@ void test_ThrottleTaskBaselimting_with_primary_button_not_held()
   //   return _throttle;
   // });
 
-  // while (!ThrottleTaskBase::thisTask->ready)
+  // while (!ThrottleTask::thisTask->ready)
   // {
   //   vTaskDelay(5);
   // }
@@ -150,7 +150,7 @@ void test_ThrottleTaskBaselimting_with_primary_button_not_held()
   // TEST_ASSERT_TRUE(counter == 6);
 }
 
-void test_ThrottleTaskBasenot_limting_when_primary_button_is_held()
+void test_ThrottleTasknot_limting_when_primary_button_is_held()
 {
   // static uint8_t _throttle = 127;
   // static uint8_t _s_Steps[] = {50, 60, 120, 127, 130, 140};
@@ -160,7 +160,7 @@ void test_ThrottleTaskBasenot_limting_when_primary_button_is_held()
   //   return _throttle;
   // });
 
-  // while (!ThrottleTaskBase::thisTask->ready)
+  // while (!ThrottleTask::thisTask->ready)
   // {
   //   vTaskDelay(5);
   // }
@@ -212,7 +212,7 @@ void test_ThrottleTaskBasenot_limting_when_primary_button_is_held()
   TEST_ASSERT_TRUE(counter == 6);
 }
 
-void test_ThrottleTaskBaselimts_then_does_not_limit()
+void test_ThrottleTasklimts_then_does_not_limit()
 {
   // Queue1::Manager<ThrottleState> throttleQueue(xThrottleQueueHandle, TICKS_10ms, "(test)ThrottleQueue");
   // Queue1::Manager<PrimaryButtonState> primaryButtonQueue(xPrimaryButtonQueueHandle, TICKS_5ms, "(test)PrimButtonQueue");
@@ -226,7 +226,7 @@ void test_ThrottleTaskBaselimts_then_does_not_limit()
   //   return _throttle;
   // });
 
-  // while (!ThrottleTaskBase::thisTask->ready)
+  // while (!ThrottleTask::thisTask->ready)
   // {
   //   vTaskDelay(5);
   // }
@@ -293,9 +293,9 @@ void setup()
 
   RUN_TEST(ThrottleZero_boardReportsStopped);
   // RUN_TEST(test_ThrottleTask_sends_when_SendToBoardTask_triggers);
-  // RUN_TEST(test_ThrottleTaskBaselimting_with_primary_button_not_held);
-  // RUN_TEST(test_ThrottleTaskBasenot_limting_when_primary_button_is_held);
-  // RUN_TEST(test_ThrottleTaskBaselimts_then_does_not_limit);
+  // RUN_TEST(test_ThrottleTasklimting_with_primary_button_not_held);
+  // RUN_TEST(test_ThrottleTasknot_limting_when_primary_button_is_held);
+  // RUN_TEST(test_ThrottleTasklimts_then_does_not_limit);
 
   UNITY_END();
 }
