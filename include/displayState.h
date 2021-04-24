@@ -121,7 +121,7 @@ namespace Display
       [] {
         // TODO: make a param-less version of printState (i.e. if id set)
         fsm_mgr.printState(ST_DISCONNECTED);
-        screenWhenDisconnected();
+        simpleStoppedScreen(SimpleScreenOption::OFFLINE, TFT_CASET);
       },
       NULL, NULL);
   //---------------------------------------------------------------
@@ -147,8 +147,7 @@ namespace Display
         else if (stats.boardResets > 0)
           screenNeedToAckResets(Stats::BOARD_RESETS);
         else
-          simpleStoppedScreen("STOPPED", TFT_CASET);
-        // screenWhenStopped(/*init*/ true);
+          simpleStoppedScreen(SimpleScreenOption::STOPPED, TFT_CASET);
       },
       NULL,
       NULL);

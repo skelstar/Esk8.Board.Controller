@@ -35,6 +35,13 @@
 
 #define STRIPE_HEIGHT 10
 
+enum SimpleScreenOption
+{
+  NO_OPTION = 0,
+  OFFLINE,
+  STOPPED
+};
+
 namespace Display
 {
 
@@ -252,7 +259,6 @@ namespace Display
     }
   }
   //-----------------------------------------------------
-
   void screenOneMetricWithStripe(float value, char *title, uint32_t stripeColour, bool init, uint32_t bgColour)
   {
     if (take(mux_SPI))
@@ -288,19 +294,33 @@ namespace Display
 
   //-----------------------------------------------------
 
-  void simpleStoppedScreen(const char *text, uint32_t colour)
+  void simpleStoppedScreen(SimpleScreenOption option, uint32_t colour)
   {
+    const int barHeight = 15;
+
     if (take(mux_SPI))
     {
       uint8_t y = 0;
       tft.fillScreen(TFT_BLACK);
 
-      y = (LCD_HEIGHT / 2) - tft.fontHeight() - 15;
+      y = (LCD_HEIGHT / 2) - tft.fontHeight() - 20;
       tft.setFreeFont(FONT_LG);
+      tft.setTextSize(1);
+
       tft.setTextColor(TFT_CYAN);
       tft.setTextDatum(TC_DATUM);
-      tft.drawString(text, LCD_WIDTH / 2, y);
-      y += tft.fontHeight();
+
+      if (option == SimpleScreenOption::STOPPED)
+      {
+        tft.drawString("STOPPED", LCD_WIDTH / 2, y);
+        tft.fillRect(0, 0, LCD_WIDTH, barHeight, TFT_DARKGREEN);
+      }
+      else if (option == SimpleScreenOption::OFFLINE)
+      {
+        tft.drawString("OFFLINE", LCD_WIDTH / 2, y);
+        tft.fillRect(0, 0, LCD_WIDTH, barHeight, TFT_RED);
+      }
+      y += tft.fontHeight() + 5;
 
       // remote battery
       const int batteryWidth = 50;
