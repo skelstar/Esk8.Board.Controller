@@ -25,8 +25,6 @@ namespace QwiicTaskBase
 
     PrimaryButtonState state;
 
-    bool printReplyToSchedule = false;
-
     void initialiseQueues()
     {
       primaryButtonQueue = createQueue<PrimaryButtonState>("(QwiicTaskBase)primaryButtonQueue");
@@ -45,7 +43,7 @@ namespace QwiicTaskBase
 
     elapsedMillis since_last_did_work = 0;
 
-    bool timeToDowork()
+    bool timeToDoWork()
     {
       return true;
     }
@@ -72,7 +70,7 @@ namespace QwiicTaskBase
     thisTask = new TaskBase("QwiicTaskBase", 3000);
     thisTask->setInitialiseCallback(initialise);
     thisTask->setInitialiseQueuesCallback(initialiseQueues);
-    thisTask->setTimeToDoWorkCallback(timeToDowork);
+    thisTask->setTimeToDoWorkCallback(timeToDoWork);
     thisTask->setDoWorkCallback(doWork);
 
     thisTask->doWorkInterval = doWorkInterval;

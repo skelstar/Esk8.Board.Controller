@@ -16,10 +16,11 @@ private:
   elapsedMillis since_last_did_work = 0;
   BatteryLib *battery;
   BatteryInfo remote;
+
   Queue1::Manager<BatteryInfo> *remoteBatteryQueue = nullptr;
 
 public:
-  RemoteTask() : TaskBaseAlt("RemoteTaskAlt", 3000)
+  RemoteTask() : TaskBaseAlt("RemoteTask", 3000)
   {
     battery = new BatteryLib(34);
   }
@@ -60,15 +61,6 @@ public:
   void start(uint8_t priority, ulong p_doWorkInterval, TaskFunction_t taskRef)
   {
     doWorkInterval = p_doWorkInterval;
-
-    // xTaskCreatePinnedToCore(
-    //     taskRef,
-    //     "RemoteAlt",
-    //     3000,
-    //     NULL,
-    //     priority,
-    //     NULL,
-    //     CORE_0);
 
     rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
   }

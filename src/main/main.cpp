@@ -103,14 +103,14 @@ void configureTasks()
   ThrottleTaskBase::settings.printWarnings = false;
   ThrottleTaskBase::settings.printThrottle = PRINT_THROTTLE;
 
-  DisplayTaskBase::settings.printState = PRINT_DISP_STATE;
-  DisplayTaskBase::settings.printTrigger = PRINT_DISP_STATE_EVENT;
+  displayTask.p_printState = PRINT_DISP_STATE;
+  displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
 }
 
 void startTasks()
 {
   BoardCommsTask::start(TASK_PRIORITY_4, /*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
-  DisplayTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
+  displayTask.start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms, Display::task1);
   NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
   QwiicTaskBase::start(TASK_PRIORITY_2, /*work*/ PERIOD_100ms);
   ThrottleTaskBase::start(TASK_PRIORITY_4, /*work*/ PERIOD_200ms);
@@ -123,7 +123,7 @@ void waitForTasks()
 {
   while (
       BoardCommsTask::thisTask->ready == false ||
-      DisplayTaskBase::thisTask->ready == false ||
+      displayTask.ready == false ||
       NintendoClassicTaskBase::thisTask->ready == false ||
       QwiicTaskBase::thisTask->ready == false ||
       remoteTask.ready == false ||
@@ -135,7 +135,7 @@ void waitForTasks()
 void enableTasks(bool print)
 {
   BoardCommsTask::thisTask->enable(print);
-  DisplayTaskBase::thisTask->enable(print);
+  displayTask.enable(print);
   NintendoClassicTaskBase::thisTask->enable(print);
   QwiicTaskBase::thisTask->enable(print);
   remoteTask.enable(print);

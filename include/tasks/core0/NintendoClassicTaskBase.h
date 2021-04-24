@@ -48,7 +48,7 @@ namespace NintendoClassicTaskBase
 
     elapsedMillis since_last_did_work = 0;
 
-    bool timeToDowork()
+    bool timeToDoWork()
     {
       return true;
     }
@@ -87,7 +87,7 @@ namespace NintendoClassicTaskBase
     thisTask = new TaskBase("NintendoClassicTaskBase", 3000);
     thisTask->setInitialiseCallback(_p::initialise);
     thisTask->setInitialiseQueuesCallback(_p::initialiseQueues);
-    thisTask->setTimeToDoWorkCallback(_p::timeToDowork);
+    thisTask->setTimeToDoWorkCallback(_p::timeToDoWork);
     thisTask->setDoWorkCallback(_p::doWork);
 
     thisTask->doWorkInterval = doWorkInterval;

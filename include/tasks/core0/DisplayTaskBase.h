@@ -1,6 +1,6 @@
 #pragma once
 
-#include <TaskBase.h>
+#include <TaskBaseAlt.h>
 #include <tasks/queues/queues.h>
 #include <tasks/queues/types/DisplayEvent.h>
 #include <tasks/queues/QueueFactory.h>
@@ -11,117 +11,98 @@
 #include <printFormatStrings.h>
 #include <NintendoController.h>
 
-namespace DisplayTaskBase
+class DisplayTask : public TaskBaseAlt
 {
-  // prototypes
-  void printState(uint16_t id);
-  void printTrigger(uint16_t ev);
-  void handlePacketState(PacketState payload);
-  void handleNintendoButtonEvent(NintendoButtonEvent payload);
-  void handleBatteryQueue(BatteryInfo battery);
+public:
+  bool p_printTrigger = false;
+  bool p_printState = false;
 
-  TaskBase *thisTask;
-
+private:
   DisplayEvent displayEvent;
 
-  struct Config
+  Queue1::Manager<BatteryInfo> *batteryQueue = nullptr;
+  Queue1::Manager<PacketState> *packetStateQueue = nullptr;
+  Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
+  Queue1::Manager<NintendoButtonEvent> *nintendoClassicQueue = nullptr;
+  Queue1::Manager<DisplayEvent> *displayEventQueue = nullptr;
+
+  elapsedMillis since_last_did_work = 0, since_checked_online = 0;
+
+public:
+  DisplayTask() : TaskBaseAlt("DisplayTask", 5000)
   {
-    bool printTrigger = false;
-    bool printState = false;
-  } settings;
+  }
 
-  namespace _p
+  void initialiseQueues()
   {
-    Queue1::Manager<BatteryInfo> *batteryQueue = nullptr;
-    Queue1::Manager<PacketState> *packetStateQueue = nullptr;
-    Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
-    Queue1::Manager<NintendoButtonEvent> *nintendoClassicQueue = nullptr;
-    Queue1::Manager<DisplayEvent> *displayEventQueue = nullptr;
-    //--------------------------------
-    void initialiseQueues()
-    {
-      batteryQueue = createQueue<BatteryInfo>("(DisplayTask)BatteryInfo");
-      packetStateQueue = createQueue<PacketState>("(DisplayBase)PacketStateQueue");
-      primaryButtonQueue = createQueue<PrimaryButtonState>("(DisplayBase)PrimaryButtonQueue");
-      nintendoClassicQueue = createQueue<NintendoButtonEvent>("(DisplayBase)NintendoClassicQueue");
-      displayEventQueue = createQueue<DisplayEvent>("(DisplayBase)DisplayEventQueue");
-    }
-    //--------------------------------
-    void initialise()
-    {
-      if (mux_SPI == nullptr)
-        mux_SPI = xSemaphoreCreateMutex();
-
-      setupLCD();
-
-      Display::fsm_mgr.begin(&Display::_fsm);
-      Display::fsm_mgr.setPrintStateCallback(printState);
-      Display::fsm_mgr.setPrintTriggerCallback(printTrigger);
-
-      Display::addTransitions();
-
-      Display::_fsm.run_machine();
-    }
-    //--------------------------------
-
-    elapsedMillis since_last_did_work = 0, since_checked_online = 0;
-
-    bool timeToDowork()
-    {
-      return since_checked_online > PERIOD_1s;
-    }
-    //--------------------------------
-    void doWork()
-    {
-      // will check for online regardless of anything being new on the queue
-      if (packetStateQueue->hasValue() && packetStateQueue->payload.event_id > 0)
-        handlePacketState(packetStateQueue->payload);
-
-      if (nintendoClassicQueue->hasValue())
-        handleNintendoButtonEvent(nintendoClassicQueue->payload);
-
-      if (batteryQueue->hasValue())
-        handleBatteryQueue(batteryQueue->payload);
-
-      Display::_fsm.run_machine();
-    }
-
-    void task(void *parameters)
-    {
-      thisTask->task(parameters);
-    }
+    batteryQueue = createQueue<BatteryInfo>("(DisplayTask)BatteryInfo");
+    packetStateQueue = createQueue<PacketState>("(DisplayBase)PacketStateQueue");
+    primaryButtonQueue = createQueue<PrimaryButtonState>("(DisplayBase)PrimaryButtonQueue");
+    nintendoClassicQueue = createQueue<NintendoButtonEvent>("(DisplayBase)NintendoClassicQueue");
+    displayEventQueue = createQueue<DisplayEvent>("(DisplayBase)DisplayEventQueue");
   }
   //--------------------------------
-  void start(uint8_t priority, unsigned long doWorkInterval)
+  void initialise()
   {
-    thisTask = new TaskBase("DisplayTaskBase", 3000);
-    thisTask->setInitialiseQueuesCallback(_p::initialiseQueues);
-    thisTask->setInitialiseCallback(_p::initialise);
-    thisTask->setTimeToDoWorkCallback(_p::timeToDowork);
-    thisTask->setDoWorkCallback(_p::doWork);
+    if (mux_SPI == nullptr)
+      mux_SPI = xSemaphoreCreateMutex();
 
-    thisTask->doWorkInterval = doWorkInterval > PERIOD_10ms ? doWorkInterval : PERIOD_10ms;
+    setupLCD();
 
-    if (thisTask->rtos != nullptr)
-      thisTask->rtos->create(_p::task, CORE_0, priority, WITH_HEALTHCHECK);
+    Display::fsm_mgr.begin(&Display::_fsm);
+    // Display::fsm_mgr.setPrintStateCallback(printState);
+    // Display::fsm_mgr.setPrintTriggerCallback(printTrigger);
+
+    Display::addTransitions();
+
+    Display::_fsm.run_machine();
+  }
+  //--------------------------------
+
+  bool timeToDoWork()
+  {
+    return since_checked_online > PERIOD_1s;
+  }
+  //--------------------------------
+  void doWork()
+  {
+    // will check for online regardless of anything being new on the queue
+    if (packetStateQueue->hasValue() && packetStateQueue->payload.event_id > 0)
+      handlePacketState(packetStateQueue->payload);
+
+    if (nintendoClassicQueue->hasValue())
+      handleNintendoButtonEvent(nintendoClassicQueue->payload);
+
+    if (batteryQueue->hasValue())
+      handleBatteryQueue(batteryQueue->payload);
+
+    Display::_fsm.run_machine();
+  }
+
+  //--------------------------------------------------
+  void start(uint8_t priority, unsigned long p_doWorkInterval, TaskFunction_t taskRef)
+  {
+    doWorkInterval = p_doWorkInterval;
+
+    rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
   }
   //--------------------------------------------------
   void deleteTask(bool print = false)
   {
-    if (thisTask != nullptr && thisTask->rtos != nullptr)
-      thisTask->rtos->deleteTask(print);
+    if (rtos != nullptr)
+      rtos->deleteTask(print);
   }
   //==================================================
 
   void printState(uint16_t id)
   {
-    if (settings.printState)
+    if (p_printState)
       Serial.printf(PRINT_FSM_STATE_FORMAT, "DISP", millis(), Display::stateID(id));
   }
 
   void printTrigger(uint16_t ev)
   {
-    if (settings.printTrigger &&
+    if (p_printTrigger &&
         !(Display::_fsm.revisit() && ev == Display::TR_STOPPED) &&
         !(Display::_fsm.revisit() && ev == Display::TR_MOVING) &&
         !(Display::_fsm.getCurrentStateId() == Display::ST_OPTION_PUSH_TO_START && ev == Display::TR_STOPPED))
@@ -184,4 +165,4 @@ namespace DisplayTaskBase
     if (changed)
       Display::fsm_mgr.trigger(Display::TR_REMOTE_BATTERY_CHANGED);
   }
-}
+};

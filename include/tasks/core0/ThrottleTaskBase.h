@@ -49,7 +49,7 @@ namespace ThrottleTaskBase
       MagneticThrottle::printThrottle = settings.printThrottle;
     }
 
-    bool timeToDowork()
+    bool timeToDoWork()
     {
       return true;
     }
@@ -79,7 +79,7 @@ namespace ThrottleTaskBase
     thisTask = new TaskBase("NintendoClassicTaskBase", 3000);
     thisTask->setInitialiseCallback(_p::initialise);
     thisTask->setInitialiseQueuesCallback(_p::initialiseQueues);
-    thisTask->setTimeToDoWorkCallback(_p::timeToDowork);
+    thisTask->setTimeToDoWorkCallback(_p::timeToDoWork);
     thisTask->setDoWorkCallback(_p::doWork);
 
     thisTask->doWorkInterval = doWorkInterval;

@@ -94,7 +94,7 @@ namespace BoardCommsTask
     }
     //----------------------------------------------------------
 
-    bool timeToDowork()
+    bool timeToDoWork()
     {
       return true;
     }
@@ -127,7 +127,7 @@ namespace BoardCommsTask
     thisTask = new TaskBase("BoardCommsTask", 3000);
     thisTask->setInitialiseCallback(initialise);
     thisTask->setInitialiseQueuesCallback(initialiseQueues);
-    thisTask->setTimeToDoWorkCallback(timeToDowork);
+    thisTask->setTimeToDoWorkCallback(timeToDoWork);
     thisTask->setDoWorkCallback(doWork);
 
     thisTask->doWorkInterval = doWorkInterval;
