@@ -24,7 +24,7 @@ public:
   }
   virtual void initialiseQueues() = 0;
   virtual void initialise() = 0;
-  virtual void firstTask() = 0;
+  virtual void initialTask() = 0;
   virtual bool timeToDoWork() = 0;
   virtual void doWork() = 0;
   virtual void start(uint8_t priority, ulong doWorkInterval, TaskFunction_t taskRef) = 0;
@@ -50,7 +50,7 @@ public:
     while (!enabled)
       vTaskDelay(TICKS_5ms);
 
-    firstTask();
+    initialTask();
 
     while (true)
     {

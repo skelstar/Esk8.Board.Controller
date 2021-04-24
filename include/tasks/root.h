@@ -2,11 +2,10 @@
 #include <tasks/core0/DisplayTaskBase.h>
 #include <tasks/core0/NintendoClassicTaskBase.h>
 #include <tasks/core0/QwiicTaskBase.h>
-#include <tasks/core0/RemoteTask.h>
 #include <tasks/core0/ThrottleTaskBase.h>
 
-#include <tasks/core0/RemoteTaskAlt.h>
-RemoteTaskA remoteTask;
+#include <tasks/core0/RemoteTask.h>
+RemoteTask remoteTask;
 
 namespace Remote
 {
@@ -14,4 +13,4 @@ namespace Remote
   {
     remoteTask.task(parameters);
   }
-} // namespace Remote
+}

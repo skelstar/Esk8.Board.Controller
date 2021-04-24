@@ -1,92 +1,81 @@
 #pragma once
 
-#include <TaskBase.h>
+#include <TaskBaseAlt.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 #include <tasks/queues/types/BatteryInfo.h>
 
 #include <BatteryLib.h>
 
-namespace RemoteTask
+class RemoteTask : public TaskBaseAlt
 {
+public:
   bool printWarnings = true;
 
-  TaskBase *thisTask;
-
-  BatteryLib battery(BATTERY_MEASURE_PIN);
-
+private:
+  elapsedMillis since_last_did_work = 0;
+  BatteryLib *battery;
   BatteryInfo remote;
+  Queue1::Manager<BatteryInfo> *remoteBatteryQueue = nullptr;
 
-  elapsedMillis since_measure_battery;
-
-  namespace _p
+public:
+  RemoteTask() : TaskBaseAlt("RemoteTaskAlt", 3000)
   {
-    // prototypes
-    void doWork();
-
-    Queue1::Manager<BatteryInfo> *remoteBatteryQueue = nullptr;
-
-    void initialiseQueues()
-    {
-      remoteBatteryQueue = createQueue<BatteryInfo>("(RemoteTask) remoteBatteryQueue");
-    }
-
-    void initialise()
-    {
-      battery.setup(nullptr);
-    }
-
-    void firstTask()
-    {
-      doWork();
-    }
-
-    elapsedMillis since_last_did_work = 0;
-
-    bool timeToDowork()
-    {
-      return true;
-    }
-
-    void doWork()
-    {
-      battery.update();
-
-      remote.charging = battery.isCharging;
-      remote.percent = battery.chargePercent;
-      remote.volts = battery.getVolts();
-
-      remoteBatteryQueue->send(&remote);
-
-      remote.print("[RemoteTask]");
-    }
-
-    void task(void *parameters)
-    {
-      thisTask->task(parameters);
-    }
+    battery = new BatteryLib(34);
   }
 
-  void start(uint8_t priority, ulong doWorkInterval)
+  void initialiseQueues()
   {
-    thisTask = new TaskBase("RemoteTask", 3000);
-    thisTask->setInitialiseCallback(_p::initialise);
-    thisTask->setInitialiseQueuesCallback(_p::initialiseQueues);
-    thisTask->setFirstTaskCallback(_p::firstTask);
-    thisTask->setTimeToDoWorkCallback(_p::timeToDowork);
-    thisTask->setDoWorkCallback(_p::doWork);
+    remoteBatteryQueue = createQueue<BatteryInfo>("(RemoteTask) remoteBatteryQueue");
+  }
 
-    thisTask->doWorkInterval = doWorkInterval;
+  void initialise()
+  {
+    battery->setup(nullptr);
+  }
 
-    if (thisTask->rtos != nullptr)
-      thisTask->rtos->create(_p::task, CORE_0, priority, WITH_HEALTHCHECK);
+  void initialTask()
+  {
+    doWork();
+  }
+
+  bool timeToDoWork()
+  {
+    return true;
+  }
+
+  void doWork()
+  {
+    battery->update();
+
+    remote.charging = battery->isCharging;
+    remote.percent = battery->chargePercent;
+    remote.volts = battery->getVolts();
+
+    remoteBatteryQueue->send(&remote);
+
+    remote.print("[RemoteTask]");
+  }
+
+  void start(uint8_t priority, ulong p_doWorkInterval, TaskFunction_t taskRef)
+  {
+    doWorkInterval = p_doWorkInterval;
+
+    // xTaskCreatePinnedToCore(
+    //     taskRef,
+    //     "RemoteAlt",
+    //     3000,
+    //     NULL,
+    //     priority,
+    //     NULL,
+    //     CORE_0);
+
+    rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
   }
 
   void deleteTask(bool print = false)
   {
-    if (thisTask != nullptr && thisTask->rtos != nullptr)
-      thisTask->rtos->deleteTask(print);
+    if (rtos != nullptr)
+      rtos->deleteTask(print);
   }
-
-  //--------------------------------------------------------
-} // namespace Remote
+};
