@@ -115,6 +115,9 @@ void startTasks()
   NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
   QwiicTaskBase::start(TASK_PRIORITY_2, /*work*/ PERIOD_100ms);
   ThrottleTaskBase::start(TASK_PRIORITY_4, /*work*/ PERIOD_200ms);
+
+  remoteTask.start(TASK_PRIORITY_0, 5 * SECONDS, Remote::task1);
+  remoteTask.printSendToQueue = true;
 }
 
 void waitForTasks()
@@ -126,6 +129,7 @@ void waitForTasks()
       QwiicTaskBase::thisTask->ready == false ||
       RemoteTask::thisTask->ready == false ||
       ThrottleTaskBase::thisTask->ready == false ||
+      remoteTask.ready == false ||
       false)
     vTaskDelay(PERIOD_10ms);
 }
@@ -138,6 +142,7 @@ void enableTasks(bool print)
   QwiicTaskBase::thisTask->enable(print);
   RemoteTask::thisTask->enable(print);
   ThrottleTaskBase::thisTask->enable(print);
+  remoteTask.enable(print);
 }
 
 #endif // UNIT_TEST

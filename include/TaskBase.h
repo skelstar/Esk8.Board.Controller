@@ -28,6 +28,10 @@ public:
   elapsedMillis since_last_did_work = 0;
 
 public:
+  // TaskBase()
+  // {
+  // }
+
   TaskBase(const char *name, uint16_t stackSize)
   {
     _name = name;
