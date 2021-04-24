@@ -19,6 +19,7 @@ class BoardCommsTask : public TaskBaseAlt
 public:
   bool printWarnings = false;
   bool printSentPacketToBoard = false;
+  bool printRadioDetails = true;
   unsigned long SEND_TO_BOARD_INTERVAL_LOCAL = SEND_TO_BOARD_INTERVAL;
 
   elapsedMillis since_last_response = 0;
@@ -76,7 +77,7 @@ public:
 
     packetStateQueue->read(); // clear the queue
 
-    nrf24.begin(&radio, &network, COMMS_CONTROLLER);
+    nrf24.begin(&radio, &network, COMMS_CONTROLLER, nullptr, false, printRadioDetails);
 
     boardClient = new GenericClient<ControllerData, VescData>(COMMS_BOARD);
 

@@ -32,7 +32,15 @@ public:
   DisplayTask() : TaskBaseAlt("DisplayTask", 5000)
   {
   }
+  //--------------------------------------------------
+  void start(uint8_t priority, unsigned long p_doWorkInterval, TaskFunction_t taskRef)
+  {
+    doWorkInterval = p_doWorkInterval;
 
+    rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
+  }
+
+private:
   void initialiseQueues()
   {
     batteryQueue = createQueue<BatteryInfo>("(DisplayTask)BatteryInfo");
@@ -79,13 +87,6 @@ public:
     Display::_fsm.run_machine();
   }
 
-  //--------------------------------------------------
-  void start(uint8_t priority, unsigned long p_doWorkInterval, TaskFunction_t taskRef)
-  {
-    doWorkInterval = p_doWorkInterval;
-
-    rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
-  }
   //--------------------------------------------------
   void deleteTask(bool print = false)
   {

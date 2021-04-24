@@ -13,7 +13,9 @@
 
 namespace MagneticThrottle
 {
-  bool printThrottle = false;
+  // variables
+  bool printThrottle = false,
+       printDebug = false;
 
   // https://ams.com/documents/20143/36005/AS5600_DS000365_5-00.pdf
   AMS_5600 ams5600;
@@ -64,6 +66,15 @@ namespace MagneticThrottle
                  ? deg - last
                  : last - deg;
     }
+
+    float limitDeltaToMax(float delta, uint8_t throttle)
+    {
+      float oldDelta = delta;
+      delta = delta > 0 ? _max_delta_limit : 0 - _max_delta_limit;
+      Serial.printf("oldDelta %.1f limited to %.1f\n", oldDelta, delta);
+      return delta;
+    }
+
   }
 
   uint8_t get()
@@ -73,6 +84,8 @@ namespace MagneticThrottle
 
   void update(bool force_print = false)
   {
+    bool changed = false;
+
     float deg = _centre;
     // TODO is this the bext way to handle this?
     if (take(mux_I2C, TICKS_100ms))
@@ -82,9 +95,9 @@ namespace MagneticThrottle
     }
     float adj = deg;
     float delta = getDelta(deg, _prev_deg);
-    bool transition = abs(delta) > 180.0;
+    bool transitionsAcrossZero = abs(delta) > 180.0;
 
-    if (transition)
+    if (transitionsAcrossZero)
     {
       if (_prev_deg > deg)
         adj += 360.0;
@@ -93,25 +106,27 @@ namespace MagneticThrottle
       delta = getDelta(adj, _prev_deg);
     }
 
+    // are we allowed to be accelerating?
     if (_throttle > 127 && !_throttleEnabled_cb())
     {
       _throttle = 127;
+      changed = true;
     }
 
     // make sure not too radical
     // make sure is more than minimum (to eliminate drift/noise)
-    if (_min_delta_limit <= abs(delta) && abs(delta) <= _max_delta_limit)
+
+    bool tooMuch = abs(delta) > _max_delta_limit;
+    bool tooLittle = abs(delta) < _min_delta_limit;
+
+    if (!tooLittle)
     {
-      int16_t running = _throttle;
-      running += (delta / 360.0) * 255;
+      if (tooMuch)
+        delta = limitDeltaToMax(delta, _throttle);
+
+      int16_t running = _throttle + (delta / 360.0) * 255;
 
       _throttle = constrain(running, 0, 255);
-
-      if (_throttleEnabled_cb == nullptr)
-      {
-        Serial.printf("ERROR: throttleEnabledCallback is not set!!!\n");
-        return;
-      }
 
       if (_throttle > 127 && _throttleEnabled_cb() == false)
       {
@@ -122,18 +137,28 @@ namespace MagneticThrottle
       {
         char b[50];
         _throttleString(abs(delta), _throttle, b);
-        Serial.printf("%s ", transition ? "EDGE" : "----");
-        Serial.printf("| delta: %05.1f", delta);
-        Serial.printf("| throttle: %03d", _throttle);
-        Serial.printf("  %s \n", b);
       }
+      changed = true;
     }
-    else if (printThrottle || force_print)
+
+    if (printThrottle || force_print)
     {
-      Serial.printf("%s ", transition ? "EDGE" : "----");
-      Serial.printf("| delta_limit (%.1f) EXCEEDED!!! ", delta);
-      Serial.printf("| throttle: %03d", _throttle);
-      Serial.printf("  \n");
+      if (changed || force_print)
+      {
+        char b[50];
+        _throttleString(abs(delta), _throttle, b);
+
+        Serial.printf("thr: %03d ", _throttle);
+        Serial.printf("%s ", transitionsAcrossZero ? "EDGE" : "----");
+        Serial.printf("| delta: %05.1f", delta);
+        Serial.printf("| delta_limit (%.1f-%.1f) %s ",
+                      _min_delta_limit, _max_delta_limit,
+                      tooLittle ? "UNDER"
+                      : tooMuch ? "LIMIT"
+                                : "-----");
+        Serial.printf("  %s", b); // throttleString
+        Serial.printf("\n");
+      }
     }
     _prev_deg = deg;
   }
@@ -164,6 +189,14 @@ namespace MagneticThrottle
   */
   void init(float sweep, float max_delta_limit, float min_delta_limit, uint8_t direction)
   {
+    if (_throttleEnabled_cb == nullptr)
+    {
+      Serial.printf("ERROR: throttleEnabledCallback is not set!!!\n");
+      return;
+    }
+
+    Serial.printf("MagThrottle: SWEEP=%.1f MIN=%.1f MAX=%.1f DIR=%s\n",
+                  sweep, min_delta_limit, max_delta_limit, direction == DIR_CLOCKWISE ? "CW" : "CCW");
     _sweep = sweep;
     _max_delta_limit = max_delta_limit;
     _min_delta_limit = min_delta_limit;

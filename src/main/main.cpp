@@ -20,6 +20,7 @@ SemaphoreHandle_t mux_SPI;
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
 #include <Wire.h>
+#include <MagThrottle.h>
 
 #include <RF24.h>
 #include <RF24Network.h>
@@ -100,10 +101,11 @@ void createQueues()
 
 void configureTasks()
 {
-  ThrottleTask::settings.printWarnings = false;
-  ThrottleTask::settings.printThrottle = PRINT_THROTTLE;
+  throttleTask.printWarnings = true;
+  throttleTask.printThrottle = true;
 
   boardCommsTask.SEND_TO_BOARD_INTERVAL_LOCAL = SEND_TO_BOARD_INTERVAL;
+  boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
 
   displayTask.p_printState = PRINT_DISP_STATE;
   displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
@@ -115,7 +117,7 @@ void startTasks()
   displayTask.start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms, Display::task1);
   NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
   QwiicTaskBase::start(TASK_PRIORITY_2, /*work*/ PERIOD_100ms);
-  ThrottleTask::start(TASK_PRIORITY_4, /*work*/ PERIOD_200ms);
+  throttleTask.start(TASK_PRIORITY_4, /*work*/ PERIOD_200ms, nsThrottleTask::task1);
 
   remoteTask.start(TASK_PRIORITY_0, 5 * SECONDS, Remote::task1);
   remoteTask.printSendToQueue = true;
@@ -129,7 +131,7 @@ void waitForTasks()
       NintendoClassicTaskBase::thisTask->ready == false ||
       QwiicTaskBase::thisTask->ready == false ||
       remoteTask.ready == false ||
-      ThrottleTask::thisTask->ready == false ||
+      throttleTask.ready == false ||
       false)
     vTaskDelay(PERIOD_10ms);
 }
@@ -141,7 +143,7 @@ void enableTasks(bool print)
   NintendoClassicTaskBase::thisTask->enable(print);
   QwiicTaskBase::thisTask->enable(print);
   remoteTask.enable(print);
-  ThrottleTask::thisTask->enable(print);
+  throttleTask.enable(print);
 }
 
 #endif // UNIT_TEST
