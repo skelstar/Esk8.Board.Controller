@@ -56,8 +56,6 @@ private:
 
   void doWork()
   {
-    Serial.printf("Doing work (NintendoClassic) %lu \n ", (ulong)since_last_did_work);
-
     buttonEvent.changed = classic.update(mux_I2C, TICKS_50ms);
     buttonEvent.button = NintendoController::BUTTON_NONE;
     if (buttonEvent.changed)

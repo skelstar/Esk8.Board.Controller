@@ -22,8 +22,6 @@ public:
   void deleteTask(bool print = false)
   {
     exitTask = true;
-    // if (rtos != nullptr)
-    //   rtos->deleteTask(print);
   }
 
 private:

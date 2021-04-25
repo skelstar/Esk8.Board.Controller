@@ -98,19 +98,24 @@ void loop()
   {
     since_checked_queues = 0;
 
+    // changed?
     if (packetStateQueue->hasValue() &&
         board.moving != packetStateQueue->payload.moving)
     {
+      // moving
       if (packetStateQueue->payload.moving)
       {
-        // moving
         nintendoClassTask.deleteTask(PRINT_THIS);
+        remoteTask.deleteTask(PRINT_THIS);
       }
+
+      // stopped
       else
       {
-        // stopped
         nintendoClassTask.start(TASK_PRIORITY_1, nsNintendoClassicTask::task1);
+        remoteTask.start(TASK_PRIORITY_1, nsRemoteTask::task1);
       }
+
       board.moving = packetStateQueue->payload.moving;
     }
   }
@@ -155,7 +160,7 @@ void startTasks()
   displayTask.start(TASK_PRIORITY_1, Display::task1);
   nintendoClassTask.start(TASK_PRIORITY_1, nsNintendoClassicTask::task1);
   qwiicButtonTask.start(TASK_PRIORITY_2, nsQwiicButtonTask::task1);
-  remoteTask.start(TASK_PRIORITY_0, Remote::task1);
+  remoteTask.start(TASK_PRIORITY_0, nsRemoteTask::task1);
   throttleTask.start(TASK_PRIORITY_4, nsThrottleTask::task1);
 }
 

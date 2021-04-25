@@ -63,14 +63,13 @@ public:
 
   void deleteTask(bool print = false)
   {
-    if (rtos != nullptr)
-      rtos->deleteTask(print);
+    exitTask = true;
   }
 };
 
 RemoteTask remoteTask(5 * SECONDS);
 
-namespace Remote
+namespace nsRemoteTask
 {
   void task1(void *parameters)
   {

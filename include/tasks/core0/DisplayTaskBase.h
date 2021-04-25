@@ -88,8 +88,7 @@ private:
   //--------------------------------------------------
   void deleteTask(bool print = false)
   {
-    if (rtos != nullptr)
-      rtos->deleteTask(print);
+    exitTask = true;
   }
   //==================================================
 
