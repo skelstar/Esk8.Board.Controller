@@ -21,11 +21,6 @@ public:
     rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
   }
 
-  void deleteTask(bool print = false)
-  {
-    exitTask = true;
-  }
-
 private:
   Queue1::Manager<NintendoButtonEvent> *nintendoButtonQueue = nullptr;
 

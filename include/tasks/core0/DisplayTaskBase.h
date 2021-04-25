@@ -84,12 +84,6 @@ private:
 
     Display::_fsm.run_machine();
   }
-
-  //--------------------------------------------------
-  void deleteTask(bool print = false)
-  {
-    exitTask = true;
-  }
   //==================================================
 
   void printState(uint16_t id)

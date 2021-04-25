@@ -32,7 +32,10 @@ public:
   virtual bool timeToDoWork() = 0;
   virtual void doWork() = 0;
   virtual void start(uint8_t priority, TaskFunction_t taskRef) = 0;
-  virtual void deleteTask(bool print = false) = 0;
+  virtual void deleteTask(bool print = false)
+  {
+    exitTask = true;
+  }
   virtual void cleanup()
   {
   }

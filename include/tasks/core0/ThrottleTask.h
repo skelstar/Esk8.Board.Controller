@@ -18,13 +18,6 @@ class ThrottleTask : public TaskBaseAlt
 {
 
 public:
-  enum PrintLevel
-  {
-    NONE = 0,
-    THROTTLE,
-    THROTTLE_DEBUG,
-  };
-
   bool printWarnings = true;
   bool printThrottle = false;
 
@@ -88,11 +81,6 @@ private:
     MagneticThrottle::update();
     // test to see if anything changed (maybe update^^ returns changed?)
     throttleQueue->send(&throttle);
-  }
-
-  void deleteTask(bool print = false)
-  {
-    exitTask = true;
   }
 };
 

@@ -35,7 +35,6 @@ SemaphoreHandle_t mux_SPI;
 // TASKS ------------------------
 
 #include <tasks/root.h>
-// #include <tasks/queues/Managers.h>
 
 // LOCAL QUEUE MANAGERS -----------------------
 
@@ -143,7 +142,7 @@ void createLocalQueueManagers()
 void configureTasks()
 {
   throttleTask.printWarnings = true;
-  throttleTask.printThrottle = false;
+  throttleTask.printThrottle = true;
 
   boardCommsTask.SEND_TO_BOARD_INTERVAL_LOCAL = SEND_TO_BOARD_INTERVAL;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
