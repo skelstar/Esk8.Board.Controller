@@ -34,6 +34,8 @@ private:
 
   ThrottleState throttle;
 
+  MagneticThrottleClass magThrottle;
+
   void initialiseQueues()
   {
     primaryButtonQueue = createQueue<PrimaryButtonState>("(throttle)primaryButtonQueue");
@@ -47,9 +49,13 @@ private:
 
     Serial.printf("ThrottleTask init()\n");
 
-    MagneticThrottle::setThrottleEnabledCb(nsThrottleTask::throttleEnabled_cb);
-    MagneticThrottle::init(SWEEP_ANGLE, LIMIT_DELTA_MAX, LIMIT_DELTA_MIN, THROTTLE_DIRECTION);
-    MagneticThrottle::printThrottle = printThrottle;
+    magThrottle.setSweepAngle(SWEEP_ANGLE);
+    magThrottle.setAccelDirection(DIR_CLOCKWISE);
+    magThrottle.setDeltaLimits(LIMIT_DELTA_MIN, LIMIT_DELTA_MAX);
+    magThrottle.setThrottleEnabledCb(nsThrottleTask::throttleEnabled_cb);
+    magThrottle.init();
+
+    magThrottle.printThrottle = printThrottle;
   }
 
   bool timeToDoWork()
@@ -69,13 +75,13 @@ private:
       if (oldPressed != primaryButtonQueue->payload.pressed)
         // released?
         if (primaryButtonQueue->payload.pressed == false)
-          MagneticThrottle::centre();
+          magThrottle.centre();
 
       // PrimaryButtonState::printRead(primaryButtonQueue->payload);
     }
 
     // check magthrottle
-    MagneticThrottle::update();
+    magThrottle.update();
     // test to see if anything changed (maybe update^^ returns changed?)
     throttleQueue->send(&throttle);
   }
