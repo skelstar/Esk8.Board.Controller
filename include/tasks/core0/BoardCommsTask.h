@@ -1,6 +1,6 @@
 #pragma once
 
-#include <TaskBaseAlt.h>
+#include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/types/root.h>
 #include <tasks/queues/QueueFactory.h>
@@ -14,7 +14,7 @@ namespace BoardComms
   void boardPacketAvailable_cb(uint16_t from_id, uint8_t t);
 }
 
-class BoardCommsTask : public TaskBaseAlt
+class BoardCommsTask : public TaskBase
 {
 public:
   bool printWarnings = false;
@@ -45,7 +45,7 @@ private:
       since_sent_to_board = 0;
 
 public:
-  BoardCommsTask(unsigned long p_doWorkInterval) : TaskBaseAlt("BoardCommsTask", 3000, p_doWorkInterval)
+  BoardCommsTask(unsigned long p_doWorkInterval) : TaskBase("BoardCommsTask", 3000, p_doWorkInterval)
   {
   }
   //----------------------------------------------------------

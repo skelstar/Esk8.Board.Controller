@@ -1,13 +1,13 @@
 #pragma once
 
-#include <TaskBaseAlt.h>
+#include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 #include <tasks/queues/types/BatteryInfo.h>
 
 #include <BatteryLib.h>
 
-class RemoteTask : public TaskBaseAlt
+class RemoteTask : public TaskBase
 {
 public:
   bool printWarnings = true;
@@ -19,7 +19,7 @@ private:
   Queue1::Manager<BatteryInfo> *remoteBatteryQueue = nullptr;
 
 public:
-  RemoteTask(unsigned long p_doWorkInterval) : TaskBaseAlt("RemoteTask", 3000, p_doWorkInterval)
+  RemoteTask(unsigned long p_doWorkInterval) : TaskBase("RemoteTask", 3000, p_doWorkInterval)
   {
     battery = new BatteryLib(34);
   }

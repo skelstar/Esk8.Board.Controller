@@ -1,6 +1,6 @@
 #pragma once
 
-#include <TaskBaseAlt.h>
+#include <TaskBase.h>
 #include <tasks/queues/queues.h>
 #include <tasks/queues/types/DisplayEvent.h>
 #include <tasks/queues/QueueFactory.h>
@@ -11,7 +11,7 @@
 #include <printFormatStrings.h>
 #include <NintendoController.h>
 
-class DisplayTask : public TaskBaseAlt
+class DisplayTask : public TaskBase
 {
 public:
   bool p_printTrigger = false;
@@ -29,7 +29,7 @@ private:
   elapsedMillis since_checked_online = 0;
 
 public:
-  DisplayTask(unsigned long p_doWorkInterval) : TaskBaseAlt("DisplayTask", 5000, p_doWorkInterval)
+  DisplayTask(unsigned long p_doWorkInterval) : TaskBase("DisplayTask", 5000, p_doWorkInterval)
   {
   }
   //--------------------------------------------------

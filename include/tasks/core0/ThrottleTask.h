@@ -1,6 +1,6 @@
 #pragma once
 
-#include <TaskBaseAlt.h>
+#include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 
@@ -14,7 +14,7 @@ namespace nsThrottleTask
   };
 }
 
-class ThrottleTask : public TaskBaseAlt
+class ThrottleTask : public TaskBase
 {
 
 public:
@@ -22,7 +22,7 @@ public:
   bool printThrottle = false;
 
 public:
-  ThrottleTask(unsigned long p_doWorkInterval) : TaskBaseAlt("ThrottleTask", 3000, p_doWorkInterval)
+  ThrottleTask(unsigned long p_doWorkInterval) : TaskBase("ThrottleTask", 3000, p_doWorkInterval)
   {
   }
 

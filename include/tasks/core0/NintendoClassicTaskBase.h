@@ -1,10 +1,10 @@
 #pragma once
 
-#include <TaskBaseAlt.h>
+#include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 
-class NintendoClassicTaskBase : public TaskBaseAlt
+class NintendoClassicTaskBase : public TaskBase
 {
 public:
   bool printWarnings = true;
@@ -12,7 +12,7 @@ public:
   NintendoController classic;
 
 public:
-  NintendoClassicTaskBase(unsigned long p_doWorkInterval) : TaskBaseAlt("NintendoClassicTask", 3000, p_doWorkInterval)
+  NintendoClassicTaskBase(unsigned long p_doWorkInterval) : TaskBase("NintendoClassicTask", 3000, p_doWorkInterval)
   {
   }
 

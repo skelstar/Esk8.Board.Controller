@@ -1,16 +1,16 @@
 #pragma once
 
-#include <TaskBaseAlt.h>
+#include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 
-class QwiicButtonTask : public TaskBaseAlt
+class QwiicButtonTask : public TaskBase
 {
 public:
   // variables
   bool printSendToQueue = false;
 
-  QwiicButtonTask(unsigned long p_doWorkInterval) : TaskBaseAlt("QwiicTask", 3000, p_doWorkInterval)
+  QwiicButtonTask(unsigned long p_doWorkInterval) : TaskBase("QwiicTask", 3000, p_doWorkInterval)
   {
   }
 

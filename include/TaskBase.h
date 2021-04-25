@@ -7,35 +7,37 @@ class TaskBase
 {
 public:
   RTOSTaskManager *rtos = nullptr;
-
-  typedef void (*VoidVoidCallback)();
-  typedef bool (*BoolVoidCallback)();
-
-public:
-  VoidVoidCallback _initialise_cb = nullptr;
-  VoidVoidCallback _initialiseQueues_cb = nullptr;
-  VoidVoidCallback _createTask_cb = nullptr;
-  VoidVoidCallback _firstTask_cb = nullptr;
-  BoolVoidCallback _timeToDoWork_cb = nullptr;
-  VoidVoidCallback _doWork_cb = nullptr;
+  bool exitTask = false;
 
 public:
   const char *_name = "Task has not name";
   bool ready = false, enabled = false;
-  unsigned long doWorkInterval = PERIOD_10ms;
+  unsigned long doWorkInterval = PERIOD_100ms;
   bool printSendToQueue = false,
        printPeekSchedule = false;
   elapsedMillis since_last_did_work = 0;
 
 public:
-  // TaskBase()
-  // {
-  // }
-
-  TaskBase(const char *name, uint16_t stackSize)
+  TaskBase(const char *name, uint16_t stackSize, unsigned long p_doWorkInterval)
   {
     _name = name;
+    doWorkInterval = p_doWorkInterval;
     rtos = new RTOSTaskManager(_name, /*stack*/ stackSize);
+  }
+  virtual void initialiseQueues() = 0;
+  virtual void initialise() = 0;
+  virtual void initialTask()
+  {
+  } // you would have to "override"
+  virtual bool timeToDoWork() = 0;
+  virtual void doWork() = 0;
+  virtual void start(uint8_t priority, TaskFunction_t taskRef) = 0;
+  virtual void deleteTask(bool print = false)
+  {
+    exitTask = true;
+  }
+  virtual void cleanup()
+  {
   }
 
   void enable(bool print = false)
@@ -47,72 +49,44 @@ public:
 
   void task(void *parameters)
   {
+    exitTask = false;
+
     rtos->printStarted();
 
-    if (_initialiseQueues_cb != nullptr)
-      _initialiseQueues_cb();
+    initialiseQueues();
 
-    if (_initialise_cb != nullptr)
-      _initialise_cb();
+    initialise();
 
     ready = true;
 
     while (!enabled)
       vTaskDelay(TICKS_5ms);
 
-    if (_firstTask_cb != nullptr)
-      _firstTask_cb();
+    initialTask();
 
-    while (true)
+    while (exitTask == false)
     {
       if (since_last_did_work > doWorkInterval && enabled)
       {
-        if (_timeToDoWork_cb != nullptr && _timeToDoWork_cb())
+        if (timeToDoWork())
         {
           since_last_did_work = 0;
-          if (_doWork_cb != nullptr)
-            _doWork_cb();
+          doWork();
         }
-        else if (_timeToDoWork_cb == nullptr)
-          Serial.printf("ERROR: _timeToDoWork callback is NULL (%s)\n", _name);
       }
       vTaskDelay(5);
     }
+
+    cleanup();
+
+    Serial.printf("[TASK] Exiting: %s\n", _name);
+    Serial.printf("- highwater mark (words): %d\n", uxTaskGetStackHighWaterMark(NULL));
+    Serial.printf("- free heap size (bytes): %d\n", xPortGetFreeHeapSize());
+
+    rtos->deleteTask(PRINT_THIS);
+
+    vTaskDelay(TICKS_100ms);
+
     vTaskDelete(NULL);
-  }
-
-  void deleteTask(bool print = false)
-  {
-    rtos->deleteTask(print);
-  }
-
-  void setInitialiseCallback(VoidVoidCallback _cb)
-  {
-    _initialise_cb = _cb;
-  }
-
-  void setInitialiseQueuesCallback(VoidVoidCallback _cb)
-  {
-    _initialiseQueues_cb = _cb;
-  }
-
-  void setCreateTaskCallback(VoidVoidCallback _cb)
-  {
-    _createTask_cb = _cb;
-  }
-
-  void setFirstTaskCallback(VoidVoidCallback _cb)
-  {
-    _firstTask_cb = _cb;
-  }
-
-  void setTimeToDoWorkCallback(BoolVoidCallback _cb)
-  {
-    _timeToDoWork_cb = _cb;
-  }
-
-  void setDoWorkCallback(VoidVoidCallback _cb)
-  {
-    _doWork_cb = _cb;
   }
 };
