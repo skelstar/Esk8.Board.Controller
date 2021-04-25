@@ -31,12 +31,10 @@ private:
 public:
   DisplayTask(unsigned long p_doWorkInterval) : TaskBase("DisplayTask", 5000, p_doWorkInterval)
   {
+    _core = CORE_0;
+    _priority = TASK_PRIORITY_1;
   }
   //--------------------------------------------------
-  void start(uint8_t priority, TaskFunction_t taskRef)
-  {
-    rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
-  }
 
 private:
   void initialiseQueues()

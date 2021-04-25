@@ -28,10 +28,7 @@ public:
 
   PacketState packetState;
 
-#ifndef MOCK_GENERIC_CLIENT
-#include <GenericClient.h>
-#endif
-  GenericClient<ControllerData, VescData> *boardClient; //(COMMS_BOARD);
+  GenericClient<ControllerData, VescData> *boardClient;
 
   Queue1::Manager<PacketState> *packetStateQueue = nullptr;
   Queue1::Manager<ThrottleState> *throttleStateQueue = nullptr;
@@ -47,6 +44,8 @@ private:
 public:
   BoardCommsTask(unsigned long p_doWorkInterval) : TaskBase("BoardCommsTask", 3000, p_doWorkInterval)
   {
+    _core = CORE_1;
+    _priority = TASK_PRIORITY_4;
   }
   //----------------------------------------------------------
   void sendPacketToBoard(bool print = false)
@@ -113,11 +112,6 @@ public:
     {
       packetStateQueue->send(&packetState);
     }
-  }
-  //----------------------------------------------------------
-  void start(uint8_t priority, TaskFunction_t taskRef)
-  {
-    rtos->create(taskRef, CORE_1, priority, WITH_HEALTHCHECK);
   }
   //----------------------------------------------------------
 };

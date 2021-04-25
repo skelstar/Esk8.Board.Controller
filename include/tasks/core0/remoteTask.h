@@ -21,7 +21,8 @@ private:
 public:
   RemoteTask(unsigned long p_doWorkInterval) : TaskBase("RemoteTask", 3000, p_doWorkInterval)
   {
-    battery = new BatteryLib(34);
+    _core = CORE_0;
+    _priority = TASK_PRIORITY_0;
   }
 
   void initialiseQueues()
@@ -31,6 +32,7 @@ public:
 
   void initialise()
   {
+    battery = new BatteryLib(34);
     battery->setup(nullptr);
   }
 
@@ -53,12 +55,6 @@ public:
     remote.volts = battery->getVolts();
 
     remoteBatteryQueue->send(&remote);
-    // remote.print("[RemoteTask]");
-  }
-
-  void start(uint8_t priority, TaskFunction_t taskRef)
-  {
-    rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
   }
 };
 

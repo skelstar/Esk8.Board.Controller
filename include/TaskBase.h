@@ -5,19 +5,26 @@
 
 class TaskBase
 {
-public:
+protected:
   RTOSTaskManager *rtos = nullptr;
   bool exitTask = false;
-
-public:
   const char *_name = "Task has not name";
-  bool ready = false, enabled = false;
+
+private:
   unsigned long doWorkInterval = PERIOD_100ms;
-  bool printSendToQueue = false,
-       printPeekSchedule = false;
   elapsedMillis since_last_did_work = 0;
 
 public:
+  bool ready = false, enabled = false;
+  bool printSendToQueue = false,
+       printPeekSchedule = false;
+
+protected:
+  uint8_t _core = 0,
+          _priority = 0;
+  TaskFunction_t taskRef = nullptr;
+
+protected:
   TaskBase(const char *name, uint16_t stackSize, unsigned long p_doWorkInterval)
   {
     _name = name;
@@ -28,16 +35,22 @@ public:
   virtual void initialise() = 0;
   virtual void initialTask()
   {
-  } // you would have to "override"
+  }
   virtual bool timeToDoWork() = 0;
   virtual void doWork() = 0;
-  virtual void start(uint8_t priority, TaskFunction_t taskRef) = 0;
+  virtual void cleanup()
+  {
+  }
+
+public:
+  virtual void start(TaskFunction_t taskRef)
+  {
+    rtos->create(taskRef, _core, _priority, WITH_HEALTHCHECK);
+  };
+
   virtual void deleteTask(bool print = false)
   {
     exitTask = true;
-  }
-  virtual void cleanup()
-  {
   }
 
   void enable(bool print = false)

@@ -26,6 +26,7 @@ SemaphoreHandle_t mux_SPI;
 #include <RF24.h>
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
+#include <GenericClient.h>
 
 #include <rom/rtc.h> // for reset reason
 #include <shared-utils.h>
@@ -111,8 +112,8 @@ void loop()
       // stopped
       else
       {
-        nintendoClassTask.start(TASK_PRIORITY_1, nsNintendoClassicTask::task1);
-        remoteTask.start(TASK_PRIORITY_1, nsRemoteTask::task1);
+        nintendoClassTask.start(nsNintendoClassicTask::task1);
+        remoteTask.start(nsRemoteTask::task1);
       }
 
       board.moving = packetStateQueue->payload.moving;
@@ -155,12 +156,12 @@ void configureTasks()
 
 void startTasks()
 {
-  boardCommsTask.start(TASK_PRIORITY_4, BoardComms::task1);
-  displayTask.start(TASK_PRIORITY_1, Display::task1);
-  nintendoClassTask.start(TASK_PRIORITY_1, nsNintendoClassicTask::task1);
-  qwiicButtonTask.start(TASK_PRIORITY_2, nsQwiicButtonTask::task1);
-  remoteTask.start(TASK_PRIORITY_0, nsRemoteTask::task1);
-  throttleTask.start(TASK_PRIORITY_4, nsThrottleTask::task1);
+  boardCommsTask.start(BoardComms::task1);
+  displayTask.start(Display::task1);
+  nintendoClassTask.start(nsNintendoClassicTask::task1);
+  qwiicButtonTask.start(nsQwiicButtonTask::task1);
+  remoteTask.start(nsRemoteTask::task1);
+  throttleTask.start(nsThrottleTask::task1);
 }
 
 void waitForTasks()

@@ -12,11 +12,8 @@ public:
 
   QwiicButtonTask(unsigned long p_doWorkInterval) : TaskBase("QwiicTask", 3000, p_doWorkInterval)
   {
-  }
-
-  void start(uint8_t priority, TaskFunction_t taskRef)
-  {
-    rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
+    _core = CORE_0;
+    _priority = TASK_PRIORITY_2;
   }
 
 private:
