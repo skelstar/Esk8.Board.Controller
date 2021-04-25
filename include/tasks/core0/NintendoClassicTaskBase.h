@@ -10,8 +10,6 @@ public:
   bool printWarnings = true;
 
   // prototypes
-  // void connectToNintendoController();
-  // uint8_t button_changed(uint8_t *new_buttons, uint8_t *old_buttons);
 
   NintendoController classic;
 
