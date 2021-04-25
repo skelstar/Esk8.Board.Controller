@@ -35,7 +35,11 @@ SemaphoreHandle_t mux_SPI;
 // TASKS ------------------------
 
 #include <tasks/root.h>
-#include <tasks/queues/Managers.h>
+// #include <tasks/queues/Managers.h>
+
+// LOCAL QUEUE MANAGERS -----------------------
+
+Queue1::Manager<PacketState> *packetStateQueue = nullptr;
 
 //------------------------------------------------------------------
 
@@ -47,6 +51,7 @@ SemaphoreHandle_t mux_SPI;
 #include <utils.h>
 
 void createQueues();
+void createLocalQueueManagers();
 void startTasks();
 void configureTasks();
 void waitForTasks();
@@ -72,6 +77,8 @@ void setup()
 
   createQueues();
 
+  createLocalQueueManagers();
+
   configureTasks();
 
   startTasks();
@@ -82,8 +89,31 @@ void setup()
 }
 //---------------------------------------------------------------
 
+elapsedMillis since_checked_queues = 0;
+PacketState board;
+
 void loop()
 {
+  if (since_checked_queues > PERIOD_200ms)
+  {
+    since_checked_queues = 0;
+
+    if (packetStateQueue->hasValue() &&
+        board.moving != packetStateQueue->payload.moving)
+    {
+      if (packetStateQueue->payload.moving)
+      {
+        // moving
+        nintendoClassTask.deleteTask(PRINT_THIS);
+      }
+      else
+      {
+        // stopped
+        nintendoClassTask.start(TASK_PRIORITY_1, nsNintendoClassicTask::task1);
+      }
+      board.moving = packetStateQueue->payload.moving;
+    }
+  }
 
   vTaskDelay(TICKS_10ms);
 }
@@ -100,16 +130,23 @@ void createQueues()
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 }
 
+void createLocalQueueManagers()
+{
+  packetStateQueue = createQueue<PacketState>("(main) packetStateQueue");
+}
+
 void configureTasks()
 {
   throttleTask.printWarnings = true;
-  throttleTask.printThrottle = true;
+  throttleTask.printThrottle = false;
 
   boardCommsTask.SEND_TO_BOARD_INTERVAL_LOCAL = SEND_TO_BOARD_INTERVAL;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
 
   displayTask.p_printState = PRINT_DISP_STATE;
   displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
+
+  remoteTask.printSendToQueue = true;
 }
 
 void startTasks()

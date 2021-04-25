@@ -9,26 +9,21 @@ class NintendoClassicTaskBase : public TaskBaseAlt
 public:
   bool printWarnings = true;
 
-  // prototypes
-
   NintendoController classic;
 
 public:
-  NintendoClassicTaskBase() : TaskBaseAlt("NintendoClassicTask", 3000)
+  NintendoClassicTaskBase(unsigned long p_doWorkInterval) : TaskBaseAlt("NintendoClassicTask", 3000, p_doWorkInterval)
   {
   }
 
-  void start(uint8_t priority, ulong doWorkInterval, TaskFunction_t taskRef)
+  void start(uint8_t priority, TaskFunction_t taskRef)
   {
-    doWorkInterval = doWorkInterval;
-
     rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
   }
 
   void deleteTask(bool print = false)
   {
-    if (rtos != nullptr)
-      rtos->deleteTask(print);
+    exitTask = true;
   }
 
 private:
@@ -61,6 +56,8 @@ private:
 
   void doWork()
   {
+    Serial.printf("Doing work (NintendoClassic) %lu \n ", (ulong)since_last_did_work);
+
     buttonEvent.changed = classic.update(mux_I2C, TICKS_50ms);
     buttonEvent.button = NintendoController::BUTTON_NONE;
     if (buttonEvent.changed)
@@ -82,7 +79,14 @@ private:
     }
   }
 
-  //--------------------------------------------------
+  void cleanup()
+  {
+    delete (nintendoButtonQueue);
+    Serial.printf("cleaning up!\n");
+  }
+
+  //================================================
+private:
   void connectToNintendoController()
   {
     bool initialised = false;

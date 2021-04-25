@@ -7,6 +7,7 @@ class TaskBaseAlt
 {
 public:
   RTOSTaskManager *rtos = nullptr;
+  bool exitTask = false;
 
 public:
   const char *_name = "Task has not name";
@@ -30,8 +31,11 @@ public:
   } // you would have to "override"
   virtual bool timeToDoWork() = 0;
   virtual void doWork() = 0;
-  virtual void start(uint8_t priority, ulong doWorkInterval, TaskFunction_t taskRef) = 0;
+  virtual void start(uint8_t priority, TaskFunction_t taskRef) = 0;
   virtual void deleteTask(bool print = false) = 0;
+  virtual void cleanup()
+  {
+  }
 
   void enable(bool print = false)
   {
@@ -42,6 +46,8 @@ public:
 
   void task(void *parameters)
   {
+    exitTask = false;
+
     rtos->printStarted();
 
     initialiseQueues();
@@ -55,7 +61,7 @@ public:
 
     initialTask();
 
-    while (true)
+    while (exitTask == false)
     {
       if (since_last_did_work > doWorkInterval && enabled)
       {
@@ -67,6 +73,17 @@ public:
       }
       vTaskDelay(5);
     }
+
+    cleanup();
+
+    Serial.printf("[TASK] Exiting: %s\n", _name);
+    Serial.printf("- highwater mark (words): %d\n", uxTaskGetStackHighWaterMark(NULL));
+    Serial.printf("- free heap size (bytes): %d\n", xPortGetFreeHeapSize());
+
+    rtos->deleteTask(PRINT_THIS);
+
+    vTaskDelay(TICKS_100ms);
+
     vTaskDelete(NULL);
   }
 };
