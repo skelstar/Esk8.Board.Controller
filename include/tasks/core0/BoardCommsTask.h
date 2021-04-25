@@ -34,6 +34,7 @@ public:
   GenericClient<ControllerData, VescData> *boardClient; //(COMMS_BOARD);
 
   Queue1::Manager<PacketState> *packetStateQueue = nullptr;
+  Queue1::Manager<ThrottleState> *throttleStateQueue = nullptr;
 
 private:
   // ControllerConfig controller_config;
@@ -67,6 +68,7 @@ public:
   void initialiseQueues()
   {
     packetStateQueue = createQueue<PacketState>("(BoardCommsTask)PacketStateQueue");
+    throttleStateQueue = createQueue<ThrottleState>("(BoardCommsTask)ThrottleStateQueue");
   }
   //----------------------------------------------------------
   void initialise()
@@ -76,12 +78,13 @@ public:
 
     packetStateQueue->read(); // clear the queue
 
+    controller_packet.throttle = 127;
+
     nrf24.begin(&radio, &network, COMMS_CONTROLLER, nullptr, false, printRadioDetails);
 
     boardClient = new GenericClient<ControllerData, VescData>(COMMS_BOARD);
 
     boardClient->begin(&network, BoardComms::boardPacketAvailable_cb, mux_SPI);
-    // boardClient->printWarnings = printWarnings;
   }
   //----------------------------------------------------------
 
@@ -101,6 +104,11 @@ public:
       sendPacketToBoard();
     }
 
+    if (throttleStateQueue->hasValue())
+    {
+      controller_packet.throttle = throttleStateQueue->payload.val;
+    }
+
     if (since_last_response > SEND_TO_BOARD_INTERVAL_LOCAL)
     {
       packetStateQueue->send(&packetState);
@@ -110,11 +118,6 @@ public:
   void start(uint8_t priority, TaskFunction_t taskRef)
   {
     rtos->create(taskRef, CORE_1, priority, WITH_HEALTHCHECK);
-  }
-  //----------------------------------------------------------
-  void deleteTask(bool print = false)
-  {
-    exitTask = true;
   }
   //----------------------------------------------------------
 };
@@ -138,12 +141,10 @@ namespace BoardComms
     {
       Serial.printf("CONFIG_RESPONSE id: %lu\n", packet.id);
     }
-    // Serial.printf("[BoardComms|%lu] packet.id: %lu\n", packet.id);
 
     boardCommsTask.packetStateQueue->send(&boardCommsTask.packetState, boardCommsTask.printSendToQueue ? QueueBase::printSend : nullptr);
     boardCommsTask.since_last_response = 0;
 
     vTaskDelay(10);
   }
-
-}
+} // namespace
