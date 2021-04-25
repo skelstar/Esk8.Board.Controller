@@ -26,17 +26,15 @@ private:
   Queue1::Manager<NintendoButtonEvent> *nintendoClassicQueue = nullptr;
   Queue1::Manager<DisplayEvent> *displayEventQueue = nullptr;
 
-  elapsedMillis since_last_did_work = 0, since_checked_online = 0;
+  elapsedMillis since_checked_online = 0;
 
 public:
-  DisplayTask() : TaskBaseAlt("DisplayTask", 5000)
+  DisplayTask(unsigned long p_doWorkInterval) : TaskBaseAlt("DisplayTask", 5000, p_doWorkInterval)
   {
   }
   //--------------------------------------------------
-  void start(uint8_t priority, unsigned long p_doWorkInterval, TaskFunction_t taskRef)
+  void start(uint8_t priority, TaskFunction_t taskRef)
   {
-    doWorkInterval = p_doWorkInterval;
-
     rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
   }
 
@@ -166,7 +164,7 @@ private:
   }
 };
 
-DisplayTask displayTask;
+DisplayTask displayTask(PERIOD_50ms);
 
 namespace Display
 {

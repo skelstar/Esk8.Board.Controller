@@ -13,14 +13,13 @@ public:
   bool printWarnings = true;
 
 private:
-  elapsedMillis since_last_did_work = 0;
   BatteryLib *battery;
   BatteryInfo remote;
 
   Queue1::Manager<BatteryInfo> *remoteBatteryQueue = nullptr;
 
 public:
-  RemoteTask() : TaskBaseAlt("RemoteTask", 3000)
+  RemoteTask(unsigned long p_doWorkInterval) : TaskBaseAlt("RemoteTask", 3000, p_doWorkInterval)
   {
     battery = new BatteryLib(34);
   }
@@ -57,10 +56,8 @@ public:
     // remote.print("[RemoteTask]");
   }
 
-  void start(uint8_t priority, ulong p_doWorkInterval, TaskFunction_t taskRef)
+  void start(uint8_t priority, TaskFunction_t taskRef)
   {
-    doWorkInterval = p_doWorkInterval;
-
     rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
   }
 
@@ -71,7 +68,7 @@ public:
   }
 };
 
-RemoteTask remoteTask;
+RemoteTask remoteTask(5 * SECONDS);
 
 namespace Remote
 {

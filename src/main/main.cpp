@@ -114,14 +114,12 @@ void configureTasks()
 
 void startTasks()
 {
-  boardCommsTask.start(TASK_PRIORITY_4, /*work*/ PERIOD_100ms, BoardComms::task1);
-  displayTask.start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms, Display::task1);
-  nintendoClassTask.start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms, nsNintendoClassicTask::task1);
-  qwiicButtonTask.start(TASK_PRIORITY_2, /*work*/ PERIOD_100ms, nsQwiicButtonTask::task1);
-  throttleTask.start(TASK_PRIORITY_4, /*work*/ PERIOD_200ms, nsThrottleTask::task1);
-
-  remoteTask.start(TASK_PRIORITY_0, 5 * SECONDS, Remote::task1);
-  remoteTask.printSendToQueue = true;
+  boardCommsTask.start(TASK_PRIORITY_4, BoardComms::task1);
+  displayTask.start(TASK_PRIORITY_1, Display::task1);
+  nintendoClassTask.start(TASK_PRIORITY_1, nsNintendoClassicTask::task1);
+  qwiicButtonTask.start(TASK_PRIORITY_2, nsQwiicButtonTask::task1);
+  remoteTask.start(TASK_PRIORITY_0, Remote::task1);
+  throttleTask.start(TASK_PRIORITY_4, nsThrottleTask::task1);
 }
 
 void waitForTasks()

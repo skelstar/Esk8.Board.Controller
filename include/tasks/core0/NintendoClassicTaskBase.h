@@ -109,7 +109,7 @@ private:
   }
 };
 
-NintendoClassicTaskBase nintendoClassTask;
+NintendoClassicTaskBase nintendoClassTask(PERIOD_500ms);
 
 namespace nsNintendoClassicTask
 {

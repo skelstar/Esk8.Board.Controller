@@ -11,15 +11,16 @@ public:
 public:
   const char *_name = "Task has not name";
   bool ready = false, enabled = false;
-  unsigned long doWorkInterval = PERIOD_10ms;
+  unsigned long doWorkInterval = PERIOD_100ms;
   bool printSendToQueue = false,
        printPeekSchedule = false;
   elapsedMillis since_last_did_work = 0;
 
 public:
-  TaskBaseAlt(const char *name, uint16_t stackSize)
+  TaskBaseAlt(const char *name, uint16_t stackSize, unsigned long p_doWorkInterval)
   {
     _name = name;
+    doWorkInterval = p_doWorkInterval;
     rtos = new RTOSTaskManager(_name, /*stack*/ stackSize);
   }
   virtual void initialiseQueues() = 0;

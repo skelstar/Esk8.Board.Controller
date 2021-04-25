@@ -9,17 +9,13 @@ class QwiicButtonTask : public TaskBaseAlt
 public:
   // variables
   bool printSendToQueue = false;
-  // prototypes
-  // void connectToQwiicButton();
 
-  QwiicButtonTask() : TaskBaseAlt("QwiicTask", 3000)
+  QwiicButtonTask(unsigned long p_doWorkInterval) : TaskBaseAlt("QwiicTask", 3000, p_doWorkInterval)
   {
   }
 
-  void start(uint8_t priority, ulong p_doWorkInterval, TaskFunction_t taskRef)
+  void start(uint8_t priority, TaskFunction_t taskRef)
   {
-    doWorkInterval = p_doWorkInterval;
-
     rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
   }
 
@@ -90,7 +86,7 @@ private:
 
 //--------------------------------------------------
 
-QwiicButtonTask qwiicButtonTask;
+QwiicButtonTask qwiicButtonTask(PERIOD_100ms);
 
 namespace nsQwiicButtonTask
 {

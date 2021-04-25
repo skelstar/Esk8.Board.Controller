@@ -41,11 +41,10 @@ private:
 
   elapsedMillis
       since_checked_for_available,
-      since_sent_to_board = 0,
-      since_last_did_work = 0;
+      since_sent_to_board = 0;
 
 public:
-  BoardCommsTask() : TaskBaseAlt("BoardCommsTask", 3000)
+  BoardCommsTask(unsigned long p_doWorkInterval) : TaskBaseAlt("BoardCommsTask", 3000, p_doWorkInterval)
   {
   }
   //----------------------------------------------------------
@@ -108,10 +107,8 @@ public:
     }
   }
   //----------------------------------------------------------
-  void start(uint8_t priority, ulong p_doWorkInterval, TaskFunction_t taskRef)
+  void start(uint8_t priority, TaskFunction_t taskRef)
   {
-    doWorkInterval = p_doWorkInterval;
-
     rtos->create(taskRef, CORE_1, priority, WITH_HEALTHCHECK);
   }
   //----------------------------------------------------------
@@ -123,7 +120,7 @@ public:
   //----------------------------------------------------------
 };
 
-BoardCommsTask boardCommsTask;
+BoardCommsTask boardCommsTask(PERIOD_100ms);
 
 namespace BoardComms
 {

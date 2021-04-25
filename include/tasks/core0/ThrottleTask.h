@@ -29,14 +29,12 @@ public:
   bool printThrottle = false;
 
 public:
-  ThrottleTask() : TaskBaseAlt("ThrottleTask", 3000)
+  ThrottleTask(unsigned long p_doWorkInterval) : TaskBaseAlt("ThrottleTask", 3000, p_doWorkInterval)
   {
   }
 
-  void start(uint8_t priority, ulong p_doWorkInterval, TaskFunction_t taskRef)
+  void start(uint8_t priority, TaskFunction_t taskRef)
   {
-    doWorkInterval = p_doWorkInterval;
-
     rtos->create(taskRef, CORE_0, priority, WITH_HEALTHCHECK);
   }
 
@@ -99,7 +97,7 @@ private:
   }
 };
 
-ThrottleTask throttleTask;
+ThrottleTask throttleTask(PERIOD_200ms);
 
 namespace nsThrottleTask
 {
