@@ -30,7 +30,6 @@ SemaphoreHandle_t mux_SPI;
 
 #include <rom/rtc.h> // for reset reason
 #include <shared-utils.h>
-#include <types.h>
 #include <constants.h>
 
 // TASKS ------------------------
@@ -143,10 +142,12 @@ void createLocalQueueManagers()
 void configureTasks()
 {
   throttleTask.printWarnings = true;
-  throttleTask.printThrottle = true;
+  throttleTask.printThrottle = false;
 
-  boardCommsTask.SEND_TO_BOARD_INTERVAL_LOCAL = SEND_TO_BOARD_INTERVAL;
+  boardCommsTask.SEND_TO_BOARD_INTERVAL_LOCAL = 3 * SECONDS; // SEND_TO_BOARD_INTERVAL;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
+  boardCommsTask.printSentPacketToBoard = true;
+  boardCommsTask.printRxPacket = true;
 
   displayTask.p_printState = PRINT_DISP_STATE;
   displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;

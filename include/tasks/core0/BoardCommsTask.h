@@ -20,6 +20,7 @@ public:
   bool printWarnings = false;
   bool printSentPacketToBoard = false;
   bool printRadioDetails = true;
+  bool printRxPacket = false;
   unsigned long SEND_TO_BOARD_INTERVAL_LOCAL = SEND_TO_BOARD_INTERVAL;
 
   elapsedMillis since_last_response = 0;
@@ -113,6 +114,11 @@ public:
       packetStateQueue->send(&packetState);
     }
   }
+
+  void cleanup()
+  {
+    delete (throttleStateQueue);
+  }
   //----------------------------------------------------------
 };
 
@@ -138,6 +144,9 @@ namespace BoardComms
 
     boardCommsTask.packetStateQueue->send(&boardCommsTask.packetState, boardCommsTask.printSendToQueue ? QueueBase::printSend : nullptr);
     boardCommsTask.since_last_response = 0;
+
+    if (boardCommsTask.printRxPacket)
+      VescData::print(packet, "[Packet_cb]");
 
     vTaskDelay(10);
   }

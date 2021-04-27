@@ -56,6 +56,11 @@ public:
 
     remoteBatteryQueue->send(&remote);
   }
+
+  void cleanup()
+  {
+    delete (remoteBatteryQueue);
+  }
 };
 
 RemoteTask remoteTask(5 * SECONDS);

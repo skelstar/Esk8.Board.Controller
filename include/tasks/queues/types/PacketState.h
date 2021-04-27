@@ -18,7 +18,7 @@ public:
     name = "PacketState";
   }
 
-  void sent(ControllerPacketBase packet)
+  void sent(ControllerData packet)
   {
     _since_sent = 0;
     packet_id = packet.id;

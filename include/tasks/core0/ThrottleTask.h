@@ -85,6 +85,11 @@ private:
     // test to see if anything changed (maybe update^^ returns changed?)
     throttleQueue->send(&throttle);
   }
+
+  void cleanup()
+  {
+    delete (primaryButtonQueue);
+  }
 };
 
 ThrottleTask throttleTask(PERIOD_200ms);

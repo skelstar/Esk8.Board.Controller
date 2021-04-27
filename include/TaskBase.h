@@ -38,9 +38,7 @@ protected:
   }
   virtual bool timeToDoWork() = 0;
   virtual void doWork() = 0;
-  virtual void cleanup()
-  {
-  }
+  virtual void cleanup() = 0;
 
 public:
   virtual void start(TaskFunction_t taskRef)

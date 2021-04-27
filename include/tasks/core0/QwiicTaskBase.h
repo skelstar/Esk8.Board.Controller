@@ -56,6 +56,11 @@ private:
       primaryButtonQueue->send(&state, printSendToQueue ? QueueBase::printSend : nullptr);
   }
 
+  void cleanup()
+  {
+    delete (primaryButtonQueue);
+  }
+
   void connectToQwiicButton()
   {
     bool initButton = false;

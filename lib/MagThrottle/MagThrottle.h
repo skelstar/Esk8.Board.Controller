@@ -155,7 +155,8 @@ public:
     if (changed)
       // we don't want to update if was below min_delta
       _prev_deg = deg;
-    Serial.printf("prev_deg=%.1f deg=%.1f\n", _prev_deg, deg);
+    if (printThrottle)
+      Serial.printf("prev_deg=%.1f deg=%.1f\n", _prev_deg, deg);
   }
 
   void centre()

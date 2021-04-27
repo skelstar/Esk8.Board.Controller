@@ -1,7 +1,7 @@
 #pragma once
 
 #include <TaskBase.h>
-#include <tasks/queues/queues.h>
+// #include <tasks/queues/queues.h>
 #include <tasks/queues/types/DisplayEvent.h>
 #include <tasks/queues/QueueFactory.h>
 
@@ -81,6 +81,15 @@ private:
       handleBatteryQueue(batteryQueue->payload);
 
     Display::_fsm.run_machine();
+  }
+
+  void cleanup()
+  {
+    delete (batteryQueue);
+    delete (packetStateQueue);
+    delete (primaryButtonQueue);
+    delete (nintendoClassicQueue);
+    delete (displayEventQueue);
   }
   //==================================================
 

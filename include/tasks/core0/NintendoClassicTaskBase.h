@@ -72,7 +72,6 @@ private:
   void cleanup()
   {
     delete (nintendoButtonQueue);
-    Serial.printf("cleaning up!\n");
   }
 
   //================================================

@@ -16,7 +16,7 @@ namespace Display
 #include <FsmManager.h>
 #include <screens.h>
 #include <FeatureService.h>
-#include <tasks/core0/statsTask.h>
+// #include <tasks/core0/statsTask.h>
 
 //------------------------------------------------------------
 
@@ -119,7 +119,6 @@ namespace Display
   State stateDisconnected(
       ST_DISCONNECTED,
       [] {
-        // TODO: make a param-less version of printState (i.e. if id set)
         fsm_mgr.printState(ST_DISCONNECTED);
         simpleStoppedScreen(SimpleScreenOption::OFFLINE, TFT_CASET);
       },
@@ -142,12 +141,12 @@ namespace Display
 
         fsm_mgr.printState(ST_STOPPED_SCREEN);
 
-        if (stats.controllerResets > 0)
-          screenNeedToAckResets(Stats::CONTROLLER_RESETS);
-        else if (stats.boardResets > 0)
-          screenNeedToAckResets(Stats::BOARD_RESETS);
-        else
-          simpleStoppedScreen(SimpleScreenOption::STOPPED, TFT_CASET);
+        // if (stats.controllerResets > 0)
+        //   screenNeedToAckResets(Stats::CONTROLLER_RESETS);
+        // else if (stats.boardResets > 0)
+        //   screenNeedToAckResets(Stats::BOARD_RESETS);
+        // else
+        simpleStoppedScreen(SimpleScreenOption::STOPPED, TFT_CASET);
       },
       NULL,
       NULL);
@@ -161,12 +160,12 @@ namespace Display
 
         fsm_mgr.printState(ST_MOVING_SCREEN);
 
-        if (stats.controllerResets > 0)
-          screenNeedToAckResets(Stats::CONTROLLER_RESETS);
-        else if (stats.boardResets > 0)
-          screenNeedToAckResets(Stats::BOARD_RESETS);
-        else
-          simpleMovingScreen();
+        // if (stats.controllerResets > 0)
+        //   screenNeedToAckResets(Stats::CONTROLLER_RESETS);
+        // else if (stats.boardResets > 0)
+        //   screenNeedToAckResets(Stats::BOARD_RESETS);
+        // else
+        simpleMovingScreen();
       },
       NULL,
       NULL);
