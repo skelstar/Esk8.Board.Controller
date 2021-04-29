@@ -4,7 +4,7 @@
 #include <tasks/queues/types/NintendoButtonEvent.h>
 #include <tasks/queues/types/PrimaryButton.h>
 #include <tasks/queues/types/Throttle.h>
-#include <tasks/queues/types/QueueBase.h>
+#include <QueueBase.h>
 #include <tasks/queues/types/DisplayEvent.h>
 
 #include <tasks/queues/queues.h>
@@ -12,7 +12,7 @@
 #include <QueueManager.h>
 
 template <typename T>
-Queue1::Manager<T> *createQueue(const char *name, TickType_t ticks = TICKS_5ms)
+Queue1::Manager<T> *createQueueManager(const char *name, TickType_t ticks = TICKS_5ms)
 {
   if (std::is_same<T, BatteryInfo>::value)
   {

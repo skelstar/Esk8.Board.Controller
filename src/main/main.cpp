@@ -136,7 +136,7 @@ void createQueues()
 
 void createLocalQueueManagers()
 {
-  packetStateQueue = createQueue<PacketState>("(main) packetStateQueue");
+  packetStateQueue = createQueueManager<PacketState>("(main) packetStateQueue");
 }
 
 void configureTasks()

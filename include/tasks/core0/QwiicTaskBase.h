@@ -25,7 +25,7 @@ private:
 
   void initialiseQueues()
   {
-    primaryButtonQueue = createQueue<PrimaryButtonState>("(QwiicButtonTask)primaryButtonQueue");
+    primaryButtonQueue = createQueueManager<PrimaryButtonState>("(QwiicButtonTask)primaryButtonQueue");
   }
 
   void initialise()

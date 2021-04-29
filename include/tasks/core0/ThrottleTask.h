@@ -3,6 +3,7 @@
 #include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
+#include <MagThrottle.h>
 
 namespace nsThrottleTask
 {
@@ -38,8 +39,8 @@ private:
 
   void initialiseQueues()
   {
-    primaryButtonQueue = createQueue<PrimaryButtonState>("(throttle)primaryButtonQueue");
-    throttleQueue = createQueue<ThrottleState>("(throttle)throttleQueue");
+    primaryButtonQueue = createQueueManager<PrimaryButtonState>("(throttle)primaryButtonQueue");
+    throttleQueue = createQueueManager<ThrottleState>("(throttle)throttleQueue");
   }
 
   void initialise()

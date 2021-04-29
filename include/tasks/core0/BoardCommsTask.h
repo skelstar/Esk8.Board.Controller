@@ -5,12 +5,9 @@
 #include <tasks/queues/types/root.h>
 #include <tasks/queues/QueueFactory.h>
 
-NRF24L01Lib nrf24;
-RF24 radio(NRF_CE, NRF_CS, RF24_SPI_SPEED);
-RF24Network network(radio);
-
 namespace BoardComms
 {
+  void sendPacketToBoard(bool print = false);
   void boardPacketAvailable_cb(uint16_t from_id, uint8_t t);
 }
 
@@ -34,9 +31,10 @@ public:
   Queue1::Manager<PacketState> *packetStateQueue = nullptr;
   Queue1::Manager<ThrottleState> *throttleStateQueue = nullptr;
 
+  ControllerData controller_packet;
+
 private:
   // ControllerConfig controller_config;
-  ControllerData controller_packet;
 
   elapsedMillis
       since_checked_for_available,
@@ -49,26 +47,10 @@ public:
     _priority = TASK_PRIORITY_4;
   }
   //----------------------------------------------------------
-  void sendPacketToBoard(bool print = false)
-  {
-    controller_packet.id++;
-    controller_packet.acknowledged = false;
-
-    if (printSentPacketToBoard)
-      Serial.printf("sendPacketToBoard() @%lums id: %lu enabled: %d\n", millis(), controller_packet.id, enabled);
-
-    bool success = boardClient->sendTo(Packet::CONTROL, controller_packet);
-
-    packetState.sent(controller_packet);
-
-    if (!success)
-      Serial.printf("Unable to send CONTROL packet to board, id: %lu\n", controller_packet.id);
-  }
-  //----------------------------------------------------------
   void initialiseQueues()
   {
-    packetStateQueue = createQueue<PacketState>("(BoardCommsTask)PacketStateQueue");
-    throttleStateQueue = createQueue<ThrottleState>("(BoardCommsTask)ThrottleStateQueue");
+    packetStateQueue = createQueueManager<PacketState>("(BoardCommsTask)PacketStateQueue");
+    throttleStateQueue = createQueueManager<ThrottleState>("(BoardCommsTask)ThrottleStateQueue");
   }
   //----------------------------------------------------------
   void initialise()
@@ -85,6 +67,7 @@ public:
     boardClient = new GenericClient<ControllerData, VescData>(COMMS_BOARD);
 
     boardClient->begin(&network, BoardComms::boardPacketAvailable_cb, mux_SPI);
+    Serial.printf("boardClient ready\n");
   }
   //----------------------------------------------------------
 
@@ -101,7 +84,7 @@ public:
     {
       since_sent_to_board = 0;
 
-      sendPacketToBoard();
+      BoardComms::sendPacketToBoard();
     }
 
     if (throttleStateQueue->hasValue())
@@ -130,7 +113,24 @@ namespace BoardComms
   {
     boardCommsTask.task(parameters);
   }
+  //----------------------------------------------------------
+  void sendPacketToBoard(bool print)
+  {
+    boardCommsTask.controller_packet.id++;
+    boardCommsTask.controller_packet.acknowledged = false;
 
+    if (boardCommsTask.printSentPacketToBoard)
+      Serial.printf("sendPacketToBoard() @%lums id: %lu enabled: %d\n",
+                    millis(), boardCommsTask.controller_packet.id, boardCommsTask.enabled);
+
+    bool success = boardCommsTask.boardClient->sendTo(Packet::CONTROL, boardCommsTask.controller_packet);
+
+    boardCommsTask.packetState.sent(boardCommsTask.controller_packet);
+
+    if (!success)
+      Serial.printf("Unable to send CONTROL packet to board, id: %lu\n", boardCommsTask.controller_packet.id);
+  }
+  //----------------------------------------------------------
   void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   {
     VescData packet = boardCommsTask.boardClient->read();

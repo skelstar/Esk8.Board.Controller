@@ -31,14 +31,12 @@ protected:
     doWorkInterval = p_doWorkInterval;
     rtos = new RTOSTaskManager(_name, /*stack*/ stackSize);
   }
-  virtual void initialiseQueues() = 0;
+  virtual void initialiseQueues(){};
   virtual void initialise() = 0;
-  virtual void initialTask()
-  {
-  }
-  virtual bool timeToDoWork() = 0;
+  virtual void initialTask() {}
+  virtual bool timeToDoWork() { return true; };
   virtual void doWork() = 0;
-  virtual void cleanup() = 0;
+  virtual void cleanup(){};
 
 public:
   virtual void start(TaskFunction_t taskRef)

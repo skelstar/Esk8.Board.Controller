@@ -23,7 +23,7 @@ public:
 
   void initialiseQueues()
   {
-    // PrototypeBatteryQueue = createQueue<BatteryInfo>("(PrototypeTask) PrototypeBatteryQueue");
+    // PrototypeBatteryQueue = createQueueManager<BatteryInfo>("(PrototypeTask) PrototypeBatteryQueue");
   }
 
   void initialise()

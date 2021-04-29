@@ -27,7 +27,7 @@ public:
 
   void initialiseQueues()
   {
-    remoteBatteryQueue = createQueue<BatteryInfo>("(RemoteTask) remoteBatteryQueue");
+    remoteBatteryQueue = createQueueManager<BatteryInfo>("(RemoteTask) remoteBatteryQueue");
   }
 
   void initialise()

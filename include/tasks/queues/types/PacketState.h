@@ -1,7 +1,7 @@
 #pragma once
 
 #include <VescData.h>
-#include <tasks/queues/types/QueueBase.h>
+#include <QueueBase.h>
 #include <elapsedMillis.h>
 
 class PacketState : public QueueBase
@@ -15,6 +15,7 @@ public:
   PacketState() : QueueBase()
   {
     event_id = 0;
+    packet_id = 0;
     name = "PacketState";
   }
 

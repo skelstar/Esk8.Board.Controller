@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include <tasks/queues/types/QueueBase.h>
+#include <QueueBase.h>
 
 class BatteryInfo : public QueueBase
 {

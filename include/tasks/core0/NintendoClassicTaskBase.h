@@ -27,7 +27,7 @@ private:
 
   void initialiseQueues()
   {
-    nintendoButtonQueue = createQueue<NintendoButtonEvent>("(NintendoClassicTaskBase)nintendoButtonQueue");
+    nintendoButtonQueue = createQueueManager<NintendoButtonEvent>("(NintendoClassicTaskBase)nintendoButtonQueue");
   }
 
   void initialise()

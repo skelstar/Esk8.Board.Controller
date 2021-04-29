@@ -19,21 +19,28 @@ namespace Test
   void waitForTasksReady()
   {
     while (
-        BoardCommsTask::thisTask->ready == false ||
-        NintendoClassicTaskBase::thisTask->ready == false ||
-        QwiicTaskBase::thisTask->ready == false ||
-        DisplayTaskBase::thisTask->ready == false ||
-        ThrottleTask::thisTask->ready == false)
+        boardCommsTask.ready == false ||
+        displayTask.ready == false ||
+        nintendoClassTask.ready == false ||
+        qwiicButtonTask.ready == false ||
+        remoteTask.ready == false ||
+        throttleTask.ready == false ||
+        false)
       vTaskDelay(PERIOD_10ms);
+
+    Serial.print("[TEST] all tasks ready\n");
   }
 
   void enableAllTasks(bool print = false)
   {
-    BoardCommsTask::thisTask->enable(print);
-    NintendoClassicTaskBase::thisTask->enable(print);
-    QwiicTaskBase::thisTask->enable(print);
-    DisplayTaskBase::thisTask->enable(print);
-    ThrottleTask::thisTask->enable(print);
+    boardCommsTask.enable(print);
+    displayTask.enable(print);
+    nintendoClassTask.enable(print);
+    qwiicButtonTask.enable(print);
+    remoteTask.enable(print);
+    throttleTask.enable(print);
+
+    Serial.print("[TEST] all tasks enabled\n");
   }
 
   void printLine(const char *start, int dashes = 10)
@@ -83,26 +90,30 @@ namespace Test
     xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 
     // configure queues
-    displayEventQueue = createQueue<DisplayEvent>("(test)displayEventQueue");
-    primaryButtonQueue = createQueue<PrimaryButtonState>("(test)primaryButtonQueue");
-    packetStateQueue = createQueue<PacketState>("(test)packetStateQueue");
-    nintendoQueue = createQueue<NintendoButtonEvent>("(test)nintendoQueue");
-    throttleQueue = createQueue<ThrottleState>("(test)throttleQueue");
+    displayEventQueue = createQueueManager<DisplayEvent>("(test)displayEventQueue");
+    primaryButtonQueue = createQueueManager<PrimaryButtonState>("(test)primaryButtonQueue");
+    packetStateQueue = createQueueManager<PacketState>("(test)packetStateQueue");
+    nintendoQueue = createQueueManager<NintendoButtonEvent>("(test)nintendoQueue");
+    throttleQueue = createQueueManager<ThrottleState>("(test)throttleQueue");
 
-    QwiicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms);
-    BoardCommsTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
-    NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
-    DisplayTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
-    ThrottleTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_200ms);
+    boardCommsTask.start(BoardComms::task1);
+    displayTask.start(Display::task1);
+    nintendoClassTask.start(nsNintendoClassicTask::task1);
+    qwiicButtonTask.start(nsQwiicButtonTask::task1);
+    remoteTask.start(nsRemoteTask::task1);
+    throttleTask.start(nsThrottleTask::task1);
+
+    Serial.print("[TEST] all tasks started\n");
   }
 
   void tearDownAllTheTasks()
   {
-    QwiicTaskBase::thisTask->deleteTask(PRINT_THIS);
-    BoardCommsTask::thisTask->deleteTask(PRINT_THIS);
-    NintendoClassicTaskBase::thisTask->deleteTask(PRINT_THIS);
-    DisplayTaskBase::thisTask->deleteTask(PRINT_THIS);
-    ThrottleTask::thisTask->deleteTask(PRINT_THIS);
+    boardCommsTask.deleteTask(PRINT_THIS);
+    displayTask.deleteTask(PRINT_THIS);
+    nintendoClassTask.deleteTask(PRINT_THIS);
+    qwiicButtonTask.deleteTask(PRINT_THIS);
+    remoteTask.deleteTask(PRINT_THIS);
+    throttleTask.deleteTask(PRINT_THIS);
   }
 
   VescData mockBoardStoppedResponse(ControllerData out)

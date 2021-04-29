@@ -39,11 +39,11 @@ public:
 private:
   void initialiseQueues()
   {
-    batteryQueue = createQueue<BatteryInfo>("(DisplayTask)BatteryInfo");
-    packetStateQueue = createQueue<PacketState>("(DisplayBase)PacketStateQueue");
-    primaryButtonQueue = createQueue<PrimaryButtonState>("(DisplayBase)PrimaryButtonQueue");
-    nintendoClassicQueue = createQueue<NintendoButtonEvent>("(DisplayBase)NintendoClassicQueue");
-    displayEventQueue = createQueue<DisplayEvent>("(DisplayBase)DisplayEventQueue");
+    batteryQueue = createQueueManager<BatteryInfo>("(DisplayTask)BatteryInfo");
+    packetStateQueue = createQueueManager<PacketState>("(DisplayBase)PacketStateQueue");
+    primaryButtonQueue = createQueueManager<PrimaryButtonState>("(DisplayBase)PrimaryButtonQueue");
+    nintendoClassicQueue = createQueueManager<NintendoButtonEvent>("(DisplayBase)NintendoClassicQueue");
+    displayEventQueue = createQueueManager<DisplayEvent>("(DisplayBase)DisplayEventQueue");
   }
   //--------------------------------
   void initialise()
@@ -148,8 +148,8 @@ private:
     if (payload.button == NintendoController::BUTTON_START)
       Display::fsm_mgr.trigger(Display::TR_MENU_BUTTON_CLICKED);
 
-    if (payload.button != NintendoController::BUTTON_NONE)
-      Serial.printf("BUTTON: %s\n", NintendoController::getButtonName(payload.button));
+    // if (payload.button != NintendoController::BUTTON_NONE)
+    //   Serial.printf("BUTTON: %s\n", NintendoController::getButtonName(payload.button));
   }
 
   void handleBatteryQueue(BatteryInfo battery)
