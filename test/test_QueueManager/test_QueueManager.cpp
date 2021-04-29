@@ -217,8 +217,8 @@ void setup()
 
   UNITY_BEGIN();
 
-  // RUN_TEST(hasValue_responds_with_correct_value);
-  RUN_TEST(twoTasks_usingSameQueue_canReadAndWrite);
+  RUN_TEST(hasValue_responds_with_correct_value);
+  RUN_TEST(twoTasks_usingSameQueue_canReadAndRespond);
 
   UNITY_END();
 }
