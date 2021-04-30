@@ -109,10 +109,11 @@ private:
   }
 
 #define NOT_IN_STATE(x) !Display::fsm_mgr.currentStateIs(x)
+#define RESPONSE_WINDOW 200
 
   void handlePacketState(PacketState board)
   {
-    if (board.connected() == true)
+    if (board.connected(RESPONSE_WINDOW) == true)
     {
       // check version
       if (board.version != (float)VERSION_BOARD_COMPAT &&

@@ -20,7 +20,8 @@ public:
   bool printRxPacket = false;
   unsigned long SEND_TO_BOARD_INTERVAL_LOCAL = SEND_TO_BOARD_INTERVAL;
 
-  elapsedMillis since_last_response = 0;
+  elapsedMillis since_last_response = 0,
+                since_sent_to_board = 0;
 
   BoardClass board;
 
@@ -36,9 +37,7 @@ public:
 private:
   // ControllerConfig controller_config;
 
-  elapsedMillis
-      since_checked_for_available,
-      since_sent_to_board = 0;
+  elapsedMillis since_checked_for_available;
 
 public:
   BoardCommsTask(unsigned long p_doWorkInterval) : TaskBase("BoardCommsTask", 3000, p_doWorkInterval)
@@ -118,12 +117,14 @@ namespace BoardComms
   {
     boardCommsTask.controller_packet.id++;
     boardCommsTask.controller_packet.acknowledged = false;
-
-    if (boardCommsTask.printSentPacketToBoard)
-      Serial.printf("sendPacketToBoard() @%lums id: %lu enabled: %d\n",
-                    millis(), boardCommsTask.controller_packet.id, boardCommsTask.enabled);
+    boardCommsTask.controller_packet.txTime = millis();
 
     bool success = boardCommsTask.boardClient->sendTo(Packet::CONTROL, boardCommsTask.controller_packet);
+
+    if (boardCommsTask.printSentPacketToBoard)
+      Serial.printf("sendPacketToBoard() @ %lums id: %lu \n",
+                    boardCommsTask.controller_packet.txTime,
+                    boardCommsTask.controller_packet.id);
 
     boardCommsTask.packetState.sent(boardCommsTask.controller_packet);
 
@@ -134,6 +135,8 @@ namespace BoardComms
   void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   {
     VescData packet = boardCommsTask.boardClient->read();
+    VescData::print(packet, "[boardPacketAvailable_cb]rx");
+    // map packet to PacketState type
     boardCommsTask.packetState.received(packet);
     boardCommsTask.board.save(packet);
 

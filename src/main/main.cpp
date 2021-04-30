@@ -27,6 +27,9 @@ SemaphoreHandle_t mux_SPI;
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
 #include <GenericClient.h>
+RF24 radio(NRF_CE, NRF_CS);
+RF24Network network(radio);
+NRF24L01Lib nrf24;
 
 #include <rom/rtc.h> // for reset reason
 #include <shared-utils.h>
@@ -144,7 +147,7 @@ void configureTasks()
   throttleTask.printWarnings = true;
   throttleTask.printThrottle = false;
 
-  boardCommsTask.SEND_TO_BOARD_INTERVAL_LOCAL = 3 * SECONDS; // SEND_TO_BOARD_INTERVAL;
+  boardCommsTask.SEND_TO_BOARD_INTERVAL_LOCAL = 1 * SECONDS; // SEND_TO_BOARD_INTERVAL;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
   boardCommsTask.printSentPacketToBoard = true;
   boardCommsTask.printRxPacket = true;
