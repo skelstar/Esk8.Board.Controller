@@ -79,7 +79,7 @@ namespace Display
     ST_BOARD_BATTERY,
     ST_STOPPED_SCREEN,
     ST_MOVING_SCREEN,
-    ST_BOARD_VERSION_DOESNT_MATCH_SCREEN,
+    ST_BOARD_VERSION_DOESNT_MATCH,
     ST_OPTION_PUSH_TO_START,
     ST_SHOW_SETTINGS,
     ST_TOGGLE_PUSH_TO_START,
@@ -101,8 +101,8 @@ namespace Display
       return "ST_STOPPED_SCREEN";
     case ST_MOVING_SCREEN:
       return "ST_MOVING_SCREEN";
-    case ST_BOARD_VERSION_DOESNT_MATCH_SCREEN:
-      return "ST_BOARD_VERSION_DOESNT_MATCH_SCREEN";
+    case ST_BOARD_VERSION_DOESNT_MATCH:
+      return "ST_BOARD_VERSION_DOESNT_MATCH";
     case ST_OPTION_PUSH_TO_START:
       return "ST_OPTION_PUSH_TO_START";
     case ST_SHOW_SETTINGS:
@@ -170,10 +170,10 @@ namespace Display
       NULL,
       NULL);
   //---------------------------------------------------------------
-  State stBoardVersionDoesntMatchScreen(
-      ST_BOARD_VERSION_DOESNT_MATCH_SCREEN,
+  State stBoardVersionDoesntMatch(
+      ST_BOARD_VERSION_DOESNT_MATCH,
       [] {
-        fsm_mgr.printState(ST_BOARD_VERSION_DOESNT_MATCH_SCREEN);
+        fsm_mgr.printState(ST_BOARD_VERSION_DOESNT_MATCH);
         screenBoardNotCompatible(_g_BoardVersion);
       },
       NULL,
@@ -229,6 +229,7 @@ namespace Display
     // ST_DISCONNECTED
     _fsm.add_transition(&stStopped, &stateDisconnected, Display::TR_DISCONNECTED, NULL);
     _fsm.add_transition(&stMoving, &stateDisconnected, Display::TR_DISCONNECTED, NULL);
+    _fsm.add_transition(&stBoardVersionDoesntMatch, &stateDisconnected, Display::TR_DISCONNECTED, NULL);
 
     // Options
     _fsm.add_transition(&stStopped, &stOptionPushToStart, Display::TR_MENU_BUTTON_CLICKED, NULL);
@@ -253,6 +254,6 @@ namespace Display
     _fsm.add_transition(&stMoving, &stMoving, Display::TR_UPDATE, NULL);
 
     // TR_VERSION_DOESNT_MATCH
-    _fsm.add_transition(&stateDisconnected, &stBoardVersionDoesntMatchScreen, Display::TR_VERSION_DOESNT_MATCH, NULL);
+    _fsm.add_transition(&stateDisconnected, &stBoardVersionDoesntMatch, Display::TR_VERSION_DOESNT_MATCH, NULL);
   }
 } // namespace Display

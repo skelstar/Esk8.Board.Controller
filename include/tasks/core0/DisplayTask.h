@@ -117,9 +117,9 @@ private:
     {
       // check version
       if (board.version != (float)VERSION_BOARD_COMPAT &&
-          !Display::fsm_mgr.currentStateIs(Display::ST_BOARD_VERSION_DOESNT_MATCH_SCREEN))
+          board.version > 0.0 &&
+          NOT_IN_STATE(Display::ST_BOARD_VERSION_DOESNT_MATCH))
       {
-        Serial.printf("%.1f %.1f\n", board.version, (float)VERSION_BOARD_COMPAT);
         Display::_g_BoardVersion = board.version;
         Display::fsm_mgr.trigger(Display::TR_VERSION_DOESNT_MATCH);
       }

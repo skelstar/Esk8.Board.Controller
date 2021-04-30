@@ -122,7 +122,7 @@ namespace BoardComms
     bool success = boardCommsTask.boardClient->sendTo(Packet::CONTROL, boardCommsTask.controller_packet);
 
     if (boardCommsTask.printSentPacketToBoard)
-      Serial.printf("sendPacketToBoard() @ %lums id: %lu \n",
+      Serial.printf("------------------\nsendPacketToBoard() @ %lums id: %lu \n",
                     boardCommsTask.controller_packet.txTime,
                     boardCommsTask.controller_packet.id);
 
