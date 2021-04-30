@@ -87,7 +87,7 @@ void setUp()
   QwiicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms);
   BoardCommsTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
   NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
-  DisplayTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
+  DisplayTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
   ThrottleTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_200ms);
 }
 
@@ -96,7 +96,7 @@ void tearDown()
   QwiicTaskBase::thisTask->deleteTask(PRINT_THIS);
   BoardCommsTask::thisTask->deleteTask(PRINT_THIS);
   NintendoClassicTaskBase::thisTask->deleteTask(PRINT_THIS);
-  DisplayTaskBase::thisTask->deleteTask(PRINT_THIS);
+  DisplayTask::thisTask->deleteTask(PRINT_THIS);
   ThrottleTask::thisTask->deleteTask(PRINT_THIS);
 }
 

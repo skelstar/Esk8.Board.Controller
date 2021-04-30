@@ -74,7 +74,7 @@ void setUp()
   QwiicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms);
   BoardCommsTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
   NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
-  DisplayTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
+  DisplayTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
   ThrottleTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_200ms);
 
   counter = 0;
@@ -85,7 +85,7 @@ void tearDown()
   QwiicTaskBase::thisTask->deleteTask(PRINT_THIS);
   BoardCommsTask::thisTask->deleteTask(PRINT_THIS);
   NintendoClassicTaskBase::thisTask->deleteTask(PRINT_THIS);
-  DisplayTaskBase::thisTask->deleteTask(PRINT_THIS);
+  DisplayTask::thisTask->deleteTask(PRINT_THIS);
   ThrottleTask::thisTask->deleteTask(PRINT_THIS);
 }
 
@@ -94,8 +94,8 @@ void BoardIsStopped_whenMoving_showsTheMovingScreen()
 {
   Wire.begin();
 
-  DisplayTaskBase::settings.printState = true;
-  DisplayTaskBase::settings.printTrigger = true;
+  DisplayTask::settings.printState = true;
+  DisplayTask::settings.printTrigger = true;
 
   /* #region  Mocks */
 
@@ -114,7 +114,7 @@ void BoardIsStopped_whenMoving_showsTheMovingScreen()
       QwiicTaskBase::thisTask->ready == false ||
       BoardCommsTask::thisTask->ready == false ||
       NintendoClassicTaskBase::thisTask->ready == false ||
-      DisplayTaskBase::thisTask->ready == false ||
+      DisplayTask::thisTask->ready == false ||
       false)
   {
     vTaskDelay(10);
@@ -126,7 +126,7 @@ void BoardIsStopped_whenMoving_showsTheMovingScreen()
   QwiicTaskBase::thisTask->enable(PRINT_THIS);
   BoardCommsTask::thisTask->enable(PRINT_THIS);
   NintendoClassicTaskBase::thisTask->enable(PRINT_THIS);
-  DisplayTaskBase::thisTask->enable(PRINT_THIS);
+  DisplayTask::thisTask->enable(PRINT_THIS);
 
   /* #endregion */
 
@@ -165,8 +165,8 @@ void NintendoStartButton_whenPressed_opensPushToStartScreen()
 {
   Wire.begin();
 
-  DisplayTaskBase::settings.printState = true;
-  DisplayTaskBase::settings.printTrigger = true;
+  DisplayTask::settings.printState = true;
+  DisplayTask::settings.printTrigger = true;
 
   /* #region  Mocks */
 
