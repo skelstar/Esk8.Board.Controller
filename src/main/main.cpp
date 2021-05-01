@@ -107,15 +107,14 @@ void loop()
       // moving
       if (packetStateQueue->payload.moving)
       {
-        nintendoClassTask.deleteTask(PRINT_THIS);
-        remoteTask.deleteTask(PRINT_THIS);
+        nintendoClassTask.enabled = false;
+        remoteTask.enabled = false;
       }
-
       // stopped
       else
       {
-        nintendoClassTask.start(nsNintendoClassicTask::task1);
-        remoteTask.start(nsRemoteTask::task1);
+        nintendoClassTask.enabled = true;
+        remoteTask.enabled = true;
       }
 
       board.moving = packetStateQueue->payload.moving;
@@ -149,8 +148,8 @@ void configureTasks()
 
   boardCommsTask.SEND_TO_BOARD_INTERVAL_LOCAL = 1 * SECONDS; // SEND_TO_BOARD_INTERVAL;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
-  boardCommsTask.printSentPacketToBoard = true;
-  boardCommsTask.printRxPacket = true;
+  // boardCommsTask.printSentPacketToBoard = true;
+  // boardCommsTask.printRxPacket = true;
 
   displayTask.p_printState = PRINT_DISP_STATE;
   displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;

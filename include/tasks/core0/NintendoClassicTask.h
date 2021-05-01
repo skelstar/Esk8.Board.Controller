@@ -4,7 +4,7 @@
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 
-class NintendoClassicTaskBase : public TaskBase
+class NintendoClassicTask : public TaskBase
 {
 public:
   bool printWarnings = true;
@@ -12,7 +12,7 @@ public:
   NintendoController classic;
 
 public:
-  NintendoClassicTaskBase(unsigned long p_doWorkInterval) : TaskBase("NintendoClassicTask", 3000, p_doWorkInterval)
+  NintendoClassicTask(unsigned long p_doWorkInterval) : TaskBase("NintendoClassicTask", 3000, p_doWorkInterval)
   {
     _core = CORE_0;
     _priority = TASK_PRIORITY_1;
@@ -27,7 +27,7 @@ private:
 
   void initialiseQueues()
   {
-    nintendoButtonQueue = createQueueManager<NintendoButtonEvent>("(NintendoClassicTaskBase)nintendoButtonQueue");
+    nintendoButtonQueue = createQueueManager<NintendoButtonEvent>("(NintendoClassicTask)nintendoButtonQueue");
   }
 
   void initialise()
@@ -53,12 +53,11 @@ private:
     if (buttonEvent.changed)
     {
       uint8_t *new_buttons = classic.get_buttons();
-      uint8_t button_that_changed = button_changed(new_buttons, last_buttons);
-      if (button_that_changed != NintendoController::BUTTON_NONE)
+      uint8_t buttonTheWasPressed = buttonPressed(new_buttons, last_buttons);
+      if (buttonTheWasPressed != NintendoController::BUTTON_NONE)
       {
         // something changed, send
-        buttonEvent.button = button_that_changed;
-        buttonEvent.state = new_buttons[button_that_changed];
+        buttonEvent.button = buttonTheWasPressed;
 
         nintendoButtonQueue->send(&buttonEvent);
         buttonEvent.printSend(nintendoButtonQueue->name);
@@ -93,16 +92,16 @@ private:
     Serial.printf("Nintendo Controller initialised\n");
   }
 
-  uint8_t button_changed(uint8_t *new_buttons, uint8_t *old_buttons)
+  uint8_t buttonPressed(uint8_t *new_buttons, uint8_t *old_buttons)
   {
     for (int i = 0; i < NintendoController::BUTTON_COUNT; i++)
-      if (old_buttons[i] != new_buttons[i])
+      if (old_buttons[i] != new_buttons[i] && old_buttons[i] == 0)
         return i;
     return 99;
   }
 };
 
-NintendoClassicTaskBase nintendoClassTask(PERIOD_500ms);
+NintendoClassicTask nintendoClassTask(PERIOD_50ms);
 
 namespace nsNintendoClassicTask
 {

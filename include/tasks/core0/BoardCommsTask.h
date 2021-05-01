@@ -135,7 +135,10 @@ namespace BoardComms
   void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   {
     VescData packet = boardCommsTask.boardClient->read();
-    VescData::print(packet, "[boardPacketAvailable_cb]rx");
+
+    if (boardCommsTask.printRxPacket)
+      VescData::print(packet, "[boardPacketAvailable_cb]rx");
+
     // map packet to PacketState type
     boardCommsTask.packetState.received(packet);
     boardCommsTask.board.save(packet);

@@ -73,7 +73,7 @@ void setUp()
 
   QwiicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms);
   BoardCommsTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_100ms, /*send*/ PERIOD_200ms);
-  NintendoClassicTaskBase::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
+  NintendoClassicTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
   DisplayTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_50ms);
   ThrottleTask::start(TASK_PRIORITY_1, /*work*/ PERIOD_200ms);
 
@@ -84,7 +84,7 @@ void tearDown()
 {
   QwiicTaskBase::thisTask->deleteTask(PRINT_THIS);
   BoardCommsTask::thisTask->deleteTask(PRINT_THIS);
-  NintendoClassicTaskBase::thisTask->deleteTask(PRINT_THIS);
+  NintendoClassicTask::thisTask->deleteTask(PRINT_THIS);
   DisplayTask::thisTask->deleteTask(PRINT_THIS);
   ThrottleTask::thisTask->deleteTask(PRINT_THIS);
 }
@@ -113,7 +113,7 @@ void BoardIsStopped_whenMoving_showsTheMovingScreen()
   while (
       QwiicTaskBase::thisTask->ready == false ||
       BoardCommsTask::thisTask->ready == false ||
-      NintendoClassicTaskBase::thisTask->ready == false ||
+      NintendoClassicTask::thisTask->ready == false ||
       DisplayTask::thisTask->ready == false ||
       false)
   {
@@ -125,7 +125,7 @@ void BoardIsStopped_whenMoving_showsTheMovingScreen()
 
   QwiicTaskBase::thisTask->enable(PRINT_THIS);
   BoardCommsTask::thisTask->enable(PRINT_THIS);
-  NintendoClassicTaskBase::thisTask->enable(PRINT_THIS);
+  NintendoClassicTask::thisTask->enable(PRINT_THIS);
   DisplayTask::thisTask->enable(PRINT_THIS);
 
   /* #endregion */
@@ -174,7 +174,7 @@ void NintendoStartButton_whenPressed_opensPushToStartScreen()
     return false;
   });
 
-  NintendoClassicTaskBase::classic.setMockGetButtonEventCallback([] {
+  NintendoClassicTask::classic.setMockGetButtonEventCallback([] {
     switch (counter)
     {
     case 2:
