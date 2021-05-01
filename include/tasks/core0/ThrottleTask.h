@@ -3,7 +3,7 @@
 #include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
-#include <MagThrottle.h>
+#include <MagThumbwheel.h>
 
 namespace nsThrottleTask
 {
@@ -35,7 +35,7 @@ private:
 
   ThrottleState throttle;
 
-  MagneticThrottleClass magThrottle;
+  MagneticThumbwheelClass magThrottle;
 
   void initialiseQueues()
   {
@@ -52,9 +52,9 @@ private:
 
     magThrottle.setSweepAngle(SWEEP_ANGLE);
     magThrottle.setAccelDirection(DIR_CLOCKWISE);
-    magThrottle.setDeltaLimits(LIMIT_DELTA_MIN, LIMIT_DELTA_MAX);
+    // magThrottle.setDeltaLimits(LIMIT_DELTA_MIN, LIMIT_DELTA_MAX);
     magThrottle.setThrottleEnabledCb(nsThrottleTask::throttleEnabled_cb);
-    magThrottle.init();
+    magThrottle.init(mux_I2C);
 
     magThrottle.printThrottle = printThrottle;
   }

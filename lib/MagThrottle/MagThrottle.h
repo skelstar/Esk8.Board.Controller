@@ -114,6 +114,8 @@ public:
     bool tooMuch = _max_delta_limit > 0.0 && abs(delta) > _max_delta_limit;
     bool tooLittle = abs(delta) < _min_delta_limit;
 
+    changed = false;
+
     if (!tooLittle)
     {
       if (tooMuch)
@@ -124,11 +126,11 @@ public:
       if (_throttle > 127 && _throttleEnabled_cb() == false)
         _throttle = 127;
 
-      if (printThrottle || force_print)
-      {
-        char b[50];
-        _throttleString(abs(delta), _throttle, b);
-      }
+      // if (printThrottle || force_print)
+      // {
+      //   char b[50];
+      //   _throttleString(abs(delta), _throttle, b);
+      // }
       changed = true;
     }
 
@@ -155,7 +157,8 @@ public:
     if (changed)
       // we don't want to update if was below min_delta
       _prev_deg = deg;
-    if (printThrottle)
+
+    if (printThrottle && changed)
       Serial.printf("prev_deg=%.1f deg=%.1f\n", _prev_deg, deg);
   }
 

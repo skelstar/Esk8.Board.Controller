@@ -20,7 +20,7 @@ SemaphoreHandle_t mux_SPI;
 #include <RTOSTaskManager.h>
 #include <BoardClass.h>
 #include <Wire.h>
-#include <MagThrottle.h>
+// #include <MagThrottle.h>
 #include <SparkFun_Qwiic_Button.h>
 
 #include <RF24.h>
@@ -144,7 +144,7 @@ void createLocalQueueManagers()
 void configureTasks()
 {
   throttleTask.printWarnings = true;
-  throttleTask.printThrottle = false;
+  throttleTask.printThrottle = true;
 
   boardCommsTask.SEND_TO_BOARD_INTERVAL_LOCAL = 1 * SECONDS; // SEND_TO_BOARD_INTERVAL;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
