@@ -9,10 +9,10 @@ namespace nsThrottleTask
 {
   PrimaryButtonState primaryButton;
 
-  bool throttleEnabled_cb()
-  {
-    return true; // primaryButton.pressed;
-  };
+  // bool throttleEnabled_cb()
+  // {
+  //   return true; // primaryButton.pressed;
+  // };
 }
 
 class ThrottleTask : public TaskBase
@@ -21,6 +21,8 @@ class ThrottleTask : public TaskBase
 public:
   bool printWarnings = true;
   bool printThrottle = false;
+
+  MagneticThumbwheelClass thumbwheel;
 
 public:
   ThrottleTask(unsigned long p_doWorkInterval) : TaskBase("ThrottleTask", 3000, p_doWorkInterval)
@@ -35,8 +37,6 @@ private:
 
   ThrottleState throttle;
 
-  MagneticThumbwheelClass magThrottle;
-
   void initialiseQueues()
   {
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(throttle)primaryButtonQueue");
@@ -50,13 +50,13 @@ private:
 
     Serial.printf("ThrottleTask init()\n");
 
-    magThrottle.setSweepAngle(SWEEP_ANGLE);
-    magThrottle.setAccelDirection(DIR_CLOCKWISE);
-    // magThrottle.setDeltaLimits(LIMIT_DELTA_MIN, LIMIT_DELTA_MAX);
-    magThrottle.setThrottleEnabledCb(nsThrottleTask::throttleEnabled_cb);
-    magThrottle.init(mux_I2C);
+    thumbwheel.setSweepAngle(SWEEP_ANGLE);
+    thumbwheel.setAccelDirection(DIR_CLOCKWISE);
+    // thumbwheel.setDeltaLimits(LIMIT_DELTA_MIN, LIMIT_DELTA_MAX);
+    thumbwheel.setThrottleEnabledCb([] { return true; });
+    thumbwheel.init(mux_I2C);
 
-    magThrottle.printThrottle = printThrottle;
+    thumbwheel.printThrottle = printThrottle;
   }
 
   bool timeToDoWork()
@@ -72,22 +72,25 @@ private:
       nsThrottleTask::primaryButton.event_id = primaryButtonQueue->payload.event_id;
       nsThrottleTask::primaryButton.pressed = primaryButtonQueue->payload.pressed;
 
-      // changed?
-      if (oldPressed != primaryButtonQueue->payload.pressed)
-        // released?
-        if (primaryButtonQueue->payload.pressed == false)
-          magThrottle.centre();
-
-      // PrimaryButtonState::printRead(primaryButtonQueue->payload);
+      // changed and released?
+      if (oldPressed != primaryButtonQueue->payload.pressed &&
+          primaryButtonQueue->payload.pressed == false)
+        thumbwheel.centre();
     }
 
     // check magthrottle
-    magThrottle.update();
+    uint8_t status = thumbwheel.update();
+    throttle.val = thumbwheel.get();
+    throttle.status = status;
+    if (status == MagneticThumbwheelClass::MAG_NOT_DETECTED)
+      Serial.printf("ERROR: magnet not detected!\n");
+
     // test to see if anything changed (maybe update^^ returns changed?)
     throttleQueue->send(&throttle);
   }
 
-  void cleanup()
+  void
+  cleanup()
   {
     delete (primaryButtonQueue);
   }

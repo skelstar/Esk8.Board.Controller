@@ -23,6 +23,12 @@ class MagneticThrottleBase
 public:
   typedef bool (*GetBoolean_Cb)();
 
+  enum ReturnCode
+  {
+    OK = 0,
+    MAG_NOT_DETECTED,
+  };
+
   bool printThrottle = false,
        printDebug = false;
 
@@ -88,8 +94,23 @@ public:
   }
 
   //----------------------------------------
-  void update()
+  ReturnCode update()
   {
+    if (take(_i2c_mux, TICKS_100ms))
+    {
+      if (!detectMagnet())
+      {
+        _throttle = 127;
+        give(_i2c_mux);
+        return ReturnCode::MAG_NOT_DETECTED;
+      }
+      give(_i2c_mux);
+    }
+    else
+    {
+      Serial.printf("Couldn't take i2c mutex: MagThumbwheel.update()\n");
+    }
+
     bool changed = false;
 
     float deg = _centre; // default
@@ -104,47 +125,40 @@ public:
     if (acrossZeroDegrees)
       delta = _deltaAcrossZeroDegress(deg, _prev_deg);
 
-    uint8_t rawThrottle = 127;
-    float t = 127.0;
+    uint8_t oldThrottle = _throttle;
 
     bool usesMapper = abs(delta) >= _deadzone;
+
+    _throttle = 127;
 
     if (usesMapper)
     {
       if (_accel_direction == DIR_CLOCKWISE)
       {
-        t = delta > _deadzone
-                ? _accelmapper.constrainedMap(delta)
-                : _brakemapper.constrainedMap(delta);
+        _throttle = delta > _deadzone
+                        ? (uint8_t)_accelmapper.constrainedMap(delta)
+                        : (uint8_t)_brakemapper.constrainedMap(delta);
       }
       else if (_accel_direction == DIR_ANIT_CLOCKWISE)
       {
-        t = delta < -_deadzone
-                ? _accelmapper.constrainedMap(delta)
-                : _brakemapper.constrainedMap(delta);
+        _throttle = delta < -_deadzone
+                        ? (uint8_t)_accelmapper.constrainedMap(delta)
+                        : (uint8_t)_brakemapper.constrainedMap(delta);
       }
     }
-    rawThrottle = (int)t;
-    Serial.printf("%s: delta=%.1f %d %.1f dir=%s\n",
-                  delta > _deadzone
-                      ? "Accel"
-                  : delta < -_deadzone ? "Brake"
-                                       : " --- ",
-                  delta,
-                  rawThrottle,
-                  t,
-                  _accel_direction == DIR_CLOCKWISE ? "CW" : "CCW");
 
-    if (rawThrottle > 127 && _throttleEnabled_cb() == false)
+    if (_throttle > 127 && _throttleEnabled_cb() == false)
       _throttle = 127;
 
-    _throttle = rawThrottle;
+    changed = _throttle != oldThrottle;
 
-    changed = true;
+    if (changed && printThrottle)
+      Serial.printf("throttle: %d\n", _throttle);
+
+    return ReturnCode::OK; // OK
   }
 
-  void
-  centre()
+  void centre()
   {
     if (take(_i2c_mux, TICKS_50ms))
     {
@@ -201,6 +215,11 @@ private:
     buff[idx++] = delta > 50.0 ? '!' : ' ';
 
     return idx;
+  }
+
+  bool detectMagnet()
+  {
+    return ams5600.detectMagnet() == 1;
   }
 
   void _calibrateAccelBrakeMaps()
