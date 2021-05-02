@@ -57,8 +57,10 @@ private:
   float _centre = 0.0,
         _prev_deg = 0.0,
         _sweep = 0.0,
+        _deadzone = 5.0,
         _max_delta_limit = 0.0,
         _min_delta_limit = 0.0;
+  FastMap _accelmapper, _brakemapper;
 
 public:
   MagneticThumbwheelClass()
@@ -79,6 +81,12 @@ public:
     Serial.printf("MagneticThumbwheel: SWEEP=%.1f\n", _sweep);
   }
 
+  void setDeadzone(float degrees)
+  {
+    assert(degrees > 0.0);
+    _deadzone = degrees;
+  }
+
   //----------------------------------------
   void update()
   {
@@ -91,40 +99,60 @@ public:
       give(_i2c_mux);
     }
     float delta = _getDeltaDegrees(deg, _centre);
+    bool acrossZeroDegrees = abs(delta) > 180.0;
 
-    changed = false;
+    if (acrossZeroDegrees)
+      delta = _deltaAcrossZeroDegress(deg, _prev_deg);
 
-    _throttle = _constrainThrottle(_throttle, delta);
+    uint8_t rawThrottle = 127;
+    float t = 127.0;
 
-    if (_throttle > 127 && _throttleEnabled_cb() == false)
-      _throttle = 127;
+    bool usesMapper = abs(delta) >= _deadzone;
 
-    changed = true;
-
-    if (printThrottle)
+    if (usesMapper)
     {
-      if (changed)
+      if (_accel_direction == DIR_CLOCKWISE)
       {
-        char b[50];
-        _throttleString(abs(delta), _throttle, b);
-
-        Serial.printf("thr: %03d ", _throttle);
-        Serial.printf("| delta: %05.1f", delta);
-        Serial.printf("  %s", b); // throttleString
-        Serial.printf("\n");
-
-        Serial.printf("prev_deg=%.1f deg=%.1f\n", _prev_deg, deg);
+        t = delta > _deadzone
+                ? _accelmapper.constrainedMap(delta)
+                : _brakemapper.constrainedMap(delta);
+      }
+      else if (_accel_direction == DIR_ANIT_CLOCKWISE)
+      {
+        t = delta < -_deadzone
+                ? _accelmapper.constrainedMap(delta)
+                : _brakemapper.constrainedMap(delta);
       }
     }
+    rawThrottle = (int)t;
+    Serial.printf("%s: delta=%.1f %d %.1f dir=%s\n",
+                  delta > _deadzone
+                      ? "Accel"
+                  : delta < -_deadzone ? "Brake"
+                                       : " --- ",
+                  delta,
+                  rawThrottle,
+                  t,
+                  _accel_direction == DIR_CLOCKWISE ? "CW" : "CCW");
+
+    if (rawThrottle > 127 && _throttleEnabled_cb() == false)
+      _throttle = 127;
+
+    _throttle = rawThrottle;
+
+    changed = true;
   }
 
-  void centre()
+  void
+  centre()
   {
     if (take(_i2c_mux, TICKS_50ms))
     {
       _centre = _convertRawAngleToDegrees(ams5600.getRawAngle());
       give(_i2c_mux);
     }
+
+    _calibrateAccelBrakeMaps();
 
     _throttle = 127;
     _prev_deg = _centre;
@@ -173,6 +201,20 @@ private:
     buff[idx++] = delta > 50.0 ? '!' : ' ';
 
     return idx;
+  }
+
+  void _calibrateAccelBrakeMaps()
+  {
+    if (_accel_direction == DIR_CLOCKWISE)
+    {
+      _accelmapper.init(_deadzone, _sweep, 127.0, 255.0);
+      _brakemapper.init(0 - _sweep, 0 - _deadzone, 0.0, 127.0);
+    }
+    else
+    {
+      _accelmapper.init(-_deadzone, -_sweep, 127, 0);
+      _brakemapper.init(_deadzone, _sweep, 127, 255);
+    }
   }
 
   void _throttleString(float delta, uint16_t throttle, char *buff)

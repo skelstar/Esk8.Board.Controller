@@ -11,7 +11,7 @@ namespace nsThrottleTask
 
   bool throttleEnabled_cb()
   {
-    return primaryButton.pressed;
+    return true; // primaryButton.pressed;
   };
 }
 
