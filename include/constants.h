@@ -24,6 +24,26 @@ enum ButtonClickType
 #define TICKS_50ms 50 / portTICK_PERIOD_MS
 #define TICKS_100ms 100 / portTICK_PERIOD_MS
 
+// ThrottleTask
+
+enum ThrottleStatus
+{
+  STATUS_OK = 0,
+  DIAL_DISCONNECTED,
+};
+
+const char *getThrottleStatus(uint8_t status)
+{
+  switch (status)
+  {
+  case OK:
+    return "OK";
+  case DIAL_DISCONNECTED:
+    return "DIAL_DISCONNECTED";
+  }
+  return "OUT OF RANGE (getStatus)";
+}
+
 //------------------------------------------------------------
 
 // namespace Comms
@@ -109,6 +129,9 @@ enum ButtonClickType
 #ifndef GIT_BRANCH_NAME
 #define GIT_BRANCH_NAME "branch not provided?"
 #endif
+#ifndef GIT_COMMIT_HASH
+#define GIT_COMMIT_HASH "hash not provided?"
+#endif
 
 #ifndef PRINT_BOARD_CLIENT_CONNECTED_CHANGED
 #define PRINT_BOARD_CLIENT_CONNECTED_CHANGED 0
@@ -123,10 +146,6 @@ enum ButtonClickType
 #endif
 #ifndef FEATURE_START_MOVING_BOOST
 #define FEATURE_START_MOVING_BOOST 0
-#endif
-
-#ifndef OPTION_USING_MAG_THROTTLE
-#define OPTION_USING_MAG_THROTTLE 0
 #endif
 
 #ifndef PRINT_NINTENDO_BUTTON

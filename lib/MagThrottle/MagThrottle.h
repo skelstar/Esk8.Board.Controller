@@ -59,7 +59,7 @@ public:
 
   void setAccelDirection(uint8_t accelDirection)
   {
-    _accel_direction = accelDirection == DIR_CLOCKWISE || accelDirection == DIR_ANIT_CLOCKWISE
+    _accel_direction = accelDirection == DIR_CLOCKWISE || accelDirection == DIR_ANTI_CLOCKWISE
                            ? accelDirection
                            : DIR_CLOCKWISE;
 

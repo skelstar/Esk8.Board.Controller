@@ -16,7 +16,11 @@ public:
   bool printWarnings = true;
   bool printThrottle = false;
 
+#if REMOTE_USED == REMOTE_M5STACK_FIRE
   MagneticThumbwheelClass thumbwheel;
+#elif REMOTE_USED == REMOTE_RED_REMOTE
+  AnalogThumbwheelClass thumbwheel;
+#endif
 
 public:
   ThrottleTask() : TaskBase("ThrottleTask", 3000, PERIOD_50ms)
@@ -42,20 +46,13 @@ private:
     if (mux_I2C == nullptr)
       mux_I2C = xSemaphoreCreateMutex();
 
-    Serial.printf("ThrottleTask init()\n");
-
-    thumbwheel.setSweepAngle(SWEEP_ANGLE);
-    thumbwheel.setAccelDirection(DIR_CLOCKWISE);
+    // thumbwheel.setSweepAngle(SWEEP_ANGLE);
+    // thumbwheel.setAccelDirection(DIR_CLOCKWISE);
     // thumbwheel.setDeltaLimits(LIMIT_DELTA_MIN, LIMIT_DELTA_MAX);
     thumbwheel.setThrottleEnabledCb([] { return true; });
-    thumbwheel.init(mux_I2C);
-
+    // thumbwheel.init(mux_I2C);
     thumbwheel.printThrottle = printThrottle;
-  }
-
-  bool timeToDoWork()
-  {
-    return true;
+    thumbwheel.init();
   }
 
   void doWork()
@@ -78,7 +75,7 @@ private:
     throttle.val = thumbwheel.get();
     throttle.status = status;
 
-    if (og_throttle != throttle.val || status != MagneticThumbwheelClass::OK)
+    if (og_throttle != throttle.val || throttle.status != ThrottleStatus::STATUS_OK)
     {
       throttleQueue->send(&throttle);
       ThrottleState::print(throttle, "[ThrottleTask]-->");

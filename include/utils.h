@@ -63,6 +63,7 @@ void print_build_status(String chipId)
 
   Serial.printf("\n");
   Serial.printf("%s BRANCH: %s \n", spaces, GIT_BRANCH_NAME);
+  Serial.printf("%s COMMIT: %s \n", spaces, GIT_COMMIT_HASH);
 
   Serial.printf("\n");
   Serial.printf("%s %s \n", spaces, __TIME__);

@@ -41,7 +41,7 @@ protected:
 public:
   void setAccelDirection(uint8_t accelDirection)
   {
-    _accel_direction = accelDirection == DIR_CLOCKWISE || accelDirection == DIR_ANIT_CLOCKWISE
+    _accel_direction = accelDirection == DIR_CLOCKWISE || accelDirection == DIR_ANTI_CLOCKWISE
                            ? accelDirection
                            : DIR_CLOCKWISE;
     Serial.printf("MagneticThumbwheel: DIR=%s\n", _accel_direction == DIR_CLOCKWISE ? "CW" : "CCW");
@@ -73,10 +73,8 @@ public:
   {
   }
 
-  void init(SemaphoreHandle_t i2c_mux)
+  void init()
   {
-    _i2c_mux = i2c_mux;
-    assert(_i2c_mux != nullptr);
     assert(_throttleEnabled_cb != nullptr);
     centre();
   }
@@ -138,7 +136,7 @@ public:
                         ? (uint8_t)_accelmapper.constrainedMap(delta)
                         : (uint8_t)_brakemapper.constrainedMap(delta);
       }
-      else if (_accel_direction == DIR_ANIT_CLOCKWISE)
+      else if (_accel_direction == DIR_ANTI_CLOCKWISE)
       {
         _throttle = delta < -_deadzone
                         ? (uint8_t)_accelmapper.constrainedMap(delta)

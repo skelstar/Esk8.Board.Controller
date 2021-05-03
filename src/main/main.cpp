@@ -19,8 +19,20 @@ SemaphoreHandle_t mux_SPI;
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <Wire.h>
+
+#include <constants.h>
+
+#if REMOTE_USED == REMOTE_M5STACK_FIRE
 #include <SparkFun_Qwiic_Button.h>
+#elif REMOTE_USED == REMOTE_RED_REMOTE
+#include <Button2.h>
+#endif
+
+#if REMOTE_USED == REMOTE_M5STACK_FIRE
 #include <MagThumbwheel.h>
+#elif REMOTE_USED == REMOTE_RED_REMOTE
+#include <AnalogThumbwheel.h>
+#endif
 
 #include <RF24.h>
 #include <RF24Network.h>
@@ -32,7 +44,6 @@ NRF24L01Lib nrf24;
 
 #include <rom/rtc.h> // for reset reason
 #include <shared-utils.h>
-#include <constants.h>
 
 // TASKS ------------------------
 
@@ -81,7 +92,7 @@ void setup()
 
   waitForTasks();
 
-  enableTasks();
+  enableTasks(PRINT_THIS);
 }
 //---------------------------------------------------------------
 
@@ -101,13 +112,17 @@ void loop()
       // moving
       if (transactionQueue->payload.moving)
       {
+#ifdef NINTENDOCLASSIC_TASK
         nintendoClassTask.enabled = false;
+#endif
         remoteTask.enabled = false;
       }
       // stopped
       else
       {
+#ifdef NINTENDOCLASSIC_TASK
         nintendoClassTask.enabled = true;
+#endif
         remoteTask.enabled = true;
       }
 
@@ -142,15 +157,24 @@ void configureTasks()
   // boardCommsTask.printSentPacketToBoard = true;
   // boardCommsTask.printRxPacket = true;
 
+#ifdef NINTENDOCLASSIC_TASK
   nintendoClassTask.doWorkInterval = PERIOD_50ms;
+#endif
 
+#ifdef QWIICBUTTON_TASK
   qwiicButtonTask.doWorkInterval = PERIOD_100ms;
+#endif
+
+#ifdef DIGITALPRIMARYBUTTON_TASK
+  digitalPrimaryButtonTask.doWorkInterval = PERIOD_100ms;
+  // digitalPrimaryButtonTask.printSendToQueue = true;
+#endif
 
   throttleTask.doWorkInterval = PERIOD_200ms;
   throttleTask.printWarnings = true;
   throttleTask.printThrottle = true;
-  throttleTask.thumbwheel.setSweepAngle(30.0);
-  throttleTask.thumbwheel.setDeadzone(5.0);
+  // throttleTask.thumbwheel.setSweepAngle(30.0);
+  // throttleTask.thumbwheel.setDeadzone(5.0);
 
   displayTask.doWorkInterval = PERIOD_50ms;
   displayTask.p_printState = PRINT_DISP_STATE;
@@ -164,8 +188,16 @@ void startTasks()
 {
   boardCommsTask.start(BoardComms::task1);
   displayTask.start(Display::task1);
+#ifdef NINTENDOCLASSIC_TASK
   nintendoClassTask.start(nsNintendoClassicTask::task1);
+#endif
+#ifdef QWIICBUTTON_TASK
   qwiicButtonTask.start(nsQwiicButtonTask::task1);
+#endif
+#ifdef DIGITALPRIMARYBUTTON_TASK
+  digitalPrimaryButtonTask.start(nsDigitalPrimaryButtonTask::task1);
+#endif
+
   remoteTask.start(nsRemoteTask::task1);
   throttleTask.start(nsThrottleTask::task1);
 }
@@ -175,8 +207,15 @@ void waitForTasks()
   while (
       boardCommsTask.ready == false ||
       displayTask.ready == false ||
+#ifdef NINTENDOCLASSIC_TASK
       nintendoClassTask.ready == false ||
+#endif
+#ifdef QWIICBUTTON_TASK
       qwiicButtonTask.ready == false ||
+#endif
+#ifdef DIGITALPRIMARYBUTTON_TASK
+      digitalPrimaryButtonTask.ready == false ||
+#endif
       remoteTask.ready == false ||
       throttleTask.ready == false ||
       false)
@@ -188,8 +227,15 @@ void enableTasks(bool print)
 {
   boardCommsTask.enable(print);
   displayTask.enable(print);
+#ifdef NINTENDOCLASSIC_TASK
   nintendoClassTask.enable(print);
+#endif
+#ifdef QWIICBUTTON_TASK
   qwiicButtonTask.enable(print);
+#endif
+#ifdef DIGITALPRIMARYBUTTON_TASK
+  digitalPrimaryButtonTask.enable(print);
+#endif
   remoteTask.enable(print);
   throttleTask.enable(print);
 }

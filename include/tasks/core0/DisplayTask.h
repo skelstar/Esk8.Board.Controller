@@ -189,11 +189,10 @@ private:
 
   void handleThrottleResponse(const ThrottleState &throttleState)
   {
-    if (throttleState.status == MagneticThumbwheelClass::MAG_NOT_DETECTED &&
-        NOT_IN_STATE(Display::ST_MAGNET_NOT_DETECTED))
+    if (throttleState.status == ThrottleStatus::DIAL_DISCONNECTED && NOT_IN_STATE(Display::ST_MAGNET_NOT_DETECTED))
       Display::fsm_mgr.trigger(Display::TR_MAGNET_NOT_DETECTED);
-    if (IN_STATE(Display::ST_MAGNET_NOT_DETECTED) &&
-        throttleState.status == MagneticThumbwheelClass::OK)
+
+    if (throttleState.status == ThrottleStatus::STATUS_OK && IN_STATE(Display::ST_MAGNET_NOT_DETECTED))
       Display::fsm_mgr.trigger(Display::TR_MAGNET_DETECTED);
   }
 };
