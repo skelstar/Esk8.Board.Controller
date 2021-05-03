@@ -18,19 +18,18 @@ public:
   bool printSentPacketToBoard = false;
   bool printRadioDetails = true;
   bool printRxPacket = false;
-  unsigned long SEND_TO_BOARD_INTERVAL_LOCAL = SEND_TO_BOARD_INTERVAL;
+  unsigned long sendToBoardInterval = SEND_TO_BOARD_INTERVAL;
 
-  elapsedMillis since_last_response = 0,
-                since_sent_to_board = 0;
-
-  PacketState packetState;
+  elapsedMillis sinceLastBoardResponse = 0,
+                sinceSentToBoard = 0;
 
   GenericClient<ControllerData, VescData> *boardClient;
 
-  Queue1::Manager<PacketState> *packetStateQueue = nullptr;
+  Queue1::Manager<BoardState> *packetStateQueue = nullptr;
   Queue1::Manager<ThrottleState> *throttleStateQueue = nullptr;
 
   ControllerData controller_packet;
+  BoardState packetState;
 
 private:
   // ControllerConfig controller_config;
@@ -38,7 +37,7 @@ private:
   elapsedMillis since_checked_for_available;
 
 public:
-  BoardCommsTask(unsigned long p_doWorkInterval) : TaskBase("BoardCommsTask", 3000, p_doWorkInterval)
+  BoardCommsTask() : TaskBase("BoardCommsTask", 3000, PERIOD_50ms)
   {
     _core = CORE_1;
     _priority = TASK_PRIORITY_4;
@@ -46,7 +45,7 @@ public:
   //----------------------------------------------------------
   void initialiseQueues()
   {
-    packetStateQueue = createQueueManager<PacketState>("(BoardCommsTask)PacketStateQueue");
+    packetStateQueue = createQueueManager<BoardState>("(BoardCommsTask)PacketStateQueue");
     throttleStateQueue = createQueueManager<ThrottleState>("(BoardCommsTask)ThrottleStateQueue");
   }
   //----------------------------------------------------------
@@ -77,22 +76,23 @@ public:
   {
     boardClient->update();
 
-    if (since_sent_to_board > SEND_TO_BOARD_INTERVAL_LOCAL)
-    {
-      since_sent_to_board = 0;
-
-      BoardComms::sendPacketToBoard();
-    }
-
     if (throttleStateQueue->hasValue())
     {
       controller_packet.throttle = throttleStateQueue->payload.val;
     }
 
-    if (since_last_response > SEND_TO_BOARD_INTERVAL_LOCAL)
+    if (sinceSentToBoard > sendToBoardInterval)
     {
-      packetStateQueue->send(&packetState);
+      sinceSentToBoard = 0;
+      BoardComms::sendPacketToBoard();
     }
+
+    // have to send so display knows when board goes offline, maybe
+    // should poll in DisplayTask instead
+    // if (sinceLastBoardResponse > sendToBoardInterval)
+    // {
+    //   packetStateQueue->send(&packetState);
+    // }
   }
 
   void cleanup()
@@ -102,7 +102,7 @@ public:
   //----------------------------------------------------------
 };
 
-BoardCommsTask boardCommsTask(PERIOD_100ms);
+BoardCommsTask boardCommsTask;
 
 namespace BoardComms
 {
@@ -115,7 +115,7 @@ namespace BoardComms
   {
     boardCommsTask.controller_packet.id++;
     boardCommsTask.controller_packet.acknowledged = false;
-    boardCommsTask.controller_packet.txTime = millis();
+    boardCommsTask.controller_packet.txTime = millis(); // board updates txTime
 
     bool success = boardCommsTask.boardClient->sendTo(Packet::CONTROL, boardCommsTask.controller_packet);
 
@@ -137,7 +137,7 @@ namespace BoardComms
     if (boardCommsTask.printRxPacket)
       VescData::print(packet, "[boardPacketAvailable_cb]rx");
 
-    // map packet to PacketState type
+    // map packet to BoardState type
     boardCommsTask.packetState.received(packet);
 
     if (packet.reason == CONFIG_RESPONSE)
@@ -146,7 +146,7 @@ namespace BoardComms
     }
 
     boardCommsTask.packetStateQueue->send(&boardCommsTask.packetState, boardCommsTask.printSendToQueue ? QueueBase::printSend : nullptr);
-    boardCommsTask.since_last_response = 0;
+    boardCommsTask.sinceLastBoardResponse = 0;
 
     if (boardCommsTask.printRxPacket)
       VescData::print(packet, "[Packet_cb]");

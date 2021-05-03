@@ -19,7 +19,7 @@ private:
   Queue1::Manager<BatteryInfo> *remoteBatteryQueue = nullptr;
 
 public:
-  RemoteTask(unsigned long p_doWorkInterval) : TaskBase("RemoteTask", 3000, p_doWorkInterval)
+  RemoteTask() : TaskBase("RemoteTask", 3000, PERIOD_50ms)
   {
     _core = CORE_0;
     _priority = TASK_PRIORITY_0;
@@ -63,7 +63,7 @@ public:
   }
 };
 
-RemoteTask remoteTask(5 * SECONDS);
+RemoteTask remoteTask;
 
 namespace nsRemoteTask
 {

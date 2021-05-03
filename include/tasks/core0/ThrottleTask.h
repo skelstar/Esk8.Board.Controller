@@ -19,7 +19,7 @@ public:
   MagneticThumbwheelClass thumbwheel;
 
 public:
-  ThrottleTask(unsigned long p_doWorkInterval) : TaskBase("ThrottleTask", 3000, p_doWorkInterval)
+  ThrottleTask() : TaskBase("ThrottleTask", 3000, PERIOD_50ms)
   {
     _core = CORE_0;
     _priority = TASK_PRIORITY_4;
@@ -92,7 +92,7 @@ private:
   }
 };
 
-ThrottleTask throttleTask(PERIOD_200ms);
+ThrottleTask throttleTask;
 
 namespace nsThrottleTask
 {

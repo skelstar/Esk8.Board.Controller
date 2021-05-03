@@ -15,7 +15,7 @@ private:
   Queue1::Manager<BatteryInfo> *PrototypeBatteryQueue = nullptr;
 
 public:
-  PrototypeTask(unsigned long p_doWorkInterval) : TaskBase("PrototypeTask", 3000, p_doWorkInterval)
+  PrototypeTask() : TaskBase("PrototypeTask", 3000, PERIOD_50ms)
   {
     _core = CORE_0;
     _priority = TASK_PRIORITY_0;
@@ -47,7 +47,7 @@ public:
   }
 };
 
-PrototypeTask prototypeTask(5 * SECONDS);
+PrototypeTask prototypeTask;
 
 namespace nsPrototypeTask
 {

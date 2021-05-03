@@ -85,14 +85,14 @@ namespace Test
 
     xDisplayQueueHandle = xQueueCreate(1, sizeof(DisplayEvent *));
     xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
-    xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
+    xPacketStateQueueHandle = xQueueCreate(1, sizeof(BoardState *));
     xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
     xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 
     // configure queues
     displayEventQueue = createQueueManager<DisplayEvent>("(test)displayEventQueue");
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(test)primaryButtonQueue");
-    packetStateQueue = createQueueManager<PacketState>("(test)packetStateQueue");
+    packetStateQueue = createQueueManager<BoardState>("(test)packetStateQueue");
     nintendoQueue = createQueueManager<NintendoButtonEvent>("(test)nintendoQueue");
     throttleQueue = createQueueManager<ThrottleState>("(test)throttleQueue");
 

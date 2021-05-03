@@ -12,7 +12,7 @@ public:
   NintendoController classic;
 
 public:
-  NintendoClassicTask(unsigned long p_doWorkInterval) : TaskBase("NintendoClassicTask", 3000, p_doWorkInterval)
+  NintendoClassicTask() : TaskBase("NintendoClassicTask", 3000, PERIOD_50ms)
   {
     _core = CORE_0;
     _priority = TASK_PRIORITY_1;
@@ -101,7 +101,7 @@ private:
   }
 };
 
-NintendoClassicTask nintendoClassTask(PERIOD_50ms);
+NintendoClassicTask nintendoClassTask;
 
 namespace nsNintendoClassicTask
 {

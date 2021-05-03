@@ -4,20 +4,21 @@
 #include <QueueBase.h>
 #include <elapsedMillis.h>
 
-class PacketState : public QueueBase
+class BoardState : public QueueBase
 {
 public:
   float version = 0.0;
-  unsigned long packet_id,
+  unsigned long
+      packet_id,
       roundTripTime; // time it took for the board to reply
   bool moving = false;
 
 public:
-  PacketState() : QueueBase()
+  BoardState() : QueueBase()
   {
     event_id = 0;
     packet_id = 0;
-    name = "PacketState";
+    name = "BoardState";
   }
 
   void sent(ControllerData packet)
@@ -48,11 +49,11 @@ public:
   bool connected(unsigned long responseWindow)
   {
     return packet_id == 0 || // ignore first packet
-           packet_id == _reply_packet_id ||
-           roundTripTime < responseWindow;
+           (packet_id == _reply_packet_id &&
+            roundTripTime < responseWindow);
   }
 
-  static void print(PacketState item, const char *preamble = nullptr)
+  static void print(BoardState item, const char *preamble = nullptr)
   {
     if (preamble != nullptr)
       Serial.printf("%s: ", preamble);

@@ -40,7 +40,7 @@ NRF24L01Lib nrf24;
 
 // LOCAL QUEUE MANAGERS -----------------------
 
-Queue1::Manager<PacketState> *packetStateQueue = nullptr;
+Queue1::Manager<BoardState> *packetStateQueue = nullptr;
 
 //------------------------------------------------------------------
 
@@ -91,7 +91,7 @@ void setup()
 //---------------------------------------------------------------
 
 elapsedMillis since_checked_queues = 0;
-PacketState board;
+BoardState board;
 
 void loop()
 {
@@ -130,14 +130,14 @@ void createQueues()
   xBatteryInfo = xQueueCreate(1, sizeof(BatteryInfo *));
   xDisplayQueueHandle = xQueueCreate(1, sizeof(DisplayEvent *));
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
-  xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
+  xPacketStateQueueHandle = xQueueCreate(1, sizeof(BoardState *));
   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 }
 
 void createLocalQueueManagers()
 {
-  packetStateQueue = createQueueManager<PacketState>("(main) packetStateQueue");
+  packetStateQueue = createQueueManager<BoardState>("(main) packetStateQueue");
 }
 
 void configureTasks()
@@ -146,16 +146,24 @@ void configureTasks()
   throttleTask.printThrottle = true;
   throttleTask.thumbwheel.setSweepAngle(30.0);
   throttleTask.thumbwheel.setDeadzone(5.0);
+  throttleTask.doWorkInterval = PERIOD_200ms;
 
-  boardCommsTask.SEND_TO_BOARD_INTERVAL_LOCAL = 1 * SECONDS; // SEND_TO_BOARD_INTERVAL;
+  nintendoClassTask.doWorkInterval = PERIOD_100ms;
+
+  qwiicButtonTask.doWorkInterval = PERIOD_100ms;
+
+  boardCommsTask.sendToBoardInterval = SEND_TO_BOARD_INTERVAL;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
+  boardCommsTask.doWorkInterval = PERIOD_50ms;
   // boardCommsTask.printSentPacketToBoard = true;
   // boardCommsTask.printRxPacket = true;
 
   displayTask.p_printState = PRINT_DISP_STATE;
   displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
+  displayTask.doWorkInterval = PERIOD_100ms;
 
   remoteTask.printSendToQueue = true;
+  remoteTask.doWorkInterval = SECONDS * 5;
 }
 
 void startTasks()

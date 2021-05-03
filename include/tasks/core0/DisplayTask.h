@@ -21,16 +21,18 @@ private:
   DisplayEvent displayEvent;
 
   Queue1::Manager<BatteryInfo> *batteryQueue = nullptr;
-  Queue1::Manager<PacketState> *packetStateQueue = nullptr;
+  Queue1::Manager<BoardState> *packetStateQueue = nullptr;
   Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
   Queue1::Manager<NintendoButtonEvent> *nintendoClassicQueue = nullptr;
   Queue1::Manager<DisplayEvent> *displayEventQueue = nullptr;
   Queue1::Manager<ThrottleState> *throttleQueue = nullptr;
 
+  BoardState *packetState;
+
   elapsedMillis since_checked_online = 0;
 
 public:
-  DisplayTask(unsigned long p_doWorkInterval) : TaskBase("DisplayTask", 5000, p_doWorkInterval)
+  DisplayTask() : TaskBase("DisplayTask", 5000, PERIOD_50ms)
   {
     _core = CORE_0;
     _priority = TASK_PRIORITY_1;
@@ -41,7 +43,7 @@ private:
   void initialiseQueues()
   {
     batteryQueue = createQueueManager<BatteryInfo>("(DisplayTask)BatteryInfo");
-    packetStateQueue = createQueueManager<PacketState>("(DisplayBase)PacketStateQueue");
+    packetStateQueue = createQueueManager<BoardState>("(DisplayBase)PacketStateQueue");
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(DisplayBase)PrimaryButtonQueue");
     nintendoClassicQueue = createQueueManager<NintendoButtonEvent>("(DisplayBase)NintendoClassicQueue");
     displayEventQueue = createQueueManager<DisplayEvent>("(DisplayBase)DisplayEventQueue");
@@ -74,7 +76,14 @@ private:
   {
     // will check for online regardless of anything being new on the queue
     if (packetStateQueue->hasValue() && packetStateQueue->payload.event_id > 0)
-      handlePacketState(packetStateQueue->payload);
+    {
+      packetState = new BoardState(packetStateQueue->payload);
+    }
+    Serial.printf("packet: connected=%d sent_time=%lu roundTrip=%lu\n",
+                  packetState->connected(200),
+                  packetState->sent_time,
+                  packetState->roundTripTime);
+    handlePacketState(*packetState);
 
     if (nintendoClassicQueue->hasValue())
       handleNintendoButtonEvent(nintendoClassicQueue->payload);
@@ -117,7 +126,7 @@ private:
 #define IN_STATE(x) Display::fsm_mgr.currentStateIs(x)
 #define RESPONSE_WINDOW 200
 
-  void handlePacketState(PacketState board)
+  void handlePacketState(BoardState board)
   {
     if (board.connected(RESPONSE_WINDOW) == true)
     {
@@ -181,7 +190,7 @@ private:
   }
 };
 
-DisplayTask displayTask(PERIOD_50ms);
+DisplayTask displayTask;
 
 namespace Display
 {

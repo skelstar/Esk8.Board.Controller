@@ -10,7 +10,7 @@ public:
   // variables
   bool printSendToQueue = false;
 
-  QwiicButtonTask(unsigned long p_doWorkInterval) : TaskBase("QwiicTask", 3000, p_doWorkInterval)
+  QwiicButtonTask() : TaskBase("QwiicTask", 3000, PERIOD_50ms)
   {
     _core = CORE_0;
     _priority = TASK_PRIORITY_2;
@@ -82,7 +82,7 @@ private:
 
 //--------------------------------------------------
 
-QwiicButtonTask qwiicButtonTask(PERIOD_100ms);
+QwiicButtonTask qwiicButtonTask;
 
 namespace nsQwiicButtonTask
 {
