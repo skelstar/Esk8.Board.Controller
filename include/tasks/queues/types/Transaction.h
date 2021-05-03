@@ -10,6 +10,9 @@ public:
   float version = 0.0;
   unsigned long
       packet_id,
+      replyId,
+      startedTime,
+      responseTime,
       roundTripTime; // time it took for the board to reply
   bool moving = false;
 
@@ -21,36 +24,40 @@ public:
     name = "BoardState";
   }
 
-  void sent(ControllerData packet)
+  void start(ControllerData packet)
   {
-    _since_sent = 0;
     packet_id = packet.id;
+    startedTime = millis();
   }
 
-  void sent(ControllerConfig config_packet)
+  void start(ControllerConfig config_packet)
   {
-    _since_sent = 0;
     packet_id = config_packet.id;
+    startedTime = millis();
   }
 
   void received(VescData packet)
   {
-    _reply_packet_id = packet.id;
+    replyId = packet.id;
     roundTripTime = millis() - packet.txTime;
+    responseTime = millis();
     version = packet.version;
     moving = packet.moving;
   }
 
   bool acknowledged()
   {
-    return packet_id == _reply_packet_id;
+    return packet_id == replyId;
   }
 
-  bool connected(unsigned long responseWindow)
+  bool connected(unsigned long timeout)
   {
-    return packet_id == 0 || // ignore first packet
-           (packet_id == _reply_packet_id &&
-            roundTripTime < responseWindow);
+    bool online = packet_id == 0 || // ignore first packet
+                  millis() - responseTime < timeout;
+    if (!online)
+      Serial.printf("connected(): board offline since: %lu\n",
+                    millis() - responseTime);
+    return online;
   }
 
   static void print(BoardState item, const char *preamble = nullptr)
@@ -65,7 +72,5 @@ public:
   }
 
 private:
-  elapsedMillis _since_sent, _since_responded;
-  unsigned long
-      _reply_packet_id;
+  elapsedMillis _since_responded;
 };

@@ -44,11 +44,6 @@ Queue1::Manager<BoardState> *packetStateQueue = nullptr;
 
 //------------------------------------------------------------------
 
-#ifndef SEND_TO_BOARD_INTERVAL
-#define SEND_TO_BOARD_INTERVAL 200
-#endif
-//------------------------------------------------------------------
-
 #include <utils.h>
 
 void createQueues();
@@ -142,28 +137,27 @@ void createLocalQueueManagers()
 
 void configureTasks()
 {
-  throttleTask.printWarnings = true;
-  throttleTask.printThrottle = true;
-  throttleTask.thumbwheel.setSweepAngle(30.0);
-  throttleTask.thumbwheel.setDeadzone(5.0);
-  throttleTask.doWorkInterval = PERIOD_200ms;
+  boardCommsTask.doWorkInterval = PERIOD_50ms;
+  boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
+  // boardCommsTask.printSentPacketToBoard = true;
+  // boardCommsTask.printRxPacket = true;
 
   nintendoClassTask.doWorkInterval = PERIOD_100ms;
 
   qwiicButtonTask.doWorkInterval = PERIOD_100ms;
 
-  boardCommsTask.sendToBoardInterval = SEND_TO_BOARD_INTERVAL;
-  boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
-  boardCommsTask.doWorkInterval = PERIOD_50ms;
-  // boardCommsTask.printSentPacketToBoard = true;
-  // boardCommsTask.printRxPacket = true;
+  throttleTask.doWorkInterval = PERIOD_200ms;
+  throttleTask.printWarnings = true;
+  throttleTask.printThrottle = true;
+  throttleTask.thumbwheel.setSweepAngle(30.0);
+  throttleTask.thumbwheel.setDeadzone(5.0);
 
+  displayTask.doWorkInterval = PERIOD_100ms;
   displayTask.p_printState = PRINT_DISP_STATE;
   displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
-  displayTask.doWorkInterval = PERIOD_100ms;
 
-  remoteTask.printSendToQueue = true;
   remoteTask.doWorkInterval = SECONDS * 5;
+  remoteTask.printSendToQueue = true;
 }
 
 void startTasks()

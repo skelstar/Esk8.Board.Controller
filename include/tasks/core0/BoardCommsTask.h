@@ -20,20 +20,17 @@ public:
   bool printRxPacket = false;
   unsigned long sendToBoardInterval = SEND_TO_BOARD_INTERVAL;
 
-  elapsedMillis sinceLastBoardResponse = 0,
-                sinceSentToBoard = 0;
+  elapsedMillis sinceSentToBoard = 0;
 
   GenericClient<ControllerData, VescData> *boardClient;
 
-  Queue1::Manager<BoardState> *packetStateQueue = nullptr;
+  Queue1::Manager<BoardState> *boardTransactionQueue = nullptr;
   Queue1::Manager<ThrottleState> *throttleStateQueue = nullptr;
 
   ControllerData controller_packet;
-  BoardState packetState;
+  BoardState transaction;
 
 private:
-  // ControllerConfig controller_config;
-
   elapsedMillis since_checked_for_available;
 
 public:
@@ -45,7 +42,7 @@ public:
   //----------------------------------------------------------
   void initialiseQueues()
   {
-    packetStateQueue = createQueueManager<BoardState>("(BoardCommsTask)PacketStateQueue");
+    boardTransactionQueue = createQueueManager<BoardState>("(BoardCommsTask)BoardTransactionQueue");
     throttleStateQueue = createQueueManager<ThrottleState>("(BoardCommsTask)ThrottleStateQueue");
   }
   //----------------------------------------------------------
@@ -54,7 +51,7 @@ public:
     if (mux_SPI == nullptr)
       mux_SPI = xSemaphoreCreateMutex();
 
-    packetStateQueue->read(); // clear the queue
+    boardTransactionQueue->read(); // clear the queue
 
     controller_packet.throttle = 127;
 
@@ -81,18 +78,16 @@ public:
       controller_packet.throttle = throttleStateQueue->payload.val;
     }
 
+    // time to send to board
     if (sinceSentToBoard > sendToBoardInterval)
     {
+      // refresh the packet on the queue
+      // incase something monitoring the connected state
+      boardTransactionQueue->send(&transaction, printSendToQueue ? QueueBase::printSend : nullptr);
+
       sinceSentToBoard = 0;
       BoardComms::sendPacketToBoard();
     }
-
-    // have to send so display knows when board goes offline, maybe
-    // should poll in DisplayTask instead
-    // if (sinceLastBoardResponse > sendToBoardInterval)
-    // {
-    //   packetStateQueue->send(&packetState);
-    // }
   }
 
   void cleanup()
@@ -124,7 +119,11 @@ namespace BoardComms
                     boardCommsTask.controller_packet.txTime,
                     boardCommsTask.controller_packet.id);
 
-    boardCommsTask.packetState.sent(boardCommsTask.controller_packet);
+    // store transaction data
+    if ((millis() - boardCommsTask.transaction.responseTime) < boardCommsTask.sendToBoardInterval)
+    {
+      boardCommsTask.transaction.start(boardCommsTask.controller_packet); //startedTime = millis();
+    }
 
     if (!success)
       Serial.printf("Unable to send CONTROL packet to board, id: %lu\n", boardCommsTask.controller_packet.id);
@@ -138,15 +137,14 @@ namespace BoardComms
       VescData::print(packet, "[boardPacketAvailable_cb]rx");
 
     // map packet to BoardState type
-    boardCommsTask.packetState.received(packet);
+    boardCommsTask.transaction.received(packet);
 
     if (packet.reason == CONFIG_RESPONSE)
     {
       Serial.printf("CONFIG_RESPONSE id: %lu\n", packet.id);
     }
 
-    boardCommsTask.packetStateQueue->send(&boardCommsTask.packetState, boardCommsTask.printSendToQueue ? QueueBase::printSend : nullptr);
-    boardCommsTask.sinceLastBoardResponse = 0;
+    boardCommsTask.boardTransactionQueue->send(&boardCommsTask.transaction, boardCommsTask.printSendToQueue ? QueueBase::printSend : nullptr);
 
     if (boardCommsTask.printRxPacket)
       VescData::print(packet, "[Packet_cb]");

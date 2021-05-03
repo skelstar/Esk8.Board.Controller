@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tasks/queues/types/PacketState.h>
+#include <tasks/queues/types/Transaction.h>
 #include <tasks/queues/types/NintendoButtonEvent.h>
 #include <tasks/queues/types/PrimaryButton.h>
 #include <tasks/queues/types/ThrottleState.h>

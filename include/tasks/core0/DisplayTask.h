@@ -64,6 +64,8 @@ private:
     Display::addTransitions();
 
     Display::_fsm.run_machine();
+
+    packetState = new BoardState();
   }
   //--------------------------------
 
@@ -71,18 +73,15 @@ private:
   {
     return since_checked_online > PERIOD_1s;
   }
-  //--------------------------------
+  //===================================================================
   void doWork()
   {
-    // will check for online regardless of anything being new on the queue
+    // update packetState if anything new on the queue
     if (packetStateQueue->hasValue() && packetStateQueue->payload.event_id > 0)
     {
       packetState = new BoardState(packetStateQueue->payload);
     }
-    Serial.printf("packet: connected=%d sent_time=%lu roundTrip=%lu\n",
-                  packetState->connected(200),
-                  packetState->sent_time,
-                  packetState->roundTripTime);
+    // will check for online regardless of anything being new on the queue
     handlePacketState(*packetState);
 
     if (nintendoClassicQueue->hasValue())
@@ -96,6 +95,7 @@ private:
 
     Display::_fsm.run_machine();
   }
+  //===================================================================
 
   void cleanup()
   {
@@ -124,27 +124,27 @@ private:
 
 #define NOT_IN_STATE(x) !Display::fsm_mgr.currentStateIs(x)
 #define IN_STATE(x) Display::fsm_mgr.currentStateIs(x)
-#define RESPONSE_WINDOW 200
+#define RESPONSE_WINDOW 500
 
-  void handlePacketState(BoardState board)
+  void handlePacketState(BoardState transaction)
   {
-    if (board.connected(RESPONSE_WINDOW) == true)
+    if (transaction.connected(RESPONSE_WINDOW) == true)
     {
       // check version
-      if (board.version != (float)VERSION_BOARD_COMPAT &&
-          board.version > 0.0 &&
+      if (transaction.version != (float)VERSION_BOARD_COMPAT &&
+          transaction.version > 0.0 &&
           NOT_IN_STATE(Display::ST_BOARD_VERSION_DOESNT_MATCH))
       {
-        Display::_g_BoardVersion = board.version;
+        Display::_g_BoardVersion = transaction.version;
         Display::fsm_mgr.trigger(Display::TR_VERSION_DOESNT_MATCH);
       }
       // moving
-      else if (NOT_IN_STATE(Display::ST_MOVING_SCREEN) && board.moving)
+      else if (NOT_IN_STATE(Display::ST_MOVING_SCREEN) && transaction.moving)
       {
         Display::fsm_mgr.trigger(Display::Trigger::TR_MOVING);
       }
       // stopped
-      else if (NOT_IN_STATE(Display::ST_STOPPED_SCREEN) && !board.moving)
+      else if (NOT_IN_STATE(Display::ST_STOPPED_SCREEN) && !transaction.moving)
       {
         Display::fsm_mgr.trigger(Display::Trigger::TR_STOPPED);
       }
