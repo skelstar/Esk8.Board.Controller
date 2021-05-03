@@ -12,8 +12,7 @@ public:
       packet_id,
       replyId,
       startedTime,
-      responseTime,
-      roundTripTime; // time it took for the board to reply
+      responseTime;
   bool moving = false;
 
 public:
@@ -39,7 +38,6 @@ public:
   void received(VescData packet)
   {
     replyId = packet.id;
-    roundTripTime = millis() - packet.txTime;
     responseTime = millis();
     version = packet.version;
     moving = packet.moving;
@@ -67,7 +65,6 @@ public:
     Serial.printf("event_id: %lu  ", item.event_id);
     Serial.printf("packet_id: %lu:  ", item.packet_id);
     Serial.printf("moving: %d:  ", item.moving);
-    Serial.printf("round trip: %lu:  ", item.roundTripTime);
     Serial.println();
   }
 
