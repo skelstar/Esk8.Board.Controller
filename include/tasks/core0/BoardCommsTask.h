@@ -122,7 +122,7 @@ namespace BoardComms
     // store transaction data
     if ((millis() - boardCommsTask.transaction.responseTime) < boardCommsTask.sendToBoardInterval)
     {
-      boardCommsTask.transaction.start(boardCommsTask.controller_packet); //startedTime = millis();
+      boardCommsTask.transaction.start(boardCommsTask.controller_packet);
     }
 
     if (!success)

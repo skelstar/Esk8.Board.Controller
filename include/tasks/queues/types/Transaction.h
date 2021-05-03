@@ -11,7 +11,6 @@ public:
   unsigned long
       packet_id,
       replyId,
-      startedTime,
       responseTime;
   bool moving = false;
 
@@ -26,13 +25,11 @@ public:
   void start(ControllerData packet)
   {
     packet_id = packet.id;
-    startedTime = millis();
   }
 
   void start(ControllerConfig config_packet)
   {
     packet_id = config_packet.id;
-    startedTime = millis();
   }
 
   void received(VescData packet)
