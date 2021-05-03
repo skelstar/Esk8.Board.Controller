@@ -67,7 +67,7 @@ void setUp()
   // configure queues
   displayEventQueue = createQueue<DisplayEvent>("(test)displayEventQueue");
   primaryButtonQueue = createQueue<PrimaryButtonState>("(test)primaryButtonQueue");
-  packetStateQueue = createQueue<PacketState>("(test)packetStateQueue");
+  transactionQueue = createQueue<PacketState>("(test)transactionQueue");
   nintendoQueue = createQueue<NintendoButtonEvent>("(test)nintendoQueue");
   throttleQueue = createQueue<ThrottleState>("(test)throttleQueue");
 

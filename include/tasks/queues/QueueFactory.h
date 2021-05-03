@@ -26,7 +26,7 @@ Queue1::Manager<T> *createQueueManager(const char *name, TickType_t ticks = TICK
   {
     return new Queue1::Manager<T>(xThrottleQueueHandle, TICKS_5ms, name);
   }
-  if (std::is_same<T, BoardState>::value)
+  if (std::is_same<T, Transaction>::value)
   {
     return new Queue1::Manager<T>(xPacketStateQueueHandle, TICKS_5ms, name);
   }

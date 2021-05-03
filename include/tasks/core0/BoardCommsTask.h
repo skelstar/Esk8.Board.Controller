@@ -24,11 +24,11 @@ public:
 
   GenericClient<ControllerData, VescData> *boardClient;
 
-  Queue1::Manager<BoardState> *boardTransactionQueue = nullptr;
+  Queue1::Manager<Transaction> *boardTransactionQueue = nullptr;
   Queue1::Manager<ThrottleState> *throttleStateQueue = nullptr;
 
   ControllerData controller_packet;
-  BoardState transaction;
+  Transaction transaction;
 
 private:
   elapsedMillis since_checked_for_available;
@@ -42,7 +42,7 @@ public:
   //----------------------------------------------------------
   void initialiseQueues()
   {
-    boardTransactionQueue = createQueueManager<BoardState>("(BoardCommsTask)BoardTransactionQueue");
+    boardTransactionQueue = createQueueManager<Transaction>("(BoardCommsTask)BoardTransactionQueue");
     throttleStateQueue = createQueueManager<ThrottleState>("(BoardCommsTask)ThrottleStateQueue");
   }
   //----------------------------------------------------------
@@ -136,7 +136,7 @@ namespace BoardComms
     if (boardCommsTask.printRxPacket)
       VescData::print(packet, "[boardPacketAvailable_cb]rx");
 
-    // map packet to BoardState type
+    // map packet to Transaction type
     boardCommsTask.transaction.received(packet);
 
     if (packet.reason == CONFIG_RESPONSE)

@@ -63,7 +63,7 @@ void hasValue_responds_with_correct_value()
   xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 
-  packetStateQueue = createQueueManager<PacketState>("(test)packetStateQueue");
+  transactionQueue = createQueueManager<PacketState>("(test)transactionQueue");
   throttleQueue = createQueueManager<ThrottleState>("(test)throttleQueue");
 
   boardCommsTask.start(BoardComms::task1);
@@ -89,7 +89,7 @@ void hasValue_responds_with_correct_value()
 
   while (counter < 5)
   {
-    TEST_ASSERT_TRUE(packetStateQueue->hasValue());
+    TEST_ASSERT_TRUE(transactionQueue->hasValue());
     counter++;
 
     vTaskDelay(PERIOD_500ms);
@@ -105,7 +105,7 @@ class RepeaterTask : public TaskBase
 public:
   PacketState *packet;
 
-  Queue1::Manager<PacketState> *packetStateQueue = nullptr;
+  Queue1::Manager<PacketState> *transactionQueue = nullptr;
 
   RepeaterTask() : TaskBase("RepeaterTask", 3000, PERIOD_20ms)
   {
@@ -115,32 +115,32 @@ public:
   //----------------------------------------------------------
   void initialiseQueues()
   {
-    packetStateQueue = createQueueManager<PacketState>("(RepeaterTask)PacketQueue");
+    transactionQueue = createQueueManager<PacketState>("(RepeaterTask)PacketQueue");
   }
   //----------------------------------------------------------
   void initialise()
   {
     packet = new PacketState();
-    packetStateQueue->read(); // clear the queue
+    transactionQueue->read(); // clear the queue
   }
   //----------------------------------------------------------
 
   void doWork()
   {
-    if (packetStateQueue->hasValue())
+    if (transactionQueue->hasValue())
     {
-      packet = new PacketState(packetStateQueue->payload);
+      packet = new PacketState(transactionQueue->payload);
       PacketState::print(*packet, "-->[Task]");
 
       packet->moving = 1;
-      packetStateQueue->send(packet);
+      transactionQueue->send(packet);
       PacketState::print(*packet, "[Task]-->");
     }
   }
 
   void cleanup()
   {
-    delete (packetStateQueue);
+    delete (transactionQueue);
   }
 };
 
@@ -160,7 +160,7 @@ void twoTasks_usingSameQueue_canReadAndRespond()
 
   xPacketStateQueueHandle = xQueueCreate(1, sizeof(PacketState *));
 
-  packetStateQueue = createQueueManager<PacketState>("(Test)packetStateQueue");
+  transactionQueue = createQueueManager<PacketState>("(Test)transactionQueue");
 
   repeaterTask.start(nsRepeaterTask::task1);
 
@@ -183,16 +183,16 @@ void twoTasks_usingSameQueue_canReadAndRespond()
   {
     DEBUG("------------------------------");
     packet->moving = 0;
-    packetStateQueue->send(packet);
+    transactionQueue->send(packet);
     since_sent = 0;
     ulong sentId = packet->event_id;
     PacketState::print(*packet, "[Test]-->");
 
-    while (!packetStateQueue->hasValue() && since_sent < PERIOD_200ms)
+    while (!transactionQueue->hasValue() && since_sent < PERIOD_200ms)
     {
       vTaskDelay(TICKS_50ms);
     }
-    packet = new PacketState(packetStateQueue->payload);
+    packet = new PacketState(transactionQueue->payload);
     PacketState::print(*packet, "-->[Test]");
 
     TEST_ASSERT_EQUAL(sentId + 1, packet->event_id);

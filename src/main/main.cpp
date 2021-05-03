@@ -40,7 +40,7 @@ NRF24L01Lib nrf24;
 
 // LOCAL QUEUE MANAGERS -----------------------
 
-Queue1::Manager<BoardState> *packetStateQueue = nullptr;
+Queue1::Manager<Transaction> *transactionQueue = nullptr;
 
 //------------------------------------------------------------------
 
@@ -86,7 +86,7 @@ void setup()
 //---------------------------------------------------------------
 
 elapsedMillis since_checked_queues = 0;
-BoardState board;
+Transaction board;
 
 void loop()
 {
@@ -95,11 +95,11 @@ void loop()
     since_checked_queues = 0;
 
     // changed?
-    if (packetStateQueue->hasValue() &&
-        board.moving != packetStateQueue->payload.moving)
+    if (transactionQueue->hasValue() &&
+        board.moving != transactionQueue->payload.moving)
     {
       // moving
-      if (packetStateQueue->payload.moving)
+      if (transactionQueue->payload.moving)
       {
         nintendoClassTask.enabled = false;
         remoteTask.enabled = false;
@@ -111,7 +111,7 @@ void loop()
         remoteTask.enabled = true;
       }
 
-      board.moving = packetStateQueue->payload.moving;
+      board.moving = transactionQueue->payload.moving;
     }
   }
 
@@ -125,14 +125,14 @@ void createQueues()
   xBatteryInfo = xQueueCreate(1, sizeof(BatteryInfo *));
   xDisplayQueueHandle = xQueueCreate(1, sizeof(DisplayEvent *));
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
-  xPacketStateQueueHandle = xQueueCreate(1, sizeof(BoardState *));
+  xPacketStateQueueHandle = xQueueCreate(1, sizeof(Transaction *));
   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 }
 
 void createLocalQueueManagers()
 {
-  packetStateQueue = createQueueManager<BoardState>("(main) packetStateQueue");
+  transactionQueue = createQueueManager<Transaction>("(main) transactionQueue");
 }
 
 void configureTasks()

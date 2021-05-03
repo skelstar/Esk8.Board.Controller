@@ -80,7 +80,7 @@ void setUp()
   // configure queues
   displayEventQueue = createQueue<DisplayEvent>("(test)displayEventQueue");
   primaryButtonQueue = createQueue<PrimaryButtonState>("(test)primaryButtonQueue");
-  packetStateQueue = createQueue<PacketState>("(test)packetStateQueue");
+  transactionQueue = createQueue<PacketState>("(test)transactionQueue");
   nintendoQueue = createQueue<NintendoButtonEvent>("(test)nintendoQueue");
   throttleQueue = createQueue<ThrottleState>("(test)throttleQueue");
 
@@ -125,8 +125,8 @@ void BoardCommsTask_withMockGenericClient_repliesWithCorrectData()
 
   vTaskDelay(TICKS_500ms);
 
-  TEST_ASSERT_TRUE(packetStateQueue->hasValue());
-  TEST_ASSERT_EQUAL(VERSION_BOARD_COMPAT, packetStateQueue->payload.version);
+  TEST_ASSERT_TRUE(transactionQueue->hasValue());
+  TEST_ASSERT_EQUAL(VERSION_BOARD_COMPAT, transactionQueue->payload.version);
 }
 
 //===================================================================

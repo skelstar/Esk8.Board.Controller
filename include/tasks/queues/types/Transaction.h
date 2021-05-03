@@ -4,7 +4,7 @@
 #include <QueueBase.h>
 #include <elapsedMillis.h>
 
-class BoardState : public QueueBase
+class Transaction : public QueueBase
 {
 public:
   float version = 0.0;
@@ -17,11 +17,11 @@ public:
   bool moving = false;
 
 public:
-  BoardState() : QueueBase()
+  Transaction() : QueueBase()
   {
     event_id = 0;
     packet_id = 0;
-    name = "BoardState";
+    name = "Transaction";
   }
 
   void start(ControllerData packet)
@@ -60,7 +60,7 @@ public:
     return online;
   }
 
-  static void print(BoardState item, const char *preamble = nullptr)
+  static void print(Transaction item, const char *preamble = nullptr)
   {
     if (preamble != nullptr)
       Serial.printf("%s: ", preamble);

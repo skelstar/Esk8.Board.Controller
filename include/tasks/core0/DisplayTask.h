@@ -21,13 +21,13 @@ private:
   DisplayEvent displayEvent;
 
   Queue1::Manager<BatteryInfo> *batteryQueue = nullptr;
-  Queue1::Manager<BoardState> *packetStateQueue = nullptr;
+  Queue1::Manager<Transaction> *transactionQueue = nullptr;
   Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
   Queue1::Manager<NintendoButtonEvent> *nintendoClassicQueue = nullptr;
   Queue1::Manager<DisplayEvent> *displayEventQueue = nullptr;
   Queue1::Manager<ThrottleState> *throttleQueue = nullptr;
 
-  BoardState *packetState;
+  Transaction *transaction;
 
   elapsedMillis since_checked_online = 0;
 
@@ -43,7 +43,7 @@ private:
   void initialiseQueues()
   {
     batteryQueue = createQueueManager<BatteryInfo>("(DisplayTask)BatteryInfo");
-    packetStateQueue = createQueueManager<BoardState>("(DisplayBase)PacketStateQueue");
+    transactionQueue = createQueueManager<Transaction>("(DisplayBase)PacketStateQueue");
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(DisplayBase)PrimaryButtonQueue");
     nintendoClassicQueue = createQueueManager<NintendoButtonEvent>("(DisplayBase)NintendoClassicQueue");
     displayEventQueue = createQueueManager<DisplayEvent>("(DisplayBase)DisplayEventQueue");
@@ -65,7 +65,7 @@ private:
 
     Display::_fsm.run_machine();
 
-    packetState = new BoardState();
+    transaction = new Transaction();
   }
   //--------------------------------
 
@@ -76,13 +76,13 @@ private:
   //===================================================================
   void doWork()
   {
-    // update packetState if anything new on the queue
-    if (packetStateQueue->hasValue() && packetStateQueue->payload.event_id > 0)
+    // update transaction if anything new on the queue
+    if (transactionQueue->hasValue() && transactionQueue->payload.event_id > 0)
     {
-      packetState = new BoardState(packetStateQueue->payload);
+      transaction = new Transaction(transactionQueue->payload);
     }
     // will check for online regardless of anything being new on the queue
-    handlePacketState(*packetState);
+    handlePacketState(*transaction);
 
     if (nintendoClassicQueue->hasValue())
       handleNintendoButtonEvent(nintendoClassicQueue->payload);
@@ -100,7 +100,7 @@ private:
   void cleanup()
   {
     delete (batteryQueue);
-    delete (packetStateQueue);
+    delete (transactionQueue);
     delete (primaryButtonQueue);
     delete (nintendoClassicQueue);
     delete (displayEventQueue);
@@ -126,7 +126,7 @@ private:
 #define IN_STATE(x) Display::fsm_mgr.currentStateIs(x)
 #define RESPONSE_WINDOW 500
 
-  void handlePacketState(BoardState transaction)
+  void handlePacketState(Transaction transaction)
   {
     if (transaction.connected(RESPONSE_WINDOW) == true)
     {
