@@ -142,7 +142,7 @@ void configureTasks()
   // boardCommsTask.printSentPacketToBoard = true;
   // boardCommsTask.printRxPacket = true;
 
-  nintendoClassTask.doWorkInterval = PERIOD_100ms;
+  nintendoClassTask.doWorkInterval = PERIOD_50ms;
 
   qwiicButtonTask.doWorkInterval = PERIOD_100ms;
 
@@ -152,7 +152,7 @@ void configureTasks()
   throttleTask.thumbwheel.setSweepAngle(30.0);
   throttleTask.thumbwheel.setDeadzone(5.0);
 
-  displayTask.doWorkInterval = PERIOD_100ms;
+  displayTask.doWorkInterval = PERIOD_50ms;
   displayTask.p_printState = PRINT_DISP_STATE;
   displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
 
@@ -181,6 +181,7 @@ void waitForTasks()
       throttleTask.ready == false ||
       false)
     vTaskDelay(PERIOD_10ms);
+  Serial.printf("-- all tasks ready! --\n");
 }
 
 void enableTasks(bool print)

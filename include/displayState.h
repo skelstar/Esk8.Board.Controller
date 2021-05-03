@@ -33,7 +33,16 @@ namespace Display
     TR_REMOTE_BATTERY_CHANGED,
     TR_SELECT_BUTTON_CLICK,
     TR_VERSION_DOESNT_MATCH,
+
+    TR_UP_BUTTON_CLICKED,
+    TR_RIGHT_BUTTON_CLICKED,
+    TR_DOWN_BUTTON_CLICKED,
+    TR_LEFT_BUTTON_CLICKED,
+    TR_A_BUTTON_CLICKED,
+    TR_B_BUTTON_CLICKED,
+    TR_SEL_BUTTON_CLICKED,
     TR_MENU_BUTTON_CLICKED,
+
     TR_OPTION_TIMED_OUT,
     TR_MAGNET_NOT_DETECTED,
     TR_MAGNET_DETECTED,
@@ -61,6 +70,20 @@ namespace Display
       return "TR_SELECT_BUTTON_CLICK";
     case TR_VERSION_DOESNT_MATCH:
       return "TR_VERSION_DOESNT_MATCH";
+    case TR_UP_BUTTON_CLICKED:
+      return "TR_UP_BUTTON_CLICKED";
+    case TR_RIGHT_BUTTON_CLICKED:
+      return "TR_RIGHT_BUTTON_CLICKED";
+    case TR_DOWN_BUTTON_CLICKED:
+      return "TR_DOWN_BUTTON_CLICKED";
+    case TR_LEFT_BUTTON_CLICKED:
+      return "TR_LEFT_BUTTON_CLICKED";
+    case TR_A_BUTTON_CLICKED:
+      return "TR_A_BUTTON_CLICKED";
+    case TR_B_BUTTON_CLICKED:
+      return "TR_B_BUTTON_CLICKED";
+    case TR_SEL_BUTTON_CLICKED:
+      return "TR_SEL_BUTTON_CLICKED";
     case TR_MENU_BUTTON_CLICKED:
       return "TR_MENU_BUTTON_CLICKED";
     case TR_OPTION_TIMED_OUT:
@@ -88,6 +111,7 @@ namespace Display
     ST_MAGNET_NOT_DETECTED,
     ST_BOARD_VERSION_DOESNT_MATCH,
     ST_OPTION_PUSH_TO_START,
+    ST_OPTION_THROTTLE_SETTING,
     ST_SHOW_SETTINGS,
     ST_TOGGLE_PUSH_TO_START,
   };
@@ -118,6 +142,8 @@ namespace Display
       return "ST_SHOW_SETTINGS";
     case ST_TOGGLE_PUSH_TO_START:
       return "ST_TOGGLE_PUSH_TO_START";
+    case ST_OPTION_THROTTLE_SETTING:
+      return "ST_OPTION_THROTTLE_SETTING";
     }
     return "OUT OF RANGE: Display::stateID()";
   }
@@ -215,7 +241,6 @@ namespace Display
         }
         case Display::TR_SELECT_BUTTON_CLICK:
         {
-          sinceShowingOptionScreen = 0;
           bool enabled = featureService.get<bool>(FeatureType::PUSH_TO_START);
           featureService.set(PUSH_TO_START, !enabled);
           screenPropValue<bool>("Push to start", enabled == false ? "ON" : "OFF");
@@ -225,6 +250,48 @@ namespace Display
           Serial.printf("Unhandled event: %s\n", Display::getTrigger(fsm_mgr.lastEvent()));
         }
       },
+      [] {
+        if (sinceShowingOptionScreen > OPTION_SCREEN_TIMEOUT)
+          fsm_mgr.trigger(Display::TR_OPTION_TIMED_OUT);
+      },
+      NULL);
+
+  int throttleValue = 0;
+
+  State stOptionThrottleSetting(
+      ST_OPTION_THROTTLE_SETTING,
+      [] {
+        fsm_mgr.printState(ST_OPTION_THROTTLE_SETTING);
+        sinceShowingOptionScreen = 0;
+        switch (fsm_mgr.lastEvent())
+        {
+        case Display::TR_MENU_BUTTON_CLICKED:
+        {
+          char buff[5];
+          sprintf(buff, "%d", throttleValue);
+          screenPropValue<int>("Throttle 1", buff);
+          break;
+        }
+        case Display::TR_DOWN_BUTTON_CLICKED:
+        {
+          if (throttleValue > 0)
+            throttleValue--;
+          char buff[5];
+          sprintf(buff, "%d", throttleValue);
+          screenPropValue<int>("Throttle 2", buff);
+          break;
+        }
+        case Display::TR_UP_BUTTON_CLICKED:
+        {
+          throttleValue++;
+          char buff[5];
+          sprintf(buff, "%d", throttleValue);
+          screenPropValue<int>("Throttle 2", buff);
+          break;
+        }
+        default:
+          Serial.printf("Unhandled event: %s\n", Display::getTrigger(fsm_mgr.lastEvent()));
+        } },
       [] {
         if (sinceShowingOptionScreen > OPTION_SCREEN_TIMEOUT)
           fsm_mgr.trigger(Display::TR_OPTION_TIMED_OUT);
@@ -251,9 +318,15 @@ namespace Display
 
     // Options
     _fsm.add_transition(&stStopped, &stOptionPushToStart, Display::TR_MENU_BUTTON_CLICKED, NULL);
-    _fsm.add_transition(&stOptionPushToStart, &stStopped, Display::TR_MENU_BUTTON_CLICKED, NULL);
+    // _fsm.add_transition(&stOptionPushToStart, &stStopped, Display::TR_MENU_BUTTON_CLICKED, NULL);
     _fsm.add_transition(&stOptionPushToStart, &stOptionPushToStart, Display::TR_SELECT_BUTTON_CLICK, NULL);
     _fsm.add_transition(&stOptionPushToStart, &stStopped, Display::TR_OPTION_TIMED_OUT, NULL);
+
+    _fsm.add_transition(&stOptionPushToStart, &stOptionThrottleSetting, Display::TR_MENU_BUTTON_CLICKED, NULL);
+    _fsm.add_transition(&stOptionThrottleSetting, &stStopped, Display::TR_MENU_BUTTON_CLICKED, NULL);
+    _fsm.add_transition(&stOptionThrottleSetting, &stStopped, Display::TR_OPTION_TIMED_OUT, NULL);
+    _fsm.add_transition(&stOptionThrottleSetting, &stOptionThrottleSetting, Display::TR_UP_BUTTON_CLICKED, NULL);
+    _fsm.add_transition(&stOptionThrottleSetting, &stOptionThrottleSetting, Display::TR_DOWN_BUTTON_CLICKED, NULL);
 
     // TR_MOVING
     _fsm.add_transition(&stateDisconnected, &stMoving, Display::TR_MOVING, NULL);

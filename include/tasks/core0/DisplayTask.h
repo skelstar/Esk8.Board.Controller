@@ -27,12 +27,12 @@ private:
   Queue1::Manager<DisplayEvent> *displayEventQueue = nullptr;
   Queue1::Manager<ThrottleState> *throttleQueue = nullptr;
 
-  Transaction *transaction;
+  Transaction transaction;
 
   elapsedMillis since_checked_online = 0;
 
 public:
-  DisplayTask() : TaskBase("DisplayTask", 5000, PERIOD_50ms)
+  DisplayTask() : TaskBase("DisplayTask", 10000, PERIOD_50ms)
   {
     _core = CORE_0;
     _priority = TASK_PRIORITY_1;
@@ -65,13 +65,7 @@ private:
 
     Display::_fsm.run_machine();
 
-    transaction = new Transaction();
-  }
-  //--------------------------------
-
-  bool timeToDoWork()
-  {
-    return since_checked_online > PERIOD_1s;
+    // transaction = new Transaction();
   }
   //===================================================================
   void doWork()
@@ -79,10 +73,10 @@ private:
     // update transaction if anything new on the queue
     if (transactionQueue->hasValue() && transactionQueue->payload.event_id > 0)
     {
-      transaction = new Transaction(transactionQueue->payload);
+      transaction = transactionQueue->payload;
     }
     // will check for online regardless of anything being new on the queue
-    handlePacketState(*transaction);
+    handlePacketState(transaction);
 
     if (nintendoClassicQueue->hasValue())
       handleNintendoButtonEvent(nintendoClassicQueue->payload);
@@ -126,7 +120,7 @@ private:
 #define IN_STATE(x) Display::fsm_mgr.currentStateIs(x)
 #define RESPONSE_WINDOW 500
 
-  void handlePacketState(Transaction transaction)
+  void handlePacketState(Transaction &transaction)
   {
     if (transaction.connected(RESPONSE_WINDOW) == true)
     {
@@ -159,16 +153,30 @@ private:
     }
   }
 
-  void handleNintendoButtonEvent(NintendoButtonEvent payload)
+  void handleNintendoButtonEvent(const NintendoButtonEvent &payload)
   {
     if (payload.button == NintendoController::BUTTON_START)
       Display::fsm_mgr.trigger(Display::TR_MENU_BUTTON_CLICKED);
+    else if (payload.button == NintendoController::BUTTON_UP)
+      Display::fsm_mgr.trigger(Display::TR_UP_BUTTON_CLICKED);
+    else if (payload.button == NintendoController::BUTTON_RIGHT)
+      Display::fsm_mgr.trigger(Display::TR_RIGHT_BUTTON_CLICKED);
+    else if (payload.button == NintendoController::BUTTON_DOWN)
+      Display::fsm_mgr.trigger(Display::TR_DOWN_BUTTON_CLICKED);
+    else if (payload.button == NintendoController::BUTTON_LEFT)
+      Display::fsm_mgr.trigger(Display::TR_LEFT_BUTTON_CLICKED);
+    else if (payload.button == NintendoController::BUTTON_A)
+      Display::fsm_mgr.trigger(Display::TR_A_BUTTON_CLICKED);
+    else if (payload.button == NintendoController::BUTTON_B)
+      Display::fsm_mgr.trigger(Display::TR_B_BUTTON_CLICKED);
+    else if (payload.button == NintendoController::BUTTON_SELECT)
+      Display::fsm_mgr.trigger(Display::TR_SEL_BUTTON_CLICKED);
 
     // if (payload.button != NintendoController::BUTTON_NONE)
     //   Serial.printf("BUTTON: %s\n", NintendoController::getButtonName(payload.button));
   }
 
-  void handleBatteryQueue(BatteryInfo battery)
+  void handleBatteryQueue(const BatteryInfo &battery)
   {
     bool changed = Display::_g_RemoteBattery.volts != battery.volts;
     Display::_g_RemoteBattery.charging = battery.charging;
@@ -179,7 +187,7 @@ private:
       Display::fsm_mgr.trigger(Display::TR_REMOTE_BATTERY_CHANGED);
   }
 
-  void handleThrottleResponse(ThrottleState throttleState)
+  void handleThrottleResponse(const ThrottleState &throttleState)
   {
     if (throttleState.status == MagneticThumbwheelClass::MAG_NOT_DETECTED &&
         NOT_IN_STATE(Display::ST_MAGNET_NOT_DETECTED))
