@@ -236,10 +236,10 @@ namespace Display
 
   void clearResetCounters()
   {
-    if (stats.controllerResets > 0)
-      stats.clearControllerResets();
-    else if (stats.boardResets > 0)
-      stats.clearBoardResets();
+    // if (stats.controllerResets > 0)
+    //   stats.clearControllerResets();
+    // else if (stats.boardResets > 0)
+    //   stats.clearBoardResets();
   }
 
   void addTransitions()

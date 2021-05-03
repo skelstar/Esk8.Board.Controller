@@ -23,8 +23,6 @@ public:
   elapsedMillis since_last_response = 0,
                 since_sent_to_board = 0;
 
-  BoardClass board;
-
   PacketState packetState;
 
   GenericClient<ControllerData, VescData> *boardClient;
@@ -141,7 +139,6 @@ namespace BoardComms
 
     // map packet to PacketState type
     boardCommsTask.packetState.received(packet);
-    boardCommsTask.board.save(packet);
 
     if (packet.reason == CONFIG_RESPONSE)
     {
