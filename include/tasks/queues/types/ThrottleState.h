@@ -14,4 +14,13 @@ public:
     name = "ThrottleState";
     status = 0; // OK
   }
+
+  static void print(ThrottleState item, const char *preamble = nullptr)
+  {
+    if (preamble != nullptr)
+      Serial.printf("%s: ", preamble);
+    Serial.printf("event_id: %lu  ", item.event_id);
+    Serial.printf("throttle: %d:  ", item.val);
+    Serial.println();
+  }
 };

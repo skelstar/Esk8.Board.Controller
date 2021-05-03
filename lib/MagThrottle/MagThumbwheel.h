@@ -127,11 +127,10 @@ public:
 
     uint8_t oldThrottle = _throttle;
 
-    bool usesMapper = abs(delta) >= _deadzone;
-
     _throttle = 127;
 
-    if (usesMapper)
+    bool outsideDeadzone = abs(delta) >= _deadzone;
+    if (outsideDeadzone)
     {
       if (_accel_direction == DIR_CLOCKWISE)
       {
@@ -152,10 +151,7 @@ public:
 
     changed = _throttle != oldThrottle;
 
-    if (changed && printThrottle)
-      Serial.printf("throttle: %d\n", _throttle);
-
-    return ReturnCode::OK; // OK
+    return ReturnCode::OK;
   }
 
   void centre()

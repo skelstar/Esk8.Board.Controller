@@ -25,6 +25,7 @@ private:
   Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
   Queue1::Manager<NintendoButtonEvent> *nintendoClassicQueue = nullptr;
   Queue1::Manager<DisplayEvent> *displayEventQueue = nullptr;
+  Queue1::Manager<ThrottleState> *throttleQueue = nullptr;
 
   elapsedMillis since_checked_online = 0;
 
@@ -44,6 +45,7 @@ private:
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(DisplayBase)PrimaryButtonQueue");
     nintendoClassicQueue = createQueueManager<NintendoButtonEvent>("(DisplayBase)NintendoClassicQueue");
     displayEventQueue = createQueueManager<DisplayEvent>("(DisplayBase)DisplayEventQueue");
+    throttleQueue = createQueueManager<ThrottleState>("(DisplayTask)ThrottleQueue");
   }
   //--------------------------------
   void initialise()
@@ -80,6 +82,9 @@ private:
     if (batteryQueue->hasValue())
       handleBatteryQueue(batteryQueue->payload);
 
+    if (throttleQueue->hasValue())
+      handleThrottleResponse(throttleQueue->payload);
+
     Display::_fsm.run_machine();
   }
 
@@ -109,6 +114,7 @@ private:
   }
 
 #define NOT_IN_STATE(x) !Display::fsm_mgr.currentStateIs(x)
+#define IN_STATE(x) Display::fsm_mgr.currentStateIs(x)
 #define RESPONSE_WINDOW 200
 
   void handlePacketState(PacketState board)
@@ -162,6 +168,16 @@ private:
 
     if (changed)
       Display::fsm_mgr.trigger(Display::TR_REMOTE_BATTERY_CHANGED);
+  }
+
+  void handleThrottleResponse(ThrottleState throttleState)
+  {
+    if (throttleState.status == MagneticThumbwheelClass::MAG_NOT_DETECTED &&
+        NOT_IN_STATE(Display::ST_MAGNET_NOT_DETECTED))
+      Display::fsm_mgr.trigger(Display::TR_MAGNET_NOT_DETECTED);
+    if (IN_STATE(Display::ST_MAGNET_NOT_DETECTED) &&
+        throttleState.status == MagneticThumbwheelClass::OK)
+      Display::fsm_mgr.trigger(Display::TR_MAGNET_DETECTED);
   }
 };
 

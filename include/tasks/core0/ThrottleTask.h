@@ -3,16 +3,10 @@
 #include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
-#include <MagThumbwheel.h>
 
 namespace nsThrottleTask
 {
   PrimaryButtonState primaryButton;
-
-  // bool throttleEnabled_cb()
-  // {
-  //   return true; // primaryButton.pressed;
-  // };
 }
 
 class ThrottleTask : public TaskBase
@@ -79,14 +73,16 @@ private:
     }
 
     // check magthrottle
+    uint8_t og_throttle = thumbwheel.get();
     uint8_t status = thumbwheel.update();
     throttle.val = thumbwheel.get();
     throttle.status = status;
-    if (status == MagneticThumbwheelClass::MAG_NOT_DETECTED)
-      Serial.printf("ERROR: magnet not detected!\n");
 
-    // test to see if anything changed (maybe update^^ returns changed?)
-    throttleQueue->send(&throttle);
+    if (og_throttle != throttle.val || status != MagneticThumbwheelClass::OK)
+    {
+      throttleQueue->send(&throttle);
+      ThrottleState::print(throttle, "[ThrottleTask]-->");
+    }
   }
 
   void

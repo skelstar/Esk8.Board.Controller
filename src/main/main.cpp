@@ -18,9 +18,9 @@ SemaphoreHandle_t mux_SPI;
 #include <QueueManager.h>
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
-#include <BoardClass.h>
 #include <Wire.h>
 #include <SparkFun_Qwiic_Button.h>
+#include <MagThumbwheel.h>
 
 #include <RF24.h>
 #include <RF24Network.h>

@@ -15,6 +15,7 @@
 #define FONT_MED &Orbitron_Medium_16
 #define FONT_LG &Orbitron_Light_24
 #define FONT_XL &Orbitron_Light_32
+#define FONT_XL_B &Orbitron_Bold_48
 
 #define TOP_BAR 10
 #define LINE_1 1

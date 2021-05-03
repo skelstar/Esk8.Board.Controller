@@ -35,6 +35,8 @@ namespace Display
     TR_VERSION_DOESNT_MATCH,
     TR_MENU_BUTTON_CLICKED,
     TR_OPTION_TIMED_OUT,
+    TR_MAGNET_NOT_DETECTED,
+    TR_MAGNET_DETECTED,
   };
 
   const char *getTrigger(int ev)
@@ -63,6 +65,10 @@ namespace Display
       return "TR_MENU_BUTTON_CLICKED";
     case TR_OPTION_TIMED_OUT:
       return "TR_OPTION_TIMED_OUT";
+    case TR_MAGNET_NOT_DETECTED:
+      return "TR_MAGNET_NOT_DETECTED";
+    case TR_MAGNET_DETECTED:
+      return "TR_MAGNET_DETECTED";
     }
     return OUT_OF_RANGE;
   }
@@ -79,6 +85,7 @@ namespace Display
     ST_BOARD_BATTERY,
     ST_STOPPED_SCREEN,
     ST_MOVING_SCREEN,
+    ST_MAGNET_NOT_DETECTED,
     ST_BOARD_VERSION_DOESNT_MATCH,
     ST_OPTION_PUSH_TO_START,
     ST_SHOW_SETTINGS,
@@ -101,6 +108,8 @@ namespace Display
       return "ST_STOPPED_SCREEN";
     case ST_MOVING_SCREEN:
       return "ST_MOVING_SCREEN";
+    case ST_MAGNET_NOT_DETECTED:
+      return "ST_MAGNET_NOT_DETECTED";
     case ST_BOARD_VERSION_DOESNT_MATCH:
       return "ST_BOARD_VERSION_DOESNT_MATCH";
     case ST_OPTION_PUSH_TO_START:
@@ -166,6 +175,15 @@ namespace Display
         //   screenNeedToAckResets(Stats::BOARD_RESETS);
         // else
         simpleMovingScreen();
+      },
+      NULL,
+      NULL);
+  //---------------------------------------------------------------
+  State stMagnetNotDetected(
+      ST_MAGNET_NOT_DETECTED,
+      [] {
+        fsm_mgr.printState(ST_MAGNET_NOT_DETECTED);
+        screenError("No magnet!");
       },
       NULL,
       NULL);
@@ -252,6 +270,11 @@ namespace Display
     // UPDATE
     _fsm.add_transition(&stStopped, &stStopped, Display::TR_UPDATE, NULL);
     _fsm.add_transition(&stMoving, &stMoving, Display::TR_UPDATE, NULL);
+
+    // TR_MAGNET_NOT_DETECTED
+    _fsm.add_transition(&stStopped, &stMagnetNotDetected, Display::TR_MAGNET_NOT_DETECTED, NULL);
+    _fsm.add_transition(&stMoving, &stMagnetNotDetected, Display::TR_MAGNET_NOT_DETECTED, NULL);
+    _fsm.add_transition(&stMagnetNotDetected, &stStopped, Display::TR_MAGNET_DETECTED, NULL);
 
     // TR_VERSION_DOESNT_MATCH
     _fsm.add_transition(&stateDisconnected, &stBoardVersionDoesntMatch, Display::TR_VERSION_DOESNT_MATCH, NULL);

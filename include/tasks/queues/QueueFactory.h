@@ -3,7 +3,7 @@
 #include <tasks/queues/types/PacketState.h>
 #include <tasks/queues/types/NintendoButtonEvent.h>
 #include <tasks/queues/types/PrimaryButton.h>
-#include <tasks/queues/types/Throttle.h>
+#include <tasks/queues/types/ThrottleState.h>
 #include <QueueBase.h>
 #include <tasks/queues/types/DisplayEvent.h>
 

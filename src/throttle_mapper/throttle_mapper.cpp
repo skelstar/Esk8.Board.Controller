@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <elapsedMillis.h>
-#include <throttle.h>
+#include <ThrottleState.h>
 
 ThrottleClass throttle;
 

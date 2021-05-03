@@ -4,4 +4,4 @@
 #include <tasks/queues/types/PacketState.h>
 #include <tasks/queues/types/PrimaryButton.h>
 #include <QueueBase.h>
-#include <tasks/queues/types/Throttle.h>
+#include <tasks/queues/types/ThrottleState.h>

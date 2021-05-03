@@ -385,40 +385,19 @@ namespace Display
   }
   //-----------------------------------------------------
 
-  void screenNeedToAckResets(Stats::ResetsType type)
+
+  void screenError(const char *text)
   {
     if (take(mux_SPI))
     {
-      char buff[10];
-      uint32_t bgColour = 0;
-      if (type == Stats::CONTROLLER_RESETS)
-      {
-        bgColour = TFT_RED;
-        sprintf(buff, "%d", stats.controllerResets);
-      }
-      else if (type == Stats::BOARD_RESETS)
-      {
-        bgColour = TFT_NAVY;
-        sprintf(buff, "%d", stats.boardResets);
-      }
-      else
-      {
-        return;
-      }
-
-      tft.fillScreen(bgColour);
-      tft.setFreeFont(FONT_LG);
+      tft.fillScreen(TFT_RED);
+      tft.setFreeFont(FONT_XL_B);
       tft.setTextColor(TFT_WHITE);
       tft.setTextDatum(TC_DATUM);
-      tft.drawString("ACK RESETS!\n", /*x*/ LCD_WIDTH / 2, /*y*/ 20);
-
-      chunkyDigit = new ChunkyDigit(&tft, CHUNKY_PIXEL_MED, CHUNKY_SPACING_MED, bgColour);
-
-      int w = chunkyDigit->getWidth(buff);
-      int x = LCD_WIDTH / 2 - w / 2;
-      int y = LCD_HEIGHT - chunkyDigit->getHeight() - 20;
-      chunkyDigit->draw_float(x, y, buff);
-
+      uint8_t line1 = 20, lineheight = 48 + 8;
+      tft.drawString("ERROR", /*x*/ LCD_WIDTH / 2, /*y*/ line1);
+      tft.setFreeFont(FONT_LG);
+      tft.drawString(text, /*x*/ LCD_WIDTH / 2, /*y*/ line1 += lineheight);
       give(mux_SPI);
     }
   }
