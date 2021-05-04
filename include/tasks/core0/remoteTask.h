@@ -1,74 +1,74 @@
+#pragma once
 
-#define BATTERY_MEASURE_INTERVAL 5000
+#include <TaskBase.h>
+#include <QueueManager.h>
+#include <tasks/queues/QueueFactory.h>
+#include <tasks/queues/types/BatteryInfo.h>
 
-elapsedMillis since_measure_battery;
+#include <BatteryLib.h>
 
-// prototypes
-
-namespace Remote
+class RemoteTask : public TaskBase
 {
-  void battVoltsChanged_cb();
+public:
+  bool printWarnings = true;
 
-  MyMutex mutex;
+private:
+  BatteryLib *battery;
+  BatteryInfo remote;
 
-  BatteryLib battery(BATTERY_MEASURE_PIN);
+  Queue1::Manager<BatteryInfo> *remoteBatteryQueue = nullptr;
 
-  namespace
+public:
+  RemoteTask() : TaskBase("RemoteTask", 3000, PERIOD_50ms)
   {
-    const char *taskName = "";
+    _core = CORE_0;
+    _priority = TASK_PRIORITY_0;
   }
 
-  bool taskReady = false;
-
-  //--------------------------------------------------------
-  void task(void *pvParameters)
+  void initialiseQueues()
   {
-    Remote::battery.setup(battVoltsChanged_cb);
-
-    Serial.printf(PRINT_TASK_STARTED_FORMAT, taskName, xPortGetCoreID());
-
-    taskReady = true;
-
-    mutex.create("remote", TICKS_2);
-    mutex.enabled = true;
-
-    while (true)
-    {
-      if (since_measure_battery > BATTERY_MEASURE_INTERVAL)
-      {
-        since_measure_battery = 0;
-        if (Remote::mutex.take(__func__, TICKS_50))
-          battery.update();
-
-        if (battery.isCharging)
-        {
-          displayQueue->send(DispState::UPDATE);
-        }
-        Remote::mutex.give(__func__);
-      }
-      vTaskDelay(10);
-    }
-    vTaskDelete(NULL);
+    remoteBatteryQueue = createQueueManager<BatteryInfo>("(RemoteTask) remoteBatteryQueue");
   }
 
-  //--------------------------------------------------------
-  void createTask(uint8_t core, uint8_t priority)
+  void initialise()
   {
-    taskName = "Battery Measure";
-    xTaskCreatePinnedToCore(
-        task,
-        taskName,
-        10000,
-        NULL,
-        priority,
-        NULL,
-        core);
+    battery = new BatteryLib(34);
+    battery->setup(nullptr);
   }
 
-  //--------------------------------------------------------
-  void battVoltsChanged_cb()
+  void initialTask()
   {
-    displayQueue->send(DispState::UPDATE);
+    doWork();
   }
-  //--------------------------------------------------------
-} // namespace Remote
+
+  bool timeToDoWork()
+  {
+    return true;
+  }
+
+  void doWork()
+  {
+    battery->update();
+
+    remote.charging = battery->isCharging;
+    remote.percent = battery->chargePercent;
+    remote.volts = battery->getVolts();
+
+    remoteBatteryQueue->send(&remote);
+  }
+
+  void cleanup()
+  {
+    delete (remoteBatteryQueue);
+  }
+};
+
+RemoteTask remoteTask;
+
+namespace nsRemoteTask
+{
+  void task1(void *parameters)
+  {
+    remoteTask.task(parameters);
+  }
+}

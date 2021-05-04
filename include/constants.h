@@ -16,107 +16,66 @@ enum ButtonClickType
 #define OUT_OF_RANGE "OUT OF RANGE"
 #define NO_MESSAGE_ON_QUEUE 0
 
-#define TICKS_0 0
-#define TICKS_1 1
-#define TICKS_2 2
-#define TICKS_5 5
-#define TICKS_10 10
-#define TICKS_50 50
-#define TICKS_100 100
+#define TICKS_0ms 0
+#define TICKS_1ms 1 / portTICK_PERIOD_MS
+#define TICKS_2ms 2 / portTICK_PERIOD_MS
+#define TICKS_5ms 5 / portTICK_PERIOD_MS
+#define TICKS_10ms 10 / portTICK_PERIOD_MS
+#define TICKS_50ms 50 / portTICK_PERIOD_MS
+#define TICKS_100ms 100 / portTICK_PERIOD_MS
 
-//------------------------------------------------------------
-namespace DispState
+// ThrottleTask
+
+enum ThrottleStatus
 {
-  enum Trigger
-  {
-    NO_EVENT = 0,
-    CONNECTED,
-    DISCONNECTED,
-    STOPPED,
-    MOVING,
-    UPDATE,
-    REMOTE_BATTERY_CHANGED,
-    PRIMARY_SINGLE_CLICK,
-    PRIMARY_DOUBLE_CLICK,
-    PRIMARY_TRIPLE_CLICK,
-    PRIMARY_LONG_PRESS,
-    VERSION_DOESNT_MATCH,
-    RIGHT_BUTTON_CLICKED,
-  };
+  STATUS_OK = 0,
+  DIAL_DISCONNECTED,
+};
 
-  const char *getTrigger(int ev)
-  {
-    switch (ev)
-    {
-    case NO_EVENT:
-      return "NO_EVENT";
-    case CONNECTED:
-      return "CONNECTED";
-    case DISCONNECTED:
-      return "DISCONNECTED";
-    case STOPPED:
-      return "STOPPED";
-    case MOVING:
-      return "MOVING";
-    case UPDATE:
-      return "UPDATE";
-    case REMOTE_BATTERY_CHANGED:
-      return "REMOTE_BATTERY_CHANGED";
-    case PRIMARY_SINGLE_CLICK:
-      return "PRIMARY_SINGLE_CLICK";
-    case PRIMARY_DOUBLE_CLICK:
-      return "PRIMARY_DOUBLE_CLICK";
-    case PRIMARY_TRIPLE_CLICK:
-      return "PRIMARY_TRIPLE_CLICK";
-    case PRIMARY_LONG_PRESS:
-      return "PRIMARY_LONG_PRESS";
-    case VERSION_DOESNT_MATCH:
-      return "VERSION_DOESNT_MATCH";
-    case RIGHT_BUTTON_CLICKED:
-      return "RIGHT_BUTTON_CLICKED";
-    }
-    return OUT_OF_RANGE;
-  }
-} // namespace DispState
-
-//------------------------------------------------------------
-
-namespace Comms
+const char *getThrottleStatus(uint8_t status)
 {
-  enum Event
+  switch (status)
   {
-    NO_EVENT = 0,
-    PKT_RXD,
-    BOARD_TIMEDOUT,
-    BOARD_FIRST_PACKET,
-    Length
-  };
-
-  const char *getEventName(uint8_t ev)
-  {
-    switch (ev)
-    {
-    case NO_EVENT:
-      return "NO_EVENT";
-    case PKT_RXD:
-      return "PKT_RXD";
-    case BOARD_TIMEDOUT:
-      return "BOARD_TIMEDOUT";
-    case BOARD_FIRST_PACKET:
-      return "BOARD_FIRST_PACKET";
-    }
-    return "Out of range (Comms::getEventName())";
+  case OK:
+    return "OK";
+  case DIAL_DISCONNECTED:
+    return "DIAL_DISCONNECTED";
   }
-} // namespace Comms
+  return "OUT OF RANGE (getStatus)";
+}
 
 //------------------------------------------------------------
 
-#define LCD_WIDTH 240
-#define LCD_HEIGHT 135
+// namespace Comms
+// {
+//   enum Event
+//   {
+//     NO_EVENT = 0,
+//     PKT_RXD,
+//     BOARD_TIMEDOUT,
+//     BOARD_FIRST_PACKET,
+//     Length
+//   };
 
-#define TFT_DEFAULT_BG TFT_BLACK
+//   const char *getEventName(uint8_t ev)
+//   {
+//     switch (ev)
+//     {
+//     case NO_EVENT:
+//       return "NO_EVENT";
+//     case PKT_RXD:
+//       return "PKT_RXD";
+//     case BOARD_TIMEDOUT:
+//       return "BOARD_TIMEDOUT";
+//     case BOARD_FIRST_PACKET:
+//       return "BOARD_FIRST_PACKET";
+//     }
+//     return "Out of range (Comms::getEventName())";
+//   }
+// } // namespace Comms
 
-//-----------------------------------------------------
+//------------------------------------------------------------
+
 // build flag defaults
 
 #ifndef PRINT_COMMS_STATE
@@ -136,9 +95,6 @@ namespace Comms
 #endif
 #ifndef PRINT_DISP_STATE_EVENT
 #define PRINT_DISP_STATE_EVENT 0
-#endif
-#ifndef PRINT_DISP_QUEUE_READ
-#define PRINT_DISP_QUEUE_READ 0
 #endif
 #ifndef PRINT_IF_TOTAL_FAILED_SENDING
 #define PRINT_IF_TOTAL_FAILED_SENDING 0
@@ -173,24 +129,16 @@ namespace Comms
 #ifndef GIT_BRANCH_NAME
 #define GIT_BRANCH_NAME "branch not provided?"
 #endif
+#ifndef GIT_COMMIT_HASH
+#define GIT_COMMIT_HASH "hash not provided?"
+#endif
 
 #ifndef PRINT_BOARD_CLIENT_CONNECTED_CHANGED
 #define PRINT_BOARD_CLIENT_CONNECTED_CHANGED 0
 #endif
 
-#ifndef PRINT_STATS_QUEUE_SEND
-#define PRINT_STATS_QUEUE_SEND 0
-#endif
-#ifndef PRINT_STATS_QUEUE_READ
-#define PRINT_STATS_QUEUE_READ 0
-#endif
-
-#ifndef PRINT_COMMS_QUEUE_SENT
-#define PRINT_COMMS_QUEUE_SENT 0
-#endif
-
-#ifndef PRINT_COMMS_QUEUE_READ
-#define PRINT_COMMS_QUEUE_READ 0
+#ifndef FEATURE_LED_COUNT
+#define FEATURE_LED_COUNT 0
 #endif
 
 #ifndef FEATURE_PUSH_TO_START
@@ -200,12 +148,30 @@ namespace Comms
 #define FEATURE_START_MOVING_BOOST 0
 #endif
 
-#ifndef PRINT_STATS_MUTEX_TAKE_STATE
-#define PRINT_STATS_MUTEX_TAKE_STATE 0
+#ifndef PRINT_NINTENDO_BUTTON
+#define PRINT_NINTENDO_BUTTON 0
 #endif
 
-#ifndef PRINT_STATS_MUTEX_GIVE_STATE
-#define PRINT_STATS_MUTEX_GIVE_STATE 0
+#ifndef USING_DISPLAY
+#define USING_DISPLAY 0
+#endif
+#ifndef USING_REMOTE
+#define USING_REMOTE 0
+#endif
+#ifndef USING_STATS
+#define USING_STATS 0
+#endif
+#ifndef USING_NINTENDO_BUTTONS
+#define USING_NINTENDO_BUTTONS 0
+#endif
+#ifndef USING_LED
+#define USING_LED 0
+#endif
+#ifndef USING_DEBUG_TASK
+#define USING_DEBUG_TASK 0
+#endif
+#ifndef USING_QWIIC_BUTTON_TASK
+#define USING_QWIIC_BUTTON_TASK 0
 #endif
 
 #define BOARD_COMMS_STATE_FORMAT_LONG "[BOARD: %s | %s ]\n"
@@ -214,7 +180,6 @@ namespace Comms
 
 #define TX_TO_BOARD_FORMAT "[TX -> BOARD]: id=%d\n"
 #define RX_FROM_BOARD_FORMAT "[RX <- BOARD]: id=%d\n"
-#define PRINT_TASK_STARTED_FORMAT "TASK: %s on Core %d\n"
 
 enum TriState
 {

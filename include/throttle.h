@@ -1,4 +1,5 @@
 
+#include <FastMap.h>
 
 typedef void (*ThrottleChangedCallback)(uint8_t);
 
@@ -11,6 +12,12 @@ public:
     _throttleChangedCb = throttleChangedCb;
     pinMode(pin, INPUT);
     _oldMapped = 127;
+
+    uint16_t centreLow = THROTTLE_RAW_CENTRE - (THROTTLE_RAW_DEADBAND / 2);
+    uint16_t centreHigh = THROTTLE_RAW_CENTRE + (THROTTLE_RAW_DEADBAND / 2);
+
+    _accelmapper.init(centreHigh, THROTTLE_RAW_MAX, 128, 255);
+    _brakemapper.init(THROTTLE_RAW_MIN, centreLow, 0, 127);
   }
 
   uint8_t get(bool enabled = true)
@@ -18,11 +25,11 @@ public:
     if (enabled)
     {
       _raw = _getRaw();
-      uint8_t mapped = getMappedFromRaw();
+      uint8_t mapped = _getMappedFromRaw();
       if (_oldMapped != mapped && _throttleChangedCb != nullptr)
         _throttleChangedCb(mapped);
       if (PRINT_THROTTLE && _oldMapped != mapped)
-        DEBUGVAL(_raw, mapped);
+        Serial.printf("raw: %d mapped: %d\n", _raw, mapped);
       _oldMapped = mapped;
       return mapped;
     }
@@ -32,43 +39,38 @@ public:
     }
   }
 
+  uint16_t getRaw()
+  {
+    return _raw;
+  }
+
 private:
   uint8_t _pin;
   uint16_t _raw;
   uint8_t _oldMapped;
-  uint16_t _centre = 1280, _min = 0, _max = 2530;
-  uint16_t _deadband = 50;
   ThrottleChangedCallback _throttleChangedCb = nullptr;
+  FastMap _accelmapper, _brakemapper;
 
   uint16_t _getRaw()
   {
     return analogRead(_pin);
   }
 
-  uint8_t getMappedFromRaw()
+  uint8_t _getMappedFromRaw()
   {
-    if (_raw > _max)
-    {
-      _max = _raw;
-    }
-    if (_raw < _min)
-    {
-      _min = _raw;
-    }
-
-    uint16_t centreLow = _centre - _deadband;
-    uint16_t centreHigh = _centre + _deadband;
+    uint16_t centreLow = THROTTLE_RAW_CENTRE - THROTTLE_RAW_DEADBAND;
+    uint16_t centreHigh = THROTTLE_RAW_CENTRE + THROTTLE_RAW_DEADBAND;
 
     bool braking = _raw < centreLow;
     bool acceling = _raw > centreHigh;
 
     if (braking)
     {
-      return map(_raw, _min, centreLow, 0, 127);
+      return _brakemapper.constrainedMap(_raw);
     }
     else if (acceling)
     {
-      return map(_raw, centreHigh, _max, 128, 255);
+      return _accelmapper.constrainedMap(_raw);
     }
     return 127;
   }

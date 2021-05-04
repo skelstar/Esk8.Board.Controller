@@ -1,7 +1,6 @@
-#ifndef Arduino
-#include <Arduino.h>
-#endif
+#pragma once
 
+#include <Arduino.h>
 #include <FastMap.h>
 
 class BatteryLib

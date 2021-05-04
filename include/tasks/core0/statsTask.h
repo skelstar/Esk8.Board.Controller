@@ -1,223 +1,164 @@
+// #pragma once
 
-#include <stats.h>
+// #include <statsClass.h>
+// #include <Preferences.h>
 
-//------------------------------------------------------------------
+// #ifndef STORE_STATS
+// #define STORE_STATS "stats"
+// #endif
+// #ifndef STORE_STATS_SOFT_RSTS
+// #define STORE_STATS_SOFT_RSTS "soft resets"
+// #endif
+// #ifndef STORE_STATS_TRIP_TIME
+// #define STORE_STATS_TRIP_TIME "trip time"
+// #endif
 
-StatsClass stats;
+// //------------------------------------------------------------------
 
-template <typename T>
-void storeInMemory(char *storeName, char *key, T value);
-template <typename T>
-T readFromMemory(char *storeName, char *key, T defaultVal = 0);
+// StatsClass stats;
 
-namespace Stats
-{
-  Queue::Manager *queue;
+// template <typename T>
+// void storeInMemory(char *storeName, char *key, T value);
+// template <typename T>
+// T readFromMemory(char *storeName, char *key, T defaultVal = 0);
 
-  MyMutex mutex;
+// namespace Stats
+// {
+//   // prototypes
+//   bool handleStartingStopping(BoardClass *brd);
 
-  bool taskReady = false;
+//   bool taskReady = false;
+//   elapsedMillis sinceReadQueue, since_started_moving = 0;
 
-  enum ResetsType
-  {
-    NO_TYPE = 0,
-    CONTROLLER_RESETS,
-    BOARD_RESETS,
-  };
+//   BoardClass *myboard;
 
-  enum StatsEvent
-  {
-    NONE = 0,
-    STOPPED,
-    MOVING,
-    CLEAR_CONTROLLER_RESETS,
-    CLEAR_BOARD_RESETS,
-    BOARD_FIRST_PACKET,
-  };
+//   enum ResetsType
+//   {
+//     NO_TYPE = 0,
+//     CONTROLLER_RESETS,
+//     BOARD_RESETS,
+//   };
+//   //-----------------------------------------------------
 
-  char *getName(uint8_t ev)
-  {
-    switch (ev)
-    {
-    case NONE:
-      return "NONE";
-    case STOPPED:
-      return "STOPPED";
-    case MOVING:
-      return "MOVING";
-    case CLEAR_CONTROLLER_RESETS:
-      return "CLEAR_CONTROLLER_RESETS";
-    case CLEAR_BOARD_RESETS:
-      return "CLEAR_BOARD_RESETS";
-    case BOARD_FIRST_PACKET:
-      return "BOARD_FIRST_PACKET";
-    }
-    return "Out of range (StatsQueue getName())";
-  }
+//   void task(void *pvParameters)
+//   {
+//     Serial.printf(PRINT_TASK_STARTED_FORMAT, "Stats", xPortGetCoreID());
 
-  void task(void *pvParameters)
-  {
-    Serial.printf(PRINT_TASK_STARTED_FORMAT, "Stats", xPortGetCoreID());
+//     taskReady = true;
+//     myboard = new BoardClass();
 
-    taskReady = true;
+//     while (true)
+//     {
+//       if (sinceReadQueue > 100)
+//       {
+//         sinceReadQueue = 0;
 
-    ulong queueReadPeriod = 100;
+//         // BoardClass *res = boardPacketQueue->peek<BoardClass>(__func__);
+//         // if (res != nullptr)
+//         // {
+//         //   if (myboard->packet.moving != res->packet.moving)
+//         //     if (handleStartingStopping(res))
+//         //       // stats changed
+//         //       statsQueue->sendLegacy(&stats);
+//         //   myboard = new BoardClass(*res);
+//         // }
+//       }
 
-    elapsedMillis sinceReadQueue, sinceStartedMoving = 0;
+//       vTaskDelay(10);
+//     }
+//     vTaskDelete(NULL);
+//   }
+//   //-----------------------------------------------------
 
-    while (true)
-    {
-      if (sinceReadQueue > queueReadPeriod)
-      {
-        sinceReadQueue = 0;
+//   void createTask(uint8_t core, uint8_t priority)
+//   {
+//     xTaskCreatePinnedToCore(
+//         task,
+//         "statsCore",
+//         2000,
+//         NULL,
+//         priority,
+//         NULL,
+//         core);
+//   }
+//   //-----------------------------------------------------
+//   void resetsAcknowledged_callback()
+//   {
+//     storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, 0);
+//   }
 
-        StatsEvent event = queue->read<StatsEvent>();
+//   void init()
+//   {
+//     // TODO SPI mutex
 
-        switch (event)
-        {
-        case StatsEvent::STOPPED:
-          if (sinceStartedMoving > 5000)
-          {
-            if (mutex.take(__func__))
-            {
-              // store moving time in memory
-              stats.addMovingTime(sinceStartedMoving);
-              storeInMemory<unsigned long>(STORE_STATS, STORE_STATS_TRIP_TIME, stats.timeMovingMS);
-              mutex.give(__func__);
-            }
-          }
-          break;
-        case StatsEvent::MOVING:
-          // start the clock
-          sinceStartedMoving = 0;
-          break;
-        case StatsEvent::CLEAR_CONTROLLER_RESETS:
-          if (mutex.take(__func__))
-          {
-            stats.clearControllerResets();
-            mutex.give(__func__);
-          }
-          break;
-        case StatsEvent::CLEAR_BOARD_RESETS:
-          if (mutex.take(__func__))
-          {
-            stats.clearControllerResets();
-            mutex.give(__func__);
-          }
-          break;
-        case StatsEvent::BOARD_FIRST_PACKET:
-          if (mutex.take(__func__))
-          {
-            if (stats.boardConnectedThisSession)
-            {
-              DEBUG("sending DispState::UPDATE");
-              displayQueue->send(DispState::UPDATE);
-            }
-            mutex.give(__func__);
-          }
-        }
-      }
+//     // get the number of resets
+//     stats.controllerResets = readFromMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS);
 
-      vTaskDelay(5);
-    }
-    vTaskDelete(NULL);
-  }
-  //-----------------------------------------------------
+//     stats.setResetReasons(rtc_get_reset_reason(0), rtc_get_reset_reason(1));
+//     stats.setResetsAcknowledgedCallback(resetsAcknowledged_callback);
+//   }
 
-  void createTask(uint8_t core, uint8_t priority)
-  {
-    xTaskCreatePinnedToCore(
-        task,
-        "statsCore",
-        2000,
-        NULL,
-        priority,
-        NULL,
-        core);
-  }
-  //-----------------------------------------------------
-  void resetsAcknowledged_callback()
-  {
-    storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, 0);
-  }
+//   /* returns whether it updated stats */
+//   bool handleStartingStopping(BoardClass *brd)
+//   {
+//     bool updated_stats = false;
+//     if (brd->packet.moving)
+//     {
+//       // start the clock
+//       since_started_moving = 0;
+//     }
+//     else if (brd->packet.moving == false)
+//     {
+//       if (since_started_moving > 5000)
+//       {
+//         // store moving time in memory
+//         stats.addMovingTime(since_started_moving);
+//         storeInMemory<unsigned long>(STORE_STATS, STORE_STATS_TRIP_TIME, stats.timeMovingMS);
+//         updated_stats = true;
+//       }
+//     }
+//     return updated_stats;
+//   }
+// } // namespace Stats
 
-  void queueSentEventCb(uint16_t ev)
-  {
-    if (PRINT_STATS_QUEUE_SEND)
-      Serial.printf(PRINT_QUEUE_SEND_FORMAT, getName(ev), "STATS");
-  }
-  void queueReadEventCb(uint16_t ev)
-  {
-    if (PRINT_STATS_QUEUE_READ)
-      Serial.printf(PRINT_QUEUE_READ_FORMAT, "STATS", getName(ev));
-  }
+// template <typename T>
+// void storeInMemory(char *storeName, char *key, T value)
+// {
+//   Preferences store;
+//   store.begin(storeName, /*read-only*/ false);
+//   if (std::is_same<T, uint16_t>::value)
+//   {
+//     store.putUInt(key, value);
+//   }
+//   else if (std::is_same<T, unsigned long>::value)
+//   {
+//     store.putULong(key, value);
+//   }
+//   else
+//   {
+//     Serial.printf("WARNING: unhandled type for storeInMemory()\n");
+//   }
+//   store.end();
+// }
 
-  void init()
-  {
-    mutex.create("stats", TICKS_2);
-    mutex.enabled = true;
-
-    queue = new Queue::Manager(/*length*/ 3, sizeof(StatsEvent), /*ticks*/ 5);
-    queue->setName("Stats");
-    queue->setSentEventCallback(queueSentEventCb);
-    queue->setReadEventCallback(queueReadEventCb);
-
-    if (mutex.take(__func__))
-    {
-      // get the number of resets
-      stats.controllerResets = readFromMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS);
-
-      stats.setResetReasons(rtc_get_reset_reason(0), rtc_get_reset_reason(1));
-      stats.setResetsAcknowledgedCallback(resetsAcknowledged_callback);
-      mutex.give(__func__);
-    }
-  }
-
-  void storeTimeMovingInMemory()
-  {
-    storeInMemory<ulong>(STORE_STATS, STORE_STATS_TRIP_TIME, stats.timeMovingMS);
-  }
-
-} // namespace Stats
-
-template <typename T>
-void storeInMemory(char *storeName, char *key, T value)
-{
-  Preferences store;
-  store.begin(storeName, /*read-only*/ false);
-  if (std::is_same<T, uint16_t>::value)
-  {
-    store.putUInt(key, value);
-  }
-  else if (std::is_same<T, unsigned long>::value)
-  {
-    store.putULong(key, value);
-  }
-  else
-  {
-    Serial.printf("WARNING: unhandled type for storeInMemory()\n");
-  }
-  store.end();
-}
-
-template <typename T>
-T readFromMemory(char *storeName, char *key, T defaultVal)
-{
-  T result;
-  Preferences store;
-  store.begin(storeName, /*read-only*/ false);
-  if (std::is_same<T, uint16_t>::value)
-  {
-    result = store.getUInt(key, defaultVal);
-  }
-  else if (std::is_same<T, unsigned long>::value)
-  {
-    result = store.getULong(key, defaultVal);
-  }
-  else
-  {
-    Serial.printf("WARNING: unhandled type for storeInMemory()\n");
-  }
-  store.end();
-  return result;
-}
+// template <typename T>
+// T readFromMemory(char *storeName, char *key, T defaultVal)
+// {
+//   T result;
+//   Preferences store;
+//   store.begin(storeName, /*read-only*/ false);
+//   if (std::is_same<T, uint16_t>::value)
+//   {
+//     result = store.getUInt(key, defaultVal);
+//   }
+//   else if (std::is_same<T, unsigned long>::value)
+//   {
+//     result = store.getULong(key, defaultVal);
+//   }
+//   else
+//   {
+//     Serial.printf("WARNING: unhandled type for storeInMemory()\n");
+//   }
+//   store.end();
+//   return result;
+// }
