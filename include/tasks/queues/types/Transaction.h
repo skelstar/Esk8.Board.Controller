@@ -49,9 +49,9 @@ public:
   {
     bool online = packet_id == 0 || // ignore first packet
                   millis() - responseTime < timeout;
-    if (!online)
-      Serial.printf("connected(): board offline since: %lu\n",
-                    millis() - responseTime);
+    // if (!online)
+    //   Serial.printf("connected(): board offline since: %lu\n",
+    //                 millis() - responseTime);
     return online;
   }
 

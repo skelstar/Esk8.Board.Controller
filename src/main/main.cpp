@@ -155,7 +155,8 @@ void configureTasks()
   boardCommsTask.doWorkInterval = PERIOD_50ms;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
   // boardCommsTask.printSentPacketToBoard = true;
-  // boardCommsTask.printRxPacket = true;
+  boardCommsTask.printRxQueuePacket = true;
+  // boardCommsTask.printTxQueuePacket = true;
 
 #ifdef NINTENDOCLASSIC_TASK
   nintendoClassTask.doWorkInterval = PERIOD_50ms;

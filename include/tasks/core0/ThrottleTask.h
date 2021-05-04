@@ -78,7 +78,7 @@ private:
     if (og_throttle != throttle.val || throttle.status != ThrottleStatus::STATUS_OK)
     {
       throttleQueue->send(&throttle);
-      ThrottleState::print(throttle, "[ThrottleTask]-->");
+      // ThrottleState::print(throttle, "[ThrottleTask]-->");
     }
   }
 

@@ -17,7 +17,8 @@ public:
   bool printWarnings = false;
   bool printSentPacketToBoard = false;
   bool printRadioDetails = true;
-  bool printRxPacket = false;
+  bool printRxQueuePacket = false;
+  bool printTxQueuePacket = false;
   unsigned long sendToBoardInterval = SEND_TO_BOARD_INTERVAL;
 
   elapsedMillis sinceSentToBoard = 0;
@@ -126,15 +127,16 @@ namespace BoardComms
     }
 
     if (!success)
-      Serial.printf("Unable to send CONTROL packet to board, id: %lu\n", boardCommsTask.controller_packet.id);
+      Serial.printf("x");
+    // Serial.printf("Unable to send CONTROL packet to board, id: %lu\n", boardCommsTask.controller_packet.id);
   }
   //----------------------------------------------------------
   void boardPacketAvailable_cb(uint16_t from_id, uint8_t t)
   {
     VescData packet = boardCommsTask.boardClient->read();
 
-    if (boardCommsTask.printRxPacket)
-      VescData::print(packet, "[boardPacketAvailable_cb]rx");
+    if (boardCommsTask.printRxQueuePacket)
+      VescData::print(packet, "-->[boardPacketAvailable_cb|NRF24]");
 
     // map packet to Transaction type
     boardCommsTask.transaction.received(packet);
@@ -146,8 +148,8 @@ namespace BoardComms
 
     boardCommsTask.boardTransactionQueue->send(&boardCommsTask.transaction, boardCommsTask.printSendToQueue ? QueueBase::printSend : nullptr);
 
-    if (boardCommsTask.printRxPacket)
-      VescData::print(packet, "[Packet_cb]");
+    if (boardCommsTask.printTxQueuePacket)
+      packet.printThis("[Packet_cb|transactionQueue]->");
 
     vTaskDelay(10);
   }
