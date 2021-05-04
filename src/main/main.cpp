@@ -68,7 +68,9 @@ void enableTasks(bool print = false);
 
 void setup()
 {
+#ifdef DEBUG_SERIAL
   Serial.begin(115200);
+#endif
   Serial.printf("------------------------ BOOT ------------------------\n");
 
   Wire.begin();
@@ -155,7 +157,7 @@ void configureTasks()
   boardCommsTask.doWorkInterval = PERIOD_50ms;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
   // boardCommsTask.printSentPacketToBoard = true;
-  boardCommsTask.printRxQueuePacket = true;
+  // boardCommsTask.printRxQueuePacket = true;
   // boardCommsTask.printTxQueuePacket = true;
 
 #ifdef NINTENDOCLASSIC_TASK
@@ -173,7 +175,7 @@ void configureTasks()
 
   throttleTask.doWorkInterval = PERIOD_200ms;
   throttleTask.printWarnings = true;
-  throttleTask.printThrottle = true;
+  throttleTask.printThrottle = PRINT_THROTTLE;
   // throttleTask.thumbwheel.setSweepAngle(30.0);
   // throttleTask.thumbwheel.setDeadzone(5.0);
 

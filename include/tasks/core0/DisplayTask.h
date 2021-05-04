@@ -58,14 +58,17 @@ private:
     setupLCD();
 
     Display::fsm_mgr.begin(&Display::_fsm);
-    // Display::fsm_mgr.setPrintStateCallback(printState);
-    // Display::fsm_mgr.setPrintTriggerCallback(printTrigger);
+    Display::fsm_mgr.setPrintStateCallback(printState);
+    Display::fsm_mgr.setPrintTriggerCallback(printTrigger);
 
     Display::addTransitions();
 
     Display::_fsm.run_machine();
 
-    // transaction = new Transaction();
+    if (p_printState)
+      Display::fsm_mgr.setPrintStateCallback(printState);
+    if (p_printTrigger)
+      Display::fsm_mgr.setPrintTriggerCallback(printTrigger);
   }
   //===================================================================
   void doWork()
@@ -101,16 +104,15 @@ private:
   }
   //==================================================
 
-  void printState(uint16_t id)
+  static void printState(uint16_t id)
   {
-    if (p_printState)
-      Serial.printf(PRINT_FSM_STATE_FORMAT, "DISP", millis(), Display::stateID(id));
+    // if (p_printState)
+    Serial.printf(PRINT_FSM_STATE_FORMAT, "DISP", millis(), Display::stateID(id));
   }
 
-  void printTrigger(uint16_t ev)
+  static void printTrigger(uint16_t ev)
   {
-    if (p_printTrigger &&
-        !(Display::_fsm.revisit() && ev == Display::TR_STOPPED) &&
+    if (!(Display::_fsm.revisit() && ev == Display::TR_STOPPED) &&
         !(Display::_fsm.revisit() && ev == Display::TR_MOVING) &&
         !(Display::_fsm.getCurrentStateId() == Display::ST_OPTION_PUSH_TO_START && ev == Display::TR_STOPPED))
       Serial.printf(PRINT_FSM_TRIGGER_FORMAT, "DISP", millis(), Display::getTrigger(ev));

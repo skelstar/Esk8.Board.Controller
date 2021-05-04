@@ -16,7 +16,6 @@ namespace Display
 #include <FsmManager.h>
 #include <screens.h>
 #include <FeatureService.h>
-// #include <tasks/core0/statsTask.h>
 
 //------------------------------------------------------------
 
@@ -351,5 +350,6 @@ namespace Display
 
     // TR_VERSION_DOESNT_MATCH
     _fsm.add_transition(&stateDisconnected, &stBoardVersionDoesntMatch, Display::TR_VERSION_DOESNT_MATCH, NULL);
+    _fsm.add_transition(&stStopped, &stBoardVersionDoesntMatch, Display::TR_VERSION_DOESNT_MATCH, NULL);
   }
 } // namespace Display
