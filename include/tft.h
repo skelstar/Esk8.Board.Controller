@@ -1,7 +1,10 @@
+#pragma once
 
 #ifndef TFT_eSPI
 #include <TFT_eSPI.h>
 #endif
+
+#include <BatteryLib.h>
 
 // #include <fonts/Custom/Orbitron_Light_24.h>
 #include <fonts/Orbitron_Med_12.h>
@@ -12,12 +15,15 @@
 #define FONT_MED &Orbitron_Medium_16
 #define FONT_LG &Orbitron_Light_24
 #define FONT_XL &Orbitron_Light_32
+#define FONT_XL_B &Orbitron_Bold_48
 
 #define TOP_BAR 10
 #define LINE_1 1
 #define LINE_2 2
 #define LINE_3 3
 #define MARGIN 5
+
+TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
 
 enum FontSize
 {
@@ -48,7 +54,7 @@ uint16_t status_colours[3] = {TFT_BLUE, TFT_ORANGE, TFT_RED};
 uint16_t calulateX(uint16_t x, uint16_t width, uint8_t datum);
 uint16_t calculateY(uint16_t y, uint16_t height, uint8_t datum);
 
-TFT_eSprite _spr = TFT_eSprite(&tft);
+// TFT_eSprite _spr = TFT_eSprite(&tft);
 
 // https://github.com/skelstar/esk8Project/blob/master/Controller/Display.h
 
@@ -130,8 +136,7 @@ void lcd_messageBase(const char *message, int y, Aligned aligned, FontSize size,
 void lcd_message(const char *message, uint8_t line, Aligned aligned, FontSize size = FontSize::MED, MessageStatus status = OKAY)
 {
   uint8_t line_height = (LCD_HEIGHT - TOP_BAR) / 4;
-  uint8_t x = MARGIN,
-          y = TOP_BAR + ((line - 1) * line_height);
+  uint8_t y = TOP_BAR + ((line - 1) * line_height);
 
   uint32_t colour = TFT_WHITE;
 
@@ -148,77 +153,73 @@ void drawGraphFullWidth(uint8_t y, uint8_t height, float pc, uint16_t colour = T
 void drawBattery(BatteryLib batt, uint8_t x1, uint8_t y1, uint8_t width, uint8_t height, uint32_t colour = TFT_WHITE)
 {
 
-#define BORDER_SIZE 2
+  // #define BORDER_SIZE 2
 
-  _spr.createSprite(/*width*/ width, /*height*/ height);
+  //   _spr.createSprite(/*width*/ width, /*height*/ height);
 
-  uint8_t
-      x = 0,
-      y = 0,
-      knobWidth = 4,
-      knobHeight = 10,
-      w = width - knobWidth,
-      h = height;
+  //   uint8_t
+  //       x = 0,
+  //       y = 0,
+  //       knobWidth = 4,
+  //       knobHeight = 10,
+  //       w = width - knobWidth,
+  //       h = height;
 
-  // knob
-  _spr.fillRect(x, y + ((h - knobHeight) / 2), knobWidth, knobHeight, colour);
+  //   // knob
+  //   _spr.fillRect(x, y + ((h - knobHeight) / 2), knobWidth, knobHeight, colour);
 
-  // body - outline
-  x += knobWidth;
-  _spr.fillRect(x, y, w, h, colour);
+  //   // body - outline
+  //   x += knobWidth;
+  //   _spr.fillRect(x, y, w, h, colour);
 
-  // body - empty inside
-  x += BORDER_SIZE;
-  y += BORDER_SIZE;
-  w -= BORDER_SIZE * 2;
-  h -= BORDER_SIZE * 2;
-  _spr.fillRect(x, y, w, h, TFT_BLACK);
+  //   // body - empty inside
+  //   x += BORDER_SIZE;
+  //   y += BORDER_SIZE;
+  //   w -= BORDER_SIZE * 2;
+  //   h -= BORDER_SIZE * 2;
+  //   _spr.fillRect(x, y, w, h, TFT_BLACK);
 
-  // capacity
-  w -= BORDER_SIZE * 2;
-  h -= BORDER_SIZE * 2;
+  //   // capacity
+  //   w -= BORDER_SIZE * 2;
+  //   h -= BORDER_SIZE * 2;
 
-  x += BORDER_SIZE;
-  y += BORDER_SIZE;
-  _spr.fillRect(x, y, w, h, colour); // solid
+  //   x += BORDER_SIZE;
+  //   y += BORDER_SIZE;
+  //   _spr.fillRect(x, y, w, h, colour); // solid
 
-  if (false == batt.isCharging)
-  {
-    // black rect for used part
-    w = w * (1 - (batt.chargePercent / 100.0));
-    _spr.fillRect(x, y, w, h, TFT_BLACK);
-    DEBUGVAL(batt.chargePercent);
-  }
-  else
-  {
-    // plus
-    const int plus = 4, edge = 3;
-    _spr.fillRect(x + (w / 2) - (edge + (plus / 2)),
-                  y + (h / 2) - (plus / 2),
-                  edge + plus + edge,
-                  plus,
-                  TFT_BLACK);
-    _spr.fillRect(x + (w / 2) - (plus / 2),
-                  y + (h / 2) - (edge + (plus / 2)),
-                  plus,
-                  edge + plus + edge,
-                  TFT_BLACK);
-  }
-  _spr.pushSprite(x1, y1);
+  //   if (false == batt.isCharging)
+  //   {
+  //     // black rect for used part
+  //     w = w * (1 - (batt.chargePercent / 100.0));
+  //     _spr.fillRect(x, y, w, h, TFT_BLACK);
+  //     DEBUGVAL(batt.chargePercent);
+  //   }
+  //   else
+  //   {
+  //     // plus
+  //     const int plus = 4, edge = 3;
+  //     _spr.fillRect(x + (w / 2) - (edge + (plus / 2)),
+  //                   y + (h / 2) - (plus / 2),
+  //                   edge + plus + edge,
+  //                   plus,
+  //                   TFT_BLACK);
+  //     _spr.fillRect(x + (w / 2) - (plus / 2),
+  //                   y + (h / 2) - (edge + (plus / 2)),
+  //                   plus,
+  //                   edge + plus + edge,
+  //                   TFT_BLACK);
+  //   }
+  //   _spr.pushSprite(x1, y1);
 }
 //--------------------------------------------------------------------------------
 
 void drawSmallBattery(uint8_t percent, uint16_t x, uint16_t y, uint16_t width, uint8_t datum, bool charging, uint32_t bgColour = TFT_BLACK)
 {
-  DEBUGVAL(datum);
   uint32_t colour = TFT_WHITE;
   uint16_t height = (0.45) * width,
            knobWidth = (0.1) * width;
-  uint16_t x1 = x;
   x = calulateX(x, width, datum);
   y = calculateY(y, height, datum);
-
-  DEBUGVAL(LCD_WIDTH, LCD_WIDTH / 2, x1, x, width, datum);
 
   // body
   tft.fillRect(x + knobWidth, y, width - knobWidth, height, colour);

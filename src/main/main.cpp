@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #ifndef UNIT_TEST
 
 #ifdef DEBUG_SERIAL
@@ -6,353 +7,240 @@
 #define PRINTSTREAM_FALLBACK
 #include "Debug.hpp"
 
-#include <Arduino.h>
-#include <VescData.h>
-#include <elapsedMillis.h>
-#include <rom/rtc.h> // for reset reason
-#include <shared-utils.h>
+#include <tasks/queues/queues.h>
+#include <tasks/queues/types/root.h>
+
+SemaphoreHandle_t mux_I2C;
+SemaphoreHandle_t mux_SPI;
+
 #include <types.h>
-#include <printFormatStrings.h>
-#include <Button2.h>
+#include <rtosManager.h>
+#include <QueueManager.h>
+#include <elapsedMillis.h>
+#include <RTOSTaskManager.h>
+#include <Wire.h>
 
 #include <constants.h>
 
-Comms::Event ev = Comms::Event::BOARD_FIRST_PACKET;
+#if REMOTE_USED == REMOTE_M5STACK_FIRE
+#include <SparkFun_Qwiic_Button.h>
+#elif REMOTE_USED == REMOTE_RED_REMOTE
+#include <Button2.h>
+#endif
 
+#if REMOTE_USED == REMOTE_M5STACK_FIRE
+#include <MagThumbwheel.h>
+#elif REMOTE_USED == REMOTE_RED_REMOTE
+#include <AnalogThumbwheel.h>
+#endif
+
+#include <RF24.h>
 #include <RF24Network.h>
 #include <NRF24L01Lib.h>
 #include <GenericClient.h>
-
-#include <TFT_eSPI.h>
-#include <Preferences.h>
-#include <BatteryLib.h>
-#include <QueueManager.h>
-
-//------------------------------------------------------------
-#include "rtosManager.h"
-
-xQueueHandle xDisplayEventQueue;
-xQueueHandle xButtonPushEventQueue;
-
-Queue::Manager *displayQueue;
-Queue::Manager *buttonQueue;
-
-//------------------------------------------------------------
-enum FeatureType
-{
-  CRUISE_CONTROL,
-  PUSH_TO_START
-};
-
-class FeatureServiceClass
-{
-public:
-  FeatureServiceClass()
-  {
-    set(CRUISE_CONTROL, FEATURE_CRUISE_CONTROL);
-    set(PUSH_TO_START, FEATURE_PUSH_TO_START);
-  }
-
-  template <class T>
-  void set(FeatureType feature, T value)
-  {
-    switch (feature)
-    {
-    case CRUISE_CONTROL:
-      _featureCruiseControl = value;
-      break;
-    case PUSH_TO_START:
-      _featurePushToStart = value;
-      break;
-    }
-  }
-
-  template <class T>
-  T get(FeatureType feature)
-  {
-    switch (feature)
-    {
-    case CRUISE_CONTROL:
-      return _featureCruiseControl;
-    case PUSH_TO_START:
-      return _featurePushToStart;
-    }
-    return NULL;
-  }
-
-private:
-  bool _featureCruiseControl;
-  bool _featurePushToStart;
-} featureService;
-
-//------------------------------------------------------------------
-
-ControllerData controller_packet;
-ControllerConfig controller_config;
-
-#include <BoardClass.h>
-
-BoardClass board;
-
-//------------------------------------------------------------------
-
-namespace Board
-{
-  MyMutex mutex;
-
-  void init()
-  {
-    mutex.create("board", TICKS_2);
-    // mutex.enabled = false;
-  }
-} // namespace Board
-
-// prototypes
-void boardPacketAvailable_cb(uint16_t from_id, uint8_t t);
-
-NRF24L01Lib nrf24;
-
 RF24 radio(NRF_CE, NRF_CS);
 RF24Network network(radio);
+NRF24L01Lib nrf24;
 
-void printSentToBoard_cb(ControllerData data)
-{
-  if (PRINT_TX_TO_BOARD)
-    Serial.printf(TX_TO_BOARD_FORMAT, (int)data.id);
-}
-void printRecvFromBoard_cb(VescData data)
-{
-  if (PRINT_RX_FROM_BOARD)
-    Serial.printf(RX_FROM_BOARD_FORMAT, data.id);
-}
+#include <rom/rtc.h> // for reset reason
+#include <shared-utils.h>
 
-GenericClient<ControllerData, VescData> boardClient(COMMS_BOARD);
-void boardClientInit()
-{
-  boardClient.begin(&network, boardPacketAvailable_cb);
-  boardClient.setConnectedStateChangeCallback([] {
-    if (PRINT_BOARD_CLIENT_CONNECTED_CHANGED)
-      Serial.printf(BOARD_CLIENT_CONNECTED_FORMAT, boardClient.connected() ? "CONNECTED" : "DISCONNECTED");
-  });
-  boardClient.setSentPacketCallback(printSentToBoard_cb);
-  boardClient.setReadPacketCallback(printRecvFromBoard_cb);
-}
+// TASKS ------------------------
 
-#ifdef COMMS_M5ATOM
-GenericClient<uint16_t, uint16_t> m5AtomClient(COMMS_M5ATOM);
-void m5AtomClientInit()
-{
-  m5AtomClient.begin(&network, [](uint16_t from, uint8_t type) {
-    uint16_t packet = m5AtomClient.read();
-    Serial.printf("rx %d from M5Atom!\n", packet);
-    m5AtomClient.sendTo(0, packet);
-  });
-}
-#endif
+#include <tasks/root.h>
+
+// LOCAL QUEUE MANAGERS -----------------------
+
+Queue1::Manager<Transaction> *transactionQueue = nullptr;
 
 //------------------------------------------------------------------
 
-#define BATTERY_MEASURE_PIN 34
-
-//------------------------------------------------------------------
-
-#ifndef SEND_TO_BOARD_INTERVAL
-#define SEND_TO_BOARD_INTERVAL 200
-#endif
-//------------------------------------------------------------------
-
-TFT_eSPI tft = TFT_eSPI(LCD_HEIGHT, LCD_WIDTH); // Invoke custom library
-
-//------------------------------------------------------------------
-
-elapsedMillis
-    sinceSentToBoard,
-    sinceLastBoardPacketRx,
-    sinceSentRequest,
-    since_read_trigger,
-    sinceBoardConnected,
-    sinceStoredSnapshot;
-
-int oldCounter = 0;
-
-// prototypes
-void sendToBoard();
-
-//------------------------------------------------------------------
-
-class Config
-{
-public:
-  uint8_t headlightMode;
-};
-
-Config config;
-
-#define STORE_CONFIG "config"
-#define STORE_CONFIG_ACCEL_COUNTS "accel counts"
-#define STORE_CONFIG_BRAKE_COUNTS "brake counts"
-Preferences configStore;
-
-#include <throttle.h>
-
-ThrottleClass throttle;
-
-//---------------------------------------------------------------
-
-#include <tasks/core0/statsTask.h>
-#include <tasks/core0/remoteTask.h>
 #include <utils.h>
-#include <screens.h>
 
-#include <displayState.h>
-
-#include <tasks/core0/displayTask.h>
-#include <tasks/core0/commsStateTask.h>
-#include <nrf_comms.h>
-
-#include <peripherals.h>
-#include <assert.h>
-#define __ASSERT_USE_STDERR
+void createQueues();
+void createLocalQueueManagers();
+void startTasks();
+void configureTasks();
+void waitForTasks();
+void enableTasks(bool print = false);
 
 //------------------------------------------------------------------
 
 void setup()
 {
+#ifdef DEBUG_SERIAL
   Serial.begin(115200);
+#endif
   Serial.printf("------------------------ BOOT ------------------------\n");
+
+  Wire.begin();
 
   //get chip id
   String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
   chipId.toUpperCase();
 
-  Board::init();
-  Stats::init();
-
-  configStore.begin(STORE_CONFIG, false);
-
-  if (Stats::mutex.take("setup()"))
-  {
-    if (stats.wasWatchdogReset())
-    {
-      stats.controllerResets++;
-      storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
-      stats.timeMovingMS = readFromMemory<ulong>(STORE_STATS, STORE_STATS_TRIP_TIME);
-      if (PRINT_RESET_DETECTION)
-        Serial.printf("RESET!!! =========> controllerResets: %d\n", stats.controllerResets);
-    }
-    else if (stats.powerOnReset())
-    {
-      stats.controllerResets = 0;
-      storeInMemory<uint16_t>(STORE_STATS, STORE_STATS_SOFT_RSTS, stats.controllerResets);
-    }
-    Stats::mutex.give("setup()");
-  }
-
-  nrf24.begin(&radio, &network, COMMS_CONTROLLER);
-
-  boardClientInit();
-#ifdef COMMS_M5ATOM
-  m5AtomClientInit();
-#endif
-
+#ifdef RELEASE_BUILD
   print_build_status(chipId);
-
-  throttle.init(/*pin*/ 27, [](uint8_t throttle) {
-    // Serial.printf("throttle changed: %d (cruise: %d, pressed: %d)\n",
-    //               throttle,
-    //               controller_packet.cruise_control,
-    //               primaryButton.isPressedRaw());
-  });
-
-  primaryButtonInit();
-  rightButtonInit();
-
+#endif
   vTaskDelay(100);
 
-  // CORE_0
-  Display::createTask(DISPLAY_TASK_CORE, TASK_PRIORITY_3);
-  Comms::createTask(COMMS_TASK_CORE, TASK_PRIORITY_2);
-  Remote::createTask(BATTERY_TASK_CORE, TASK_PRIORITY_1);
-  Stats::createTask(STATS_TASK_CORE, TASK_PRIORITY_1);
+  createQueues();
 
-  // CORE_1
-  xDisplayEventQueue = xQueueCreate(5, sizeof(uint8_t));
-  xButtonPushEventQueue = xQueueCreate(3, sizeof(uint8_t));
+  createLocalQueueManagers();
 
-  displayQueue = new Queue::Manager(xDisplayEventQueue, 5);
-  displayQueue->setReadEventCallback(Display::queueReadCb);
-  buttonQueue = new Queue::Manager(xButtonPushEventQueue, 10);
+  configureTasks();
 
-  while (!Display::taskReady &&
-         !Comms::taskReady &&
-         !Stats::taskReady &&
-         !Remote::taskReady)
-  {
-    vTaskDelay(10);
-  }
+  startTasks();
 
-  sendConfigToBoard();
+  waitForTasks();
+
+  enableTasks(PRINT_THIS);
 }
 //---------------------------------------------------------------
 
-elapsedMillis sinceNRFUpdate;
+elapsedMillis since_checked_queues = 0;
+Transaction board;
 
 void loop()
 {
-  if (sinceSentToBoard > SEND_TO_BOARD_INTERVAL)
+  if (since_checked_queues > PERIOD_200ms)
   {
-    sendToBoard();
-  }
+    since_checked_queues = 0;
 
-  if (Board::mutex.take(__func__))
-  {
-    if (board.hasTimedout())
-      Comms::queue1->send(Comms::Event::BOARD_TIMEDOUT);
-    Board::mutex.give(__func__);
-  }
-
-  if (sinceNRFUpdate > 20)
-  {
-    sinceNRFUpdate = 0;
-    boardClient.update();
-#ifdef COMMS_M5ATOM
-    m5AtomClient.update();
+    // changed?
+    if (transactionQueue->hasValue() &&
+        board.moving != transactionQueue->payload.moving)
+    {
+      // moving
+      if (transactionQueue->payload.moving)
+      {
+#ifdef NINTENDOCLASSIC_TASK
+        nintendoClassTask.enabled = false;
 #endif
+        remoteTask.enabled = false;
+      }
+      // stopped
+      else
+      {
+#ifdef NINTENDOCLASSIC_TASK
+        nintendoClassTask.enabled = true;
+#endif
+        remoteTask.enabled = true;
+      }
+
+      board.moving = transactionQueue->payload.moving;
+    }
   }
 
-  primaryButton.loop();
-  rightButton.loop();
-
-  vTaskDelay(1);
+  vTaskDelay(TICKS_10ms);
 }
 
 //------------------------------------------------------------------
 
-void sendToBoard()
+void createQueues()
 {
-  bool throttleEnabled = false;
-  bool cruiseControlActive = false;
-
-  if (Board::mutex.take(__func__, 50))
-  {
-    throttleEnabled =
-        throttle.get() < 127 || // braking
-        board.packet.moving ||
-        !featureService.get<bool>(PUSH_TO_START) ||
-        (featureService.get<bool>(PUSH_TO_START) && primaryButton.isPressedRaw());
-
-    cruiseControlActive =
-        board.packet.moving &&
-        FEATURE_CRUISE_CONTROL &&
-        primaryButton.isPressedRaw();
-    Board::mutex.give(__func__);
-  }
-
-  sinceSentToBoard = 0;
-  controller_packet.throttle = throttle.get(/*enabled*/ throttleEnabled);
-  controller_packet.cruise_control = cruiseControlActive;
-  sendPacketToBoard();
+  xBatteryInfo = xQueueCreate(1, sizeof(BatteryInfo *));
+  xDisplayQueueHandle = xQueueCreate(1, sizeof(DisplayEvent *));
+  xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
+  xPacketStateQueueHandle = xQueueCreate(1, sizeof(Transaction *));
+  xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
+  xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 }
-//------------------------------------------------------------------
 
+void createLocalQueueManagers()
+{
+  transactionQueue = createQueueManager<Transaction>("(main) transactionQueue");
+}
+
+void configureTasks()
+{
+  boardCommsTask.doWorkInterval = PERIOD_50ms;
+  boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
+  // boardCommsTask.printSentPacketToBoard = true;
+  // boardCommsTask.printRxQueuePacket = true;
+  // boardCommsTask.printTxQueuePacket = true;
+
+#ifdef NINTENDOCLASSIC_TASK
+  nintendoClassTask.doWorkInterval = PERIOD_50ms;
 #endif
+
+#ifdef QWIICBUTTON_TASK
+  qwiicButtonTask.doWorkInterval = PERIOD_100ms;
+#endif
+
+#ifdef DIGITALPRIMARYBUTTON_TASK
+  digitalPrimaryButtonTask.doWorkInterval = PERIOD_100ms;
+  // digitalPrimaryButtonTask.printSendToQueue = true;
+#endif
+
+  throttleTask.doWorkInterval = PERIOD_200ms;
+  throttleTask.printWarnings = true;
+  throttleTask.printThrottle = PRINT_THROTTLE;
+  // throttleTask.thumbwheel.setSweepAngle(30.0);
+  // throttleTask.thumbwheel.setDeadzone(5.0);
+
+  displayTask.doWorkInterval = PERIOD_50ms;
+  displayTask.p_printState = PRINT_DISP_STATE;
+  displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
+
+  remoteTask.doWorkInterval = SECONDS * 5;
+  remoteTask.printSendToQueue = true;
+}
+
+void startTasks()
+{
+  boardCommsTask.start(BoardComms::task1);
+  displayTask.start(Display::task1);
+#ifdef NINTENDOCLASSIC_TASK
+  nintendoClassTask.start(nsNintendoClassicTask::task1);
+#endif
+#ifdef QWIICBUTTON_TASK
+  qwiicButtonTask.start(nsQwiicButtonTask::task1);
+#endif
+#ifdef DIGITALPRIMARYBUTTON_TASK
+  digitalPrimaryButtonTask.start(nsDigitalPrimaryButtonTask::task1);
+#endif
+
+  remoteTask.start(nsRemoteTask::task1);
+  throttleTask.start(nsThrottleTask::task1);
+}
+
+void waitForTasks()
+{
+  while (
+      boardCommsTask.ready == false ||
+      displayTask.ready == false ||
+#ifdef NINTENDOCLASSIC_TASK
+      nintendoClassTask.ready == false ||
+#endif
+#ifdef QWIICBUTTON_TASK
+      qwiicButtonTask.ready == false ||
+#endif
+#ifdef DIGITALPRIMARYBUTTON_TASK
+      digitalPrimaryButtonTask.ready == false ||
+#endif
+      remoteTask.ready == false ||
+      throttleTask.ready == false ||
+      false)
+    vTaskDelay(PERIOD_10ms);
+  Serial.printf("-- all tasks ready! --\n");
+}
+
+void enableTasks(bool print)
+{
+  boardCommsTask.enable(print);
+  displayTask.enable(print);
+#ifdef NINTENDOCLASSIC_TASK
+  nintendoClassTask.enable(print);
+#endif
+#ifdef QWIICBUTTON_TASK
+  qwiicButtonTask.enable(print);
+#endif
+#ifdef DIGITALPRIMARYBUTTON_TASK
+  digitalPrimaryButtonTask.enable(print);
+#endif
+  remoteTask.enable(print);
+  throttleTask.enable(print);
+}
+
+#endif // UNIT_TEST

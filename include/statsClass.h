@@ -3,6 +3,11 @@
 #include <rom/rtc.h> // for reset reason
 #endif
 
+#pragma once
+
+// #include <utils.h>
+#include <shared-utils.h>
+
 class StatsClass
 {
   typedef void (*ResetsAcknowledgedCallback)();
@@ -11,11 +16,11 @@ public:
   uint16_t total_failed_sending;
   unsigned long consecutive_resps;
   uint16_t controllerResets = 0,
-           boardResets = 0;
+           boardResets = 0,
+           session_count = 0;
   unsigned long timeMovingMS = 0;
   bool boardConnected = false,
        boardConnectedThisSession = false;
-  bool update = false;
 
   void setResetsAcknowledgedCallback(ResetsAcknowledgedCallback cb)
   {

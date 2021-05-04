@@ -1,275 +1,355 @@
-#ifndef Fsm
-#include <Fsm.h>
-#endif
-#ifndef FSMMANAGER_H
+#pragma once
+
+#define LCD_WIDTH 240
+#define LCD_HEIGHT 135
+
+#define TFT_DEFAULT_BG TFT_BLACK
+//------------------------------------------------------------
+
+// BatteryInfo *remote;
+namespace Display
+{
+  float _g_BoardVersion = 0.0;
+  BatteryInfo _g_RemoteBattery;
+}
+
 #include <FsmManager.h>
-#endif
+#include <screens.h>
+#include <FeatureService.h>
+
+//------------------------------------------------------------
 
 namespace Display
 {
-  DispState::Trigger lastDispEvent;
+  enum Trigger
+  {
+    TR_NO_EVENT = 0,
+    TR_CONNECTED,
+    TR_DISCONNECTED,
+    TR_STOPPED,
+    TR_MOVING,
+    TR_UPDATE,
+    TR_REMOTE_BATTERY_CHANGED,
+    TR_SELECT_BUTTON_CLICK,
+    TR_VERSION_DOESNT_MATCH,
 
-  elapsedMillis sinceShowingToggleScreen;
+    TR_UP_BUTTON_CLICKED,
+    TR_RIGHT_BUTTON_CLICKED,
+    TR_DOWN_BUTTON_CLICKED,
+    TR_LEFT_BUTTON_CLICKED,
+    TR_A_BUTTON_CLICKED,
+    TR_B_BUTTON_CLICKED,
+    TR_SEL_BUTTON_CLICKED,
+    TR_MENU_BUTTON_CLICKED,
+
+    TR_OPTION_TIMED_OUT,
+    TR_MAGNET_NOT_DETECTED,
+    TR_MAGNET_DETECTED,
+  };
+
+  const char *getTrigger(int ev)
+  {
+    switch (ev)
+    {
+    case TR_NO_EVENT:
+      return "TR_NO_EVENT";
+    case TR_CONNECTED:
+      return "TR_CONNECTED";
+    case TR_DISCONNECTED:
+      return "TR_DISCONNECTED";
+    case TR_STOPPED:
+      return "TR_STOPPED";
+    case TR_MOVING:
+      return "TR_MOVING";
+    case TR_UPDATE:
+      return "TR_UPDATE";
+    case TR_REMOTE_BATTERY_CHANGED:
+      return "TR_REMOTE_BATTERY_CHANGED";
+    case TR_SELECT_BUTTON_CLICK:
+      return "TR_SELECT_BUTTON_CLICK";
+    case TR_VERSION_DOESNT_MATCH:
+      return "TR_VERSION_DOESNT_MATCH";
+    case TR_UP_BUTTON_CLICKED:
+      return "TR_UP_BUTTON_CLICKED";
+    case TR_RIGHT_BUTTON_CLICKED:
+      return "TR_RIGHT_BUTTON_CLICKED";
+    case TR_DOWN_BUTTON_CLICKED:
+      return "TR_DOWN_BUTTON_CLICKED";
+    case TR_LEFT_BUTTON_CLICKED:
+      return "TR_LEFT_BUTTON_CLICKED";
+    case TR_A_BUTTON_CLICKED:
+      return "TR_A_BUTTON_CLICKED";
+    case TR_B_BUTTON_CLICKED:
+      return "TR_B_BUTTON_CLICKED";
+    case TR_SEL_BUTTON_CLICKED:
+      return "TR_SEL_BUTTON_CLICKED";
+    case TR_MENU_BUTTON_CLICKED:
+      return "TR_MENU_BUTTON_CLICKED";
+    case TR_OPTION_TIMED_OUT:
+      return "TR_OPTION_TIMED_OUT";
+    case TR_MAGNET_NOT_DETECTED:
+      return "TR_MAGNET_NOT_DETECTED";
+    case TR_MAGNET_DETECTED:
+      return "TR_MAGNET_DETECTED";
+    }
+    return OUT_OF_RANGE;
+  }
+
+  Trigger lastDispEvent;
+
+  elapsedMillis sinceShowingOptionScreen;
 
   enum StateId
   {
-    START_UP,
-    DISCONNECTED,
-    SOFTWARE_STATS,
-    BOARD_BATTERY,
-    STOPPED_SCREEN,
-    MOVING_SCREEN,
-    BOARD_VERSION_DOESNT_MATCH_SCREEN,
-    SHOW_PUSH_TO_START,
-    SHOW_SETTINGS,
-    TOGGLE_PUSH_TO_START,
+    ST_START_UP,
+    ST_DISCONNECTED,
+    ST_SOFTWARE_STATS,
+    ST_BOARD_BATTERY,
+    ST_STOPPED_SCREEN,
+    ST_MOVING_SCREEN,
+    ST_MAGNET_NOT_DETECTED,
+    ST_BOARD_VERSION_DOESNT_MATCH,
+    ST_OPTION_PUSH_TO_START,
+    ST_OPTION_THROTTLE_SETTING,
+    ST_SHOW_SETTINGS,
+    ST_TOGGLE_PUSH_TO_START,
   };
 
   const char *stateID(uint16_t id)
   {
     switch (id)
     {
-    case START_UP:
-      return "START_UP";
-    case DISCONNECTED:
-      return "DISCONNECTED";
-    case SOFTWARE_STATS:
-      return "SOFTWARE_STATS";
-    case BOARD_BATTERY:
-      return "BOARD_BATTERY";
-    case STOPPED_SCREEN:
-      return "STOPPED_SCREEN";
-    case MOVING_SCREEN:
-      return "MOVING_SCREEN";
-    case BOARD_VERSION_DOESNT_MATCH_SCREEN:
-      return "BOARD_VERSION_DOESNT_MATCH_SCREEN";
-    case SHOW_PUSH_TO_START:
-      return "SHOW_PUSH_TO_START";
-    case SHOW_SETTINGS:
-      return "SHOW_SETTINGS";
-    case TOGGLE_PUSH_TO_START:
-      return "TOGGLE_PUSH_TO_START";
+    case ST_START_UP:
+      return "ST_START_UP";
+    case ST_DISCONNECTED:
+      return "ST_DISCONNECTED";
+    case ST_SOFTWARE_STATS:
+      return "ST_SOFTWARE_STATS";
+    case ST_BOARD_BATTERY:
+      return "ST_BOARD_BATTERY";
+    case ST_STOPPED_SCREEN:
+      return "ST_STOPPED_SCREEN";
+    case ST_MOVING_SCREEN:
+      return "ST_MOVING_SCREEN";
+    case ST_MAGNET_NOT_DETECTED:
+      return "ST_MAGNET_NOT_DETECTED";
+    case ST_BOARD_VERSION_DOESNT_MATCH:
+      return "ST_BOARD_VERSION_DOESNT_MATCH";
+    case ST_OPTION_PUSH_TO_START:
+      return "ST_OPTION_PUSH_TO_START";
+    case ST_SHOW_SETTINGS:
+      return "ST_SHOW_SETTINGS";
+    case ST_TOGGLE_PUSH_TO_START:
+      return "ST_TOGGLE_PUSH_TO_START";
+    case ST_OPTION_THROTTLE_SETTING:
+      return "ST_OPTION_THROTTLE_SETTING";
     }
-    return outOfRange("Display::stateID()");
+    return "OUT OF RANGE: Display::stateID()";
   }
 
-  FsmManager<DispState::Trigger> dispFsm;
+  FsmManager<Trigger> fsm_mgr;
 
   //---------------------------------------------------------------
-  State stateStartup(
-      [] {
-        dispFsm.printState(START_UP);
-        screenSoftwareStats();
-      },
-      NULL, NULL);
-  //---------------------------------------------------------------
   State stateDisconnected(
+      ST_DISCONNECTED,
       [] {
-        dispFsm.printState(DISCONNECTED);
-        screenWhenDisconnected();
-      },
-      NULL, NULL);
-  //---------------------------------------------------------------
-  State stSoftwareStats(
-      [] {
-        dispFsm.printState(SOFTWARE_STATS);
-        screenSoftwareStats();
+        fsm_mgr.printState(ST_DISCONNECTED);
+        simpleStoppedScreen(SimpleScreenOption::OFFLINE, TFT_CASET);
       },
       NULL, NULL);
   //---------------------------------------------------------------
   State stBoardBattery(
+      ST_BOARD_BATTERY,
       [] {
-        dispFsm.printState(BOARD_BATTERY);
-        if (Board::mutex.take(__func__))
-        {
-          screenBoardBattery(board.packet.batteryVoltage);
-          Board::mutex.give(__func__);
-        }
+        fsm_mgr.printState(ST_BOARD_BATTERY);
+        // screenBoardBattery(board.packet.batteryVoltage);
       },
       NULL, NULL);
   //---------------------------------------------------------------
-  State stateStopped(
+  State stStopped(
+      ST_STOPPED_SCREEN,
       [] {
-        // don't need UPDATE at this stage
-        if (dispFsm.lastEvent() == DispState::UPDATE)
+        // don't need TR_UPDATE at this stage
+        if (fsm_mgr.lastEvent() == Display::TR_UPDATE)
           return;
 
-        // if (dispFsm.lastEvent() != DispState::UPDATE)
-        dispFsm.printState(STOPPED_SCREEN);
+        fsm_mgr.printState(ST_STOPPED_SCREEN);
 
-        const char *context = "disp: stateStopped (onEnter)";
-        if (Stats::mutex.take(context, TICKS_10))
-        {
-          if (stats.controllerResets > 0)
-            screenNeedToAckResets(Stats::CONTROLLER_RESETS);
-          else if (stats.boardResets > 0)
-            screenNeedToAckResets(Stats::BOARD_RESETS);
-          else
-            simpleStoppedScreen("STOPPED", TFT_CASET);
-          // screenWhenStopped(/*init*/ true);
-          Stats::mutex.give(context);
-        }
+        // if (stats.controllerResets > 0)
+        //   screenNeedToAckResets(Stats::CONTROLLER_RESETS);
+        // else if (stats.boardResets > 0)
+        //   screenNeedToAckResets(Stats::BOARD_RESETS);
+        // else
+        simpleStoppedScreen(SimpleScreenOption::STOPPED, TFT_CASET);
       },
-      [] {
-        // const char *context = "disp: stateStopped (onState)";
-        // if (Stats::mutex.take(context), TICKS_10)
-        // {
-        //   if (stats.controllerResets == 0 && stats.boardResets == 0)
-        //   {
-        //     if (stats.update)
-        //     {
-        //       stats.update = false;
-        //       screenWhenStopped(/*init*/ false);
-        //     }
-        //   }
-        //   Stats::mutex.give(context);
-        // }
-      },
+      NULL,
       NULL);
   //---------------------------------------------------------------
-  State stateMoving(
+  State stMoving(
+      ST_MOVING_SCREEN,
       [] {
         // don't need UPDATE at this stage
-        if (dispFsm.lastEvent() == DispState::UPDATE)
+        if (fsm_mgr.lastEvent() == Display::TR_UPDATE)
           return;
 
-        dispFsm.printState(MOVING_SCREEN);
-        const char *context = "disp: stateMoving (onEnter)";
-        if (Stats::mutex.take(context, TICKS_10))
-        {
-          if (stats.controllerResets > 0)
-            screenNeedToAckResets(Stats::CONTROLLER_RESETS);
-          else if (stats.boardResets > 0)
-            screenNeedToAckResets(Stats::BOARD_RESETS);
-          else
-            simpleMovingScreen();
-          Stats::mutex.give(context);
-        }
+        fsm_mgr.printState(ST_MOVING_SCREEN);
+
+        // if (stats.controllerResets > 0)
+        //   screenNeedToAckResets(Stats::CONTROLLER_RESETS);
+        // else if (stats.boardResets > 0)
+        //   screenNeedToAckResets(Stats::BOARD_RESETS);
+        // else
+        simpleMovingScreen();
       },
-      [] {
-        // const char *context = "disp: stateMoving (onState)";
-        // if (Stats::mutex.take(context, TICKS_10))
-        // {
-        //   if (stats.controllerResets == 0)
-        //   {
-        //     if (stats.update)
-        //     {
-        //       stats.update = false;
-        //       screenWhenMoving(/*init*/ false);
-        //     }
-        //   }
-        //   Stats::mutex.give(context);
-        // }
-      },
+      NULL,
       NULL);
   //---------------------------------------------------------------
-  State stateBoardVersionDoesntMatchScreen(
+  State stMagnetNotDetected(
+      ST_MAGNET_NOT_DETECTED,
       [] {
-        dispFsm.printState(BOARD_VERSION_DOESNT_MATCH_SCREEN);
-        if (Board::mutex.take(__func__))
-        {
-          screenBoardNotCompatible(board.packet.version);
-          Board::mutex.give(__func__);
-        }
+        fsm_mgr.printState(ST_MAGNET_NOT_DETECTED);
+        screenError("No magnet!");
+      },
+      NULL,
+      NULL);
+  //---------------------------------------------------------------
+  State stBoardVersionDoesntMatch(
+      ST_BOARD_VERSION_DOESNT_MATCH,
+      [] {
+        fsm_mgr.printState(ST_BOARD_VERSION_DOESNT_MATCH);
+        screenBoardNotCompatible(_g_BoardVersion);
       },
       NULL,
       NULL);
   //---------------------------------------------------------------
 
-#include "OptionsClass.h"
+#define OPTION_SCREEN_TIMEOUT 2000
 
-  //---------------------------------------------------------------
-  State stShowSettings(
+  State stOptionPushToStart(
+      ST_OPTION_PUSH_TO_START,
       [] {
-        dispFsm.printState(SHOW_SETTINGS);
-        sinceShowingToggleScreen = 0;
-        switch (lastDispEvent)
+        fsm_mgr.printState(ST_OPTION_PUSH_TO_START);
+        sinceShowingOptionScreen = 0;
+        switch (fsm_mgr.lastEvent())
         {
-        case DispState::PRIMARY_TRIPLE_CLICK:
+        case Display::TR_MENU_BUTTON_CLICKED:
         {
-          settingPtr = SettingOption::OPT_PUSH_TO_START;
-          optionHandlers[settingPtr]->display();
+          bool enabled = featureService.get<bool>(FeatureType::PUSH_TO_START);
+          screenPropValue<bool>("Push to start", enabled ? "ON" : "OFF");
           break;
         }
-        case DispState::PRIMARY_SINGLE_CLICK:
+        case Display::TR_SELECT_BUTTON_CLICK:
         {
-          nextSetting();
-          optionHandlers[settingPtr]->display();
+          bool enabled = featureService.get<bool>(FeatureType::PUSH_TO_START);
+          featureService.set(PUSH_TO_START, !enabled);
+          screenPropValue<bool>("Push to start", enabled == false ? "ON" : "OFF");
           break;
         }
-        case DispState::PRIMARY_LONG_PRESS:
-        {
-          optionHandlers[settingPtr]->changeValue();
-          optionHandlers[settingPtr]->display();
-          break;
-        }
+        default:
+          Serial.printf("Unhandled event: %s\n", Display::getTrigger(fsm_mgr.lastEvent()));
         }
       },
-      NULL, NULL);
+      [] {
+        if (sinceShowingOptionScreen > OPTION_SCREEN_TIMEOUT)
+          fsm_mgr.trigger(Display::TR_OPTION_TIMED_OUT);
+      },
+      NULL);
+
+  int throttleValue = 0;
+
+  State stOptionThrottleSetting(
+      ST_OPTION_THROTTLE_SETTING,
+      [] {
+        fsm_mgr.printState(ST_OPTION_THROTTLE_SETTING);
+        sinceShowingOptionScreen = 0;
+        switch (fsm_mgr.lastEvent())
+        {
+        case Display::TR_MENU_BUTTON_CLICKED:
+        {
+          char buff[5];
+          sprintf(buff, "%d", throttleValue);
+          screenPropValue<int>("Throttle 1", buff);
+          break;
+        }
+        case Display::TR_DOWN_BUTTON_CLICKED:
+        {
+          if (throttleValue > 0)
+            throttleValue--;
+          char buff[5];
+          sprintf(buff, "%d", throttleValue);
+          screenPropValue<int>("Throttle 2", buff);
+          break;
+        }
+        case Display::TR_UP_BUTTON_CLICKED:
+        {
+          throttleValue++;
+          char buff[5];
+          sprintf(buff, "%d", throttleValue);
+          screenPropValue<int>("Throttle 2", buff);
+          break;
+        }
+        default:
+          Serial.printf("Unhandled event: %s\n", Display::getTrigger(fsm_mgr.lastEvent()));
+        } },
+      [] {
+        if (sinceShowingOptionScreen > OPTION_SCREEN_TIMEOUT)
+          fsm_mgr.trigger(Display::TR_OPTION_TIMED_OUT);
+      },
+      NULL);
   //---------------------------------------------------------------
 
-  Fsm fsm(&stateStartup);
+  Fsm _fsm(&stateDisconnected);
 
   void clearResetCounters()
   {
-    if (Stats::mutex.take("disp: clearResetCounter"))
-    {
-      if (stats.controllerResets > 0)
-        stats.clearControllerResets();
-      else if (stats.boardResets > 0)
-        stats.clearBoardResets();
-      Stats::mutex.give("disp: clearResetCounter");
-      Stats::queue->send(Stats::CLEAR_CONTROLLER_RESETS);
-    }
+    // if (stats.controllerResets > 0)
+    //   stats.clearControllerResets();
+    // else if (stats.boardResets > 0)
+    //   stats.clearBoardResets();
   }
 
   void addTransitions()
   {
-    fsm.add_timed_transition(&stateStartup, &stateDisconnected, 2000, NULL);
+    // ST_DISCONNECTED
+    _fsm.add_transition(&stStopped, &stateDisconnected, Display::TR_DISCONNECTED, NULL);
+    _fsm.add_transition(&stMoving, &stateDisconnected, Display::TR_DISCONNECTED, NULL);
+    _fsm.add_transition(&stBoardVersionDoesntMatch, &stateDisconnected, Display::TR_DISCONNECTED, NULL);
 
-    // DispState::DISCONNECTED
-    fsm.add_transition(&stateStopped, &stateDisconnected, DispState::DISCONNECTED, NULL);
-    fsm.add_transition(&stateMoving, &stateDisconnected, DispState::DISCONNECTED, NULL);
+    // Options
+    _fsm.add_transition(&stStopped, &stOptionPushToStart, Display::TR_MENU_BUTTON_CLICKED, NULL);
+    // _fsm.add_transition(&stOptionPushToStart, &stStopped, Display::TR_MENU_BUTTON_CLICKED, NULL);
+    _fsm.add_transition(&stOptionPushToStart, &stOptionPushToStart, Display::TR_SELECT_BUTTON_CLICK, NULL);
+    _fsm.add_transition(&stOptionPushToStart, &stStopped, Display::TR_OPTION_TIMED_OUT, NULL);
 
-    // DispState::PRIMARY_DOUBLE_CLICK
-    fsm.add_transition(&stateStopped, &stateStopped, DispState::PRIMARY_DOUBLE_CLICK, clearResetCounters);
-    fsm.add_transition(&stateMoving, &stateMoving, DispState::PRIMARY_DOUBLE_CLICK, clearResetCounters);
+    _fsm.add_transition(&stOptionPushToStart, &stOptionThrottleSetting, Display::TR_MENU_BUTTON_CLICKED, NULL);
+    _fsm.add_transition(&stOptionThrottleSetting, &stStopped, Display::TR_MENU_BUTTON_CLICKED, NULL);
+    _fsm.add_transition(&stOptionThrottleSetting, &stStopped, Display::TR_OPTION_TIMED_OUT, NULL);
+    _fsm.add_transition(&stOptionThrottleSetting, &stOptionThrottleSetting, Display::TR_UP_BUTTON_CLICKED, NULL);
+    _fsm.add_transition(&stOptionThrottleSetting, &stOptionThrottleSetting, Display::TR_DOWN_BUTTON_CLICKED, NULL);
 
-    // DispState::MOVING
-    fsm.add_transition(&stateDisconnected, &stateMoving, DispState::MOVING, NULL);
-    fsm.add_transition(&stateStopped, &stateMoving, DispState::MOVING, NULL);
+    // TR_MOVING
+    _fsm.add_transition(&stateDisconnected, &stMoving, Display::TR_MOVING, NULL);
+    _fsm.add_transition(&stStopped, &stMoving, Display::TR_MOVING, NULL);
 
-    // DispState::STOPPED
-    fsm.add_transition(&stateDisconnected, &stateStopped, DispState::STOPPED, NULL);
-    fsm.add_transition(&stateMoving, &stateStopped, DispState::STOPPED, NULL);
+    // TR_STOPPED
+    _fsm.add_transition(&stateDisconnected, &stStopped, Display::TR_STOPPED, NULL);
+    _fsm.add_transition(&stMoving, &stStopped, Display::TR_STOPPED, NULL);
 
-    //DispState::REMOTE_BATTERY_CHANGED
-    fsm.add_transition(&stateStopped, &stateStopped, DispState::REMOTE_BATTERY_CHANGED, NULL);
+    // TR_REMOTE_BATTERY_CHANGED
+    _fsm.add_transition(&stStopped, &stStopped, Display::TR_REMOTE_BATTERY_CHANGED, NULL);
+    _fsm.add_transition(&stateDisconnected, &stateDisconnected, Display::TR_REMOTE_BATTERY_CHANGED, NULL);
 
-    // settings
-    /*
-    - PRIMARY_TRIPLE_CLICK takes us to first settings screen
-    - will do back to Stopped screen after 3 seconds if nothing done
-    - PRIMARY_SINGLE_CLICK retriggers stShowSettings (navigate to next setting)
-    - PRIMARY_LONG_PRESS retriggers stShowSettings (toggle value)
-    */
-    fsm.add_transition(&stateStopped, &stShowSettings, DispState::PRIMARY_TRIPLE_CLICK, NULL);
-    fsm.add_timed_transition(&stShowSettings, &stateStopped, 3000, NULL);
-    fsm.add_transition(&stShowSettings, &stShowSettings, DispState::PRIMARY_SINGLE_CLICK, NULL);
-    fsm.add_transition(&stShowSettings, &stShowSettings, DispState::PRIMARY_LONG_PRESS, NULL);
+    // UPDATE
+    _fsm.add_transition(&stStopped, &stStopped, Display::TR_UPDATE, NULL);
+    _fsm.add_transition(&stMoving, &stMoving, Display::TR_UPDATE, NULL);
 
-    // DispState::UPDATE
-    fsm.add_transition(&stateStopped, &stateStopped, DispState::UPDATE, NULL);
-    fsm.add_transition(&stateMoving, &stateMoving, DispState::UPDATE, NULL);
+    // TR_MAGNET_NOT_DETECTED
+    _fsm.add_transition(&stStopped, &stMagnetNotDetected, Display::TR_MAGNET_NOT_DETECTED, NULL);
+    _fsm.add_transition(&stMoving, &stMagnetNotDetected, Display::TR_MAGNET_NOT_DETECTED, NULL);
+    _fsm.add_transition(&stMagnetNotDetected, &stStopped, Display::TR_MAGNET_DETECTED, NULL);
 
-    // DispState::VERSION_DOESNT_MATCH
-    fsm.add_transition(&stateDisconnected, &stateBoardVersionDoesntMatchScreen, DispState::VERSION_DOESNT_MATCH, NULL);
+    // TR_VERSION_DOESNT_MATCH
+    _fsm.add_transition(&stateDisconnected, &stBoardVersionDoesntMatch, Display::TR_VERSION_DOESNT_MATCH, NULL);
+    _fsm.add_transition(&stStopped, &stBoardVersionDoesntMatch, Display::TR_VERSION_DOESNT_MATCH, NULL);
   }
-
-  void queueReadCb(uint16_t ev)
-  {
-    if (PRINT_DISP_QUEUE_READ && ev != DispState::NO_EVENT)
-      Serial.printf(PRINT_QUEUE_READ_FORMAT, "DISP", DispState::getTrigger(ev));
-  }
-
 } // namespace Display
