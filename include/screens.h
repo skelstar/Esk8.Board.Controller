@@ -294,13 +294,13 @@ namespace Display
 
   //-----------------------------------------------------
 
-  void simpleStoppedScreen(SimpleScreenOption option, uint32_t colour)
+  void simpleStoppedScreen(SimpleScreenOption variety, uint32_t colour)
   {
+    uint8_t x = 0, y = 0;
     const int barHeight = 15;
 
     if (take(mux_SPI))
     {
-      uint8_t y = 0;
       tft.fillScreen(TFT_BLACK);
 
       y = (LCD_HEIGHT / 2) - tft.fontHeight() - 20;
@@ -310,30 +310,42 @@ namespace Display
       tft.setTextColor(TFT_CYAN);
       tft.setTextDatum(TC_DATUM);
 
-      if (option == SimpleScreenOption::STOPPED)
+      if (variety == SimpleScreenOption::STOPPED)
       {
         tft.drawString("STOPPED", LCD_WIDTH / 2, y);
         tft.fillRect(0, 0, LCD_WIDTH, barHeight, TFT_DARKGREEN);
       }
-      else if (option == SimpleScreenOption::OFFLINE)
+      else if (variety == SimpleScreenOption::OFFLINE)
       {
         tft.drawString("OFFLINE", LCD_WIDTH / 2, y);
         tft.fillRect(0, 0, LCD_WIDTH, barHeight, TFT_RED);
       }
       y += tft.fontHeight() + 5;
 
+      bool showBoardBatt = _g_BoardBattery > 10.0;
+
       // remote battery
       const int batteryWidth = 50;
       y += 15;
       uint8_t percent = Display::_g_RemoteBattery.percent;
-      drawSmallBattery(percent, LCD_WIDTH / 2 - 5, y, batteryWidth, TR_DATUM, Display::_g_RemoteBattery.charging);
+      x = showBoardBatt
+              ? LCD_WIDTH / 2 - 56
+              : LCD_WIDTH / 2 - 5;
+      drawSmallBattery(percent, x, y, batteryWidth, TR_DATUM, Display::_g_RemoteBattery.charging);
 
-      char buff[10];
-      sprintf(buff, "%0.1fv", Display::_g_RemoteBattery.volts);
+      char buff[16];
+      if (showBoardBatt)
+        sprintf(buff, "%0.1fv|%.1fv", Display::_g_RemoteBattery.volts, Display::_g_BoardBattery);
+      else
+        sprintf(buff, "%0.1fv", Display::_g_RemoteBattery.volts);
+
       tft.setTextDatum(TL_DATUM);
       tft.setFreeFont(FONT_LG);
       tft.setTextColor(TFT_DARKGREY);
-      tft.drawString(buff, LCD_WIDTH / 2 + 5, y - 4);
+      x = showBoardBatt
+              ? LCD_WIDTH / 2 - 44
+              : LCD_WIDTH / 2 + 5;
+      tft.drawString(buff, x, y - 4);
 
       y += 30;
       tft.setTextColor(TFT_DARKGREY);

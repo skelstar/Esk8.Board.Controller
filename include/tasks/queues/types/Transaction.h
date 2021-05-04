@@ -7,7 +7,8 @@
 class Transaction : public QueueBase
 {
 public:
-  float version = 0.0;
+  float version = 0.0,
+        batteryVolts = 0.0;
   unsigned long
       packet_id,
       replyId,
@@ -38,6 +39,7 @@ public:
     responseTime = millis();
     version = packet.version;
     moving = packet.moving;
+    batteryVolts = packet.batteryVoltage;
   }
 
   bool acknowledged()

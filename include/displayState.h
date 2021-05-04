@@ -10,6 +10,7 @@
 namespace Display
 {
   float _g_BoardVersion = 0.0;
+  float _g_BoardBattery = 0.0;
   BatteryInfo _g_RemoteBattery;
 }
 
