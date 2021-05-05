@@ -77,6 +77,7 @@ private:
     if (transactionQueue->hasValue() && transactionQueue->payload.event_id > 0)
     {
       transaction = transactionQueue->payload;
+      Display::_g_BoardBattery = transaction.batteryVolts;
     }
     // will check for online regardless of anything being new on the queue
     handlePacketState(transaction);
