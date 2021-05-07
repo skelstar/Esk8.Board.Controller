@@ -7,6 +7,7 @@
 #define PRINTSTREAM_FALLBACK
 #include "Debug.hpp"
 
+#include <BoardConfig.h>
 #include <tasks/queues/queues.h>
 #include <tasks/queues/types/root.h>
 
@@ -24,13 +25,9 @@ SemaphoreHandle_t mux_SPI;
 
 #if REMOTE_USED == NINTENDO_REMOTE
 #include <SparkFun_Qwiic_Button.h>
-#elif REMOTE_USED == REMOTE_RED_REMOTE
-#include <Button2.h>
-#endif
-
-#if REMOTE_USED == NINTENDO_REMOTE
 #include <MagThumbwheel.h>
-#elif REMOTE_USED == REMOTE_RED_REMOTE
+#elif REMOTE_USED == RED_REMOTE
+#include <Button2.h>
 #include <AnalogThumbwheel.h>
 #endif
 

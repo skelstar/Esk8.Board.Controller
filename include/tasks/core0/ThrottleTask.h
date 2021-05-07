@@ -18,7 +18,7 @@ public:
 
 #if REMOTE_USED == NINTENDO_REMOTE
   MagneticThumbwheelClass thumbwheel;
-#elif REMOTE_USED == REMOTE_RED_REMOTE
+#elif REMOTE_USED == RED_REMOTE
   AnalogThumbwheelClass thumbwheel;
 #endif
 
