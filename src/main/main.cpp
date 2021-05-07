@@ -22,13 +22,13 @@ SemaphoreHandle_t mux_SPI;
 
 #include <constants.h>
 
-#if REMOTE_USED == REMOTE_M5STACK_FIRE
+#if REMOTE_USED == NINTENDO_REMOTE
 #include <SparkFun_Qwiic_Button.h>
 #elif REMOTE_USED == REMOTE_RED_REMOTE
 #include <Button2.h>
 #endif
 
-#if REMOTE_USED == REMOTE_M5STACK_FIRE
+#if REMOTE_USED == NINTENDO_REMOTE
 #include <MagThumbwheel.h>
 #elif REMOTE_USED == REMOTE_RED_REMOTE
 #include <AnalogThumbwheel.h>

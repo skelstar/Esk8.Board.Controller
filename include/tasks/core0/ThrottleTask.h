@@ -16,7 +16,7 @@ public:
   bool printWarnings = true;
   bool printThrottle = false;
 
-#if REMOTE_USED == REMOTE_M5STACK_FIRE
+#if REMOTE_USED == NINTENDO_REMOTE
   MagneticThumbwheelClass thumbwheel;
 #elif REMOTE_USED == REMOTE_RED_REMOTE
   AnalogThumbwheelClass thumbwheel;
