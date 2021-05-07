@@ -13,7 +13,8 @@ public:
       packet_id,
       replyId,
       responseTime;
-  bool moving = false;
+  bool moving = false,
+       sentOK = false;
 
 public:
   Transaction() : QueueBase()
@@ -49,12 +50,7 @@ public:
 
   bool connected(unsigned long timeout)
   {
-    bool online = packet_id == 0 || // ignore first packet
-                  millis() - responseTime < timeout;
-    // if (!online)
-    //   Serial.printf("connected(): board offline since: %lu\n",
-    //                 millis() - responseTime);
-    return online;
+    return sentOK;
   }
 
   static void print(Transaction item, const char *preamble = nullptr)

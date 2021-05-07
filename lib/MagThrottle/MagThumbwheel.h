@@ -73,8 +73,10 @@ public:
   {
   }
 
-  void init()
+  void init(SemaphoreHandle_t i2c_mux)
   {
+    _i2c_mux = i2c_mux;
+    assert(_i2c_mux != nullptr);
     assert(_throttleEnabled_cb != nullptr);
     centre();
   }
@@ -117,30 +119,30 @@ public:
       deg = _convertRawAngleToDegrees(ams5600.getRawAngle());
       give(_i2c_mux);
     }
-    float delta = _getDeltaDegrees(deg, _centre);
-    bool acrossZeroDegrees = abs(delta) > 180.0;
+    float degFromCentre = _getDeltaDegrees(deg, _centre);
+    bool acrossZeroDegrees = abs(degFromCentre) > 180.0;
 
     if (acrossZeroDegrees)
-      delta = _deltaAcrossZeroDegress(deg, _prev_deg);
+      degFromCentre = _deltaAcrossZeroDegress(deg, _prev_deg);
 
     uint8_t oldThrottle = _throttle;
 
     _throttle = 127;
 
-    bool outsideDeadzone = abs(delta) >= _deadzone;
+    bool outsideDeadzone = abs(degFromCentre) >= _deadzone;
     if (outsideDeadzone)
     {
       if (_accel_direction == DIR_CLOCKWISE)
       {
-        _throttle = delta > _deadzone
-                        ? (uint8_t)_accelmapper.constrainedMap(delta)
-                        : (uint8_t)_brakemapper.constrainedMap(delta);
+        _throttle = degFromCentre > _deadzone
+                        ? (uint8_t)_accelmapper.constrainedMap(degFromCentre)
+                        : (uint8_t)_brakemapper.constrainedMap(degFromCentre);
       }
       else if (_accel_direction == DIR_ANTI_CLOCKWISE)
       {
-        _throttle = delta < -_deadzone
-                        ? (uint8_t)_accelmapper.constrainedMap(delta)
-                        : (uint8_t)_brakemapper.constrainedMap(delta);
+        _throttle = degFromCentre < -_deadzone
+                        ? (uint8_t)_accelmapper.constrainedMap(degFromCentre)
+                        : (uint8_t)_brakemapper.constrainedMap(degFromCentre);
       }
     }
 

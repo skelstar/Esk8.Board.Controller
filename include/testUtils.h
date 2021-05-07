@@ -96,7 +96,7 @@ namespace Test
     nintendoQueue = createQueueManager<NintendoButtonEvent>("(test)nintendoQueue");
     throttleQueue = createQueueManager<ThrottleState>("(test)throttleQueue");
 
-    boardCommsTask.start(BoardComms::task1);
+    boardCommsTask.start(nsBoardComms::task1);
     displayTask.start(Display::task1);
     nintendoClassTask.start(nsNintendoClassicTask::task1);
     qwiicButtonTask.start(nsQwiicButtonTask::task1);

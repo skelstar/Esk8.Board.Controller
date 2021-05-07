@@ -50,9 +50,8 @@ private:
     // thumbwheel.setAccelDirection(DIR_CLOCKWISE);
     // thumbwheel.setDeltaLimits(LIMIT_DELTA_MIN, LIMIT_DELTA_MAX);
     thumbwheel.setThrottleEnabledCb([] { return true; });
-    // thumbwheel.init(mux_I2C);
     thumbwheel.printThrottle = printThrottle;
-    thumbwheel.init();
+    thumbwheel.init(mux_I2C);
   }
 
   void doWork()

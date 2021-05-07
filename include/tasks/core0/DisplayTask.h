@@ -43,11 +43,14 @@ private:
   void initialiseQueues()
   {
     batteryQueue = createQueueManager<BatteryInfo>("(DisplayTask)BatteryInfo");
-    transactionQueue = createQueueManager<Transaction>("(DisplayBase)PacketStateQueue");
+    transactionQueue = createQueueManager<Transaction>("(DisplayBase)TransactionQueue");
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(DisplayBase)PrimaryButtonQueue");
     nintendoClassicQueue = createQueueManager<NintendoButtonEvent>("(DisplayBase)NintendoClassicQueue");
     displayEventQueue = createQueueManager<DisplayEvent>("(DisplayBase)DisplayEventQueue");
     throttleQueue = createQueueManager<ThrottleState>("(DisplayTask)ThrottleQueue");
+
+    throttleQueue->read(); // clear queue
+    transactionQueue->read();
   }
   //--------------------------------
   void initialise()
@@ -70,17 +73,18 @@ private:
     if (p_printTrigger)
       Display::fsm_mgr.setPrintTriggerCallback(printTrigger);
   }
+
   //===================================================================
   void doWork()
   {
     // update transaction if anything new on the queue
-    if (transactionQueue->hasValue() && transactionQueue->payload.event_id > 0)
+    if (transactionQueue->hasValue())
     {
       transaction = transactionQueue->payload;
       Display::_g_BoardBattery = transaction.batteryVolts;
+
+      handlePacketState(transaction);
     }
-    // will check for online regardless of anything being new on the queue
-    handlePacketState(transaction);
 
     if (nintendoClassicQueue->hasValue())
       handleNintendoButtonEvent(nintendoClassicQueue->payload);
@@ -105,23 +109,23 @@ private:
   }
   //==================================================
 
+#define NOT_IN_STATE(x) !Display::fsm_mgr.currentStateIs(x)
+#define IS_REVISIT() !Display::_fsm.revisit()
+#define IN_STATE(x) Display::fsm_mgr.currentStateIs(x)
+#define RESPONSE_WINDOW 500
+
   static void printState(uint16_t id)
   {
-    // if (p_printState)
     Serial.printf(PRINT_FSM_STATE_FORMAT, "DISP", millis(), Display::stateID(id));
   }
 
   static void printTrigger(uint16_t ev)
   {
-    if (!(Display::_fsm.revisit() && ev == Display::TR_STOPPED) &&
-        !(Display::_fsm.revisit() && ev == Display::TR_MOVING) &&
+    if (!(IS_REVISIT() && ev == Display::TR_STOPPED) &&
+        !(IS_REVISIT() && ev == Display::TR_MOVING) &&
         !(Display::_fsm.getCurrentStateId() == Display::ST_OPTION_PUSH_TO_START && ev == Display::TR_STOPPED))
       Serial.printf(PRINT_FSM_TRIGGER_FORMAT, "DISP", millis(), Display::getTrigger(ev));
   }
-
-#define NOT_IN_STATE(x) !Display::fsm_mgr.currentStateIs(x)
-#define IN_STATE(x) Display::fsm_mgr.currentStateIs(x)
-#define RESPONSE_WINDOW 500
 
   void handlePacketState(Transaction &transaction)
   {

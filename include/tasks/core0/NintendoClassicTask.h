@@ -43,11 +43,6 @@ private:
     connectToNintendoController();
   }
 
-  bool timeToDoWork()
-  {
-    return true;
-  }
-
   void doWork()
   {
     buttonEvent.changed = classic.update(mux_I2C, TICKS_50ms);
