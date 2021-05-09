@@ -7,14 +7,39 @@
 class Transaction : public QueueBase
 {
 public:
+  enum TransactionSendResult
+  {
+    NONE = 0,
+    OK,
+    FAIL,
+    UPDATE,
+  };
+
+  const char *getSendResult()
+  {
+    switch (this->sendResult)
+    {
+    case NONE:
+      return "NONE";
+    case OK:
+      return "OK";
+    case FAIL:
+      return "FAIL";
+    case UPDATE:
+      return "UPDATE";
+    }
+    // TODO build method that does this __func__
+    return "OUT_OF_RANGE (getSendResult)";
+  }
+
+  TransactionSendResult sendResult;
   float version = 0.0,
         batteryVolts = 0.0;
   unsigned long
       packet_id,
       replyId,
       responseTime;
-  bool moving = false,
-       sentOK = false;
+  bool moving = false;
 
 public:
   Transaction() : QueueBase()
@@ -41,6 +66,7 @@ public:
     version = packet.version;
     moving = packet.moving;
     batteryVolts = packet.batteryVoltage;
+    sendResult = TransactionSendResult::UPDATE;
   }
 
   bool acknowledged()
@@ -50,7 +76,18 @@ public:
 
   bool connected(unsigned long timeout)
   {
-    return sentOK;
+    return sendResult != TransactionSendResult::FAIL;
+  }
+
+  void print(const char *preamble = nullptr)
+  {
+    if (preamble != nullptr)
+      Serial.printf("%s: ", preamble);
+    Serial.printf("event_id: %lu  ", this->event_id);
+    Serial.printf("packet_id: %lu:  ", this->packet_id);
+    Serial.printf("moving: %d:  ", this->moving);
+    Serial.printf("sentResult: %s:  ", this->getSendResult());
+    Serial.println();
   }
 
   static void print(Transaction item, const char *preamble = nullptr)

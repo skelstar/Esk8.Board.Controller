@@ -153,10 +153,19 @@ void configureTasks()
 {
   boardCommsTask.doWorkInterval = PERIOD_50ms;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
-  boardCommsTask.printBoardPacketAvailable = true;
-  boardCommsTask.printSentPacketToBoard = true;
+  // boardCommsTask.printBoardPacketAvailable = true;
+  // boardCommsTask.printSentPacketToBoard = true;
   // boardCommsTask.printRxQueuePacket = true;
   // boardCommsTask.printTxQueuePacket = true;
+
+#ifdef DIGITALPRIMARYBUTTON_TASK
+  digitalPrimaryButtonTask.doWorkInterval = PERIOD_100ms;
+  // digitalPrimaryButtonTask.printSendToQueue = true;
+#endif
+
+  displayTask.doWorkInterval = PERIOD_50ms;
+  displayTask.p_printState = PRINT_DISP_STATE;
+  displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
 
 #ifdef NINTENDOCLASSIC_TASK
   nintendoClassTask.doWorkInterval = PERIOD_50ms;
@@ -164,25 +173,21 @@ void configureTasks()
 
 #ifdef QWIICBUTTON_TASK
   qwiicButtonTask.doWorkInterval = PERIOD_100ms;
+  // qwiicButtonTask.printSendToQueue = true;
 #endif
 
-#ifdef DIGITALPRIMARYBUTTON_TASK
-  digitalPrimaryButtonTask.doWorkInterval = PERIOD_100ms;
-  // digitalPrimaryButtonTask.printSendToQueue = true;
-#endif
+  remoteTask.doWorkInterval = SECONDS * 5;
+  remoteTask.printSendToQueue = true;
+
+  statsTask.doWorkInterval = PERIOD_100ms;
+  // statsTask.printQueueRx = true;
+  statsTask.printSuccessRate = true;
 
   throttleTask.doWorkInterval = PERIOD_200ms;
   throttleTask.printWarnings = true;
   throttleTask.printThrottle = PRINT_THROTTLE;
   // throttleTask.thumbwheel.setSweepAngle(30.0);
   // throttleTask.thumbwheel.setDeadzone(5.0);
-
-  displayTask.doWorkInterval = PERIOD_50ms;
-  displayTask.p_printState = PRINT_DISP_STATE;
-  displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
-
-  remoteTask.doWorkInterval = SECONDS * 5;
-  remoteTask.printSendToQueue = true;
 }
 
 void startTasks()
@@ -200,6 +205,7 @@ void startTasks()
 #endif
 
   remoteTask.start(nsRemoteTask::task1);
+  statsTask.start(nsStatsTask::task1);
   throttleTask.start(nsThrottleTask::task1);
 }
 
@@ -218,6 +224,7 @@ void waitForTasks()
       digitalPrimaryButtonTask.ready == false ||
 #endif
       remoteTask.ready == false ||
+      statsTask.ready == false ||
       throttleTask.ready == false ||
       false)
     vTaskDelay(PERIOD_10ms);
@@ -238,6 +245,7 @@ void enableTasks(bool print)
   digitalPrimaryButtonTask.enable(print);
 #endif
   remoteTask.enable(print);
+  statsTask.enable(print);
   throttleTask.enable(print);
 }
 

@@ -1,4 +1,121 @@
-// #pragma once
+#pragma once
+
+#include <TaskBase.h>
+#include <QueueManager.h>
+#include <tasks/queues/QueueFactory.h>
+
+class StatsTask : public TaskBase
+{
+public:
+  // bool printWarnings = true;
+  bool printQueueRx = false,
+       printSuccessRate = false;
+
+private:
+  Queue1::Manager<Transaction> *transactionQueue = nullptr;
+
+  Transaction _transaction;
+
+  enum SendResult
+  {
+    NONE = 0,
+    OK,
+    FAIL,
+  };
+
+  static const uint16_t NUM_RESULT_SAMPLES = 20;
+  uint16_t _resultsIndex = 0;
+  SendResult _resultsWindow[NUM_RESULT_SAMPLES];
+  uint16_t _totalFailed = 0, _totalSentOK = 0;
+
+public:
+  StatsTask() : TaskBase("StatsTask", 3000, PERIOD_100ms)
+  {
+    _core = CORE_0;
+    _priority = TASK_PRIORITY_0;
+  }
+
+  void initialise()
+  {
+    transactionQueue = createQueueManager<Transaction>("(StatsTask) transactionQueue");
+  }
+
+  void doWork()
+  {
+    if (transactionQueue->hasValue())
+    {
+      _transaction = transactionQueue->payload;
+
+      _handleTransaction(_transaction);
+    }
+  }
+
+private:
+  unsigned long _lastPacketId = 0;
+
+  void _handleTransaction(Transaction transaction)
+  {
+    if (transaction.packet_id <= _lastPacketId)
+      // we already registered this packet
+      return;
+
+    // register this packet
+    switch (transaction.sendResult)
+    {
+    case Transaction::OK:
+    case Transaction::UPDATE:
+      _totalSentOK++;
+      _resultsWindow[_resultsIndex] = SendResult::OK;
+      break;
+    case Transaction::FAIL:
+      _totalFailed++;
+      _resultsWindow[_resultsIndex] = SendResult::FAIL;
+      break;
+    }
+
+    _lastPacketId = transaction.packet_id;
+
+    _resultsIndex++;
+    if (_resultsIndex == NUM_RESULT_SAMPLES)
+      _resultsIndex = 0;
+
+    // print
+    if (printSuccessRate)
+      Serial.printf("Success rates  total=%.2f  window=%.2f   sendResult=%s  \n",
+                    _getTotalSuccessRatio(), _getWindowSuccessRatio(), transaction.getSendResult());
+  }
+
+  float _getTotalSuccessRatio()
+  {
+    return _totalSentOK * 1.0 / (_totalSentOK + _totalFailed * 1.0);
+  }
+
+  float _getWindowSuccessRatio()
+  {
+    uint16_t fails = 0, OKs = 0;
+    for (result : _resultsWindow)
+    {
+      if (result == SendResult::NONE)
+        break;
+      if (result == SendResult::OK)
+        OKs++;
+      else if (result == SendResult::FAIL)
+        fails++;
+    }
+    return (OKs * 1.0) / (OKs + fails * 1.0);
+  }
+};
+//=================================================
+
+StatsTask statsTask;
+
+namespace nsStatsTask
+{
+  void task1(void *parameters)
+  {
+    statsTask.task(parameters);
+  }
+}
 
 // #include <statsClass.h>
 // #include <Preferences.h>

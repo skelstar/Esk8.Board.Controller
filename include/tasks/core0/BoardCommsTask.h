@@ -78,13 +78,16 @@ public:
     if (sinceSentToBoard > SEND_TO_BOARD_INTERVAL)
     {
       sinceSentToBoard = 0;
-      transaction.sentOK = nsBoardComms::sendPacketToBoard();
+
+      bool sentOK = nsBoardComms::sendPacketToBoard();
+
+      transaction.sendResult = sentOK ? Transaction::OK : Transaction::FAIL;
       transaction.start(controller_packet);
 
       boardTransactionQueue->send(&transaction, printSendToQueue ? QueueBase::printSend : nullptr);
 
       if (printSentPacketToBoard)
-        _printSentPacketToBoard(controller_packet, transaction.sentOK);
+        _printSentPacketToBoard(controller_packet, transaction.sendResult == Transaction::OK);
     }
   }
 
@@ -99,7 +102,7 @@ private:
   {
     if (success)
     {
-      Serial.printf("------------------\nsendPacketToBoard() @ %lums id: %lu \n",
+      Serial.printf("------------------\nsendPacketToBoard() @ %lums id: %lu sentOK \n",
                     packet.txTime, packet.id);
     }
     else
