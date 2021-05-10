@@ -81,13 +81,13 @@ public:
 
       bool sentOK = nsBoardComms::sendPacketToBoard();
 
-      transaction.sendResult = sentOK ? Transaction::OK : Transaction::FAIL;
+      transaction.sendResult = sentOK ? Transaction::SENT_OK : Transaction::SEND_FAIL;
       transaction.start(controller_packet);
 
       boardTransactionQueue->send(&transaction, printSendToQueue ? QueueBase::printSend : nullptr);
 
       if (printSentPacketToBoard)
-        _printSentPacketToBoard(controller_packet, transaction.sendResult == Transaction::OK);
+        _printSentPacketToBoard(controller_packet, transaction.sendResult == Transaction::SENT_OK);
     }
   }
 

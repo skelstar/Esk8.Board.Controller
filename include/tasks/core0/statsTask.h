@@ -9,7 +9,8 @@ class StatsTask : public TaskBase
 public:
   // bool printWarnings = true;
   bool printQueueRx = false,
-       printSuccessRate = false;
+       printAllSuccessRate = false,
+       printOnlyFailedPackets = false;
 
 private:
   Queue1::Manager<Transaction> *transactionQueue = nullptr;
@@ -62,12 +63,12 @@ private:
     // register this packet
     switch (transaction.sendResult)
     {
-    case Transaction::OK:
+    case Transaction::SENT_OK:
     case Transaction::UPDATE:
       _totalSentOK++;
       _resultsWindow[_resultsIndex] = SendResult::OK;
       break;
-    case Transaction::FAIL:
+    case Transaction::SEND_FAIL:
       _totalFailed++;
       _resultsWindow[_resultsIndex] = SendResult::FAIL;
       break;
@@ -80,7 +81,8 @@ private:
       _resultsIndex = 0;
 
     // print
-    if (printSuccessRate)
+    if (printAllSuccessRate ||
+        (printOnlyFailedPackets && transaction.sendResult == Transaction::SEND_FAIL))
       Serial.printf("Success rates  total=%.2f  window=%.2f   sendResult=%s  \n",
                     _getTotalSuccessRatio(), _getWindowSuccessRatio(), transaction.getSendResult());
   }

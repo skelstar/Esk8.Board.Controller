@@ -173,7 +173,7 @@ void configureTasks()
 
 #ifdef QWIICBUTTON_TASK
   qwiicButtonTask.doWorkInterval = PERIOD_100ms;
-  // qwiicButtonTask.printSendToQueue = true;
+  qwiicButtonTask.printSendToQueue = true;
 #endif
 
   remoteTask.doWorkInterval = SECONDS * 5;
@@ -181,7 +181,7 @@ void configureTasks()
 
   statsTask.doWorkInterval = PERIOD_100ms;
   // statsTask.printQueueRx = true;
-  statsTask.printSuccessRate = true;
+  statsTask.printOnlyFailedPackets = true;
 
   throttleTask.doWorkInterval = PERIOD_200ms;
   throttleTask.printWarnings = true;

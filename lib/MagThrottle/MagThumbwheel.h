@@ -73,11 +73,17 @@ public:
   {
   }
 
-  void init(SemaphoreHandle_t i2c_mux)
+  void init(SemaphoreHandle_t i2c_mux, float sweepAngle, float deadzone, uint8_t accelDirection = DIR_CLOCKWISE)
   {
     _i2c_mux = i2c_mux;
+    _sweep = sweepAngle;
+    _deadzone = deadzone;
+    _accel_direction = accelDirection;
     assert(_i2c_mux != nullptr);
     assert(_throttleEnabled_cb != nullptr);
+    assert(_sweep > 20.0);
+    assert(_deadzone > 2.0);
+    assert(_accel_direction == DIR_CLOCKWISE || _accel_direction == DIR_ANTI_CLOCKWISE);
     centre();
   }
 
@@ -150,6 +156,8 @@ public:
       _throttle = 127;
 
     changed = _throttle != oldThrottle;
+    if (printThrottle && changed)
+      Serial.printf("Magwheel: throttle=%d \n", _throttle);
 
     return ReturnCode::OK;
   }
