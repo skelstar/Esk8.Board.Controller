@@ -41,7 +41,7 @@ private:
     throttleQueue = createQueueManager<ThrottleState>("(throttle)throttleQueue");
   }
 
-  void initialise()
+  void _initialise()
   {
     if (mux_I2C == nullptr)
       mux_I2C = xSemaphoreCreateMutex();

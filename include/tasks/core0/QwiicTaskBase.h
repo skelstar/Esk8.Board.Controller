@@ -30,7 +30,7 @@ private:
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(QwiicButtonTask)primaryButtonQueue");
   }
 
-  void initialise()
+  void _initialise()
   {
     if (mux_I2C == nullptr)
       mux_I2C = xSemaphoreCreateMutex();

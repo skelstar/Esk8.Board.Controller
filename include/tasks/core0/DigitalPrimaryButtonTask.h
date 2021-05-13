@@ -27,7 +27,7 @@ private:
 
   PrimaryButtonState state;
 
-  void initialise()
+  void _initialise()
   {
     primaryButton.begin(PRIMARY_BUTTON_PIN);
 

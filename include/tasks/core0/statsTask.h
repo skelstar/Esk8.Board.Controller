@@ -36,7 +36,7 @@ public:
     _priority = TASK_PRIORITY_0;
   }
 
-  void initialise()
+  void _initialise()
   {
     transactionQueue = createQueueManager<Transaction>("(StatsTask) transactionQueue");
   }

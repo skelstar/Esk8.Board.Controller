@@ -32,7 +32,7 @@ private:
     nintendoButtonQueue = createQueueManager<NintendoButtonEvent>("(NintendoClassicTask)nintendoButtonQueue");
   }
 
-  void initialise()
+  void _initialise()
   {
     if (nintendoButtonQueue == nullptr)
       Serial.printf("ERROR: nintendoButtonQueue is NULL\n");

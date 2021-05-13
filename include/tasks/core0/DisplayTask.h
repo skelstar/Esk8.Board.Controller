@@ -53,7 +53,7 @@ private:
     transactionQueue->read();
   }
   //--------------------------------
-  void initialise()
+  void _initialise()
   {
     if (mux_SPI == nullptr)
       mux_SPI = xSemaphoreCreateMutex();

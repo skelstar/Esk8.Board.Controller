@@ -40,6 +40,7 @@ public:
     _core = CORE_1;
     _priority = TASK_PRIORITY_4;
   }
+
   //----------------------------------------------------------
   void initialiseQueues()
   {
@@ -49,7 +50,7 @@ public:
     boardTransactionQueue->read(); // clear the queue
   }
   //----------------------------------------------------------
-  void initialise()
+  void _initialise()
   {
     if (mux_SPI == nullptr)
       mux_SPI = xSemaphoreCreateMutex();
