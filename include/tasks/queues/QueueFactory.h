@@ -38,6 +38,10 @@ Queue1::Manager<T> *createQueueManager(const char *name, TickType_t ticks = TICK
   {
     return new Queue1::Manager<T>(xDisplayQueueHandle, TICKS_5ms, name);
   }
+  if (std::is_same<T, SimplMessageObj>::value)
+  {
+    return new Queue1::Manager<T>(xSimplMessageQueueHandle, TICKS_5ms, name);
+  }
   Serial.printf("ERROR: (Manager::create) a queue has not been created for this type (%s)\n", name);
   return nullptr;
 }
