@@ -57,6 +57,7 @@ Queue1::Manager<Transaction> *transactionQueue = nullptr;
 void createQueues();
 void createLocalQueueManagers();
 void startTasks();
+void initialiseTasks();
 void configureTasks();
 void waitForTasks();
 void enableTasks(bool print = false);
@@ -88,6 +89,8 @@ void setup()
   configureTasks();
 
   startTasks();
+
+  initialiseTasks();
 
   waitForTasks();
 
@@ -154,6 +157,7 @@ void configureTasks()
   boardCommsTask.doWorkInterval = PERIOD_50ms;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
   // boardCommsTask.printBoardPacketAvailable = true;
+  boardCommsTask.printFirstBoardPacketAvailable = true;
   // boardCommsTask.printSentPacketToBoard = true;
   // boardCommsTask.printRxQueuePacket = true;
   // boardCommsTask.printTxQueuePacket = true;
@@ -203,10 +207,27 @@ void startTasks()
 #ifdef DIGITALPRIMARYBUTTON_TASK
   digitalPrimaryButtonTask.start(nsDigitalPrimaryButtonTask::task1);
 #endif
-
   remoteTask.start(nsRemoteTask::task1);
   statsTask.start(nsStatsTask::task1);
   throttleTask.start(nsThrottleTask::task1);
+}
+
+void initialiseTasks()
+{
+  boardCommsTask.initialiseTask(PRINT_THIS);
+  displayTask.initialiseTask(PRINT_THIS);
+#ifdef NINTENDOCLASSIC_TASK
+  nintendoClassTask.initialiseTask(PRINT_THIS);
+#endif
+#ifdef QWIICBUTTON_TASK
+  qwiicButtonTask.initialiseTask(PRINT_THIS);
+#endif
+#ifdef DIGITALPRIMARYBUTTON_TASK
+  digitalPrimaryButtonTask.initialiseTask(PRINT_THIS);
+#endif
+  remoteTask.initialiseTask(PRINT_THIS);
+  statsTask.initialiseTask(PRINT_THIS);
+  throttleTask.initialiseTask(PRINT_THIS);
 }
 
 void waitForTasks()

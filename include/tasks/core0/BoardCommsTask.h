@@ -17,7 +17,8 @@ public:
   bool printWarnings = false;
   bool printRadioDetails = true;
   bool printSentPacketToBoard = false,
-       printBoardPacketAvailable = false;
+       printBoardPacketAvailable = false,
+       printFirstBoardPacketAvailable = false;
   bool printRxQueuePacket = false,
        printTxQueuePacket = false;
 
@@ -140,7 +141,8 @@ namespace nsBoardComms
   {
     VescData packet = boardCommsTask.boardClient->read();
 
-    if (boardCommsTask.printBoardPacketAvailable)
+    if (boardCommsTask.printBoardPacketAvailable ||
+        (packet.reason == ReasonType::FIRST_PACKET && boardCommsTask.printFirstBoardPacketAvailable))
       VescData::print(packet, "-->[boardPacketAvailable_cb|NRF24]");
 
     // map packet to Transaction type

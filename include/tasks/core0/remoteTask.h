@@ -30,7 +30,7 @@ public:
     remoteBatteryQueue = createQueueManager<BatteryInfo>("(RemoteTask) remoteBatteryQueue");
   }
 
-  void initialise()
+  void _initialise()
   {
     battery = new BatteryLib(34);
     battery->setup(nullptr);

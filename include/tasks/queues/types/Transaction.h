@@ -37,10 +37,10 @@ public:
 
   float version = 0.0,
         batteryVolts = 0.0;
+  ReasonType reason;
   unsigned long
       packet_id,
-      replyId,
-      responseTime;
+      replyId;
   bool moving = false;
 
 public:
@@ -63,11 +63,12 @@ public:
 
   void received(VescData packet)
   {
-    replyId = packet.id;
-    responseTime = millis();
-    version = packet.version;
-    moving = packet.moving;
     batteryVolts = packet.batteryVoltage;
+    moving = packet.moving;
+    reason = packet.reason;
+    replyId = packet.id;
+    version = packet.version;
+
     sendResult = TransactionSendResult::UPDATE;
   }
 

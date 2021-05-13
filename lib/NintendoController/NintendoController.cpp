@@ -9,30 +9,6 @@
 #define PRINT_MUTEX_GIVE_SUCCESS 0
 #endif
 
-bool NintendoController::init(bool printWarnings)
-{
-  // Not required for NES mini controller
-  // See http://wiibrew.org/wiki/Wiimote/Extension_Controllers
-
-  // send 0x55 to 0xF0
-  Wire.beginTransmission(this->address);
-  Wire.write(0xF0);
-  Wire.write(0x55);
-  Wire.endTransmission();
-  delay(10);
-
-  // send 0x00 to 0xFB
-  Wire.beginTransmission(this->address);
-  Wire.write(0xFB);
-  Wire.write(0x00);
-  bool success = Wire.endTransmission() == 0;
-  delay(10);
-
-  reset_buttons();
-
-  return success;
-}
-
 ulong since_started;
 
 bool takeMutex(xSemaphoreHandle mutex, TickType_t ticks)
@@ -51,6 +27,36 @@ bool giveMutex(xSemaphoreHandle mutex)
   return given;
 }
 
+bool NintendoController::init(xSemaphoreHandle mutex, TickType_t ticks, bool printWarnings)
+{
+  // Not required for NES mini controller
+  // See http://wiibrew.org/wiki/Wiimote/Extension_Controllers
+  bool success = false;
+
+  // send 0x55 to 0xF0
+  if (takeMutex(mutex, ticks))
+  {
+    Wire.beginTransmission(this->address);
+    Wire.write(0xF0);
+    Wire.write(0x55);
+    Wire.endTransmission();
+
+    delay(10);
+    // send 0x00 to 0xFB
+    Wire.beginTransmission(this->address);
+    Wire.write(0xFB);
+    Wire.write(0x00);
+    success = Wire.endTransmission() == 0;
+    delay(10);
+
+    giveMutex(mutex);
+  }
+
+  reset_buttons();
+
+  return success;
+}
+
 bool NintendoController::update(xSemaphoreHandle mutex, TickType_t ticks)
 {
   if (takeMutex(mutex, ticks))
@@ -60,7 +66,8 @@ bool NintendoController::update(xSemaphoreHandle mutex, TickType_t ticks)
     if (Wire.endTransmission() != 0)
     {
       // try to reconnect
-      this->init();
+      giveMutex(mutex);
+      this->init(mutex, ticks);
     }
     else
     {

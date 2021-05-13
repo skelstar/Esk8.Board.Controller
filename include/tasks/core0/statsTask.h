@@ -56,8 +56,9 @@ private:
 
   void _handleTransaction(Transaction transaction)
   {
-    if (transaction.packet_id <= _lastPacketId)
-      // we already registered this packet
+    bool packetRegistered = transaction.packet_id <= _lastPacketId;
+
+    if (packetRegistered)
       return;
 
     // register this packet
@@ -85,6 +86,9 @@ private:
         (printOnlyFailedPackets && transaction.sendResult == Transaction::SEND_FAIL))
       Serial.printf("Success rates  total=%.2f  window=%.2f   sendResult=%s  \n",
                     _getTotalSuccessRatio(), _getWindowSuccessRatio(), transaction.getSendResult());
+
+    if (transaction.reason == FIRST_PACKET)
+      Serial.printf("\n------------------\n    StatsTask: BOARD RESET!!!\n-------------------\n\n");
   }
 
   float _getTotalSuccessRatio()
