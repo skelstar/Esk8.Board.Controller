@@ -144,6 +144,7 @@ void createQueues()
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
   xPacketStateQueueHandle = xQueueCreate(1, sizeof(Transaction *));
   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
+  xSimplMessageQueueHandle = xQueueCreate(1, sizeof(SimplMessageObj *));
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 }
 
@@ -155,6 +156,7 @@ void createLocalQueueManagers()
 void configureTasks()
 {
   boardCommsTask.doWorkInterval = PERIOD_50ms;
+  boardCommsTask.priority = TASK_PRIORITY_4;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
   // boardCommsTask.printBoardPacketAvailable = true;
   boardCommsTask.printFirstBoardPacketAvailable = true;
@@ -164,30 +166,42 @@ void configureTasks()
 
 #ifdef DIGITALPRIMARYBUTTON_TASK
   digitalPrimaryButtonTask.doWorkInterval = PERIOD_100ms;
+  digitalPrimaryButtonTask.priority = TASK_PRIORITY_1;
   // digitalPrimaryButtonTask.printSendToQueue = true;
 #endif
 
   displayTask.doWorkInterval = PERIOD_50ms;
+  displayTask.priority = TASK_PRIORITY_2;
   displayTask.p_printState = PRINT_DISP_STATE;
   displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
 
+#ifdef HAPTIC_TASK
+  hapticTask.priority = TASK_PRIORITY_0;
+  hapticTask.doWorkInterval = PERIOD_100ms;
+#endif
+
 #ifdef NINTENDOCLASSIC_TASK
   nintendoClassTask.doWorkInterval = PERIOD_50ms;
+  nintendoClassTask.priority = TASK_PRIORITY_2;
 #endif
 
 #ifdef QWIICBUTTON_TASK
   qwiicButtonTask.doWorkInterval = PERIOD_100ms;
+  qwiicButtonTask.priority = TASK_PRIORITY_1;
   qwiicButtonTask.printSendToQueue = true;
 #endif
 
   remoteTask.doWorkInterval = SECONDS * 5;
+  remoteTask.priority = 0;
   remoteTask.printSendToQueue = true;
 
   statsTask.doWorkInterval = PERIOD_100ms;
+  statsTask.priority = TASK_PRIORITY_1;
   // statsTask.printQueueRx = true;
   statsTask.printOnlyFailedPackets = true;
 
   throttleTask.doWorkInterval = PERIOD_200ms;
+  throttleTask.priority = TASK_PRIORITY_3;
   throttleTask.printWarnings = true;
   throttleTask.printThrottle = PRINT_THROTTLE;
   // throttleTask.thumbwheel.setSweepAngle(30.0);
@@ -198,6 +212,9 @@ void startTasks()
 {
   boardCommsTask.start(nsBoardComms::task1);
   displayTask.start(Display::task1);
+#ifdef HAPTIC_TASK
+  hapticTask.start(nsHapticTask::task1);
+#endif
 #ifdef NINTENDOCLASSIC_TASK
   nintendoClassTask.start(nsNintendoClassicTask::task1);
 #endif
@@ -216,6 +233,9 @@ void initialiseTasks()
 {
   boardCommsTask.initialiseTask(PRINT_THIS);
   displayTask.initialiseTask(PRINT_THIS);
+#ifdef HAPTIC_TASK
+  hapticTask.initialiseTask(PRINT_THIS);
+#endif
 #ifdef NINTENDOCLASSIC_TASK
   nintendoClassTask.initialiseTask(PRINT_THIS);
 #endif
@@ -235,6 +255,10 @@ void waitForTasks()
   while (
       boardCommsTask.ready == false ||
       displayTask.ready == false ||
+#ifdef HAPTIC_TASK
+      hapticTask.ready == false ||
+#endif
+
 #ifdef NINTENDOCLASSIC_TASK
       nintendoClassTask.ready == false ||
 #endif
@@ -256,6 +280,9 @@ void enableTasks(bool print)
 {
   boardCommsTask.enable(print);
   displayTask.enable(print);
+#ifdef HAPTIC_TASK
+  hapticTask.enable(print);
+#endif
 #ifdef NINTENDOCLASSIC_TASK
   nintendoClassTask.enable(print);
 #endif

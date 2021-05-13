@@ -49,7 +49,8 @@ private:
     // thumbwheel.setSweepAngle(SWEEP_ANGLE);
     // thumbwheel.setAccelDirection(DIR_CLOCKWISE);
     // thumbwheel.setDeltaLimits(LIMIT_DELTA_MIN, LIMIT_DELTA_MAX);
-    thumbwheel.setThrottleEnabledCb([] { return true; });
+    thumbwheel.setThrottleEnabledCb([]
+                                    { return true; });
     thumbwheel.printThrottle = printThrottle;
     thumbwheel.init(mux_I2C, SWEEP_ANGLE, DEADZONE, ACCEL_DIRECTION);
   }

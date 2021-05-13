@@ -39,7 +39,6 @@ public:
   BoardCommsTask() : TaskBase("BoardCommsTask", 3000, PERIOD_50ms)
   {
     _core = CORE_1;
-    _priority = TASK_PRIORITY_4;
   }
 
   //----------------------------------------------------------

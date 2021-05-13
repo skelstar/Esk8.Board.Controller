@@ -33,7 +33,6 @@ public:
   StatsTask() : TaskBase("StatsTask", 3000, PERIOD_100ms)
   {
     _core = CORE_0;
-    _priority = TASK_PRIORITY_0;
   }
 
   void _initialise()

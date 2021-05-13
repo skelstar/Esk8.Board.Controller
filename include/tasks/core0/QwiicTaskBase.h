@@ -15,7 +15,6 @@ public:
   QwiicButtonTask() : TaskBase("QwiicTask", 3000, PERIOD_50ms)
   {
     _core = CORE_0;
-    _priority = TASK_PRIORITY_2;
   }
 
 private:

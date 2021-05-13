@@ -35,7 +35,6 @@ public:
   DisplayTask() : TaskBase("DisplayTask", 10000, PERIOD_50ms)
   {
     _core = CORE_0;
-    _priority = TASK_PRIORITY_1;
   }
   //--------------------------------------------------
 
