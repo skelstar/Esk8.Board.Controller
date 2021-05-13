@@ -7,6 +7,8 @@
 
 #include <BatteryLib.h>
 
+#define REMOTE_TASK
+
 class RemoteTask : public TaskBase
 {
 public:

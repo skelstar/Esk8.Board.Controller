@@ -5,6 +5,8 @@
 #include <tasks/queues/types/root.h>
 #include <tasks/queues/QueueFactory.h>
 
+#define BOARDCOMMS_TASK
+
 namespace nsBoardComms
 {
   bool sendPacketToBoard(bool print = false);

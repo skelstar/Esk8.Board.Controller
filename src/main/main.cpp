@@ -177,7 +177,7 @@ void configureTasks()
 
 #ifdef HAPTIC_TASK
   hapticTask.priority = TASK_PRIORITY_0;
-  hapticTask.doWorkInterval = PERIOD_100ms;
+  hapticTask.doWorkInterval = PERIOD_50ms;
 #endif
 
 #ifdef NINTENDOCLASSIC_TASK
@@ -192,10 +192,10 @@ void configureTasks()
 #endif
 
   remoteTask.doWorkInterval = SECONDS * 5;
-  remoteTask.priority = 0;
+  remoteTask.priority = TASK_PRIORITY_0;
   remoteTask.printSendToQueue = true;
 
-  statsTask.doWorkInterval = PERIOD_100ms;
+  statsTask.doWorkInterval = PERIOD_50ms;
   statsTask.priority = TASK_PRIORITY_1;
   // statsTask.printQueueRx = true;
   statsTask.printOnlyFailedPackets = true;

@@ -1,10 +1,10 @@
 #pragma once
 
-#define NINTENDOCLASSIC_TASK
-
 #include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
+
+#define NINTENDOCLASSIC_TASK
 
 class NintendoClassicTask : public TaskBase
 {

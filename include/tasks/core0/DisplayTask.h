@@ -11,6 +11,8 @@
 #include <printFormatStrings.h>
 #include <NintendoController.h>
 
+#define DISPLAY_TASK
+
 class DisplayTask : public TaskBase
 {
 public:

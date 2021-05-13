@@ -4,6 +4,8 @@
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 
+#define STATS_TASK
+
 class StatsTask : public TaskBase
 {
 public:

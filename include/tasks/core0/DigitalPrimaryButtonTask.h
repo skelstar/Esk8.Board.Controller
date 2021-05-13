@@ -1,11 +1,11 @@
 #pragma once
 
-#define DIGITALPRIMARYBUTTON_TASK
-
 #include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 #include <Button2.h>
+
+#define DIGITALPRIMARYBUTTON_TASK
 
 class DigitalPrimaryButtonTask : public TaskBase
 {
