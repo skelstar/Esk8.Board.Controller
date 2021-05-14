@@ -23,6 +23,7 @@ enum ButtonClickType
 #define TICKS_10ms 10 / portTICK_PERIOD_MS
 #define TICKS_50ms 50 / portTICK_PERIOD_MS
 #define TICKS_100ms 100 / portTICK_PERIOD_MS
+#define TICKS_200ms 200 / portTICK_PERIOD_MS
 
 // ThrottleTask
 

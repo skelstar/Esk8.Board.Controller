@@ -28,7 +28,6 @@ public:
   ThrottleTask() : TaskBase("ThrottleTask", 3000, PERIOD_50ms)
   {
     _core = CORE_0;
-    _priority = TASK_PRIORITY_4;
   }
 
 private:
