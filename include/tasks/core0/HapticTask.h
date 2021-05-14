@@ -7,14 +7,41 @@
 
 #define HAPTIC_TASK
 
+namespace nsHapticTask
+{
+  Haptic_Driver haptic;
+
+  enum HapticState
+  {
+    HAP_IDLE = 0,
+    HAP_ON,
+    HAP_OFF,
+  };
+
+  enum HapticCommand
+  {
+    HAP_NONE = 0,
+    HAP_PULSE,
+  };
+
+  uint8_t m_strength = 0;
+  unsigned long m_period = 0;
+  HapticCommand m_command = HAP_NONE;
+  HapticState m_state = HAP_IDLE;
+  elapsedMillis sinceLastState = 0;
+
+  // prototypes
+  void startCommand(HapticCommand command, float strength, unsigned long period);
+  void loop();
+  void handlePulseCommand();
+}
+
 class HapticTask : public TaskBase
 {
 public:
   bool printWarnings = true;
 
 private:
-  Haptic_Driver haptic;
-
   Queue1::Manager<SimplMessageObj> *simplMsgQueue = nullptr;
   Queue1::Manager<Transaction> *transactionQueue = nullptr;
 
@@ -34,16 +61,16 @@ public:
 
     if (take(mux_I2C, TICKS_500ms))
     {
-      if (!haptic.begin())
+      if (!nsHapticTask::haptic.begin())
         Serial.printf("Could not find Haptic unit\n");
 
-      if (!haptic.defaultMotor())
+      if (!nsHapticTask::haptic.defaultMotor())
         Serial.printf("Could not set default settings\n");
 
-      haptic.enableFreqTrack(false);
+      nsHapticTask::haptic.enableFreqTrack(false);
 
       //s etting I2C Operation
-      haptic.setOperationMode(DRO_MODE);
+      nsHapticTask::haptic.setOperationMode(DRO_MODE);
       vTaskDelay(TICKS_500ms);
       give(mux_I2C);
     }
@@ -65,7 +92,7 @@ public:
     if (transactionQueue->hasValue())
       _handleTransaction(transactionQueue->payload);
 
-    // TODO: set up fsm for haptic tasks maybe?
+    nsHapticTask::loop();
   }
 
   void cleanup()
@@ -83,34 +110,9 @@ public:
     if (m_transaction.moving != q_transaction.moving)
     {
       if (q_transaction.moving)
-        _pulseHaptic(0.5, TICKS_100ms);
+        nsHapticTask::startCommand(nsHapticTask::HAP_PULSE, 0.5, PERIOD_10ms);
     }
     m_transaction = q_transaction;
-  }
-
-  int event = 0;
-
-  void _pulseHaptic(float strength, TickType_t ticks)
-  {
-    if (strength > 1.0 || strength < 0.0)
-    {
-      Serial.printf("Haptic motor strength must be between 0.0 and 1.0 (0-100%)\n");
-      return;
-    }
-
-    if (take(mux_I2C, TICKS_50ms))
-    {
-      // Max value is 127 with acceleration on (default).
-      uint8_t s = 127 * strength;
-      haptic.setVibrate(s);
-      give(mux_I2C);
-    }
-    vTaskDelay(ticks);
-    if (take(mux_I2C, TICKS_50ms))
-    {
-      haptic.setVibrate(0);
-      give(mux_I2C);
-    }
   }
 };
 
@@ -121,5 +123,51 @@ namespace nsHapticTask
   void task1(void *parameters)
   {
     hapticTask.task(parameters);
+  }
+
+  void startCommand(HapticCommand command, float strength, unsigned long period)
+  {
+    m_command = command;
+    if (strength > 1.0 || strength < 0.0)
+    {
+      Serial.printf("ERROR: Haptic motor strength must be between 0.0 and 1.0 (0-100%)\n");
+      strength = 0.5;
+    }
+
+    m_strength = 127.0 * strength;
+    m_period = period;
+  }
+
+  void loop()
+  {
+    if (m_command == HapticCommand::HAP_PULSE)
+      handlePulseCommand();
+  }
+
+  void handlePulseCommand()
+  {
+    if (sinceLastState > m_period)
+    {
+      sinceLastState = 0;
+      if (m_state == HAP_IDLE)
+      {
+        if (take(mux_I2C, TICKS_50ms))
+        {
+          haptic.setVibrate(m_strength);
+          give(mux_I2C);
+          m_state = HAP_ON;
+        }
+      }
+      else if (m_state == HAP_ON)
+      {
+        if (take(mux_I2C, TICKS_500ms)) // really important
+        {
+          haptic.setVibrate(0);
+          give(mux_I2C);
+          m_command = HapticCommand::HAP_NONE;
+          m_state = HAP_IDLE;
+        }
+      }
+    }
   }
 }
