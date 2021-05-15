@@ -4,6 +4,8 @@
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 #include <Haptic_Driver.h>
+#include <Fsm.h>
+#include <FsmManager.h>
 
 #define HAPTIC_TASK
 
@@ -11,11 +13,20 @@ namespace nsHapticTask
 {
   Haptic_Driver haptic;
 
+  bool m_printDebug = false;
+
   enum HapticState
   {
     HAP_IDLE = 0,
     HAP_ON,
     HAP_OFF,
+  };
+
+  enum HapticEvent
+  {
+    EV_IDLE = 0,
+    EV_ON,
+    EV_OFF,
   };
 
   enum HapticCommand
@@ -29,17 +40,65 @@ namespace nsHapticTask
   HapticCommand m_command = HAP_NONE;
   HapticState m_state = HAP_IDLE;
   elapsedMillis sinceLastState = 0;
+  FsmManager<HapticEvent> fsm;
 
   // prototypes
+  void initialiseHaptic();
   void startCommand(HapticCommand command, float strength, unsigned long period);
-  void loop();
-  void handlePulseCommand();
+
+  void hapticSet(uint8_t strength, TickType_t ticks = TICKS_50ms)
+  {
+    if (take(mux_I2C, ticks, __func__))
+    {
+      haptic.setVibrate(strength);
+      give(mux_I2C);
+    }
+  }
+
+  void stateIdle_OnEnter()
+  {
+    if (m_printDebug)
+      Serial.printf(PRINT_FSM_STATE_FORMAT, "HapticTask", millis(), "stateIdle");
+    m_state = HapticState::HAP_IDLE;
+    hapticSet(0);
+  }
+
+  void stateOn_OnEnter()
+  {
+    if (m_printDebug)
+      Serial.printf(PRINT_FSM_STATE_FORMAT, "HapticTask", millis(), "stateOn");
+    m_state = HapticState::HAP_ON;
+    hapticSet(m_strength);
+    sinceLastState = 0;
+  }
+
+  void stateOn_OnLoop()
+  {
+    if (sinceLastState > m_period)
+    {
+      if (m_command == HAP_PULSE)
+        fsm.trigger(EV_IDLE);
+
+      fsm.trigger(EV_IDLE);
+    }
+  }
+
+  State stateIdle(stateIdle_OnEnter, NULL, NULL);
+  State stateOn(stateOn_OnEnter, stateOn_OnLoop, NULL);
+
+  Fsm _fsm(&stateIdle);
+
+  void addTransitions()
+  {
+    _fsm.add_transition(&stateIdle, &stateOn, HapticEvent::EV_ON, NULL);
+    _fsm.add_transition(&stateOn, &stateIdle, HapticEvent::EV_IDLE, NULL);
+  }
 }
 
 class HapticTask : public TaskBase
 {
 public:
-  bool printWarnings = true;
+  bool printWarnings = true, printDebug = false;
 
 private:
   Queue1::Manager<SimplMessageObj> *simplMsgQueue = nullptr;
@@ -56,28 +115,17 @@ public:
 
   void _initialise()
   {
+    using namespace nsHapticTask;
+
+    nsHapticTask::m_printDebug = printDebug;
+
     if (mux_I2C == nullptr)
       mux_I2C = xSemaphoreCreateMutex();
 
-    if (take(mux_I2C, TICKS_500ms))
-    {
-      if (!nsHapticTask::haptic.begin())
-        Serial.printf("Could not find Haptic unit\n");
+    initialiseHaptic();
 
-      if (!nsHapticTask::haptic.defaultMotor())
-        Serial.printf("Could not set default settings\n");
-
-      nsHapticTask::haptic.enableFreqTrack(false);
-
-      //s etting I2C Operation
-      nsHapticTask::haptic.setOperationMode(DRO_MODE);
-      vTaskDelay(TICKS_500ms);
-      give(mux_I2C);
-    }
-    else
-    {
-      Serial.printf("[HapticTask] Unable to take mux_I2C\n");
-    }
+    nsHapticTask::fsm.begin(&_fsm);
+    addTransitions();
 
     simplMsgQueue = createQueueManager<SimplMessageObj>("(HapticTask)simplMsgQueue");
 
@@ -92,7 +140,7 @@ public:
     if (transactionQueue->hasValue())
       _handleTransaction(transactionQueue->payload);
 
-    nsHapticTask::loop();
+    nsHapticTask::_fsm.run_machine();
   }
 
   void cleanup()
@@ -125,6 +173,29 @@ namespace nsHapticTask
     hapticTask.task(parameters);
   }
 
+  void initialiseHaptic()
+  {
+    if (take(mux_I2C, TICKS_500ms, __func__))
+    {
+      if (!haptic.begin())
+        Serial.printf("Could not find Haptic unit\n");
+
+      if (!haptic.defaultMotor())
+        Serial.printf("Could not set default settings\n");
+
+      haptic.enableFreqTrack(false);
+
+      //s etting I2C Operation
+      haptic.setOperationMode(DRO_MODE);
+      vTaskDelay(TICKS_500ms);
+      give(mux_I2C);
+    }
+    else
+    {
+      Serial.printf("[HapticTask] Unable to take mux_I2C\n");
+    }
+  }
+
   void startCommand(HapticCommand command, float strength, unsigned long period)
   {
     m_command = command;
@@ -136,38 +207,8 @@ namespace nsHapticTask
 
     m_strength = 127.0 * strength;
     m_period = period;
-  }
 
-  void loop()
-  {
-    if (m_command == HapticCommand::HAP_PULSE)
-      handlePulseCommand();
-  }
-
-  void handlePulseCommand()
-  {
-    if (sinceLastState > m_period)
-    {
-      sinceLastState = 0;
-      if (m_state == HAP_IDLE)
-      {
-        if (take(mux_I2C, TICKS_50ms))
-        {
-          haptic.setVibrate(m_strength);
-          give(mux_I2C);
-          m_state = HAP_ON;
-        }
-      }
-      else if (m_state == HAP_ON)
-      {
-        if (take(mux_I2C, TICKS_500ms)) // really important
-        {
-          haptic.setVibrate(0);
-          give(mux_I2C);
-          m_command = HapticCommand::HAP_NONE;
-          m_state = HAP_IDLE;
-        }
-      }
-    }
+    fsm.trigger(EV_ON);
+    DEBUG("sent EV_ON");
   }
 }
