@@ -179,6 +179,7 @@ void configureTasks()
   hapticTask.priority = TASK_PRIORITY_0;
   hapticTask.doWorkInterval = PERIOD_50ms;
   hapticTask.printDebug = true;
+  hapticTask.printFsmTrigger = false;
 #endif
 
 #ifdef NINTENDOCLASSIC_TASK
