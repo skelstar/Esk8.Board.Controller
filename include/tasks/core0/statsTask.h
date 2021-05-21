@@ -32,7 +32,7 @@ private:
   uint16_t _totalFailed = 0, _totalSentOK = 0;
 
 public:
-  StatsTask() : TaskBase("StatsTask", 3000, PERIOD_100ms)
+  StatsTask() : TaskBase("StatsTask", 3000)
   {
     _core = CORE_0;
   }

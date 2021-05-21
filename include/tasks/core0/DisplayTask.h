@@ -34,7 +34,7 @@ private:
   elapsedMillis since_checked_online = 0;
 
 public:
-  DisplayTask() : TaskBase("DisplayTask", 10000, PERIOD_50ms)
+  DisplayTask() : TaskBase("DisplayTask", 10000)
   {
     _core = CORE_0;
   }
@@ -62,17 +62,14 @@ private:
     setupLCD();
 
     Display::fsm_mgr.begin(&Display::_fsm);
-    Display::fsm_mgr.setPrintStateCallback(printState);
-    Display::fsm_mgr.setPrintTriggerCallback(printTrigger);
-
-    Display::addTransitions();
-
-    Display::_fsm.run_machine();
-
     if (p_printState)
       Display::fsm_mgr.setPrintStateCallback(printState);
     if (p_printTrigger)
       Display::fsm_mgr.setPrintTriggerCallback(printTrigger);
+
+    Display::addTransitions();
+
+    Display::_fsm.run_machine();
   }
 
   //===================================================================
@@ -130,6 +127,8 @@ private:
 
   void handlePacketState(Transaction &transaction)
   {
+    manageRunningState(transaction);
+
     if (transaction.connected(RESPONSE_WINDOW) == true)
     {
       // check version
@@ -202,6 +201,20 @@ private:
 
     if (throttleState.status == ThrottleStatus::STATUS_OK && IN_STATE(Display::ST_MAGNET_NOT_DETECTED))
       Display::fsm_mgr.trigger(Display::TR_MAGNET_DETECTED);
+  }
+
+  void manageRunningState(Transaction &transaction)
+  {
+    using namespace Display;
+
+    bool moved = !_g_Moving && transaction.moving;
+    bool stopped = _g_Moving && !transaction.moving;
+
+    if (moved)
+      setRunningState(RunningState::SLOW);
+    else if (stopped)
+      setRunningState(RunningState::FAST);
+    _g_Moving = transaction.moving;
   }
 };
 

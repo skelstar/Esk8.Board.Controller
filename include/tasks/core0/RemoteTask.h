@@ -21,7 +21,7 @@ private:
   Queue1::Manager<BatteryInfo> *remoteBatteryQueue = nullptr;
 
 public:
-  RemoteTask() : TaskBase("RemoteTask", 3000, PERIOD_50ms)
+  RemoteTask() : TaskBase("RemoteTask", 3000)
   {
     _core = CORE_0;
   }

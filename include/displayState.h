@@ -11,6 +11,7 @@ namespace Display
 {
   float _g_BoardVersion = 0.0;
   float _g_BoardBattery = 0.0;
+  bool _g_Moving = false;
   BatteryInfo _g_RemoteBattery;
 }
 
@@ -153,7 +154,8 @@ namespace Display
   //---------------------------------------------------------------
   State stateDisconnected(
       ST_DISCONNECTED,
-      [] {
+      []
+      {
         fsm_mgr.printState(ST_DISCONNECTED);
         simpleStoppedScreen(SimpleScreenOption::OFFLINE, TFT_CASET);
       },
@@ -161,7 +163,8 @@ namespace Display
   //---------------------------------------------------------------
   State stBoardBattery(
       ST_BOARD_BATTERY,
-      [] {
+      []
+      {
         fsm_mgr.printState(ST_BOARD_BATTERY);
         // screenBoardBattery(board.packet.batteryVoltage);
       },
@@ -169,7 +172,8 @@ namespace Display
   //---------------------------------------------------------------
   State stStopped(
       ST_STOPPED_SCREEN,
-      [] {
+      []
+      {
         // don't need TR_UPDATE at this stage
         if (fsm_mgr.lastEvent() == Display::TR_UPDATE)
           return;
@@ -188,7 +192,8 @@ namespace Display
   //---------------------------------------------------------------
   State stMoving(
       ST_MOVING_SCREEN,
-      [] {
+      []
+      {
         // don't need UPDATE at this stage
         if (fsm_mgr.lastEvent() == Display::TR_UPDATE)
           return;
@@ -207,7 +212,8 @@ namespace Display
   //---------------------------------------------------------------
   State stMagnetNotDetected(
       ST_MAGNET_NOT_DETECTED,
-      [] {
+      []
+      {
         fsm_mgr.printState(ST_MAGNET_NOT_DETECTED);
         screenError("No magnet!");
       },
@@ -216,7 +222,8 @@ namespace Display
   //---------------------------------------------------------------
   State stBoardVersionDoesntMatch(
       ST_BOARD_VERSION_DOESNT_MATCH,
-      [] {
+      []
+      {
         fsm_mgr.printState(ST_BOARD_VERSION_DOESNT_MATCH);
         screenBoardNotCompatible(_g_BoardVersion);
       },
@@ -228,7 +235,8 @@ namespace Display
 
   State stOptionPushToStart(
       ST_OPTION_PUSH_TO_START,
-      [] {
+      []
+      {
         fsm_mgr.printState(ST_OPTION_PUSH_TO_START);
         sinceShowingOptionScreen = 0;
         switch (fsm_mgr.lastEvent())
@@ -250,7 +258,8 @@ namespace Display
           Serial.printf("Unhandled event: %s\n", Display::getTrigger(fsm_mgr.lastEvent()));
         }
       },
-      [] {
+      []
+      {
         if (sinceShowingOptionScreen > OPTION_SCREEN_TIMEOUT)
           fsm_mgr.trigger(Display::TR_OPTION_TIMED_OUT);
       },
@@ -260,7 +269,8 @@ namespace Display
 
   State stOptionThrottleSetting(
       ST_OPTION_THROTTLE_SETTING,
-      [] {
+      []
+      {
         fsm_mgr.printState(ST_OPTION_THROTTLE_SETTING);
         sinceShowingOptionScreen = 0;
         switch (fsm_mgr.lastEvent())
@@ -291,8 +301,10 @@ namespace Display
         }
         default:
           Serial.printf("Unhandled event: %s\n", Display::getTrigger(fsm_mgr.lastEvent()));
-        } },
-      [] {
+        }
+      },
+      []
+      {
         if (sinceShowingOptionScreen > OPTION_SCREEN_TIMEOUT)
           fsm_mgr.trigger(Display::TR_OPTION_TIMED_OUT);
       },

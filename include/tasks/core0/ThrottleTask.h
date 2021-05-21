@@ -25,7 +25,7 @@ public:
 #endif
 
 public:
-  ThrottleTask() : TaskBase("ThrottleTask", 3000, PERIOD_50ms)
+  ThrottleTask() : TaskBase("ThrottleTask", 3000)
   {
     _core = CORE_0;
   }
@@ -52,8 +52,13 @@ private:
     // thumbwheel.setDeltaLimits(LIMIT_DELTA_MIN, LIMIT_DELTA_MAX);
     thumbwheel.setThrottleEnabledCb([]
                                     { return true; });
+
+#if REMOTE_USED == NINTENDO_REMOTE
     thumbwheel.printThrottle = printThrottle;
     thumbwheel.init(mux_I2C, SWEEP_ANGLE, DEADZONE, ACCEL_DIRECTION);
+#elif REMOTE_USED == RED_REMOTE
+    thumbwheel.init();
+#endif
   }
 
   void doWork()
@@ -64,9 +69,9 @@ private:
       nsThrottleTask::primaryButton.event_id = primaryButtonQueue->payload.event_id;
       nsThrottleTask::primaryButton.pressed = primaryButtonQueue->payload.pressed;
 
-      // changed and released?
-      if (oldPressed != primaryButtonQueue->payload.pressed &&
-          primaryButtonQueue->payload.pressed == false)
+      bool buttonReleased = oldPressed != primaryButtonQueue->payload.pressed &&
+                            primaryButtonQueue->payload.pressed == false;
+      if (buttonReleased)
         thumbwheel.centre();
     }
 
@@ -79,7 +84,8 @@ private:
     if (og_throttle != throttle.val || throttle.status != ThrottleStatus::STATUS_OK)
     {
       throttleQueue->send(&throttle);
-      // ThrottleState::print(throttle, "[ThrottleTask]-->");
+      if (throttle.val == 255)
+        ThrottleState::print(throttle, "[ThrottleTask]-->");
     }
   }
 

@@ -38,7 +38,7 @@ private:
   elapsedMillis since_checked_for_available;
 
 public:
-  BoardCommsTask() : TaskBase("BoardCommsTask", 3000, PERIOD_50ms)
+  BoardCommsTask() : TaskBase("BoardCommsTask", 3000)
   {
     _core = CORE_1;
   }
@@ -48,6 +48,7 @@ public:
   {
     boardTransactionQueue = createQueueManager<Transaction>("(BoardCommsTask)BoardTransactionQueue");
     throttleStateQueue = createQueueManager<ThrottleState>("(BoardCommsTask)ThrottleStateQueue");
+    throttleStateQueue->printMissedPacket = false;
 
     boardTransactionQueue->read(); // clear the queue
   }

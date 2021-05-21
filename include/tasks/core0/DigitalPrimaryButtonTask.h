@@ -13,10 +13,9 @@ public:
   // variables
   bool printSendToQueue = false;
 
-  DigitalPrimaryButtonTask() : TaskBase("DigitalPrimaryButtonTask", 3000, PERIOD_100ms)
+  DigitalPrimaryButtonTask() : TaskBase("DigitalPrimaryButtonTask", 3000)
   {
     _core = CORE_0;
-    _priority = TASK_PRIORITY_2;
   }
 
 private:

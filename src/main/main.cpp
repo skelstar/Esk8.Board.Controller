@@ -54,6 +54,7 @@ Queue1::Manager<Transaction> *transactionQueue = nullptr;
 
 #include <utils.h>
 
+// prototypes
 void createQueues();
 void createLocalQueueManagers();
 void startTasks();
@@ -61,6 +62,7 @@ void initialiseTasks();
 void configureTasks();
 void waitForTasks();
 void enableTasks(bool print = false);
+void handleTransaction(Transaction &transaction, bool movingChange);
 
 //------------------------------------------------------------------
 
@@ -103,33 +105,15 @@ Transaction board;
 
 void loop()
 {
-  if (since_checked_queues > PERIOD_200ms)
+  if (since_checked_queues > PERIOD_100ms)
   {
     since_checked_queues = 0;
 
     // changed?
-    if (transactionQueue->hasValue() &&
-        board.moving != transactionQueue->payload.moving)
-    {
-      // moving
-      if (transactionQueue->payload.moving)
-      {
-#ifdef NINTENDOCLASSIC_TASK
-        nintendoClassTask.enabled = false;
-#endif
-        remoteTask.enabled = false;
-      }
-      // stopped
-      else
-      {
-#ifdef NINTENDOCLASSIC_TASK
-        nintendoClassTask.enabled = true;
-#endif
-        remoteTask.enabled = true;
-      }
+    if (transactionQueue->hasValue())
+      handleTransaction(transactionQueue->payload, /*moving change*/ board.moving != transactionQueue->payload.moving);
 
-      board.moving = transactionQueue->payload.moving;
-    }
+    board.moving = transactionQueue->payload.moving;
   }
 
   vTaskDelay(TICKS_10ms);
@@ -151,11 +135,12 @@ void createQueues()
 void createLocalQueueManagers()
 {
   transactionQueue = createQueueManager<Transaction>("(main) transactionQueue");
+  transactionQueue->printMissedPacket = false;
 }
 
 void configureTasks()
 {
-  boardCommsTask.doWorkInterval = PERIOD_50ms;
+  boardCommsTask.doWorkIntervalFast = PERIOD_50ms;
   boardCommsTask.priority = TASK_PRIORITY_4;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
   // boardCommsTask.printBoardPacketAvailable = true;
@@ -165,44 +150,45 @@ void configureTasks()
   // boardCommsTask.printTxQueuePacket = true;
 
 #ifdef DIGITALPRIMARYBUTTON_TASK
-  digitalPrimaryButtonTask.doWorkInterval = PERIOD_100ms;
+  digitalPrimaryButtonTask.doWorkIntervalFast = PERIOD_100ms;
   digitalPrimaryButtonTask.priority = TASK_PRIORITY_1;
   // digitalPrimaryButtonTask.printSendToQueue = true;
 #endif
 
-  displayTask.doWorkInterval = PERIOD_50ms;
+  displayTask.doWorkIntervalFast = PERIOD_50ms;
+  displayTask.doWorkIntervalSlow = PERIOD_500ms;
   displayTask.priority = TASK_PRIORITY_2;
   displayTask.p_printState = PRINT_DISP_STATE;
   displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
 
 #ifdef HAPTIC_TASK
   hapticTask.priority = TASK_PRIORITY_0;
-  hapticTask.doWorkInterval = PERIOD_50ms;
+  hapticTask.doWorkIntervalFast = PERIOD_50ms;
   hapticTask.printDebug = true;
   hapticTask.printFsmTrigger = false;
 #endif
 
 #ifdef NINTENDOCLASSIC_TASK
-  nintendoClassTask.doWorkInterval = PERIOD_50ms;
+  nintendoClassTask.doWorkIntervalFast = PERIOD_50ms;
   nintendoClassTask.priority = TASK_PRIORITY_2;
 #endif
 
 #ifdef QWIICBUTTON_TASK
-  qwiicButtonTask.doWorkInterval = PERIOD_100ms;
+  qwiicButtonTask.doWorkIntervalFast = PERIOD_100ms;
   qwiicButtonTask.priority = TASK_PRIORITY_1;
   qwiicButtonTask.printSendToQueue = true;
 #endif
 
-  remoteTask.doWorkInterval = SECONDS * 5;
+  remoteTask.doWorkIntervalFast = SECONDS * 5;
   remoteTask.priority = TASK_PRIORITY_0;
   remoteTask.printSendToQueue = true;
 
-  statsTask.doWorkInterval = PERIOD_50ms;
+  statsTask.doWorkIntervalFast = PERIOD_50ms;
   statsTask.priority = TASK_PRIORITY_1;
   // statsTask.printQueueRx = true;
   statsTask.printOnlyFailedPackets = true;
 
-  throttleTask.doWorkInterval = PERIOD_200ms;
+  throttleTask.doWorkIntervalFast = PERIOD_200ms;
   throttleTask.priority = TASK_PRIORITY_3;
   throttleTask.printWarnings = true;
   throttleTask.printThrottle = PRINT_THROTTLE;
@@ -297,6 +283,28 @@ void enableTasks(bool print)
   remoteTask.enable(print);
   statsTask.enable(print);
   throttleTask.enable(print);
+}
+
+void handleTransaction(Transaction &transaction, bool movingChange)
+{
+  if (movingChange)
+  { // moving
+    if (transactionQueue->payload.moving)
+    {
+#ifdef NINTENDOCLASSIC_TASK
+      nintendoClassTask.enabled = false;
+#endif
+      remoteTask.enabled = false;
+    }
+    // stopped
+    else
+    {
+#ifdef NINTENDOCLASSIC_TASK
+      nintendoClassTask.enabled = true;
+#endif
+      remoteTask.enabled = true;
+    }
+  }
 }
 
 #endif // UNIT_TEST
