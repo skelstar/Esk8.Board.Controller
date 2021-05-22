@@ -5,9 +5,9 @@
 #include <tasks/queues/types/DisplayEvent.h>
 #include <tasks/queues/QueueFactory.h>
 
-#include <displayState.h>
+#include <display/displayState.h>
 #include <TFT_eSPI.h>
-#include <tft.h>
+#include <display/tft.h>
 #include <printFormatStrings.h>
 #include <NintendoController.h>
 

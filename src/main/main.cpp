@@ -7,7 +7,6 @@
 #define PRINTSTREAM_FALLBACK
 #include "Debug.hpp"
 
-#include <BoardConfig.h>
 #include <tasks/queues/queues.h>
 #include <tasks/queues/types/root.h>
 
@@ -15,7 +14,6 @@ SemaphoreHandle_t mux_I2C;
 SemaphoreHandle_t mux_SPI;
 
 #include <types.h>
-#include <rtosManager.h>
 #include <QueueManager.h>
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
@@ -142,9 +140,11 @@ void populateTaskList()
 {
   addTaskToList(&boardCommsTask);
   addTaskToList(&remoteTask);
-  addTaskToList(&statsTask);
   addTaskToList(&throttleTask);
 
+#ifdef STATS_TASK
+  addTaskToList(&statsTask);
+#endif
 #ifdef DIGITALPRIMARYBUTTON_TASK
   addTaskToList(&digitalPrimaryButtonTask);
 #endif
@@ -223,10 +223,12 @@ void configureTasks()
   remoteTask.priority = TASK_PRIORITY_0;
   remoteTask.printSendToQueue = true;
 
+#ifdef STATS_TASK
   statsTask.doWorkIntervalFast = PERIOD_50ms;
   statsTask.priority = TASK_PRIORITY_1;
   // statsTask.printQueueRx = true;
   statsTask.printOnlyFailedPackets = true;
+#endif
 
   throttleTask.doWorkIntervalFast = PERIOD_200ms;
   throttleTask.priority = TASK_PRIORITY_3;
@@ -243,9 +245,11 @@ void startTasks()
   boardCommsTask.start(nsBoardComms::task1);
   displayTask.start(Display::task1);
   remoteTask.start(nsRemoteTask::task1);
-  statsTask.start(nsStatsTask::task1);
   throttleTask.start(nsThrottleTask::task1);
 
+#ifdef STATS_TASK
+  statsTask.start(nsStatsTask::task1);
+#endif
 #ifdef HAPTIC_TASK
   hapticTask.start(nsHapticTask::task1);
 #endif
