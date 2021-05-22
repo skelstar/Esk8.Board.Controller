@@ -94,7 +94,7 @@ namespace Display
     case TR_MAGNET_DETECTED:
       return "TR_MAGNET_DETECTED";
     }
-    return OUT_OF_RANGE;
+    return "OUT OF RANGE";
   }
 
   Trigger lastDispEvent;
