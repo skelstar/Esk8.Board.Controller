@@ -128,7 +128,7 @@ void loop()
 
 void addTaskToList(TaskBase *t)
 {
-  DEBUGMVAL("Adding task", t->_name);
+  Serial.printf("Adding task: %s\n", t->_name);
   if (tasksCount < NUM_TASKS)
   {
     tasks[tasksCount++] = t;

@@ -24,3 +24,9 @@ const char *getThrottleStatus(uint8_t status)
 #ifndef PRINT_DISP_STATE_EVENT
 #define PRINT_DISP_STATE_EVENT 0
 #endif
+#ifndef PRINT_THROTTLE
+#define PRINT_THROTTLE 0
+#endif
+#ifndef PRINT_NRF24L01_DETAILS
+#define PRINT_NRF24L01_DETAILS 0
+#endif
