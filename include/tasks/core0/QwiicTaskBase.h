@@ -1,10 +1,10 @@
 #pragma once
 
-#define QWIICBUTTON_TASK
-
 #include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
+
+#define QWIICBUTTON_TASK
 
 class QwiicButtonTask : public TaskBase
 {
@@ -15,7 +15,6 @@ public:
   QwiicButtonTask() : TaskBase("QwiicTask", 3000, PERIOD_50ms)
   {
     _core = CORE_0;
-    _priority = TASK_PRIORITY_2;
   }
 
 private:
@@ -30,7 +29,7 @@ private:
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(QwiicButtonTask)primaryButtonQueue");
   }
 
-  void initialise()
+  void _initialise()
   {
     if (mux_I2C == nullptr)
       mux_I2C = xSemaphoreCreateMutex();

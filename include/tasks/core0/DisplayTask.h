@@ -5,11 +5,13 @@
 #include <tasks/queues/types/DisplayEvent.h>
 #include <tasks/queues/QueueFactory.h>
 
-#include <displayState.h>
+#include <display/displayState.h>
 #include <TFT_eSPI.h>
-#include <tft.h>
+#include <display/tft.h>
 #include <printFormatStrings.h>
 #include <NintendoController.h>
+
+#define DISPLAY_TASK
 
 class DisplayTask : public TaskBase
 {
@@ -32,10 +34,9 @@ private:
   elapsedMillis since_checked_online = 0;
 
 public:
-  DisplayTask() : TaskBase("DisplayTask", 10000, PERIOD_50ms)
+  DisplayTask() : TaskBase("DisplayTask", 10000)
   {
     _core = CORE_0;
-    _priority = TASK_PRIORITY_1;
   }
   //--------------------------------------------------
 
@@ -43,14 +44,23 @@ private:
   void initialiseQueues()
   {
     batteryQueue = createQueueManager<BatteryInfo>("(DisplayTask)BatteryInfo");
-    transactionQueue = createQueueManager<Transaction>("(DisplayBase)PacketStateQueue");
+    batteryQueue->printMissedPacket = false;
+    transactionQueue = createQueueManager<Transaction>("(DisplayBase)TransactionQueue");
+    transactionQueue->printMissedPacket = false;
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(DisplayBase)PrimaryButtonQueue");
+    primaryButtonQueue->printMissedPacket = false;
     nintendoClassicQueue = createQueueManager<NintendoButtonEvent>("(DisplayBase)NintendoClassicQueue");
+    nintendoClassicQueue->printMissedPacket = false;
     displayEventQueue = createQueueManager<DisplayEvent>("(DisplayBase)DisplayEventQueue");
+    displayEventQueue->printMissedPacket = false;
     throttleQueue = createQueueManager<ThrottleState>("(DisplayTask)ThrottleQueue");
+    throttleQueue->printMissedPacket = false;
+
+    throttleQueue->read(); // clear queue
+    transactionQueue->read();
   }
   //--------------------------------
-  void initialise()
+  void _initialise()
   {
     if (mux_SPI == nullptr)
       mux_SPI = xSemaphoreCreateMutex();
@@ -58,29 +68,27 @@ private:
     setupLCD();
 
     Display::fsm_mgr.begin(&Display::_fsm);
-    Display::fsm_mgr.setPrintStateCallback(printState);
-    Display::fsm_mgr.setPrintTriggerCallback(printTrigger);
-
-    Display::addTransitions();
-
-    Display::_fsm.run_machine();
-
     if (p_printState)
       Display::fsm_mgr.setPrintStateCallback(printState);
     if (p_printTrigger)
       Display::fsm_mgr.setPrintTriggerCallback(printTrigger);
+
+    Display::addTransitions();
+
+    Display::_fsm.run_machine();
   }
+
   //===================================================================
   void doWork()
   {
     // update transaction if anything new on the queue
-    if (transactionQueue->hasValue() && transactionQueue->payload.event_id > 0)
+    if (transactionQueue->hasValue())
     {
       transaction = transactionQueue->payload;
       Display::_g_BoardBattery = transaction.batteryVolts;
+
+      handlePacketState(transaction);
     }
-    // will check for online regardless of anything being new on the queue
-    handlePacketState(transaction);
 
     if (nintendoClassicQueue->hasValue())
       handleNintendoButtonEvent(nintendoClassicQueue->payload);
@@ -105,26 +113,28 @@ private:
   }
   //==================================================
 
+#define NOT_IN_STATE(x) !Display::fsm_mgr.currentStateIs(x)
+#define IS_REVISIT() !Display::_fsm.revisit()
+#define IN_STATE(x) Display::fsm_mgr.currentStateIs(x)
+#define RESPONSE_WINDOW 500
+
   static void printState(uint16_t id)
   {
-    // if (p_printState)
     Serial.printf(PRINT_FSM_STATE_FORMAT, "DISP", millis(), Display::stateID(id));
   }
 
   static void printTrigger(uint16_t ev)
   {
-    if (!(Display::_fsm.revisit() && ev == Display::TR_STOPPED) &&
-        !(Display::_fsm.revisit() && ev == Display::TR_MOVING) &&
+    if (!(IS_REVISIT() && ev == Display::TR_STOPPED) &&
+        !(IS_REVISIT() && ev == Display::TR_MOVING) &&
         !(Display::_fsm.getCurrentStateId() == Display::ST_OPTION_PUSH_TO_START && ev == Display::TR_STOPPED))
       Serial.printf(PRINT_FSM_TRIGGER_FORMAT, "DISP", millis(), Display::getTrigger(ev));
   }
 
-#define NOT_IN_STATE(x) !Display::fsm_mgr.currentStateIs(x)
-#define IN_STATE(x) Display::fsm_mgr.currentStateIs(x)
-#define RESPONSE_WINDOW 500
-
   void handlePacketState(Transaction &transaction)
   {
+    manageRunningState(transaction);
+
     if (transaction.connected(RESPONSE_WINDOW) == true)
     {
       // check version
@@ -197,6 +207,20 @@ private:
 
     if (throttleState.status == ThrottleStatus::STATUS_OK && IN_STATE(Display::ST_MAGNET_NOT_DETECTED))
       Display::fsm_mgr.trigger(Display::TR_MAGNET_DETECTED);
+  }
+
+  void manageRunningState(Transaction &transaction)
+  {
+    using namespace Display;
+
+    bool moved = !_g_Moving && transaction.moving;
+    bool stopped = _g_Moving && !transaction.moving;
+
+    if (moved)
+      setRunningState(RunningState::SLOW);
+    else if (stopped)
+      setRunningState(RunningState::FAST);
+    _g_Moving = transaction.moving;
   }
 };
 

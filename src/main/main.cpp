@@ -14,7 +14,6 @@ SemaphoreHandle_t mux_I2C;
 SemaphoreHandle_t mux_SPI;
 
 #include <types.h>
-#include <rtosManager.h>
 #include <QueueManager.h>
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
@@ -22,15 +21,11 @@ SemaphoreHandle_t mux_SPI;
 
 #include <constants.h>
 
-#if REMOTE_USED == REMOTE_M5STACK_FIRE
+#if REMOTE_USED == NINTENDO_REMOTE
 #include <SparkFun_Qwiic_Button.h>
-#elif REMOTE_USED == REMOTE_RED_REMOTE
-#include <Button2.h>
-#endif
-
-#if REMOTE_USED == REMOTE_M5STACK_FIRE
 #include <MagThumbwheel.h>
-#elif REMOTE_USED == REMOTE_RED_REMOTE
+#elif REMOTE_USED == RED_REMOTE
+#include <Button2.h>
 #include <AnalogThumbwheel.h>
 #endif
 
@@ -49,6 +44,10 @@ NRF24L01Lib nrf24;
 
 #include <tasks/root.h>
 
+int tasksCount = 0;
+
+TaskBase *tasks[NUM_TASKS];
+
 // LOCAL QUEUE MANAGERS -----------------------
 
 Queue1::Manager<Transaction> *transactionQueue = nullptr;
@@ -57,12 +56,16 @@ Queue1::Manager<Transaction> *transactionQueue = nullptr;
 
 #include <utils.h>
 
+// prototypes
+void populateTaskList();
 void createQueues();
 void createLocalQueueManagers();
 void startTasks();
+void initialiseTasks();
 void configureTasks();
 void waitForTasks();
 void enableTasks(bool print = false);
+void handleTransaction(Transaction &transaction, bool movingChange);
 
 //------------------------------------------------------------------
 
@@ -84,6 +87,8 @@ void setup()
 #endif
   vTaskDelay(100);
 
+  populateTaskList();
+
   createQueues();
 
   createLocalQueueManagers();
@@ -91,6 +96,8 @@ void setup()
   configureTasks();
 
   startTasks();
+
+  initialiseTasks();
 
   waitForTasks();
 
@@ -103,33 +110,15 @@ Transaction board;
 
 void loop()
 {
-  if (since_checked_queues > PERIOD_200ms)
+  if (since_checked_queues > PERIOD_100ms)
   {
     since_checked_queues = 0;
 
     // changed?
-    if (transactionQueue->hasValue() &&
-        board.moving != transactionQueue->payload.moving)
-    {
-      // moving
-      if (transactionQueue->payload.moving)
-      {
-#ifdef NINTENDOCLASSIC_TASK
-        nintendoClassTask.enabled = false;
-#endif
-        remoteTask.enabled = false;
-      }
-      // stopped
-      else
-      {
-#ifdef NINTENDOCLASSIC_TASK
-        nintendoClassTask.enabled = true;
-#endif
-        remoteTask.enabled = true;
-      }
+    if (transactionQueue->hasValue())
+      handleTransaction(transactionQueue->payload, /*moving change*/ board.moving != transactionQueue->payload.moving);
 
-      board.moving = transactionQueue->payload.moving;
-    }
+    board.moving = transactionQueue->payload.moving;
   }
 
   vTaskDelay(TICKS_10ms);
@@ -137,6 +126,39 @@ void loop()
 
 //------------------------------------------------------------------
 
+void addTaskToList(TaskBase *t)
+{
+  Serial.printf("Adding task: %s\n", t->_name);
+  if (tasksCount < NUM_TASKS)
+  {
+    tasks[tasksCount++] = t;
+    assert(tasksCount < NUM_TASKS);
+  }
+}
+
+void populateTaskList()
+{
+  addTaskToList(&boardCommsTask);
+  addTaskToList(&remoteTask);
+  addTaskToList(&throttleTask);
+
+#ifdef STATS_TASK
+  addTaskToList(&statsTask);
+#endif
+#ifdef DIGITALPRIMARYBUTTON_TASK
+  addTaskToList(&digitalPrimaryButtonTask);
+#endif
+  addTaskToList(&displayTask);
+#ifdef HAPTIC_TASK
+  addTaskToList(&hapticTask);
+#endif
+#ifdef NINTENDOCLASSIC_TASK
+  addTaskToList(&nintendoClassTask);
+#endif
+#ifdef QWIICBUTTON_TASK
+  addTaskToList(&qwiicButtonTask);
+#endif
+}
 void createQueues()
 {
   xBatteryInfo = xQueueCreate(1, sizeof(BatteryInfo *));
@@ -144,53 +166,93 @@ void createQueues()
   xNintendoControllerQueue = xQueueCreate(1, sizeof(NintendoButtonEvent *));
   xPacketStateQueueHandle = xQueueCreate(1, sizeof(Transaction *));
   xPrimaryButtonQueueHandle = xQueueCreate(1, sizeof(PrimaryButtonState *));
+  xSimplMessageQueueHandle = xQueueCreate(1, sizeof(SimplMessageObj *));
   xThrottleQueueHandle = xQueueCreate(1, sizeof(ThrottleState *));
 }
 
 void createLocalQueueManagers()
 {
   transactionQueue = createQueueManager<Transaction>("(main) transactionQueue");
+  transactionQueue->printMissedPacket = false;
 }
 
 void configureTasks()
 {
-  boardCommsTask.doWorkInterval = PERIOD_50ms;
+  DEBUG("Configuring tasks");
+
+  boardCommsTask.doWorkIntervalFast = PERIOD_50ms;
+  boardCommsTask.priority = TASK_PRIORITY_4;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
+  // boardCommsTask.printBoardPacketAvailable = true;
+  boardCommsTask.printFirstBoardPacketAvailable = true;
   // boardCommsTask.printSentPacketToBoard = true;
   // boardCommsTask.printRxQueuePacket = true;
   // boardCommsTask.printTxQueuePacket = true;
 
-#ifdef NINTENDOCLASSIC_TASK
-  nintendoClassTask.doWorkInterval = PERIOD_50ms;
-#endif
-
-#ifdef QWIICBUTTON_TASK
-  qwiicButtonTask.doWorkInterval = PERIOD_100ms;
-#endif
-
 #ifdef DIGITALPRIMARYBUTTON_TASK
-  digitalPrimaryButtonTask.doWorkInterval = PERIOD_100ms;
+  digitalPrimaryButtonTask.doWorkIntervalFast = PERIOD_100ms;
+  digitalPrimaryButtonTask.priority = TASK_PRIORITY_1;
   // digitalPrimaryButtonTask.printSendToQueue = true;
 #endif
 
-  throttleTask.doWorkInterval = PERIOD_200ms;
+  displayTask.doWorkIntervalFast = PERIOD_50ms;
+  displayTask.doWorkIntervalSlow = PERIOD_500ms;
+  displayTask.priority = TASK_PRIORITY_2;
+  displayTask.p_printState = PRINT_DISP_STATE;
+  displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
+
+#ifdef HAPTIC_TASK
+  hapticTask.priority = TASK_PRIORITY_0;
+  hapticTask.doWorkIntervalFast = PERIOD_50ms;
+  hapticTask.printDebug = true;
+  hapticTask.printFsmTrigger = false;
+#endif
+
+#ifdef NINTENDOCLASSIC_TASK
+  nintendoClassTask.doWorkIntervalFast = PERIOD_50ms;
+  nintendoClassTask.priority = TASK_PRIORITY_2;
+#endif
+
+#ifdef QWIICBUTTON_TASK
+  qwiicButtonTask.doWorkIntervalFast = PERIOD_100ms;
+  qwiicButtonTask.priority = TASK_PRIORITY_1;
+  qwiicButtonTask.printSendToQueue = true;
+#endif
+
+  remoteTask.doWorkIntervalFast = SECONDS * 5;
+  remoteTask.priority = TASK_PRIORITY_0;
+  remoteTask.printSendToQueue = true;
+
+#ifdef STATS_TASK
+  statsTask.doWorkIntervalFast = PERIOD_50ms;
+  statsTask.priority = TASK_PRIORITY_1;
+  // statsTask.printQueueRx = true;
+  statsTask.printOnlyFailedPackets = true;
+#endif
+
+  throttleTask.doWorkIntervalFast = PERIOD_200ms;
+  throttleTask.priority = TASK_PRIORITY_3;
   throttleTask.printWarnings = true;
   throttleTask.printThrottle = PRINT_THROTTLE;
   // throttleTask.thumbwheel.setSweepAngle(30.0);
   // throttleTask.thumbwheel.setDeadzone(5.0);
-
-  displayTask.doWorkInterval = PERIOD_50ms;
-  displayTask.p_printState = PRINT_DISP_STATE;
-  displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
-
-  remoteTask.doWorkInterval = SECONDS * 5;
-  remoteTask.printSendToQueue = true;
 }
 
 void startTasks()
 {
-  boardCommsTask.start(BoardComms::task1);
+  DEBUG("Starting tasks");
+
+  boardCommsTask.start(nsBoardComms::task1);
   displayTask.start(Display::task1);
+  remoteTask.start(nsRemoteTask::task1);
+  throttleTask.start(nsThrottleTask::task1);
+
+#ifdef STATS_TASK
+  statsTask.start(nsStatsTask::task1);
+#endif
+#ifdef HAPTIC_TASK
+  hapticTask.start(nsHapticTask::task1);
+#endif
 #ifdef NINTENDOCLASSIC_TASK
   nintendoClassTask.start(nsNintendoClassicTask::task1);
 #endif
@@ -200,47 +262,56 @@ void startTasks()
 #ifdef DIGITALPRIMARYBUTTON_TASK
   digitalPrimaryButtonTask.start(nsDigitalPrimaryButtonTask::task1);
 #endif
+}
 
-  remoteTask.start(nsRemoteTask::task1);
-  throttleTask.start(nsThrottleTask::task1);
+void initialiseTasks()
+{
+  DEBUG("Initialising tasks");
+
+  for (int i = 0; i < tasksCount; i++)
+    tasks[i]->initialiseTask(PRINT_THIS);
 }
 
 void waitForTasks()
 {
-  while (
-      boardCommsTask.ready == false ||
-      displayTask.ready == false ||
-#ifdef NINTENDOCLASSIC_TASK
-      nintendoClassTask.ready == false ||
-#endif
-#ifdef QWIICBUTTON_TASK
-      qwiicButtonTask.ready == false ||
-#endif
-#ifdef DIGITALPRIMARYBUTTON_TASK
-      digitalPrimaryButtonTask.ready == false ||
-#endif
-      remoteTask.ready == false ||
-      throttleTask.ready == false ||
-      false)
-    vTaskDelay(PERIOD_10ms);
-  Serial.printf("-- all tasks ready! --\n");
+  bool allReady = false;
+  while (!allReady)
+  {
+    allReady = true;
+    for (int i = 0; i < tasksCount; i++)
+      allReady = allReady && tasks[i]->ready;
+    vTaskDelay(PERIOD_100ms);
+    DEBUG("Waiting for tasks\n");
+  }
+  DEBUG("-- all tasks ready! --");
 }
 
 void enableTasks(bool print)
 {
-  boardCommsTask.enable(print);
-  displayTask.enable(print);
+  for (int i = 0; i < tasksCount; i++)
+    tasks[i]->enable(print);
+}
+
+void handleTransaction(Transaction &transaction, bool movingChange)
+{
+  if (movingChange)
+  { // moving
+    if (transactionQueue->payload.moving)
+    {
 #ifdef NINTENDOCLASSIC_TASK
-  nintendoClassTask.enable(print);
+      nintendoClassTask.enabled = false;
 #endif
-#ifdef QWIICBUTTON_TASK
-  qwiicButtonTask.enable(print);
+      remoteTask.enabled = false;
+    }
+    // stopped
+    else
+    {
+#ifdef NINTENDOCLASSIC_TASK
+      nintendoClassTask.enabled = true;
 #endif
-#ifdef DIGITALPRIMARYBUTTON_TASK
-  digitalPrimaryButtonTask.enable(print);
-#endif
-  remoteTask.enable(print);
-  throttleTask.enable(print);
+      remoteTask.enabled = true;
+    }
+  }
 }
 
 #endif // UNIT_TEST

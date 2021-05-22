@@ -4,6 +4,8 @@
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 
+#define THROTTLE_TASK
+
 namespace nsThrottleTask
 {
   PrimaryButtonState primaryButton;
@@ -16,17 +18,16 @@ public:
   bool printWarnings = true;
   bool printThrottle = false;
 
-#if REMOTE_USED == REMOTE_M5STACK_FIRE
+#if REMOTE_USED == NINTENDO_REMOTE
   MagneticThumbwheelClass thumbwheel;
-#elif REMOTE_USED == REMOTE_RED_REMOTE
+#elif REMOTE_USED == RED_REMOTE
   AnalogThumbwheelClass thumbwheel;
 #endif
 
 public:
-  ThrottleTask() : TaskBase("ThrottleTask", 3000, PERIOD_50ms)
+  ThrottleTask() : TaskBase("ThrottleTask", 3000)
   {
     _core = CORE_0;
-    _priority = TASK_PRIORITY_4;
   }
 
 private:
@@ -41,7 +42,7 @@ private:
     throttleQueue = createQueueManager<ThrottleState>("(throttle)throttleQueue");
   }
 
-  void initialise()
+  void _initialise()
   {
     if (mux_I2C == nullptr)
       mux_I2C = xSemaphoreCreateMutex();
@@ -49,10 +50,15 @@ private:
     // thumbwheel.setSweepAngle(SWEEP_ANGLE);
     // thumbwheel.setAccelDirection(DIR_CLOCKWISE);
     // thumbwheel.setDeltaLimits(LIMIT_DELTA_MIN, LIMIT_DELTA_MAX);
-    thumbwheel.setThrottleEnabledCb([] { return true; });
-    // thumbwheel.init(mux_I2C);
+    thumbwheel.setThrottleEnabledCb([]
+                                    { return true; });
+
+#if REMOTE_USED == NINTENDO_REMOTE
     thumbwheel.printThrottle = printThrottle;
+    thumbwheel.init(mux_I2C, SWEEP_ANGLE, DEADZONE, ACCEL_DIRECTION);
+#elif REMOTE_USED == RED_REMOTE
     thumbwheel.init();
+#endif
   }
 
   void doWork()
@@ -63,9 +69,9 @@ private:
       nsThrottleTask::primaryButton.event_id = primaryButtonQueue->payload.event_id;
       nsThrottleTask::primaryButton.pressed = primaryButtonQueue->payload.pressed;
 
-      // changed and released?
-      if (oldPressed != primaryButtonQueue->payload.pressed &&
-          primaryButtonQueue->payload.pressed == false)
+      bool buttonReleased = oldPressed != primaryButtonQueue->payload.pressed &&
+                            primaryButtonQueue->payload.pressed == false;
+      if (buttonReleased)
         thumbwheel.centre();
     }
 
@@ -78,7 +84,8 @@ private:
     if (og_throttle != throttle.val || throttle.status != ThrottleStatus::STATUS_OK)
     {
       throttleQueue->send(&throttle);
-      // ThrottleState::print(throttle, "[ThrottleTask]-->");
+      if (throttle.val == 255)
+        ThrottleState::print(throttle, "[ThrottleTask]-->");
     }
   }
 

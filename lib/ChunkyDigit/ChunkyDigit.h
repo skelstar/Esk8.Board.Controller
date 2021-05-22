@@ -315,9 +315,9 @@ private:
       uint8_t y,
       uint8_t _pixel_size = 1)
   {
-    for (int xx = 0; xx < 3; xx++)
+    for (int xx = 0; xx < 3; xx++) //column
     {
-      for (int yy = 0; yy < 5; yy++)
+      for (int yy = 0; yy < 5; yy++) // row
       {
         int x1 = x + xx * _pixel_size;
         int y1 = y + yy * _pixel_size;

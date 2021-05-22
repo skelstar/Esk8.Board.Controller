@@ -54,6 +54,13 @@ void print_build_status(String chipId)
   if (DEBUG_BUILD)
     Serial.printf("%s DEBUG BUILD!! \n", spaces);
 
+#if REMOTE_USED == RED_REMOTE
+  Serial.printf("%s RED REMOTE\n", spaces);
+#endif
+#if REMOTE_USED == NINTENDO_REMOTE
+  Serial.printf("%s NINTENDO REMOTE\n", spaces);
+#endif
+
   Serial.printf("\n");
   Serial.printf("%s MISO: %d\n", spaces, SOFT_SPI_MISO_PIN);
   Serial.printf("%s MOSI: %d\n", spaces, SOFT_SPI_MOSI_PIN);

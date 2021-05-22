@@ -1,10 +1,10 @@
 #pragma once
 
-#define NINTENDOCLASSIC_TASK
-
 #include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
+
+#define NINTENDOCLASSIC_TASK
 
 class NintendoClassicTask : public TaskBase
 {
@@ -17,7 +17,6 @@ public:
   NintendoClassicTask() : TaskBase("NintendoClassicTask", 3000, PERIOD_50ms)
   {
     _core = CORE_0;
-    _priority = TASK_PRIORITY_1;
   }
 
 private:
@@ -32,7 +31,7 @@ private:
     nintendoButtonQueue = createQueueManager<NintendoButtonEvent>("(NintendoClassicTask)nintendoButtonQueue");
   }
 
-  void initialise()
+  void _initialise()
   {
     if (nintendoButtonQueue == nullptr)
       Serial.printf("ERROR: nintendoButtonQueue is NULL\n");
@@ -41,11 +40,6 @@ private:
       mux_I2C = xSemaphoreCreateMutex();
 
     connectToNintendoController();
-  }
-
-  bool timeToDoWork()
-  {
-    return true;
   }
 
   void doWork()
@@ -82,13 +76,9 @@ private:
     bool initialised = false;
     do
     {
-      if (take(mux_I2C, TICKS_10ms))
-      {
-        initialised = classic.init(printWarnings);
-        if (!initialised)
-          Serial.printf("ERROR: couldn't init Nintendo Controller\n");
-        give(mux_I2C);
-      }
+      initialised = classic.init(mux_I2C, TICKS_500ms, printWarnings);
+      if (!initialised)
+        Serial.printf("ERROR: couldn't init Nintendo Controller\n");
       vTaskDelay(200);
     } while (!initialised);
     Serial.printf("Nintendo Controller initialised\n");

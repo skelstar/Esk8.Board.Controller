@@ -7,6 +7,8 @@
 
 #include <BatteryLib.h>
 
+#define REMOTE_TASK
+
 class RemoteTask : public TaskBase
 {
 public:
@@ -19,10 +21,9 @@ private:
   Queue1::Manager<BatteryInfo> *remoteBatteryQueue = nullptr;
 
 public:
-  RemoteTask() : TaskBase("RemoteTask", 3000, PERIOD_50ms)
+  RemoteTask() : TaskBase("RemoteTask", 3000)
   {
     _core = CORE_0;
-    _priority = TASK_PRIORITY_0;
   }
 
   void initialiseQueues()
@@ -30,7 +31,7 @@ public:
     remoteBatteryQueue = createQueueManager<BatteryInfo>("(RemoteTask) remoteBatteryQueue");
   }
 
-  void initialise()
+  void _initialise()
   {
     battery = new BatteryLib(34);
     battery->setup(nullptr);

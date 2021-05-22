@@ -13,15 +13,9 @@
 #endif
 
 #include <ChunkyDigit.h>
-#include <SlantyDigit.h>
 #include <math.h>
 #include <string.h>
-
-#include <tasks/core0/statsTask.h>
-
-#ifndef TFT_H
-#include <tft.h>
-#endif
+#include <display/tft.h>
 
 #define LINE_1 1
 #define LINE_2 2
@@ -49,7 +43,6 @@ namespace Display
   void drawStatusStripe(uint32_t bgColour, uint32_t stripeColour);
 
   ChunkyDigit *chunkyDigit;
-  SlantyDigit *slantyDigit;
 
   //-----------------------------------------------------
   void screen_searching()

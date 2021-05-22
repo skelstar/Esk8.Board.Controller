@@ -1,11 +1,11 @@
 #pragma once
 
-#define DIGITALPRIMARYBUTTON_TASK
-
 #include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 #include <Button2.h>
+
+#define DIGITALPRIMARYBUTTON_TASK
 
 class DigitalPrimaryButtonTask : public TaskBase
 {
@@ -13,10 +13,9 @@ public:
   // variables
   bool printSendToQueue = false;
 
-  DigitalPrimaryButtonTask() : TaskBase("DigitalPrimaryButtonTask", 3000, PERIOD_100ms)
+  DigitalPrimaryButtonTask() : TaskBase("DigitalPrimaryButtonTask", 3000)
   {
     _core = CORE_0;
-    _priority = TASK_PRIORITY_2;
   }
 
 private:
@@ -27,7 +26,7 @@ private:
 
   PrimaryButtonState state;
 
-  void initialise()
+  void _initialise()
   {
     primaryButton.begin(PRIMARY_BUTTON_PIN);
 

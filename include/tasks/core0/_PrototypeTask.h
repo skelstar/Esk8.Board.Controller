@@ -26,7 +26,7 @@ public:
     // PrototypeBatteryQueue = createQueueManager<BatteryInfo>("(PrototypeTask) PrototypeBatteryQueue");
   }
 
-  void initialise()
+  void _initialise()
   {
     // battery = new BatteryLib(34);
   }

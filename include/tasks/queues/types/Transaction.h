@@ -7,12 +7,40 @@
 class Transaction : public QueueBase
 {
 public:
+  enum TransactionSendResult
+  {
+    NONE = 0,
+    SENT_OK,
+    SEND_FAIL,
+    UPDATE,
+  };
+
+  const char *getSendResult(const char *context = __func__)
+  {
+    switch (this->sendResult)
+    {
+    case NONE:
+      return "NONE";
+    case SENT_OK:
+      return "SENT_OK";
+    case SEND_FAIL:
+      return "SEND_FAIL";
+    case UPDATE:
+      return "UPDATE";
+    }
+    char buff[30];
+    sprintf(buff, "OUT_OF_RANGE (%s)", context);
+    return buff;
+  }
+
+  TransactionSendResult sendResult;
+
   float version = 0.0,
         batteryVolts = 0.0;
+  ReasonType reason;
   unsigned long
       packet_id,
-      replyId,
-      responseTime;
+      replyId;
   bool moving = false;
 
 public:
@@ -35,11 +63,13 @@ public:
 
   void received(VescData packet)
   {
-    replyId = packet.id;
-    responseTime = millis();
-    version = packet.version;
-    moving = packet.moving;
     batteryVolts = packet.batteryVoltage;
+    moving = packet.moving;
+    reason = packet.reason;
+    replyId = packet.id;
+    version = packet.version;
+
+    sendResult = TransactionSendResult::UPDATE;
   }
 
   bool acknowledged()
@@ -49,12 +79,18 @@ public:
 
   bool connected(unsigned long timeout)
   {
-    bool online = packet_id == 0 || // ignore first packet
-                  millis() - responseTime < timeout;
-    // if (!online)
-    //   Serial.printf("connected(): board offline since: %lu\n",
-    //                 millis() - responseTime);
-    return online;
+    return sendResult != TransactionSendResult::SEND_FAIL;
+  }
+
+  void print(const char *preamble = nullptr)
+  {
+    if (preamble != nullptr)
+      Serial.printf("%s: ", preamble);
+    Serial.printf("event_id: %lu  ", this->event_id);
+    Serial.printf("packet_id: %lu:  ", this->packet_id);
+    Serial.printf("moving: %d:  ", this->moving);
+    Serial.printf("sentResult: %s:  ", this->getSendResult());
+    Serial.println();
   }
 
   static void print(Transaction item, const char *preamble = nullptr)
