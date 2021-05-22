@@ -44,11 +44,17 @@ private:
   void initialiseQueues()
   {
     batteryQueue = createQueueManager<BatteryInfo>("(DisplayTask)BatteryInfo");
+    batteryQueue->printMissedPacket = false;
     transactionQueue = createQueueManager<Transaction>("(DisplayBase)TransactionQueue");
+    transactionQueue->printMissedPacket = false;
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(DisplayBase)PrimaryButtonQueue");
+    primaryButtonQueue->printMissedPacket = false;
     nintendoClassicQueue = createQueueManager<NintendoButtonEvent>("(DisplayBase)NintendoClassicQueue");
+    nintendoClassicQueue->printMissedPacket = false;
     displayEventQueue = createQueueManager<DisplayEvent>("(DisplayBase)DisplayEventQueue");
+    displayEventQueue->printMissedPacket = false;
     throttleQueue = createQueueManager<ThrottleState>("(DisplayTask)ThrottleQueue");
+    throttleQueue->printMissedPacket = false;
 
     throttleQueue->read(); // clear queue
     transactionQueue->read();

@@ -46,6 +46,10 @@ NRF24L01Lib nrf24;
 
 #include <tasks/root.h>
 
+int tasksCount = 0;
+
+TaskBase *tasks[NUM_TASKS];
+
 // LOCAL QUEUE MANAGERS -----------------------
 
 Queue1::Manager<Transaction> *transactionQueue = nullptr;
@@ -55,6 +59,7 @@ Queue1::Manager<Transaction> *transactionQueue = nullptr;
 #include <utils.h>
 
 // prototypes
+void populateTaskList();
 void createQueues();
 void createLocalQueueManagers();
 void startTasks();
@@ -83,6 +88,8 @@ void setup()
   print_build_status(chipId);
 #endif
   vTaskDelay(100);
+
+  populateTaskList();
 
   createQueues();
 
@@ -121,6 +128,37 @@ void loop()
 
 //------------------------------------------------------------------
 
+void addTaskToList(TaskBase *t)
+{
+  DEBUGMVAL("Adding task", t->_name);
+  if (tasksCount < NUM_TASKS)
+  {
+    tasks[tasksCount++] = t;
+    assert(tasksCount < NUM_TASKS);
+  }
+}
+
+void populateTaskList()
+{
+  addTaskToList(&boardCommsTask);
+  addTaskToList(&remoteTask);
+  addTaskToList(&statsTask);
+  addTaskToList(&throttleTask);
+
+#ifdef DIGITALPRIMARYBUTTON_TASK
+  addTaskToList(&digitalPrimaryButtonTask);
+#endif
+  addTaskToList(&displayTask);
+#ifdef HAPTIC_TASK
+  addTaskToList(&hapticTask);
+#endif
+#ifdef NINTENDOCLASSIC_TASK
+  addTaskToList(&nintendoClassTask);
+#endif
+#ifdef QWIICBUTTON_TASK
+  addTaskToList(&qwiicButtonTask);
+#endif
+}
 void createQueues()
 {
   xBatteryInfo = xQueueCreate(1, sizeof(BatteryInfo *));
@@ -140,6 +178,8 @@ void createLocalQueueManagers()
 
 void configureTasks()
 {
+  DEBUG("Configuring tasks");
+
   boardCommsTask.doWorkIntervalFast = PERIOD_50ms;
   boardCommsTask.priority = TASK_PRIORITY_4;
   boardCommsTask.printRadioDetails = PRINT_NRF24L01_DETAILS;
@@ -198,8 +238,14 @@ void configureTasks()
 
 void startTasks()
 {
+  DEBUG("Starting tasks");
+
   boardCommsTask.start(nsBoardComms::task1);
   displayTask.start(Display::task1);
+  remoteTask.start(nsRemoteTask::task1);
+  statsTask.start(nsStatsTask::task1);
+  throttleTask.start(nsThrottleTask::task1);
+
 #ifdef HAPTIC_TASK
   hapticTask.start(nsHapticTask::task1);
 #endif
@@ -212,77 +258,34 @@ void startTasks()
 #ifdef DIGITALPRIMARYBUTTON_TASK
   digitalPrimaryButtonTask.start(nsDigitalPrimaryButtonTask::task1);
 #endif
-  remoteTask.start(nsRemoteTask::task1);
-  statsTask.start(nsStatsTask::task1);
-  throttleTask.start(nsThrottleTask::task1);
 }
 
 void initialiseTasks()
 {
-  boardCommsTask.initialiseTask(PRINT_THIS);
-  displayTask.initialiseTask(PRINT_THIS);
-#ifdef HAPTIC_TASK
-  hapticTask.initialiseTask(PRINT_THIS);
-#endif
-#ifdef NINTENDOCLASSIC_TASK
-  nintendoClassTask.initialiseTask(PRINT_THIS);
-#endif
-#ifdef QWIICBUTTON_TASK
-  qwiicButtonTask.initialiseTask(PRINT_THIS);
-#endif
-#ifdef DIGITALPRIMARYBUTTON_TASK
-  digitalPrimaryButtonTask.initialiseTask(PRINT_THIS);
-#endif
-  remoteTask.initialiseTask(PRINT_THIS);
-  statsTask.initialiseTask(PRINT_THIS);
-  throttleTask.initialiseTask(PRINT_THIS);
+  DEBUG("Initialising tasks");
+
+  for (int i = 0; i < tasksCount; i++)
+    tasks[i]->initialiseTask(PRINT_THIS);
 }
 
 void waitForTasks()
 {
-  while (
-      boardCommsTask.ready == false ||
-      displayTask.ready == false ||
-#ifdef HAPTIC_TASK
-      hapticTask.ready == false ||
-#endif
-
-#ifdef NINTENDOCLASSIC_TASK
-      nintendoClassTask.ready == false ||
-#endif
-#ifdef QWIICBUTTON_TASK
-      qwiicButtonTask.ready == false ||
-#endif
-#ifdef DIGITALPRIMARYBUTTON_TASK
-      digitalPrimaryButtonTask.ready == false ||
-#endif
-      remoteTask.ready == false ||
-      statsTask.ready == false ||
-      throttleTask.ready == false ||
-      false)
-    vTaskDelay(PERIOD_10ms);
-  Serial.printf("-- all tasks ready! --\n");
+  bool allReady = false;
+  while (!allReady)
+  {
+    allReady = true;
+    for (int i = 0; i < tasksCount; i++)
+      allReady = allReady && tasks[i]->ready;
+    vTaskDelay(PERIOD_100ms);
+    DEBUG("Waiting for tasks\n");
+  }
+  DEBUG("-- all tasks ready! --");
 }
 
 void enableTasks(bool print)
 {
-  boardCommsTask.enable(print);
-  displayTask.enable(print);
-#ifdef HAPTIC_TASK
-  hapticTask.enable(print);
-#endif
-#ifdef NINTENDOCLASSIC_TASK
-  nintendoClassTask.enable(print);
-#endif
-#ifdef QWIICBUTTON_TASK
-  qwiicButtonTask.enable(print);
-#endif
-#ifdef DIGITALPRIMARYBUTTON_TASK
-  digitalPrimaryButtonTask.enable(print);
-#endif
-  remoteTask.enable(print);
-  statsTask.enable(print);
-  throttleTask.enable(print);
+  for (int i = 0; i < tasksCount; i++)
+    tasks[i]->enable(print);
 }
 
 void handleTransaction(Transaction &transaction, bool movingChange)

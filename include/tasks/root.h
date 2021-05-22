@@ -9,3 +9,5 @@
 #endif
 #include <tasks/core0/RemoteTask.h>
 #include <tasks/core0/ThrottleTask.h>
+
+#define NUM_TASKS 20

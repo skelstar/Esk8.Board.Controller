@@ -40,6 +40,7 @@ public:
   void _initialise()
   {
     transactionQueue = createQueueManager<Transaction>("(StatsTask) transactionQueue");
+    transactionQueue->printMissedPacket = false;
   }
 
   void doWork()
