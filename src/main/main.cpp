@@ -24,6 +24,9 @@ SemaphoreHandle_t mux_SPI;
 #if REMOTE_USED == NINTENDO_REMOTE
 #include <SparkFun_Qwiic_Button.h>
 #include <MagThumbwheel.h>
+#elif REMOTE_USED == PURPLE_REMOTE
+#include <AnalogI2CTrigger.h>
+// #include <AnalogThumbwheel.h>
 #elif REMOTE_USED == RED_REMOTE
 #include <Button2.h>
 #include <AnalogThumbwheel.h>

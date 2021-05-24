@@ -150,7 +150,7 @@ private:
   Transaction m_transaction;
 
 public:
-  HapticTask() : TaskBase("HapticTask", 3000, PERIOD_50ms)
+  HapticTask() : TaskBase("HapticTask", 3000)
   {
     _core = CORE_0;
   }

@@ -4,6 +4,8 @@
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 
+#include <AnalogI2CTrigger.h>
+
 #define THROTTLE_TASK
 
 namespace nsThrottleTask
@@ -16,10 +18,12 @@ class ThrottleTask : public TaskBase
 
 public:
   bool printWarnings = true;
-  bool printThrottle = false;
+  bool printThrottle = true;
 
 #if REMOTE_USED == NINTENDO_REMOTE
   MagneticThumbwheelClass thumbwheel;
+#elif REMOTE_USED == PURPLE_REMOTE
+  AnalogI2CTriggerClass thumbwheel;
 #elif REMOTE_USED == RED_REMOTE
   AnalogThumbwheelClass thumbwheel;
 #endif
@@ -47,15 +51,15 @@ private:
     if (mux_I2C == nullptr)
       mux_I2C = xSemaphoreCreateMutex();
 
-    // thumbwheel.setSweepAngle(SWEEP_ANGLE);
-    // thumbwheel.setAccelDirection(DIR_CLOCKWISE);
-    // thumbwheel.setDeltaLimits(LIMIT_DELTA_MIN, LIMIT_DELTA_MAX);
     thumbwheel.setThrottleEnabledCb([]
                                     { return true; });
 
 #if REMOTE_USED == NINTENDO_REMOTE
     thumbwheel.printThrottle = printThrottle;
     thumbwheel.init(mux_I2C, SWEEP_ANGLE, DEADZONE, ACCEL_DIRECTION);
+#elif REMOTE_USED == PURPLE_REMOTE
+    thumbwheel.printThrottle = printThrottle;
+    thumbwheel.init(mux_I2C, ACCEL_DIRECTION);
 #elif REMOTE_USED == RED_REMOTE
     thumbwheel.init();
 #endif
