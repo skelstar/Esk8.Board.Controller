@@ -14,7 +14,7 @@ public:
   NintendoController classic;
 
 public:
-  NintendoClassicTask() : TaskBase("NintendoClassicTask", 3000, PERIOD_50ms)
+  NintendoClassicTask() : TaskBase("NintendoClassicTask", 3000)
   {
     _core = CORE_0;
   }
