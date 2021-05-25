@@ -68,18 +68,9 @@ private:
   void doWork()
   {
     if (primaryButtonQueue->hasValue())
-    {
-      bool oldPressed = nsThrottleTask::primaryButton.pressed;
-      nsThrottleTask::primaryButton.event_id = primaryButtonQueue->payload.event_id;
-      nsThrottleTask::primaryButton.pressed = primaryButtonQueue->payload.pressed;
+      handlePrimaryButton(primaryButtonQueue->payload);
 
-      bool buttonReleased = oldPressed != primaryButtonQueue->payload.pressed &&
-                            primaryButtonQueue->payload.pressed == false;
-      if (buttonReleased)
-        thumbwheel.centre();
-    }
-
-    // check magthrottle
+    // check throttle/trigger
     uint8_t og_throttle = thumbwheel.get();
     uint8_t status = thumbwheel.update();
     throttle.val = thumbwheel.get();
@@ -89,14 +80,27 @@ private:
     {
       throttleQueue->send(&throttle);
       if (throttle.val == 255)
+      {
         ThrottleState::print(throttle, "[ThrottleTask]-->");
+      }
     }
   }
 
-  void
-  cleanup()
+  void cleanup()
   {
     delete (primaryButtonQueue);
+  }
+
+  void handlePrimaryButton(PrimaryButtonState &payload)
+  {
+    using namespace nsThrottleTask;
+    bool oldPressed = primaryButton.pressed;
+    primaryButton.event_id = payload.event_id;
+    primaryButton.pressed = payload.pressed;
+
+    bool buttonReleased = oldPressed != payload.pressed && payload.pressed == false;
+    if (buttonReleased)
+      thumbwheel.centre();
   }
 };
 
