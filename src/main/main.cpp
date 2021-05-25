@@ -145,13 +145,15 @@ void populateTaskList()
   addTaskToList(&remoteTask);
   addTaskToList(&throttleTask);
 
+#ifdef DISPLAY_TASK
+  addTaskToList(&displayTask);
+#endif
 #ifdef STATS_TASK
   addTaskToList(&statsTask);
 #endif
 #ifdef DIGITALPRIMARYBUTTON_TASK
   addTaskToList(&digitalPrimaryButtonTask);
 #endif
-  addTaskToList(&displayTask);
 #ifdef HAPTIC_TASK
   addTaskToList(&hapticTask);
 #endif
@@ -198,11 +200,13 @@ void configureTasks()
   // digitalPrimaryButtonTask.printSendToQueue = true;
 #endif
 
+#ifdef DISPLAY_TASK
   displayTask.doWorkIntervalFast = PERIOD_50ms;
   displayTask.doWorkIntervalSlow = PERIOD_500ms;
   displayTask.priority = TASK_PRIORITY_2;
   displayTask.p_printState = PRINT_DISP_STATE;
   displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
+#endif
 
 #ifdef HAPTIC_TASK
   hapticTask.priority = TASK_PRIORITY_0;
@@ -246,10 +250,12 @@ void startTasks()
   DEBUG("Starting tasks");
 
   boardCommsTask.start(nsBoardComms::task1);
-  displayTask.start(Display::task1);
   remoteTask.start(nsRemoteTask::task1);
   throttleTask.start(nsThrottleTask::task1);
 
+#ifdef DISPLAY_TASK
+  displayTask.start(Display::task1);
+#endif
 #ifdef STATS_TASK
   statsTask.start(nsStatsTask::task1);
 #endif
