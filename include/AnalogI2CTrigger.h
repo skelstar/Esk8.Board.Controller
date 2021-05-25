@@ -8,6 +8,7 @@
 #include <FastMap.h>
 #include <Fsm.h>
 #include <QueueManager.h>
+#include <sharedConstants.h>
 
 #include "ADS1X15.h"
 
@@ -27,6 +28,7 @@ public:
   {
     OK = 0,
     I2C_ADC_NOT_FOUND,
+    RAW_OUT_OF_RANGE,
   };
 
 private:
@@ -61,11 +63,19 @@ public:
 
     if (take(_i2c_mux, TICKS_500ms))
     {
-      ADS.begin();
+      while (!ADS.begin())
+      {
+        vTaskDelay(TICKS_100ms);
+        Serial.printf("Trying to connect to trigger i2c\n");
+      }
       ADS.setGain(0);
 
       Serial.printf("%s\n", ADS.isConnected() ? "Connected" : "disconnected");
       give(_i2c_mux);
+    }
+    else
+    {
+      Serial.printf("Couldn't take mutex (AnalogI2CTrigger\n");
     }
 
     centre();
@@ -81,6 +91,13 @@ public:
     if (enabled)
     {
       _raw = _getRaw();
+
+      if (!_rawIsSafe(_raw))
+      {
+        _throttle = 127;
+        return ReturnCode::RAW_OUT_OF_RANGE;
+      }
+
       _throttle = _getMappedFromRaw(_raw);
 
       if (_oldMapped != _throttle && _throttleChangedCb != nullptr)
@@ -114,6 +131,11 @@ public:
   }
 
 private:
+  bool _rawIsSafe(uint16_t raw)
+  {
+    return _raw > _min - 2000 && _raw < _max + 2000;
+  }
+
   uint16_t _getRaw()
   {
     if (take(_i2c_mux, TICKS_100ms))
@@ -130,28 +152,41 @@ private:
 
   uint8_t _getMappedFromRaw(uint16_t raw)
   {
-    if (raw > _max)
-    {
-      _max = raw;
-    }
-    if (raw < _min)
-    {
-      _min = raw;
-    }
+    // calibrate
+    _max = raw > _max ? raw : _max;
+    _min = raw < _min ? raw : _min;
 
-    uint16_t centreLow = _centre - _deadband;
-    uint16_t centreHigh = _centre + _deadband;
+    uint16_t centreLow = _centre;
+    uint16_t centreHigh = _centre;
+    bool braking = false;
+    bool acceling = false;
 
-    bool braking = raw < centreLow;
-    bool acceling = raw > centreHigh;
+    centreLow = _centre - _deadband;
+    centreHigh = _centre + _deadband;
 
-    if (braking)
+    if (_accel_direction == DIR_PULL_TO_ACCEL)
     {
-      return map(raw, _min, centreLow, 0, 127);
+      // 1050 -> 8200 -> 15100
+      // _min   _centre  _max
+      // 255     127     0
+      // pushing trigger is accelerating
+      braking = raw > centreHigh;
+      acceling = raw < centreLow;
+      return braking    ? map(raw, _max, centreHigh, 0, 127)
+             : acceling ? map(raw, centreLow, _min, 128, 255)
+                        : 127;
     }
-    else if (acceling)
+    else if (_accel_direction == DIR_PUSH_TO_ACCEL)
     {
-      return map(raw, centreHigh, _max, 128, 255);
+      // 1050 -> 8200 -> 15100
+      // _min   _centre  _max
+      // 0        127     255
+      // pulling trigger is accelerating
+      braking = raw < centreLow;
+      acceling = raw > centreHigh;
+      return braking    ? map(raw, _min, centreLow, 0, 127)
+             : acceling ? map(raw, centreHigh, _max, 128, 255)
+                        : 127;
     }
     return 127;
   }
