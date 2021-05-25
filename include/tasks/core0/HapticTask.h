@@ -144,9 +144,11 @@ public:
 
 private:
   Queue1::Manager<SimplMessageObj> *simplMsgQueue = nullptr;
+  Queue1::Manager<ThrottleState> *throttleQueue = nullptr;
   Queue1::Manager<Transaction> *transactionQueue = nullptr;
 
   SimplMessageObj simplMessage;
+  ThrottleState _throttleState;
   Transaction m_transaction;
 
 public:
@@ -172,7 +174,7 @@ public:
     addTransitions();
 
     simplMsgQueue = createQueueManager<SimplMessageObj>("(HapticTask)simplMsgQueue");
-
+    throttleQueue = createQueueManager<ThrottleState>("(HapticTask)throttleQueue");
     transactionQueue = createQueueManager<Transaction>("(HapticTask)transactionQueue");
   }
 
@@ -183,6 +185,9 @@ public:
 
     if (transactionQueue->hasValue())
       _handleTransaction(transactionQueue->payload);
+
+    if (throttleQueue->hasValue())
+      _handleThrottleState(throttleQueue->payload);
 
     nsHapticTask::_fsm.run_machine();
   }
@@ -207,6 +212,15 @@ public:
         nsHapticTask::startCommand(nsHapticTask::HAP_TWO_SHORT_PULSES);
     }
     m_transaction = q_transaction;
+  }
+
+  void _handleThrottleState(ThrottleState &state)
+  {
+    if (_throttleState.val != state.val && state.val == 255)
+    {
+      nsHapticTask::startCommand(nsHapticTask::HAP_ONE_SHORT_PULSE);
+    }
+    _throttleState = state;
   }
 };
 
