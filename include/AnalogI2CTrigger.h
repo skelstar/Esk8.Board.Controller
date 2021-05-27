@@ -12,7 +12,7 @@
 
 #include "ADS1X15.h"
 
-ADS1115 ADS(0x0248);
+ADS1115 *ADS;
 
 //=========================================
 
@@ -52,6 +52,8 @@ public:
 
 #include <utils.h>
 
+  bool alternateAddr = false;
+
   void init(SemaphoreHandle_t i2c_mux, uint8_t accelDirection = DIR_CLOCKWISE)
   {
     _i2c_mux = i2c_mux;
@@ -63,14 +65,20 @@ public:
 
     if (take(_i2c_mux, TICKS_500ms))
     {
-      while (!ADS.begin())
-      {
-        vTaskDelay(TICKS_100ms);
-        Serial.printf("Trying to connect to trigger i2c\n");
-      }
-      ADS.setGain(0);
+      bool connectedToAdc = false;
 
-      Serial.printf("%s\n", ADS.isConnected() ? "Connected" : "disconnected");
+      while (!connectedToAdc)
+      {
+        alternateAddr = !alternateAddr;
+        ADS = new ADS1115(alternateAddr ? 0x48 : 0x49);
+        connectedToAdc = ADS->begin();
+
+        vTaskDelay(TICKS_100ms);
+        Serial.printf("Trying to connect to trigger i2c @%0x02x\n", alternateAddr ? 0x48 : 0x49);
+      }
+      ADS->setGain(0);
+
+      Serial.printf("%s\n", ADS->isConnected() ? "Connected" : "disconnected");
       give(_i2c_mux);
     }
     else
@@ -138,14 +146,14 @@ private:
 
   uint16_t _getRaw()
   {
-    if (take(_i2c_mux, TICKS_100ms))
+    if (take(_i2c_mux, TICKS_500ms))
     {
       give(_i2c_mux);
-      return ADS.readADC(0);
+      return ADS->readADC(0);
     }
     else
     {
-      Serial.printf("couldn't take mutex\n");
+      Serial.printf("couldn't take mutex (analog i2c trigger)\n");
     }
     return _centre;
   }

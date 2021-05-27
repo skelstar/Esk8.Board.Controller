@@ -18,6 +18,8 @@ SemaphoreHandle_t mux_SPI;
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <Wire.h>
+#include <utils.h>
+#include <printFormatStrings.h>
 
 #include <constants.h>
 
@@ -26,7 +28,6 @@ SemaphoreHandle_t mux_SPI;
 #include <MagThumbwheel.h>
 #elif REMOTE_USED == PURPLE_REMOTE
 #include <AnalogI2CTrigger.h>
-// #include <AnalogThumbwheel.h>
 #elif REMOTE_USED == RED_REMOTE
 #include <Button2.h>
 #include <AnalogThumbwheel.h>
@@ -143,11 +144,14 @@ void populateTaskList()
 {
   addTaskToList(&boardCommsTask);
   addTaskToList(&remoteTask);
-  addTaskToList(&throttleTask);
 
 #ifdef DISPLAY_TASK
   addTaskToList(&displayTask);
 #endif
+#ifdef QWIICDISPLAY_TASK
+  addTaskToList(&qwiicDisplayTask);
+#endif
+
 #ifdef STATS_TASK
   addTaskToList(&statsTask);
 #endif
@@ -163,6 +167,7 @@ void populateTaskList()
 #ifdef QWIICBUTTON_TASK
   addTaskToList(&qwiicButtonTask);
 #endif
+  addTaskToList(&throttleTask);
 }
 void createQueues()
 {
@@ -208,10 +213,15 @@ void configureTasks()
   displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
 #endif
 
+#ifdef QWIICDISPLAY_TASK
+  qwiicDisplayTask.doWorkIntervalFast = PERIOD_100ms;
+  qwiicDisplayTask.priority = TASK_PRIORITY_1;
+#endif
+
 #ifdef HAPTIC_TASK
   hapticTask.priority = TASK_PRIORITY_0;
   hapticTask.doWorkIntervalFast = PERIOD_50ms;
-  hapticTask.printDebug = true;
+  // hapticTask.printDebug = true;
   hapticTask.printFsmTrigger = false;
 #endif
 
@@ -234,7 +244,7 @@ void configureTasks()
   statsTask.doWorkIntervalFast = PERIOD_50ms;
   statsTask.priority = TASK_PRIORITY_1;
   // statsTask.printQueueRx = true;
-  statsTask.printOnlyFailedPackets = true;
+  // statsTask.printOnlyFailedPackets = true;
 #endif
 
   throttleTask.doWorkIntervalFast = PERIOD_200ms;
@@ -256,6 +266,9 @@ void startTasks()
 #ifdef DISPLAY_TASK
   displayTask.start(Display::task1);
 #endif
+#ifdef QWIICDISPLAY_TASK
+  qwiicDisplayTask.start(nsQwiicDisplayTask::task1);
+#endif
 #ifdef STATS_TASK
   statsTask.start(nsStatsTask::task1);
 #endif
@@ -276,6 +289,8 @@ void startTasks()
 void initialiseTasks()
 {
   DEBUG("Initialising tasks");
+
+  // i2cScanner();
 
   for (int i = 0; i < tasksCount; i++)
     tasks[i]->initialiseTask(PRINT_THIS);

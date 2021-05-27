@@ -11,7 +11,7 @@
 
 ulong since_started;
 
-bool takeMutex(xSemaphoreHandle mutex, TickType_t ticks)
+bool takeMutex(SemaphoreHandle_t mutex, TickType_t ticks)
 {
   bool taken = xSemaphoreTake(mutex, ticks);
   if (PRINT_MUTEX_TAKE_SUCCESS)
@@ -19,7 +19,7 @@ bool takeMutex(xSemaphoreHandle mutex, TickType_t ticks)
   return taken;
 }
 
-bool giveMutex(xSemaphoreHandle mutex)
+bool giveMutex(SemaphoreHandle_t mutex)
 {
   bool given = xSemaphoreGive(mutex);
   if (PRINT_MUTEX_GIVE_SUCCESS)
@@ -27,7 +27,7 @@ bool giveMutex(xSemaphoreHandle mutex)
   return given;
 }
 
-bool NintendoController::init(xSemaphoreHandle mutex, TickType_t ticks, bool printWarnings)
+bool NintendoController::init(SemaphoreHandle_t mutex, TickType_t ticks, bool printWarnings)
 {
   // Not required for NES mini controller
   // See http://wiibrew.org/wiki/Wiimote/Extension_Controllers
@@ -57,7 +57,7 @@ bool NintendoController::init(xSemaphoreHandle mutex, TickType_t ticks, bool pri
   return success;
 }
 
-bool NintendoController::update(xSemaphoreHandle mutex, TickType_t ticks)
+bool NintendoController::update(SemaphoreHandle_t mutex, TickType_t ticks)
 {
   if (takeMutex(mutex, ticks))
   {

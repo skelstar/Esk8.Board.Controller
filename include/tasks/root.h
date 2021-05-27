@@ -11,6 +11,9 @@
 #ifdef USE_QWIIC_TASK
 #include <tasks/core0/QwiicTaskBase.h>
 #endif
+#ifdef USE_QWIIC_DISPLAY_TASK
+#include <tasks/core0/QwiicDisplayTask.h>
+#endif
 #ifdef USE_HAPTIC_TASK
 #include <tasks/core0/HapticTask.h>
 #endif
