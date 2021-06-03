@@ -53,7 +53,8 @@ public:
 
     remote.charging = battery->isCharging;
     remote.percent = battery->chargePercent;
-    remote.volts = battery->getVolts();
+    // round to one decimal place
+    remote.volts = floorf(battery->getVolts() * 10) / 10;
 
     remoteBatteryQueue->send(&remote);
   }
