@@ -341,14 +341,21 @@ namespace Display
       tft.drawString(buff, x, y - 4);
 
       y += 30;
+
+      tft.setTextColor(TFT_LIGHTGREY);
+      tft.setFreeFont(FONT_MED);
+      tft.setTextDatum(TL_DATUM);
       tft.setTextColor(TFT_DARKGREY);
 
-      tft.setFreeFont(FONT_MED);
-      tft.setTextDatum(TC_DATUM);
+      char vbuff[10];
+      sprintf(vbuff, "v%.1f", VERSION);
+      tft.drawString(vbuff, 0, y);
+      x = tft.textWidth(vbuff) + 10;
+
       std::string s(GIT_BRANCH_NAME);
       if (s.length() > 20)
         s = s.substr(0, 20) + "..."; // truncate and add "..."
-      tft.drawString(s.c_str(), LCD_WIDTH / 2, y);
+      tft.drawString(s.c_str(), x, y);
 
       give(mux_SPI);
     }
