@@ -78,10 +78,13 @@ private:
     Display::_fsm.run_machine();
   }
 
+  const unsigned long BATTERY_CHECK_INTERVAL = 5 * SECONDS;
+  elapsedMillis sinceCheckedBattery;
+
   //===================================================================
   void doWork()
   {
-    // update transaction if anything new on the queue
+    // transaction
     if (transactionQueue->hasValue())
     {
       transaction = transactionQueue->payload;
@@ -90,12 +93,19 @@ private:
       handlePacketState(transaction);
     }
 
+    // nintendo classic
     if (nintendoClassicQueue->hasValue())
       handleNintendoButtonEvent(nintendoClassicQueue->payload);
 
-    if (batteryQueue->hasValue())
-      handleBatteryQueue(batteryQueue->payload);
+    // battery
+    if (sinceCheckedBattery > BATTERY_CHECK_INTERVAL)
+    {
+      sinceCheckedBattery = 0;
+      if (batteryQueue->hasValue())
+        handleBatteryQueue(batteryQueue->payload);
+    }
 
+    // throttle
     if (throttleQueue->hasValue())
       handleThrottleResponse(throttleQueue->payload);
 
@@ -191,13 +201,15 @@ private:
 
   void handleBatteryQueue(const BatteryInfo &battery)
   {
-    bool changed = Display::_g_RemoteBattery.volts != battery.volts;
-    Display::_g_RemoteBattery.charging = battery.charging;
-    Display::_g_RemoteBattery.percent = battery.percent;
-    Display::_g_RemoteBattery.volts = battery.volts;
+    using namespace Display;
+    bool changed = _g_RemoteBattery.volts != battery.volts; // volts are rounded to 1DP at this stage
+
+    _g_RemoteBattery.charging = battery.charging;
+    _g_RemoteBattery.percent = battery.percent;
+    _g_RemoteBattery.volts = battery.volts;
 
     if (changed)
-      Display::fsm_mgr.trigger(Display::TR_REMOTE_BATTERY_CHANGED);
+      fsm_mgr.trigger(TR_REMOTE_BATTERY_CHANGED);
   }
 
   void handleThrottleResponse(const ThrottleState &throttleState)
