@@ -7,7 +7,6 @@
 #include <Fsm.h>
 #include <FsmManager.h>
 
-
 #define HAPTIC_TASK
 
 namespace nsHapticTask
@@ -207,17 +206,10 @@ public:
 
   void _handleTransaction(Transaction &q_transaction)
   {
-    if (m_transaction.SEND_FAIL && q_transaction.SENT_OK)
+    if (q_transaction.reason == ReasonType::FIRST_PACKET)
     {
-      // nsHapticTask::startCommand(nsHapticTask::HAP_ONE_SHORT_PULSE);
+      nsHapticTask::startCommand(nsHapticTask::HAP_ONE_SHORT_PULSE);
     }
-    // if (m_transaction.moving != q_transaction.moving)
-    // {
-    //   if (q_transaction.moving)
-    //     nsHapticTask::startCommand(nsHapticTask::HAP_ONE_SHORT_PULSE);
-    //   else if (q_transaction.moving == false)
-    //     nsHapticTask::startCommand(nsHapticTask::HAP_TWO_SHORT_PULSES);
-    // }
     m_transaction = q_transaction;
   }
 
