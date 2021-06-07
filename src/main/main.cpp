@@ -18,6 +18,8 @@ SemaphoreHandle_t mux_SPI;
 #include <elapsedMillis.h>
 #include <RTOSTaskManager.h>
 #include <Wire.h>
+#include <utils.h>
+#include <printFormatStrings.h>
 
 #include <constants.h>
 
@@ -26,7 +28,6 @@ SemaphoreHandle_t mux_SPI;
 #include <MagThumbwheel.h>
 #elif REMOTE_USED == PURPLE_REMOTE
 #include <AnalogI2CTrigger.h>
-// #include <AnalogThumbwheel.h>
 #elif REMOTE_USED == RED_REMOTE
 #include <Button2.h>
 #include <AnalogThumbwheel.h>
@@ -81,13 +82,12 @@ void setup()
 
   Wire.begin();
 
-  //get chip id
+#ifdef RELEASE_BUILD
   String chipId = String((uint32_t)ESP.getEfuseMac(), HEX);
   chipId.toUpperCase();
-
-#ifdef RELEASE_BUILD
   print_build_status(chipId);
 #endif
+
   vTaskDelay(100);
 
   populateTaskList();
@@ -142,12 +142,18 @@ void addTaskToList(TaskBase *t)
 void populateTaskList()
 {
   addTaskToList(&boardCommsTask);
-  addTaskToList(&remoteTask);
   addTaskToList(&throttleTask);
 
+#ifdef USE_REMOTE_TASK
+  addTaskToList(&remoteTask);
+#endif
 #ifdef DISPLAY_TASK
   addTaskToList(&displayTask);
 #endif
+#ifdef QWIICDISPLAY_TASK
+  addTaskToList(&qwiicDisplayTask);
+#endif
+
 #ifdef STATS_TASK
   addTaskToList(&statsTask);
 #endif
@@ -208,10 +214,15 @@ void configureTasks()
   displayTask.p_printTrigger = PRINT_DISP_STATE_EVENT;
 #endif
 
+#ifdef QWIICDISPLAY_TASK
+  qwiicDisplayTask.doWorkIntervalFast = PERIOD_100ms;
+  qwiicDisplayTask.priority = TASK_PRIORITY_1;
+#endif
+
 #ifdef HAPTIC_TASK
   hapticTask.priority = TASK_PRIORITY_0;
   hapticTask.doWorkIntervalFast = PERIOD_50ms;
-  hapticTask.printDebug = true;
+  // hapticTask.printDebug = true;
   hapticTask.printFsmTrigger = false;
 #endif
 
@@ -226,15 +237,17 @@ void configureTasks()
   qwiicButtonTask.printSendToQueue = true;
 #endif
 
+#ifdef USE_REMOTE_TASK
   remoteTask.doWorkIntervalFast = SECONDS * 5;
   remoteTask.priority = TASK_PRIORITY_0;
   remoteTask.printSendToQueue = true;
+#endif
 
 #ifdef STATS_TASK
   statsTask.doWorkIntervalFast = PERIOD_50ms;
   statsTask.priority = TASK_PRIORITY_1;
   // statsTask.printQueueRx = true;
-  statsTask.printOnlyFailedPackets = true;
+  // statsTask.printOnlyFailedPackets = true;
 #endif
 
   throttleTask.doWorkIntervalFast = PERIOD_200ms;
@@ -250,11 +263,16 @@ void startTasks()
   DEBUG("Starting tasks");
 
   boardCommsTask.start(nsBoardComms::task1);
-  remoteTask.start(nsRemoteTask::task1);
   throttleTask.start(nsThrottleTask::task1);
 
+#ifdef USE_REMOTE_TASK
+  remoteTask.start(nsRemoteTask::task1);
+#endif
 #ifdef DISPLAY_TASK
   displayTask.start(Display::task1);
+#endif
+#ifdef QWIICDISPLAY_TASK
+  qwiicDisplayTask.start(nsQwiicDisplayTask::task1);
 #endif
 #ifdef STATS_TASK
   statsTask.start(nsStatsTask::task1);
@@ -276,6 +294,8 @@ void startTasks()
 void initialiseTasks()
 {
   DEBUG("Initialising tasks");
+
+  // i2cScanner();
 
   for (int i = 0; i < tasksCount; i++)
     tasks[i]->initialiseTask(PRINT_THIS);
@@ -310,7 +330,9 @@ void handleTransaction(Transaction &transaction, bool movingChange)
 #ifdef NINTENDOCLASSIC_TASK
       nintendoClassTask.enabled = false;
 #endif
+#ifdef USE_REMOTE_TASK
       remoteTask.enabled = false;
+#endif
     }
     // stopped
     else
@@ -318,7 +340,9 @@ void handleTransaction(Transaction &transaction, bool movingChange)
 #ifdef NINTENDOCLASSIC_TASK
       nintendoClassTask.enabled = true;
 #endif
+#ifdef USE_REMOTE_TASK
       remoteTask.enabled = true;
+#endif
     }
   }
 }
