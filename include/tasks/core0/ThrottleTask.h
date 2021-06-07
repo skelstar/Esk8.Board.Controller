@@ -4,7 +4,12 @@
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 
+#ifdef USE_I2C_ANALOG_TRIGGER
 #include <AnalogI2CTrigger.h>
+#endif
+#ifdef USE_ANALOG_TRIGGER
+#include <AnalogThumbwheel.h>
+#endif
 
 #define THROTTLE_TASK
 
@@ -22,9 +27,11 @@ public:
 
 #if REMOTE_USED == NINTENDO_REMOTE
   MagneticThumbwheelClass thumbwheel;
-#elif REMOTE_USED == PURPLE_REMOTE
+#endif
+#ifdef USE_I2C_ANALOG_TRIGGER
   AnalogI2CTriggerClass thumbwheel;
-#elif REMOTE_USED == RED_REMOTE
+#endif
+#ifdef USE_ANALOG_TRIGGER
   AnalogThumbwheelClass thumbwheel;
 #endif
 
@@ -48,20 +55,26 @@ private:
 
   void _initialise()
   {
-    if (mux_I2C == nullptr)
-      mux_I2C = xSemaphoreCreateMutex();
-
     thumbwheel.setThrottleEnabledCb([]
                                     { return true; });
 
 #if REMOTE_USED == NINTENDO_REMOTE
+    if (mux_I2C == nullptr)
+      mux_I2C = xSemaphoreCreateMutex();
+
     thumbwheel.printThrottle = printThrottle;
     thumbwheel.init(mux_I2C, SWEEP_ANGLE, DEADZONE, ACCEL_DIRECTION);
-#elif REMOTE_USED == PURPLE_REMOTE
+#endif
+#ifdef USE_I2C_ANALOG_TRIGGER
+    if (mux_I2C == nullptr)
+      mux_I2C = xSemaphoreCreateMutex();
+
     thumbwheel.printThrottle = printThrottle;
     thumbwheel.init(mux_I2C, ACCEL_DIRECTION);
-#elif REMOTE_USED == RED_REMOTE
+#endif
+#ifdef USE_ANALOG_TRIGGER
     thumbwheel.init();
+    thumbwheel.printThrottle = printThrottle;
 #endif
   }
 
