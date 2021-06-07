@@ -169,6 +169,7 @@ void populateTaskList()
 #ifdef QWIICBUTTON_TASK
   addTaskToList(&qwiicButtonTask);
 #endif
+  addTaskToList(&throttleTask);
 }
 void createQueues()
 {
