@@ -25,7 +25,7 @@ public:
 
 private:
   VoidUint8Callback _throttleChangedCb = nullptr;
-  GetBoolean_Cb _throttleEnabled_cb = nullptr;
+  // GetBoolean_Cb _throttleEnabled_cb = nullptr;
   FastMap _accelmapper, _brakemapper;
   int _pin = THROTTLE_PIN;
   uint8_t _oldMapped = 0, _throttle = 127;
@@ -45,7 +45,7 @@ public:
     _throttleChangedCb = throttleChangedCb;
     pinMode(_pin, INPUT);
     _oldMapped = 127;
-    assert(_throttleEnabled_cb != nullptr);
+    // assert(_throttleEnabled_cb != nullptr);
   }
 
   uint8_t get()
@@ -80,7 +80,7 @@ public:
 
   void setThrottleEnabledCb(GetBoolean_Cb cb)
   {
-    _throttleEnabled_cb = cb;
+    // _throttleEnabled_cb = cb;
   }
 
   bool connect()
