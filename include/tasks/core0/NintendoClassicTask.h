@@ -3,6 +3,8 @@
 #include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
+#include <printFormatStrings.h>
+#include <NintendoController.h>
 
 #define NINTENDOCLASSIC_TASK
 
@@ -14,7 +16,7 @@ public:
   NintendoController classic;
 
 public:
-  NintendoClassicTask() : TaskBase("NintendoClassicTask", 3000, PERIOD_50ms)
+  NintendoClassicTask() : TaskBase("NintendoClassicTask", 3000)
   {
     _core = CORE_0;
   }

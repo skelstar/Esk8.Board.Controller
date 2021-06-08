@@ -24,9 +24,7 @@ private:
 
   Queue1::Manager<BatteryInfo> *batteryQueue = nullptr;
   Queue1::Manager<Transaction> *transactionQueue = nullptr;
-  Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
   Queue1::Manager<NintendoButtonEvent> *nintendoClassicQueue = nullptr;
-  Queue1::Manager<DisplayEvent> *displayEventQueue = nullptr;
   Queue1::Manager<ThrottleState> *throttleQueue = nullptr;
 
   Transaction transaction;
@@ -47,12 +45,8 @@ private:
     batteryQueue->printMissedPacket = false;
     transactionQueue = createQueueManager<Transaction>("(DisplayBase)TransactionQueue");
     transactionQueue->printMissedPacket = false;
-    primaryButtonQueue = createQueueManager<PrimaryButtonState>("(DisplayBase)PrimaryButtonQueue");
-    primaryButtonQueue->printMissedPacket = false;
     nintendoClassicQueue = createQueueManager<NintendoButtonEvent>("(DisplayBase)NintendoClassicQueue");
     nintendoClassicQueue->printMissedPacket = false;
-    displayEventQueue = createQueueManager<DisplayEvent>("(DisplayBase)DisplayEventQueue");
-    displayEventQueue->printMissedPacket = false;
     throttleQueue = createQueueManager<ThrottleState>("(DisplayTask)ThrottleQueue");
     throttleQueue->printMissedPacket = false;
 
@@ -86,12 +80,7 @@ private:
   {
     // transaction
     if (transactionQueue->hasValue())
-    {
-      transaction = transactionQueue->payload;
-      Display::_g_BoardBattery = transaction.batteryVolts;
-
       handlePacketState(transaction);
-    }
 
     // nintendo classic
     if (nintendoClassicQueue->hasValue())
@@ -117,9 +106,7 @@ private:
   {
     delete (batteryQueue);
     delete (transactionQueue);
-    delete (primaryButtonQueue);
     delete (nintendoClassicQueue);
-    delete (displayEventQueue);
   }
   //==================================================
 
@@ -174,6 +161,9 @@ private:
         Display::fsm_mgr.trigger(Display::TR_DISCONNECTED);
       }
     }
+
+    transaction = transactionQueue->payload;
+    Display::_g_BoardBattery = transaction.batteryVolts;
   }
 
   void handleNintendoButtonEvent(const NintendoButtonEvent &payload)

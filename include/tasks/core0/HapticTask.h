@@ -50,7 +50,7 @@ namespace nsHapticTask
     HAP_TWO_SHORT_PULSES,
   };
 
-  struct HapticCommand1
+  struct HapticCommandStruct
   {
     HapticCommand command = HapticCommand::HAP_NONE;
     uint8_t strength = 0;
@@ -58,9 +58,9 @@ namespace nsHapticTask
     uint8_t pulses = 1;
   };
 
-  static HapticCommand1 CommandDetailsFactory(HapticCommand command)
+  static HapticCommandStruct CommandDetailsFactory(HapticCommand command)
   {
-    HapticCommand1 details;
+    HapticCommandStruct details;
     switch (command)
     {
     case HapticCommand::HAP_ONE_SHORT_PULSE:
@@ -79,7 +79,7 @@ namespace nsHapticTask
     return details;
   }
 
-  HapticCommand1 command;
+  HapticCommandStruct command;
 
   HapticState m_state = HAP_IDLE;
   elapsedMillis sinceLastState = 0;
@@ -144,13 +144,15 @@ public:
 
 private:
   Queue1::Manager<SimplMessageObj> *simplMsgQueue = nullptr;
+  Queue1::Manager<ThrottleState> *throttleQueue = nullptr;
   Queue1::Manager<Transaction> *transactionQueue = nullptr;
 
   SimplMessageObj simplMessage;
+  ThrottleState _throttleState;
   Transaction m_transaction;
 
 public:
-  HapticTask() : TaskBase("HapticTask", 3000, PERIOD_50ms)
+  HapticTask() : TaskBase("HapticTask", 3000)
   {
     _core = CORE_0;
   }
@@ -171,8 +173,10 @@ public:
       fsm.setPrintTriggerCallback(nsHapticTask::printTrigger);
     addTransitions();
 
-    simplMsgQueue = createQueueManager<SimplMessageObj>("(HapticTask)simplMsgQueue");
+    nsHapticTask::startCommand(nsHapticTask::HAP_ONE_SHORT_PULSE);
 
+    simplMsgQueue = createQueueManager<SimplMessageObj>("(HapticTask)simplMsgQueue");
+    throttleQueue = createQueueManager<ThrottleState>("(HapticTask)throttleQueue");
     transactionQueue = createQueueManager<Transaction>("(HapticTask)transactionQueue");
   }
 
@@ -184,6 +188,9 @@ public:
     if (transactionQueue->hasValue())
       _handleTransaction(transactionQueue->payload);
 
+    if (throttleQueue->hasValue())
+      _handleThrottleState(throttleQueue->payload);
+
     nsHapticTask::_fsm.run_machine();
   }
 
@@ -193,20 +200,26 @@ public:
     delete (transactionQueue);
   }
 
-  void _handleSimplMessage(SimplMessageObj simplMessage)
+  void _handleSimplMessage(SimplMessageObj &simplMessage)
   {
   }
 
-  void _handleTransaction(Transaction q_transaction)
+  void _handleTransaction(Transaction &q_transaction)
   {
-    if (m_transaction.moving != q_transaction.moving)
+    if (q_transaction.reason == ReasonType::FIRST_PACKET)
     {
-      if (q_transaction.moving)
-        nsHapticTask::startCommand(nsHapticTask::HAP_ONE_SHORT_PULSE);
-      else if (q_transaction.moving == false)
-        nsHapticTask::startCommand(nsHapticTask::HAP_TWO_SHORT_PULSES);
+      nsHapticTask::startCommand(nsHapticTask::HAP_ONE_SHORT_PULSE);
     }
     m_transaction = q_transaction;
+  }
+
+  void _handleThrottleState(ThrottleState &state)
+  {
+    // if (_throttleState.val != state.val && state.val == 255)
+    // {
+    //   nsHapticTask::startCommand(nsHapticTask::HAP_ONE_SHORT_PULSE);
+    // }
+    _throttleState = state;
   }
 };
 
@@ -224,7 +237,7 @@ namespace nsHapticTask
     if (take(mux_I2C, TICKS_500ms, __func__))
     {
       if (!haptic.begin())
-        Serial.printf("Could not find Haptic unit\n");
+        Serial.printf("ERROR: Could not find Haptic unit\n");
 
       if (!haptic.defaultMotor())
         Serial.printf("Could not set default settings\n");

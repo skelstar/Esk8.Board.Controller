@@ -4,6 +4,13 @@
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
 
+#ifdef USE_I2C_ANALOG_TRIGGER
+#include <AnalogI2CTrigger.h>
+#endif
+#ifdef USE_ANALOG_TRIGGER
+#include <AnalogThumbwheel.h>
+#endif
+
 #define THROTTLE_TASK
 
 namespace nsThrottleTask
@@ -16,11 +23,15 @@ class ThrottleTask : public TaskBase
 
 public:
   bool printWarnings = true;
-  bool printThrottle = false;
+  bool printThrottle = true;
 
 #if REMOTE_USED == NINTENDO_REMOTE
   MagneticThumbwheelClass thumbwheel;
-#elif REMOTE_USED == RED_REMOTE
+#endif
+#ifdef USE_I2C_ANALOG_TRIGGER
+  AnalogI2CTriggerClass thumbwheel;
+#endif
+#ifdef USE_ANALOG_TRIGGER
   AnalogThumbwheelClass thumbwheel;
 #endif
 
@@ -44,38 +55,35 @@ private:
 
   void _initialise()
   {
-    if (mux_I2C == nullptr)
-      mux_I2C = xSemaphoreCreateMutex();
-
-    // thumbwheel.setSweepAngle(SWEEP_ANGLE);
-    // thumbwheel.setAccelDirection(DIR_CLOCKWISE);
-    // thumbwheel.setDeltaLimits(LIMIT_DELTA_MIN, LIMIT_DELTA_MAX);
     thumbwheel.setThrottleEnabledCb([]
                                     { return true; });
 
 #if REMOTE_USED == NINTENDO_REMOTE
+    if (mux_I2C == nullptr)
+      mux_I2C = xSemaphoreCreateMutex();
+
     thumbwheel.printThrottle = printThrottle;
     thumbwheel.init(mux_I2C, SWEEP_ANGLE, DEADZONE, ACCEL_DIRECTION);
-#elif REMOTE_USED == RED_REMOTE
+#endif
+#ifdef USE_I2C_ANALOG_TRIGGER
+    if (mux_I2C == nullptr)
+      mux_I2C = xSemaphoreCreateMutex();
+
+    thumbwheel.printThrottle = printThrottle;
+    thumbwheel.init(mux_I2C, ACCEL_DIRECTION);
+#endif
+#ifdef USE_ANALOG_TRIGGER
     thumbwheel.init();
+    thumbwheel.printThrottle = printThrottle;
 #endif
   }
 
   void doWork()
   {
     if (primaryButtonQueue->hasValue())
-    {
-      bool oldPressed = nsThrottleTask::primaryButton.pressed;
-      nsThrottleTask::primaryButton.event_id = primaryButtonQueue->payload.event_id;
-      nsThrottleTask::primaryButton.pressed = primaryButtonQueue->payload.pressed;
+      handlePrimaryButton(primaryButtonQueue->payload);
 
-      bool buttonReleased = oldPressed != primaryButtonQueue->payload.pressed &&
-                            primaryButtonQueue->payload.pressed == false;
-      if (buttonReleased)
-        thumbwheel.centre();
-    }
-
-    // check magthrottle
+    // check throttle/trigger
     uint8_t og_throttle = thumbwheel.get();
     uint8_t status = thumbwheel.update();
     throttle.val = thumbwheel.get();
@@ -85,14 +93,27 @@ private:
     {
       throttleQueue->send(&throttle);
       if (throttle.val == 255)
+      {
         ThrottleState::print(throttle, "[ThrottleTask]-->");
+      }
     }
   }
 
-  void
-  cleanup()
+  void cleanup()
   {
     delete (primaryButtonQueue);
+  }
+
+  void handlePrimaryButton(PrimaryButtonState &payload)
+  {
+    using namespace nsThrottleTask;
+    bool oldPressed = primaryButton.pressed;
+    primaryButton.event_id = payload.event_id;
+    primaryButton.pressed = payload.pressed;
+
+    bool buttonReleased = oldPressed != payload.pressed && payload.pressed == false;
+    if (buttonReleased)
+      thumbwheel.centre();
   }
 };
 
