@@ -44,6 +44,9 @@ public:
 private:
   Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
   Queue1::Manager<ThrottleState> *throttleQueue = nullptr;
+  Queue1::Manager<Transaction> *transactionQueue = nullptr;
+
+  Transaction m_transaction;
 
   ThrottleState throttle;
 
@@ -51,12 +54,15 @@ private:
   {
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(throttle)primaryButtonQueue");
     throttleQueue = createQueueManager<ThrottleState>("(throttle)throttleQueue");
+    transactionQueue = createQueueManager<Transaction>("(DisplayBase)TransactionQueue");
+    transactionQueue->printMissedPacket = false;
+    transactionQueue->read();
   }
 
   void _initialise()
   {
-    thumbwheel.setThrottleEnabledCb([]
-                                    { return true; });
+    // thumbwheel.setThrottleEnabledCb([]
+    //                                 { return m_transaction.moving; });
 
 #if REMOTE_USED == NINTENDO_REMOTE
     if (mux_I2C == nullptr)
@@ -83,9 +89,13 @@ private:
     if (primaryButtonQueue->hasValue())
       handlePrimaryButton(primaryButtonQueue->payload);
 
+    // transaction
+    if (transactionQueue->hasValue())
+      handleTransaction(transactionQueue->payload);
+
     // check throttle/trigger
     uint8_t og_throttle = thumbwheel.get();
-    uint8_t status = thumbwheel.update();
+    uint8_t status = thumbwheel.update(m_transaction.moving);
     throttle.val = thumbwheel.get();
     throttle.status = status;
 
@@ -114,6 +124,11 @@ private:
     bool buttonReleased = oldPressed != payload.pressed && payload.pressed == false;
     if (buttonReleased)
       thumbwheel.centre();
+  }
+
+  void handleTransaction(Transaction &transaction)
+  {
+    m_transaction = transaction;
   }
 };
 
