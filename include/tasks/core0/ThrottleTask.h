@@ -95,7 +95,7 @@ private:
 
     // check throttle/trigger
     uint8_t og_throttle = thumbwheel.get();
-    uint8_t status = thumbwheel.update(m_transaction.moving);
+    uint8_t status = thumbwheel.update(m_transaction.moving || FEATURE_PUSH_TO_START == 0);
     throttle.val = thumbwheel.get();
     throttle.status = status;
 

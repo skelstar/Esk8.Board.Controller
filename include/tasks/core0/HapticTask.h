@@ -141,6 +141,7 @@ public:
   bool printWarnings = true,
        printDebug = false,
        printFsmTrigger = false;
+  bool found = false;
 
 private:
   Queue1::Manager<SimplMessageObj> *simplMsgQueue = nullptr;
@@ -182,6 +183,10 @@ public:
 
   void doWork()
   {
+    // ignore if didn't find the haptic device (i2c)
+    if (!found)
+      return;
+
     if (simplMsgQueue->hasValue())
       _handleSimplMessage(simplMsgQueue->payload);
 
@@ -236,9 +241,13 @@ namespace nsHapticTask
   {
     if (take(mux_I2C, TICKS_500ms, __func__))
     {
-      if (!haptic.begin())
+      hapticTask.found = haptic.begin();
+      if (!hapticTask.found)
+      {
+        give(mux_I2C);
         Serial.printf("ERROR: Could not find Haptic unit\n");
-
+        return;
+      }
       if (!haptic.defaultMotor())
         Serial.printf("Could not set default settings\n");
 
