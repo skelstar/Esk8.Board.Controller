@@ -328,9 +328,24 @@ namespace Display
 
       char buff[16];
       if (showBoardBatt)
-        sprintf(buff, "%0.1fv|%.1fv", Display::_g_RemoteBattery.volts, Display::_g_BoardBattery);
+        sprintf(buff, "%0.1fv|%d%%",
+                Display::_g_RemoteBattery.volts, getBatteryPercentage(Display::_g_BoardBattery));
       else
-        sprintf(buff, "%0.1fv", Display::_g_RemoteBattery.volts);
+        sprintf(buff, "%0.1fv",
+                Display::_g_RemoteBattery.volts);
+
+      // bool alarm = Display::_g_BoardBattery <= BATTERY_VOLTAGE_CUTOFF_START;
+      // bool warning = Display::_g_BoardBattery <= (BATTERY_VOLTAGE_CUTOFF_START + 2.0);
+
+      // uint32_t foreColor = alarm || warning ? TFT_WHITE : TFT_DARKGREY;
+      // uint32_t bgColor = alarm ? TFT_RED : warning ? TFT_ORANGE
+      //                                              : TFT_BLACK;
+      // if (alarm || warning)
+      //   tft.fillRect(0, y - 6, LCD_WIDTH, tft.fontHeight() + 8, bgColor);
+
+      // tft.setTextDatum(TL_DATUM);
+      // tft.setFreeFont(FONT_LG);
+      // tft.setTextColor(foreColor);
 
       tft.setTextDatum(TL_DATUM);
       tft.setFreeFont(FONT_LG);
