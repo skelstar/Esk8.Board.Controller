@@ -64,6 +64,7 @@ Queue1::Manager<Transaction> *transactionQueue = nullptr;
 void populateTaskList();
 void createQueues();
 void createLocalQueueManagers();
+void startDisplayTask();
 void startTasks();
 void initialiseTasks();
 void configureTasks();
@@ -91,19 +92,13 @@ void setup()
   vTaskDelay(100);
 
   populateTaskList();
-
   createQueues();
-
   createLocalQueueManagers();
-
   configureTasks();
-
+  startDisplayTask();
   startTasks();
-
   initialiseTasks();
-
   waitForTasks();
-
   enableTasks(PRINT_THIS);
 }
 //---------------------------------------------------------------
@@ -147,12 +142,6 @@ void populateTaskList()
 #ifdef USE_REMOTE_TASK
   addTaskToList(&remoteTask);
 #endif
-#ifdef DISPLAY_TASK
-  addTaskToList(&displayTask);
-#endif
-#ifdef QWIICDISPLAY_TASK
-  addTaskToList(&qwiicDisplayTask);
-#endif
 
 #ifdef STATS_TASK
   addTaskToList(&statsTask);
@@ -171,6 +160,7 @@ void populateTaskList()
 #endif
   addTaskToList(&throttleTask);
 }
+
 void createQueues()
 {
   xBatteryInfo = xQueueCreate(1, sizeof(BatteryInfo *));
@@ -259,6 +249,34 @@ void configureTasks()
   // throttleTask.thumbwheel.setDeadzone(5.0);
 }
 
+void startDisplayTask()
+{
+  DEBUG("Starting Display task");
+
+#ifdef DISPLAY_TASK
+  displayTask.start(Display::task1);
+  displayTask.initialiseTask(PRINT_THIS);
+
+  while (!displayTask.ready)
+  {
+    vTaskDelay(PERIOD_100ms);
+  }
+  DEBUG("-- displayTask ready! --");
+  displayTask.enabled = true;
+#endif
+
+#ifdef QWIICDISPLAY_TASK
+  qwiicDisplayTask.start(nsQwiicDisplayTask::task1);
+
+  while (!qwiicDisplayTask.ready)
+  {
+    vTaskDelay(PERIOD_100ms);
+  }
+  DEBUG("-- qwiicDisplayTask ready! --");
+  qwiicDisplayTask.enabled = true;
+#endif
+}
+
 void startTasks()
 {
   DEBUG("Starting tasks");
@@ -268,12 +286,6 @@ void startTasks()
 
 #ifdef USE_REMOTE_TASK
   remoteTask.start(nsRemoteTask::task1);
-#endif
-#ifdef DISPLAY_TASK
-  displayTask.start(Display::task1);
-#endif
-#ifdef QWIICDISPLAY_TASK
-  qwiicDisplayTask.start(nsQwiicDisplayTask::task1);
 #endif
 #ifdef STATS_TASK
   statsTask.start(nsStatsTask::task1);
