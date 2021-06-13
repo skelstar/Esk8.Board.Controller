@@ -315,48 +315,26 @@ namespace Display
       }
       y += tft.fontHeight() + 5;
 
-      bool showBoardBatt = _g_BoardBattery > 10.0;
-
       // remote battery
       const int batteryWidth = 50;
       y += 15;
       uint8_t percent = Display::_g_RemoteBattery.percent;
-      x = showBoardBatt
-              ? LCD_WIDTH / 2 - 56
-              : LCD_WIDTH / 2 - 5;
+      x = LCD_WIDTH / 2 - 60;
       drawSmallBattery(percent, x, y, batteryWidth, TR_DATUM, Display::_g_RemoteBattery.charging);
 
       char buff[16];
-      if (showBoardBatt)
-        sprintf(buff, "%0.1fv|%d%%",
-                Display::_g_RemoteBattery.volts, getBatteryPercentage(Display::_g_BoardBattery));
-      else
-        sprintf(buff, "%0.1fv",
-                Display::_g_RemoteBattery.volts);
-
-      // bool alarm = Display::_g_BoardBattery <= BATTERY_VOLTAGE_CUTOFF_START;
-      // bool warning = Display::_g_BoardBattery <= (BATTERY_VOLTAGE_CUTOFF_START + 2.0);
-
-      // uint32_t foreColor = alarm || warning ? TFT_WHITE : TFT_DARKGREY;
-      // uint32_t bgColor = alarm ? TFT_RED : warning ? TFT_ORANGE
-      //                                              : TFT_BLACK;
-      // if (alarm || warning)
-      //   tft.fillRect(0, y - 6, LCD_WIDTH, tft.fontHeight() + 8, bgColor);
-
-      // tft.setTextDatum(TL_DATUM);
-      // tft.setFreeFont(FONT_LG);
-      // tft.setTextColor(foreColor);
+      sprintf(buff, "%0.1fv | %d%%",
+              Display::_g_RemoteBattery.volts, getBatteryPercentage(Display::_g_BoardBattery));
 
       tft.setTextDatum(TL_DATUM);
       tft.setFreeFont(FONT_LG);
       tft.setTextColor(TFT_DARKGREY);
-      x = showBoardBatt
-              ? LCD_WIDTH / 2 - 44
-              : LCD_WIDTH / 2 + 5;
+      x = LCD_WIDTH / 2 - 54;
       tft.drawString(buff, x, y - 4);
 
       y += 30;
 
+      // version
       tft.setTextColor(TFT_LIGHTGREY);
       tft.setFreeFont(FONT_MED);
       tft.setTextDatum(TL_DATUM);
