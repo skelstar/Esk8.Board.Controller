@@ -30,9 +30,12 @@ private:
 
   Transaction transaction;
 
-  bool _g_PrimaryButtonPressed = false;
+  bool _g_PrimaryButtonPressed = false,
+       _g_PrimaryButtonHeld = false;
 
-  elapsedMillis since_checked_online = 0, sinceTaskStarted;
+  elapsedMillis since_checked_online = 0,
+                sinceTaskStarted,
+                sincePrimaryButtonPressed;
 
 public:
   DisplayTask() : TaskBase("DisplayTask", 10000)
@@ -246,6 +249,23 @@ private:
 
   void handlePrimaryButton(const PrimaryButtonState &primaryButton)
   {
+    bool pressed = !_g_PrimaryButtonPressed && primaryButton.pressed,
+         released = _g_PrimaryButtonPressed && !primaryButton.pressed,
+         held = sincePrimaryButtonPressed > 1000;
+
+    if (pressed)
+    {
+      Display::fsm_mgr.trigger(Display::TR_PRIMARY_BUTTON_PRESSED);
+      sincePrimaryButtonPressed = 0;
+    }
+    else if (released)
+    {
+      _g_PrimaryButtonHeld = false;
+    }
+    else if (held && !_g_PrimaryButtonHeld)
+    {
+      Display::fsm_mgr.trigger(Display::TR_PRIMARY_BUTTON_HELD);
+    }
     _g_PrimaryButtonPressed = primaryButton.pressed;
   }
 

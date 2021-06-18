@@ -35,8 +35,12 @@ namespace Display
     TR_REMOTE_BATTERY_CHANGED,
     TR_SELECT_BUTTON_CLICK,
     TR_VERSION_DOESNT_MATCH,
-    TR_PRIMARY_BUTTON_HELD_ON_STARTUP,
 
+    TR_PRIMARY_BUTTON_HELD_ON_STARTUP,
+    TR_PRIMARY_BUTTON_PRESSED,
+    TR_PRIMARY_BUTTON_HELD,
+
+    // Nintendo remote
     TR_UP_BUTTON_CLICKED,
     TR_RIGHT_BUTTON_CLICKED,
     TR_DOWN_BUTTON_CLICKED,
@@ -73,8 +77,16 @@ namespace Display
       return "TR_SELECT_BUTTON_CLICK";
     case TR_VERSION_DOESNT_MATCH:
       return "TR_VERSION_DOESNT_MATCH";
+
+      // primary button
     case TR_PRIMARY_BUTTON_HELD_ON_STARTUP:
       return "TR_PRIMARY_BUTTON_HELD_ON_STARTUP";
+    case TR_PRIMARY_BUTTON_PRESSED:
+      return "TR_PRIMARY_BUTTON_PRESSED";
+    case TR_PRIMARY_BUTTON_HELD:
+      return "TR_PRIMARY_BUTTON_HELD";
+
+      // nintendo classic
     case TR_UP_BUTTON_CLICKED:
       return "TR_UP_BUTTON_CLICKED";
     case TR_RIGHT_BUTTON_CLICKED:
@@ -91,6 +103,8 @@ namespace Display
       return "TR_SEL_BUTTON_CLICKED";
     case TR_MENU_BUTTON_CLICKED:
       return "TR_MENU_BUTTON_CLICKED";
+      // --------------------------
+
     case TR_OPTION_TIMED_OUT:
       return "TR_OPTION_TIMED_OUT";
     case TR_MAGNET_NOT_DETECTED:
@@ -258,13 +272,15 @@ namespace Display
         sinceShowingOptionScreen = 0;
         switch (fsm_mgr.lastEvent())
         {
-        case Display::TR_MENU_BUTTON_CLICKED:
+        // case Display::TR_MENU_BUTTON_CLICKED:
+        case Display::TR_PRIMARY_BUTTON_HELD_ON_STARTUP:
         {
           bool enabled = featureService.get<bool>(FeatureType::PUSH_TO_START);
           screenPropValue<bool>("Push to start", enabled ? "ON" : "OFF");
           break;
         }
-        case Display::TR_SELECT_BUTTON_CLICK:
+        // case Display::TR_SELECT_BUTTON_CLICK:
+        case Display::TR_PRIMARY_BUTTON_PRESSED:
         {
           bool enabled = featureService.get<bool>(FeatureType::PUSH_TO_START);
           featureService.set(PUSH_TO_START, !enabled);
@@ -345,6 +361,7 @@ namespace Display
     _fsm.add_transition(&stMoving, &stateDisconnected, Display::TR_DISCONNECTED, NULL);
     _fsm.add_transition(&stBoardVersionDoesntMatch, &stateDisconnected, Display::TR_DISCONNECTED, NULL);
 
+#ifdef USE_NINTENDOCLASSIC_TASK
     // Options
     _fsm.add_transition(&stStopped, &stOptionPushToStart, Display::TR_MENU_BUTTON_CLICKED, NULL);
     // _fsm.add_transition(&stOptionPushToStart, &stStopped, Display::TR_MENU_BUTTON_CLICKED, NULL);
@@ -356,6 +373,13 @@ namespace Display
     _fsm.add_transition(&stOptionThrottleSetting, &stStopped, Display::TR_OPTION_TIMED_OUT, NULL);
     _fsm.add_transition(&stOptionThrottleSetting, &stOptionThrottleSetting, Display::TR_UP_BUTTON_CLICKED, NULL);
     _fsm.add_transition(&stOptionThrottleSetting, &stOptionThrottleSetting, Display::TR_DOWN_BUTTON_CLICKED, NULL);
+#endif
+
+    // Options
+    _fsm.add_transition(&stStopped, &stOptionPushToStart, Display::TR_PRIMARY_BUTTON_HELD_ON_STARTUP, NULL);
+    _fsm.add_transition(&stOptionPushToStart, &stOptionPushToStart, Display::TR_PRIMARY_BUTTON_PRESSED, NULL);
+    _fsm.add_transition(&stOptionPushToStart, &stOptionPushToStart, Display::TR_PRIMARY_BUTTON_HELD, NULL);
+    _fsm.add_transition(&stOptionPushToStart, &stStopped, Display::TR_OPTION_TIMED_OUT, NULL);
 
     // TR_MOVING
     _fsm.add_transition(&stateDisconnected, &stMoving, Display::TR_MOVING, NULL);
