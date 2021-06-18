@@ -89,12 +89,13 @@ private:
       handleTransaction(transactionQueue->payload);
 
     // check throttle/trigger
-    bool throttleEnabled = FEATURE_USE_DEADMAN == 1
-                               ? m_primaryButton.pressed
-                               : (m_transaction.moving || FEATURE_PUSH_TO_START == 0);
+    bool throttleEnabled = true;
+    bool accelEnabled = FEATURE_USE_DEADMAN == 1
+                            ? m_primaryButton.pressed
+                            : (m_transaction.moving || FEATURE_PUSH_TO_START == 0);
 
     uint8_t og_throttle = thumbwheel.get();
-    uint8_t status = thumbwheel.update(throttleEnabled);
+    uint8_t status = thumbwheel.update(throttleEnabled, accelEnabled);
     throttle.val = thumbwheel.get();
     throttle.status = status;
 

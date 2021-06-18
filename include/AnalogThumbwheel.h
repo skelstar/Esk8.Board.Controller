@@ -53,22 +53,28 @@ public:
     return _throttle;
   }
 
-  ThrottleStatus update(bool enabled = true)
+  ThrottleStatus update(bool enabled = true, bool accelEnabled = true)
   {
-    if (enabled)
-    {
-      _raw = _getRaw();
-      _throttle = _getMappedFromRaw(_raw);
-      if (_oldMapped != _throttle && _throttleChangedCb != nullptr)
-        _throttleChangedCb(_throttle);
-      if (printThrottle && _oldMapped != _throttle)
-        Serial.printf("raw: %d centre: %d mapped: %d\n", _raw, _centre, _throttle);
-      _oldMapped = _throttle;
-    }
-    else
+    if (!enabled)
     {
       _throttle = 127;
+      return ThrottleStatus::STATUS_OK;
     }
+
+    _raw = _getRaw();
+    _throttle = _getMappedFromRaw(_raw);
+    if (_throttle > 127 && !accelEnabled)
+    {
+      _throttle = 127;
+      return ThrottleStatus::STATUS_OK;
+    }
+
+    if (_oldMapped != _throttle && _throttleChangedCb != nullptr)
+      _throttleChangedCb(_throttle);
+    if (printThrottle && _oldMapped != _throttle)
+      Serial.printf("raw: %d centre: %d mapped: %d\n", _raw, _centre, _throttle);
+    _oldMapped = _throttle;
+
     return ThrottleStatus::STATUS_OK;
   }
 
