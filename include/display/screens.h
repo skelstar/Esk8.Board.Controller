@@ -374,6 +374,25 @@ namespace Display
   }
   //-----------------------------------------------------
 
+  void simpleMessageScreen(const char *message)
+  {
+    if (take(mux_SPI))
+    {
+      uint8_t y = 0;
+      tft.fillScreen(TFT_BLACK);
+
+      y = (LCD_HEIGHT / 2);
+      tft.setFreeFont(FONT_LG);
+      tft.setTextColor(TFT_CYAN);
+      tft.setTextDatum(MC_DATUM);
+      tft.drawString(message, LCD_WIDTH / 2, y);
+      y += tft.fontHeight();
+
+      give(mux_SPI);
+    }
+  }
+  //-----------------------------------------------------
+
   void screenWhenMoving(bool init = false)
   {
     if (take(mux_SPI))

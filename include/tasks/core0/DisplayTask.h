@@ -26,10 +26,13 @@ private:
   Queue1::Manager<Transaction> *transactionQueue = nullptr;
   Queue1::Manager<NintendoButtonEvent> *nintendoClassicQueue = nullptr;
   Queue1::Manager<ThrottleState> *throttleQueue = nullptr;
+  Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
 
   Transaction transaction;
 
-  elapsedMillis since_checked_online = 0;
+  bool _g_PrimaryButtonPressed = false;
+
+  elapsedMillis since_checked_online = 0, sinceTaskStarted;
 
 public:
   DisplayTask() : TaskBase("DisplayTask", 10000)
@@ -49,8 +52,11 @@ private:
     nintendoClassicQueue->printMissedPacket = false;
     throttleQueue = createQueueManager<ThrottleState>("(DisplayTask)ThrottleQueue");
     throttleQueue->printMissedPacket = false;
+    primaryButtonQueue = createQueueManager<PrimaryButtonState>("(DisplayTask)PrimaryButtonQueue");
+    primaryButtonQueue->printMissedPacket = false;
 
     throttleQueue->read(); // clear queue
+    primaryButtonQueue->read();
     transactionQueue->read();
   }
   //--------------------------------
@@ -70,6 +76,8 @@ private:
     Display::addTransitions();
 
     Display::_fsm.run_machine();
+
+    sinceTaskStarted = 0;
   }
 
   const unsigned long BATTERY_CHECK_INTERVAL = 5 * SECONDS;
@@ -80,7 +88,7 @@ private:
   {
     // transaction
     if (transactionQueue->hasValue())
-      handlePacketState(transactionQueue->payload);
+      handleTransaction(transactionQueue->payload);
 
     // nintendo classic
     if (nintendoClassicQueue->hasValue())
@@ -97,6 +105,10 @@ private:
     // throttle
     if (throttleQueue->hasValue())
       handleThrottleResponse(throttleQueue->payload);
+
+    // primary button
+    if (primaryButtonQueue->hasValue())
+      handlePrimaryButton(primaryButtonQueue->payload);
 
     Display::_fsm.run_machine();
   }
@@ -128,7 +140,7 @@ private:
       Serial.printf(PRINT_FSM_TRIGGER_FORMAT, "DISP", millis(), Display::getTrigger(ev));
   }
 
-  void handlePacketState(Transaction &transaction)
+  void handleTransaction(Transaction &transaction)
   {
     // for some reason the battery votls were 0v in first packet
     // TODO try and work out why
@@ -136,6 +148,16 @@ private:
       return;
 
     manageRunningState(transaction);
+
+    if (sinceTaskStarted < 1000 && _g_PrimaryButtonPressed)
+    {
+      Display::fsm_mgr.trigger(Display::Trigger::TR_PRIMARY_BUTTON_HELD_ON_STARTUP);
+    }
+    else if (sinceTaskStarted < 2000)
+    {
+      Serial.printf("%lums and pressed:%d\n",
+                    (ulong)sinceTaskStarted, _g_PrimaryButtonPressed);
+    }
 
     if (transaction.connected(RESPONSE_WINDOW) == true)
     {
@@ -220,6 +242,11 @@ private:
 
     if (throttleState.status == ThrottleStatus::STATUS_OK && IN_STATE(Display::ST_MAGNET_NOT_DETECTED))
       Display::fsm_mgr.trigger(Display::TR_MAGNET_DETECTED);
+  }
+
+  void handlePrimaryButton(const PrimaryButtonState &primaryButton)
+  {
+    _g_PrimaryButtonPressed = primaryButton.pressed;
   }
 
   void manageRunningState(Transaction &transaction)
