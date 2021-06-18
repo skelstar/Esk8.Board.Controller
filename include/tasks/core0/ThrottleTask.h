@@ -13,14 +13,8 @@
 
 #define THROTTLE_TASK
 
-namespace nsThrottleTask
-{
-  PrimaryButtonState primaryButton;
-}
-
 class ThrottleTask : public TaskBase
 {
-
 public:
   bool printWarnings = true;
   bool printThrottle = true;
@@ -47,6 +41,7 @@ private:
   Queue1::Manager<Transaction> *transactionQueue = nullptr;
 
   Transaction m_transaction;
+  PrimaryButtonState m_primaryButton;
 
   ThrottleState throttle;
 
@@ -94,8 +89,12 @@ private:
       handleTransaction(transactionQueue->payload);
 
     // check throttle/trigger
+    bool throttleEnabled = FEATURE_USE_DEADMAN == 1
+                               ? m_primaryButton.pressed
+                               : (m_transaction.moving || FEATURE_PUSH_TO_START == 0);
+
     uint8_t og_throttle = thumbwheel.get();
-    uint8_t status = thumbwheel.update(m_transaction.moving || FEATURE_PUSH_TO_START == 0);
+    uint8_t status = thumbwheel.update(throttleEnabled);
     throttle.val = thumbwheel.get();
     throttle.status = status;
 
@@ -116,14 +115,16 @@ private:
 
   void handlePrimaryButton(PrimaryButtonState &payload)
   {
-    using namespace nsThrottleTask;
-    bool oldPressed = primaryButton.pressed;
-    primaryButton.event_id = payload.event_id;
-    primaryButton.pressed = payload.pressed;
+    bool oldPressed = m_primaryButton.pressed;
+    m_primaryButton.event_id = payload.event_id;
+    m_primaryButton.pressed = payload.pressed;
 
-    bool buttonReleased = oldPressed != payload.pressed && payload.pressed == false;
-    if (buttonReleased)
-      thumbwheel.centre();
+    if (FEATURE_USE_DEADMAN == 0)
+    {
+      bool buttonReleased = oldPressed != payload.pressed && payload.pressed == false;
+      if (buttonReleased)
+        thumbwheel.centre();
+    }
   }
 
   void handleTransaction(Transaction &transaction)
