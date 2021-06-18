@@ -73,14 +73,14 @@ private:
   }
 
   const unsigned long BATTERY_CHECK_INTERVAL = 5 * SECONDS;
-  elapsedMillis sinceCheckedBattery;
+  elapsedMillis sinceCheckedBattery = BATTERY_CHECK_INTERVAL - 100;
 
   //===================================================================
   void doWork()
   {
     // transaction
     if (transactionQueue->hasValue())
-      handlePacketState(transaction);
+      handlePacketState(transactionQueue->payload);
 
     // nintendo classic
     if (nintendoClassicQueue->hasValue())
@@ -130,10 +130,24 @@ private:
 
   void handlePacketState(Transaction &transaction)
   {
+    // for some reason the battery votls were 0v in first packet
+    // TODO try and work out why
+    if (transaction.packet_id == 1)
+      return;
+
     manageRunningState(transaction);
 
     if (transaction.connected(RESPONSE_WINDOW) == true)
     {
+      Display::_g_BoardBattery = transaction.batteryVolts;
+
+      if (!Display::_g_Connected)
+      {
+        // force redraw of battery
+        sinceCheckedBattery = BATTERY_CHECK_INTERVAL + 100;
+        Display::_g_Connected = true;
+      }
+
       // check version
       if (transaction.version != (float)VERSION_BOARD_COMPAT &&
           transaction.version > 0.0 &&
@@ -161,9 +175,6 @@ private:
         Display::fsm_mgr.trigger(Display::TR_DISCONNECTED);
       }
     }
-
-    transaction = transactionQueue->payload;
-    Display::_g_BoardBattery = transaction.batteryVolts;
   }
 
   void handleNintendoButtonEvent(const NintendoButtonEvent &payload)

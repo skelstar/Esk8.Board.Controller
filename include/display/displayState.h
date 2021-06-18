@@ -12,6 +12,7 @@ namespace Display
   float _g_BoardVersion = 0.0;
   float _g_BoardBattery = 0.0;
   bool _g_Moving = false;
+  bool _g_Connected = false;
   BatteryInfo _g_RemoteBattery;
 }
 

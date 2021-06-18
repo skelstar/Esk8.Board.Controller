@@ -88,6 +88,7 @@ public:
       Serial.printf("%s: ", preamble);
     Serial.printf("event_id: %lu  ", this->event_id);
     Serial.printf("packet_id: %lu:  ", this->packet_id);
+    Serial.printf("battery: %.1fv:  ", this->batteryVolts);
     Serial.printf("moving: %d:  ", this->moving);
     Serial.printf("sentResult: %s:  ", this->getSendResult());
     Serial.println();
