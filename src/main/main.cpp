@@ -213,7 +213,8 @@ void configureTasks()
 #ifdef HAPTIC_TASK
   hapticTask.priority = TASK_PRIORITY_0;
   hapticTask.doWorkIntervalFast = PERIOD_50ms;
-  // hapticTask.printDebug = true;
+  // hapticTask.heartBeatInterval = PERIOD_3s;
+  hapticTask.printDebug = true;
   hapticTask.printFsmTrigger = false;
 #endif
 

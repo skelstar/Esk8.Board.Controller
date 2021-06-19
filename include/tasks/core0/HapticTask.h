@@ -3,7 +3,9 @@
 #include <TaskBase.h>
 #include <QueueManager.h>
 #include <tasks/queues/QueueFactory.h>
+#ifdef USE_HAPTIC_I2C
 #include <Haptic_Driver.h>
+#endif
 #include <Fsm.h>
 #include <FsmManager.h>
 
@@ -11,7 +13,9 @@
 
 namespace nsHapticTask
 {
+#ifdef USE_HAPTIC_I2C
   Haptic_Driver haptic;
+#endif
 
   bool m_printDebug = false;
 
@@ -66,13 +70,13 @@ namespace nsHapticTask
     case HapticCommand::HAP_ONE_SHORT_PULSE:
       details.command = command;
       details.strength = 50;
-      details.period = PERIOD_100ms;
+      details.period = PERIOD_200ms;
       details.pulses = 1;
       return details;
     case HapticCommand::HAP_TWO_SHORT_PULSES:
       details.command = command;
       details.strength = 80;
-      details.period = PERIOD_100ms;
+      details.period = PERIOD_200ms;
       details.pulses = 2;
       return details;
     }
@@ -91,11 +95,16 @@ namespace nsHapticTask
 
   void hapticSet(uint8_t strength, TickType_t ticks = TICKS_50ms)
   {
+#ifdef USE_HAPTIC_I2C
     if (take(mux_I2C, ticks, __func__))
     {
       haptic.setVibrate(strength);
       give(mux_I2C);
     }
+#endif
+#ifdef USE_HAPTIC_DIGITAL
+    digitalWrite(HAPTIC_DIGITAL_PIN, strength > 0 ? HIGH : LOW);
+#endif
   }
 
   //---------------------------
@@ -164,8 +173,10 @@ public:
 
     nsHapticTask::m_printDebug = printDebug;
 
+#ifdef USE_HAPTIC_I2C
     if (mux_I2C == nullptr)
       mux_I2C = xSemaphoreCreateMutex();
+#endif
 
     initialiseHaptic();
 
@@ -181,14 +192,13 @@ public:
     transactionQueue = createQueueManager<Transaction>("(HapticTask)transactionQueue");
   }
 
+  elapsedMillis sinceLastBuzz;
+
   void doWork()
   {
     // ignore if didn't find the haptic device (i2c)
     if (!found)
       return;
-
-    if (simplMsgQueue->hasValue())
-      _handleSimplMessage(simplMsgQueue->payload);
 
     if (transactionQueue->hasValue())
       _handleTransaction(transactionQueue->payload);
@@ -205,10 +215,6 @@ public:
     delete (transactionQueue);
   }
 
-  void _handleSimplMessage(SimplMessageObj &simplMessage)
-  {
-  }
-
   void _handleTransaction(Transaction &q_transaction)
   {
     if (q_transaction.reason == ReasonType::FIRST_PACKET)
@@ -220,10 +226,6 @@ public:
 
   void _handleThrottleState(ThrottleState &state)
   {
-    // if (_throttleState.val != state.val && state.val == 255)
-    // {
-    //   nsHapticTask::startCommand(nsHapticTask::HAP_ONE_SHORT_PULSE);
-    // }
     _throttleState = state;
   }
 };
@@ -239,6 +241,7 @@ namespace nsHapticTask
 
   void initialiseHaptic()
   {
+#ifdef USE_HAPTIC_I2C
     if (take(mux_I2C, TICKS_500ms, __func__))
     {
       hapticTask.found = haptic.begin();
@@ -262,6 +265,11 @@ namespace nsHapticTask
     {
       Serial.printf("[HapticTask] Unable to take mux_I2C\n");
     }
+#endif
+#ifdef USE_HAPTIC_DIGITAL
+    pinMode(HAPTIC_DIGITAL_PIN, OUTPUT);
+    hapticTask.found = true;
+#endif
   }
 
   void startCommand(HapticCommand p_command)
@@ -286,8 +294,8 @@ namespace nsHapticTask
   //-----------------------------------------------------------------------------------------------------
   void stateOn_OnEnter()
   {
-    if (m_printDebug)
-      Serial.printf(PRINT_FSM_STATE_FORMAT, "HapticTask", millis(), "stateOn");
+    // if (m_printDebug)
+    Serial.printf(PRINT_FSM_STATE_FORMAT, "HapticTask", millis(), "stateOn");
     m_state = HapticState::HAP_ON;
     hapticSet(command.strength);
     sinceLastState = 0;

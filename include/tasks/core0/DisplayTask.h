@@ -156,11 +156,6 @@ private:
     {
       Display::fsm_mgr.trigger(Display::Trigger::TR_PRIMARY_BUTTON_HELD_ON_STARTUP);
     }
-    else if (sinceTaskStarted < 2000)
-    {
-      Serial.printf("%lums and pressed:%d\n",
-                    (ulong)sinceTaskStarted, _g_PrimaryButtonPressed);
-    }
 
     if (transaction.connected(RESPONSE_WINDOW) == true)
     {
