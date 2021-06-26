@@ -216,6 +216,7 @@ void configureTasks()
   // hapticTask.heartBeatInterval = PERIOD_3s;
   hapticTask.printDebug = true;
   hapticTask.printFsmTrigger = false;
+  hapticTask.printMissedPacket = false;
 #endif
 
 #ifdef NINTENDOCLASSIC_TASK

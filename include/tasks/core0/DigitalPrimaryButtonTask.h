@@ -7,6 +7,13 @@
 
 #define DIGITALPRIMARYBUTTON_TASK
 
+namespace nsDigitalPrimaryButtonTask
+{
+  // prototypes
+  void doubleClickHandler(Button2 &btn);
+  void tripleClickHandler(Button2 &btn);
+}
+
 class DigitalPrimaryButtonTask : public TaskBase
 {
 public:
@@ -16,6 +23,11 @@ public:
   DigitalPrimaryButtonTask() : TaskBase("DigitalPrimaryButtonTask", 3000)
   {
     _core = CORE_0;
+  }
+
+  void setLastEvent(PrimaryButtonEvent ev)
+  {
+    state.lastEvent = ev;
   }
 
 private:
@@ -29,10 +41,13 @@ private:
   void _initialise()
   {
     primaryButton.begin(PRIMARY_BUTTON_PIN);
+    primaryButton.setDoubleClickHandler(nsDigitalPrimaryButtonTask::doubleClickHandler);
+    primaryButton.setTripleClickHandler(nsDigitalPrimaryButtonTask::tripleClickHandler);
 
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(DigitalPrimaryButtonTask)primaryButtonQueue");
 
     state.pressed = 0;
+    state.lastEvent = PrimaryButtonEvent::EV_NONE;
   }
 
   void doWork()
@@ -61,5 +76,15 @@ namespace nsDigitalPrimaryButtonTask
   void task1(void *parameters)
   {
     digitalPrimaryButtonTask.task(parameters);
+  }
+
+  void doubleClickHandler(Button2 &btn)
+  {
+    digitalPrimaryButtonTask.setLastEvent(PrimaryButtonEvent::EV_DOUBLE_CLICK);
+  }
+
+  void tripleClickHandler(Button2 &btn)
+  {
+    digitalPrimaryButtonTask.setLastEvent(PrimaryButtonEvent::EV_DOUBLE_CLICK);
   }
 }

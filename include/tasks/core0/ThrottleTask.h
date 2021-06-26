@@ -76,6 +76,7 @@ private:
 #ifdef USE_ANALOG_TRIGGER
     thumbwheel.init();
     thumbwheel.printThrottle = printThrottle;
+    thumbwheel.centre();
 #endif
   }
 
@@ -116,16 +117,20 @@ private:
 
   void handlePrimaryButton(PrimaryButtonState &payload)
   {
+    // if (payload.lastEvent != PrimaryButtonEvent::EV_NONE)
+    // {
+    //   Serial.printf("PrimaryButton event is %s\n", getPrimaryButtonEvent(payload.lastEvent));
+    // }
+
     bool oldPressed = m_primaryButton.pressed;
     m_primaryButton.event_id = payload.event_id;
     m_primaryButton.pressed = payload.pressed;
 
-    if (FEATURE_USE_DEADMAN == 0)
-    {
-      bool buttonReleased = oldPressed != payload.pressed && payload.pressed == false;
-      if (buttonReleased)
-        thumbwheel.centre();
-    }
+#if FEATURE_USE_DEADMAN == 0
+    bool buttonReleased = oldPressed != payload.pressed && payload.pressed == false;
+    if (buttonReleased)
+      thumbwheel.centre();
+#endif
   }
 
   void handleTransaction(Transaction &transaction)

@@ -149,7 +149,8 @@ class HapticTask : public TaskBase
 public:
   bool printWarnings = true,
        printDebug = false,
-       printFsmTrigger = false;
+       printFsmTrigger = false,
+       printMissedPacket = false;
   bool found = false;
 
 private:
@@ -190,13 +191,14 @@ public:
     simplMsgQueue = createQueueManager<SimplMessageObj>("(HapticTask)simplMsgQueue");
     throttleQueue = createQueueManager<ThrottleState>("(HapticTask)throttleQueue");
     transactionQueue = createQueueManager<Transaction>("(HapticTask)transactionQueue");
+    transactionQueue->printMissedPacket = printMissedPacket;
   }
 
   elapsedMillis sinceLastBuzz;
 
   void doWork()
   {
-    // ignore if didn't find the haptic device (i2c)
+    // ignore if didn't find the haptic device (if using i2c)
     if (!found)
       return;
 

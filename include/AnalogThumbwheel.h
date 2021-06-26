@@ -63,6 +63,7 @@ public:
 
     _raw = _getRaw();
     _throttle = _getMappedFromRaw(_raw);
+
     if (_throttle > 127 && !accelEnabled)
     {
       _throttle = 127;
