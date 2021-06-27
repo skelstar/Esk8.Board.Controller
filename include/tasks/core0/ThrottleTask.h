@@ -69,7 +69,8 @@ private:
 #ifdef USE_ANALOG_TRIGGER
     thumbwheel.init();
     thumbwheel.centre();
-    thumbwheel.setRawThrottleCallback(_printRawThrottle);
+    if (printThrottle)
+      thumbwheel.setRawThrottleCallback(_printRawThrottle);
 #endif
   }
 

@@ -8,34 +8,6 @@
 class Transaction : public QueueBase
 {
 public:
-  enum TransactionSendResult
-  {
-    NONE = 0,
-    SENT_OK,
-    SEND_FAIL,
-    UPDATE,
-  };
-
-  const char *getSendResult(const char *context = __func__)
-  {
-    switch (this->sendResult)
-    {
-    case NONE:
-      return "NONE";
-    case SENT_OK:
-      return "SENT_OK";
-    case SEND_FAIL:
-      return "SEND_FAIL";
-    case UPDATE:
-      return "UPDATE";
-    }
-    char buff[30];
-    sprintf(buff, "OUT_OF_RANGE (%s)", context);
-    return buff;
-  }
-
-  TransactionSendResult sendResult;
-
   enum SourceType
   {
     CONTROLLER,
@@ -93,21 +65,17 @@ public:
       version = packet.version;
       source = SourceType::BOARD_RESPONSE;
       roundTrip = millis() - packet.txTime;
-      sendResult = TransactionSendResult::UPDATE;
+      // sendResult = TransactionSendResult::UPDATE;
     }
     batteryVolts = packet.batteryVoltage;
     moving = packet.moving;
     reason = packet.reason;
+    _rxTime = millis();
   }
-
-  // bool acknowledged()
-  // {
-  //   return packet_id == replyId;
-  // }
 
   bool connected(unsigned long timeout)
   {
-    return sendResult != TransactionSendResult::SEND_FAIL;
+    return millis() - _rxTime < timeout;
   }
 
   void print(const char *preamble = nullptr)
@@ -118,7 +86,6 @@ public:
     Serial.printf("packet_id: %lu:  ", this->packet_id);
     Serial.printf("battery: %.1fv:  ", this->batteryVolts);
     Serial.printf("moving: %d:  ", this->moving);
-    Serial.printf("sentResult: %s:  ", this->getSendResult());
     Serial.println();
   }
 
@@ -134,4 +101,5 @@ public:
 
 private:
   elapsedMillis _since_responded;
+  unsigned long _rxTime = 0;
 };

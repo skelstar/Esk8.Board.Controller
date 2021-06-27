@@ -37,6 +37,7 @@ public:
     _core = CORE_0;
   }
 
+private:
   void _initialise()
   {
     transactionQueue = createQueueManager<Transaction>("(StatsTask) transactionQueue");
@@ -46,20 +47,18 @@ public:
   void doWork()
   {
     if (transactionQueue->hasValue())
-      _handleTransaction();
+      _handleTransaction(transactionQueue->payload);
   }
 
-private:
-  unsigned long _lastPacketId = 0;
-
-  void _handleTransaction()
+  void _handleTransaction(Transaction &transaction)
   {
-    // Serial.printf("[TASK:statsTask] Packet sent to board ");
-    // Serial.printf("id: %lu ", transactionQueue->payload.packet_id);
-    // Serial.printf("event_id: %lu ", transactionQueue->payload.event_id);
-    // // Serial.printf("source: %s ", Transaction::getSourceType(transactionQueue->payload.source));
-    // Serial.printf("round trip: %lums ", transactionQueue->payload.roundTrip);
-    // Serial.println();
+    if (transaction.source == Transaction::BOARD_RESPONSE)
+    {
+      Serial.printf("[TASK:statsTask] Packet sent to board ");
+      Serial.printf("id: %lu ", transaction.packet_id);
+      Serial.printf("round trip: %lums ", transaction.roundTrip);
+      Serial.println();
+    }
   }
 
   float _getTotalSuccessRatio()

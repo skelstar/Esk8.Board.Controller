@@ -85,9 +85,6 @@ public:
 
       bool sentOK = nsBoardComms::sendPacketToBoard();
 
-      boardTransactionQueue->payload.sendResult = sentOK
-                                                      ? Transaction::SENT_OK
-                                                      : Transaction::SEND_FAIL;
       boardTransactionQueue->payload.registerPacket(controller_packet);
 
       boardTransactionQueue->sendPayload();
