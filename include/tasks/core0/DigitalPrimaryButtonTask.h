@@ -27,7 +27,7 @@ public:
 
   void setLastEvent(PrimaryButtonEvent ev)
   {
-    state.lastEvent = ev;
+    primaryButtonQueue->payload.lastEvent = ev;
   }
 
 private:
@@ -35,8 +35,6 @@ private:
 
   // QwiicButton qwiicButton;
   Button2 primaryButton;
-
-  PrimaryButtonState state;
 
   void _initialise()
   {
@@ -46,19 +44,19 @@ private:
 
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(DigitalPrimaryButtonTask)primaryButtonQueue");
 
-    state.pressed = 0;
-    state.lastEvent = PrimaryButtonEvent::EV_NONE;
+    primaryButtonQueue->payload.pressed = 0;
+    primaryButtonQueue->payload.lastEvent = PrimaryButtonEvent::EV_NONE;
   }
 
   void doWork()
   {
     primaryButton.loop();
 
-    bool wasPressed = state.pressed;
-    state.pressed = primaryButton.isPressed();
+    bool wasPressed = primaryButtonQueue->payload.pressed;
+    primaryButtonQueue->payload.pressed = primaryButton.isPressed();
 
-    if (wasPressed != state.pressed)
-      primaryButtonQueue->send(&state, printSendToQueue ? QueueBase::printSend : nullptr);
+    if (wasPressed != primaryButtonQueue->payload.pressed)
+      primaryButtonQueue->sendPayload();
   }
 
   void cleanup()

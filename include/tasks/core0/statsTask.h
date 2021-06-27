@@ -46,51 +46,20 @@ public:
   void doWork()
   {
     if (transactionQueue->hasValue())
-    {
-      _transaction = transactionQueue->payload;
-
-      _handleTransaction(_transaction);
-    }
+      _handleTransaction();
   }
 
 private:
   unsigned long _lastPacketId = 0;
 
-  void _handleTransaction(Transaction transaction)
+  void _handleTransaction()
   {
-    bool packetRegistered = transaction.packet_id <= _lastPacketId;
-
-    if (packetRegistered)
-      return;
-
-    // register this packet
-    switch (transaction.sendResult)
-    {
-    case Transaction::SENT_OK:
-    case Transaction::UPDATE:
-      _totalSentOK++;
-      _resultsWindow[_resultsIndex] = SendResult::OK;
-      break;
-    case Transaction::SEND_FAIL:
-      _totalFailed++;
-      _resultsWindow[_resultsIndex] = SendResult::FAIL;
-      break;
-    }
-
-    _lastPacketId = transaction.packet_id;
-
-    _resultsIndex++;
-    if (_resultsIndex == NUM_RESULT_SAMPLES)
-      _resultsIndex = 0;
-
-    // print
-    if (printAllSuccessRate ||
-        (printOnlyFailedPackets && transaction.sendResult == Transaction::SEND_FAIL))
-      Serial.printf("Success rates  total=%.2f  window=%.2f   sendResult=%s  \n",
-                    _getTotalSuccessRatio(), _getWindowSuccessRatio(), transaction.getSendResult());
-
-    if (transaction.reason == FIRST_PACKET)
-      Serial.printf("\n------------------\n    StatsTask: BOARD RESET!!!\n-------------------\n\n");
+    // Serial.printf("[TASK:statsTask] Packet sent to board ");
+    // Serial.printf("id: %lu ", transactionQueue->payload.packet_id);
+    // Serial.printf("event_id: %lu ", transactionQueue->payload.event_id);
+    // // Serial.printf("source: %s ", Transaction::getSourceType(transactionQueue->payload.source));
+    // Serial.printf("round trip: %lums ", transactionQueue->payload.roundTrip);
+    // Serial.println();
   }
 
   float _getTotalSuccessRatio()

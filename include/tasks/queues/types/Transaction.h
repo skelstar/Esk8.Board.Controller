@@ -3,6 +3,7 @@
 #include <VescData.h>
 #include <QueueBase.h>
 #include <elapsedMillis.h>
+#include <shared-utils.h>
 
 class Transaction : public QueueBase
 {
@@ -35,6 +36,24 @@ public:
 
   TransactionSendResult sendResult;
 
+  enum SourceType
+  {
+    CONTROLLER,
+    BOARD_RESPONSE,
+  };
+
+  static const char *getSourceType(SourceType type)
+  {
+    switch (type)
+    {
+    case CONTROLLER:
+      return "CONTROLLER";
+    case BOARD_RESPONSE:
+      return "BOARD_RESPONSE";
+    }
+    return getOutOfRange("getSourceType");
+  }
+
   float version = 0.0,
         batteryVolts = 0.0;
   ReasonType reason;
@@ -42,6 +61,8 @@ public:
       packet_id,
       replyId;
   bool moving = false;
+  SourceType source;
+  unsigned long sentTime = 0, roundTrip = 0;
 
 public:
   Transaction() : QueueBase()
@@ -51,31 +72,38 @@ public:
     name = "Transaction";
   }
 
-  void start(ControllerData packet)
+  void registerPacket(ControllerData packet)
   {
     packet_id = packet.id;
+    source = SourceType::CONTROLLER;
+    sentTime = packet.txTime;
   }
 
-  void start(ControllerConfig config_packet)
+  void registerPacket(ControllerConfig config_packet)
   {
     packet_id = config_packet.id;
   }
 
-  void received(VescData packet)
+  void reconcile(VescData packet)
   {
+    if (packet.id == packet_id)
+    {
+      // this is the response to current packet
+      replyId = packet.id;
+      version = packet.version;
+      source = SourceType::BOARD_RESPONSE;
+      roundTrip = millis() - packet.txTime;
+      sendResult = TransactionSendResult::UPDATE;
+    }
     batteryVolts = packet.batteryVoltage;
     moving = packet.moving;
     reason = packet.reason;
-    replyId = packet.id;
-    version = packet.version;
-
-    sendResult = TransactionSendResult::UPDATE;
   }
 
-  bool acknowledged()
-  {
-    return packet_id == replyId;
-  }
+  // bool acknowledged()
+  // {
+  //   return packet_id == replyId;
+  // }
 
   bool connected(unsigned long timeout)
   {

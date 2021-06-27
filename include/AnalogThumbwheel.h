@@ -15,16 +15,17 @@
 //=========================================
 
 typedef void (*VoidUint8Callback)(uint8_t);
+typedef void (*RawThrottleCallback)(uint8_t, uint16_t, uint16_t);
 typedef bool (*GetBoolean_Cb)();
 
 class AnalogThumbwheelClass
 {
-
 public:
-  bool printThrottle = false;
+  bool printThrottle = false, printRawThrottle = false;
 
 private:
   VoidUint8Callback _throttleChangedCb = nullptr;
+  RawThrottleCallback _rawThrottleCallback = nullptr;
   // GetBoolean_Cb _throttleEnabled_cb = nullptr;
   FastMap _accelmapper, _brakemapper;
   int _pin = THROTTLE_PIN;
@@ -55,16 +56,15 @@ public:
 
   ThrottleStatus update(bool enabled = true, bool accelEnabled = true)
   {
-    if (!enabled)
-    {
-      _throttle = 127;
-      return ThrottleStatus::STATUS_OK;
-    }
 
     _raw = _getRaw();
     _throttle = _getMappedFromRaw(_raw);
 
-    if (_throttle > 127 && !accelEnabled)
+    // print before exiting if not enabled
+    if (_rawThrottleCallback)
+      _rawThrottleCallback(_throttle, _raw, _centre);
+
+    if (!enabled || (_throttle > 127 && !accelEnabled))
     {
       _throttle = 127;
       return ThrottleStatus::STATUS_OK;
@@ -72,8 +72,6 @@ public:
 
     if (_oldMapped != _throttle && _throttleChangedCb != nullptr)
       _throttleChangedCb(_throttle);
-    if (printThrottle && _oldMapped != _throttle)
-      Serial.printf("raw: %d centre: %d mapped: %d\n", _raw, _centre, _throttle);
     _oldMapped = _throttle;
 
     return ThrottleStatus::STATUS_OK;
@@ -85,14 +83,19 @@ public:
     Serial.printf("centering thumbwheel: %d\n", _centre);
   }
 
-  void setThrottleEnabledCb(GetBoolean_Cb cb)
-  {
-    // _throttleEnabled_cb = cb;
-  }
-
   bool connect()
   {
     return true;
+  }
+
+  void setThrottleChanged(VoidUint8Callback cb)
+  {
+    _throttleChangedCb = cb;
+  }
+
+  void setRawThrottleCallback(RawThrottleCallback cb)
+  {
+    _rawThrottleCallback = cb;
   }
 
 private:

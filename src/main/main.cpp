@@ -237,7 +237,7 @@ void configureTasks()
 #endif
 
 #ifdef STATS_TASK
-  statsTask.doWorkIntervalFast = PERIOD_50ms;
+  statsTask.doWorkIntervalFast = PERIOD_200ms;
   statsTask.priority = TASK_PRIORITY_1;
   // statsTask.printQueueRx = true;
   // statsTask.printOnlyFailedPackets = true;
@@ -247,8 +247,6 @@ void configureTasks()
   throttleTask.priority = TASK_PRIORITY_3;
   throttleTask.printWarnings = true;
   throttleTask.printThrottle = PRINT_THROTTLE;
-  // throttleTask.thumbwheel.setSweepAngle(30.0);
-  // throttleTask.thumbwheel.setDeadzone(5.0);
 }
 
 void startDisplayTask()
