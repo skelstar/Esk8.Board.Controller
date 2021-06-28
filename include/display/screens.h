@@ -315,33 +315,26 @@ namespace Display
       }
       y += tft.fontHeight() + 5;
 
-      bool showBoardBatt = _g_BoardBattery > 10.0;
-
       // remote battery
       const int batteryWidth = 50;
       y += 15;
       uint8_t percent = Display::_g_RemoteBattery.percent;
-      x = showBoardBatt
-              ? LCD_WIDTH / 2 - 56
-              : LCD_WIDTH / 2 - 5;
+      x = LCD_WIDTH / 2 - 60;
       drawSmallBattery(percent, x, y, batteryWidth, TR_DATUM, Display::_g_RemoteBattery.charging);
 
       char buff[16];
-      if (showBoardBatt)
-        sprintf(buff, "%0.1fv|%.1fv", Display::_g_RemoteBattery.volts, Display::_g_BoardBattery);
-      else
-        sprintf(buff, "%0.1fv", Display::_g_RemoteBattery.volts);
+      sprintf(buff, "%0.1fv | %d%%",
+              Display::_g_RemoteBattery.volts, getBatteryPercentage(Display::_g_BoardBattery));
 
       tft.setTextDatum(TL_DATUM);
       tft.setFreeFont(FONT_LG);
       tft.setTextColor(TFT_DARKGREY);
-      x = showBoardBatt
-              ? LCD_WIDTH / 2 - 44
-              : LCD_WIDTH / 2 + 5;
+      x = LCD_WIDTH / 2 - 54;
       tft.drawString(buff, x, y - 4);
 
       y += 30;
 
+      // version
       tft.setTextColor(TFT_LIGHTGREY);
       tft.setFreeFont(FONT_MED);
       tft.setTextDatum(TL_DATUM);
@@ -374,6 +367,25 @@ namespace Display
       tft.setTextColor(TFT_CYAN);
       tft.setTextDatum(MC_DATUM);
       tft.drawString("MOVING", LCD_WIDTH / 2, y);
+      y += tft.fontHeight();
+
+      give(mux_SPI);
+    }
+  }
+  //-----------------------------------------------------
+
+  void simpleMessageScreen(const char *message)
+  {
+    if (take(mux_SPI))
+    {
+      uint8_t y = 0;
+      tft.fillScreen(TFT_BLACK);
+
+      y = (LCD_HEIGHT / 2);
+      tft.setFreeFont(FONT_LG);
+      tft.setTextColor(TFT_CYAN);
+      tft.setTextDatum(MC_DATUM);
+      tft.drawString(message, LCD_WIDTH / 2, y);
       y += tft.fontHeight();
 
       give(mux_SPI);

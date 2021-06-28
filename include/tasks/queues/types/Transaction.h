@@ -3,37 +3,28 @@
 #include <VescData.h>
 #include <QueueBase.h>
 #include <elapsedMillis.h>
+#include <shared-utils.h>
 
 class Transaction : public QueueBase
 {
 public:
-  enum TransactionSendResult
+  enum SourceType
   {
-    NONE = 0,
-    SENT_OK,
-    SEND_FAIL,
-    UPDATE,
+    CONTROLLER,
+    BOARD_RESPONSE,
   };
 
-  const char *getSendResult(const char *context = __func__)
+  static const char *getSourceType(SourceType type)
   {
-    switch (this->sendResult)
+    switch (type)
     {
-    case NONE:
-      return "NONE";
-    case SENT_OK:
-      return "SENT_OK";
-    case SEND_FAIL:
-      return "SEND_FAIL";
-    case UPDATE:
-      return "UPDATE";
+    case CONTROLLER:
+      return "CONTROLLER";
+    case BOARD_RESPONSE:
+      return "BOARD_RESPONSE";
     }
-    char buff[30];
-    sprintf(buff, "OUT_OF_RANGE (%s)", context);
-    return buff;
+    return getOutOfRange("getSourceType");
   }
-
-  TransactionSendResult sendResult;
 
   float version = 0.0,
         batteryVolts = 0.0;
@@ -42,6 +33,8 @@ public:
       packet_id,
       replyId;
   bool moving = false;
+  SourceType source;
+  unsigned long sentTime = 0, roundTrip = 0;
 
 public:
   Transaction() : QueueBase()
@@ -51,35 +44,38 @@ public:
     name = "Transaction";
   }
 
-  void start(ControllerData packet)
+  void registerPacket(ControllerData packet)
   {
     packet_id = packet.id;
+    source = SourceType::CONTROLLER;
+    sentTime = packet.txTime;
   }
 
-  void start(ControllerConfig config_packet)
+  void registerPacket(ControllerConfig config_packet)
   {
     packet_id = config_packet.id;
   }
 
-  void received(VescData packet)
+  void reconcile(VescData packet)
   {
+    if (packet.id == packet_id)
+    {
+      // this is the response to current packet
+      replyId = packet.id;
+      version = packet.version;
+      source = SourceType::BOARD_RESPONSE;
+      roundTrip = millis() - packet.txTime;
+      // sendResult = TransactionSendResult::UPDATE;
+    }
     batteryVolts = packet.batteryVoltage;
     moving = packet.moving;
     reason = packet.reason;
-    replyId = packet.id;
-    version = packet.version;
-
-    sendResult = TransactionSendResult::UPDATE;
-  }
-
-  bool acknowledged()
-  {
-    return packet_id == replyId;
+    _rxTime = millis();
   }
 
   bool connected(unsigned long timeout)
   {
-    return sendResult != TransactionSendResult::SEND_FAIL;
+    return millis() - _rxTime < timeout;
   }
 
   void print(const char *preamble = nullptr)
@@ -88,8 +84,8 @@ public:
       Serial.printf("%s: ", preamble);
     Serial.printf("event_id: %lu  ", this->event_id);
     Serial.printf("packet_id: %lu:  ", this->packet_id);
+    Serial.printf("battery: %.1fv:  ", this->batteryVolts);
     Serial.printf("moving: %d:  ", this->moving);
-    Serial.printf("sentResult: %s:  ", this->getSendResult());
     Serial.println();
   }
 
@@ -105,4 +101,5 @@ public:
 
 private:
   elapsedMillis _since_responded;
+  unsigned long _rxTime = 0;
 };

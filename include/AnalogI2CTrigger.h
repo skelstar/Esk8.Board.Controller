@@ -33,16 +33,15 @@ public:
 
 private:
   VoidUint8Callback _throttleChangedCb = nullptr;
-  GetBoolean_Cb _throttleEnabled_cb = nullptr;
 
   uint8_t _accel_direction = DIR_CLOCKWISE;
   FastMap _accelmapper, _brakemapper;
   uint8_t _oldMapped = 0, _throttle = 127;
   uint16_t _raw,
-      _centre = THROTTLE_RAW_CENTRE,
-      _min = THROTTLE_RAW_MIN,
-      _max = THROTTLE_RAW_MAX,
-      _deadband = THROTTLE_RAW_DEADBAND;
+      _centre = THROTTLE_I2C_RAW_CENTRE,
+      _min = THROTTLE_I2C_RAW_MIN,
+      _max = THROTTLE_I2C_RAW_MAX,
+      _deadband = THROTTLE_I2C_RAW_DEADBAND;
   SemaphoreHandle_t _i2c_mux = nullptr;
 
 public:
@@ -59,7 +58,6 @@ public:
     _i2c_mux = i2c_mux;
     _accel_direction = accelDirection;
     assert(_i2c_mux != nullptr);
-    assert(_throttleEnabled_cb != nullptr);
     assert(_accel_direction == DIR_CLOCKWISE || _accel_direction == DIR_ANTI_CLOCKWISE);
     _oldMapped = 127;
 
@@ -98,6 +96,7 @@ public:
   {
     if (enabled)
     {
+      // if i2c disconnects then it won't get past this point
       _raw = _getRaw();
 
       if (!_rawIsSafe(_raw))
@@ -127,11 +126,6 @@ public:
     Serial.printf("Centred trigger: %d\n", _centre);
   }
 
-  void setThrottleEnabledCb(GetBoolean_Cb cb)
-  {
-    _throttleEnabled_cb = cb;
-  }
-
   // connect i2c, use mux
   bool connect()
   {
@@ -146,14 +140,17 @@ private:
 
   uint16_t _getRaw()
   {
-    if (take(_i2c_mux, TICKS_500ms))
+    if (take(_i2c_mux, TICKS_500ms, "analog i2c trigger"))
     {
+      int16_t raw = ADS->readADC(0);
       give(_i2c_mux);
-      return ADS->readADC(0);
-    }
-    else
-    {
-      Serial.printf("couldn't take mutex (analog i2c trigger)\n");
+      if (raw < _min)
+      {
+        // safety
+        Serial.printf("less than _min: %d\n", raw);
+        return _centre;
+      }
+      return raw;
     }
     return _centre;
   }

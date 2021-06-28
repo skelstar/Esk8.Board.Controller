@@ -13,17 +13,12 @@
 
 #define THROTTLE_TASK
 
-namespace nsThrottleTask
-{
-  PrimaryButtonState primaryButton;
-}
-
 class ThrottleTask : public TaskBase
 {
-
 public:
-  bool printWarnings = true;
-  bool printThrottle = true;
+  bool printWarnings = true,
+       printThrottle = false,
+       printQueues = false;
 
 #if REMOTE_USED == NINTENDO_REMOTE
   MagneticThumbwheelClass thumbwheel;
@@ -46,10 +41,6 @@ private:
   Queue1::Manager<ThrottleState> *throttleQueue = nullptr;
   Queue1::Manager<Transaction> *transactionQueue = nullptr;
 
-  Transaction m_transaction;
-
-  ThrottleState throttle;
-
   void initialiseQueues()
   {
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(throttle)primaryButtonQueue");
@@ -61,9 +52,6 @@ private:
 
   void _initialise()
   {
-    // thumbwheel.setThrottleEnabledCb([]
-    //                                 { return m_transaction.moving; });
-
 #if REMOTE_USED == NINTENDO_REMOTE
     if (mux_I2C == nullptr)
       mux_I2C = xSemaphoreCreateMutex();
@@ -80,9 +68,13 @@ private:
 #endif
 #ifdef USE_ANALOG_TRIGGER
     thumbwheel.init();
-    thumbwheel.printThrottle = printThrottle;
+    thumbwheel.centre();
+    if (printThrottle)
+      thumbwheel.setRawThrottleCallback(_printRawThrottle);
 #endif
   }
+
+  elapsedMillis sinceUpdatedThrottle = 0;
 
   void doWork()
   {
@@ -94,19 +86,8 @@ private:
       handleTransaction(transactionQueue->payload);
 
     // check throttle/trigger
-    uint8_t og_throttle = thumbwheel.get();
-    uint8_t status = thumbwheel.update(m_transaction.moving);
-    throttle.val = thumbwheel.get();
-    throttle.status = status;
-
-    if (og_throttle != throttle.val || throttle.status != ThrottleStatus::STATUS_OK)
-    {
-      throttleQueue->send(&throttle);
-      if (throttle.val == 255)
-      {
-        ThrottleState::print(throttle, "[ThrottleTask]-->");
-      }
-    }
+    if (sinceUpdatedThrottle > SEND_TO_BOARD_INTERVAL)
+      _updateThrottle();
   }
 
   void cleanup()
@@ -114,21 +95,37 @@ private:
     delete (primaryButtonQueue);
   }
 
+  void _updateThrottle()
+  {
+    sinceUpdatedThrottle = 0;
+    bool throttleEnabled = true;
+    bool accelEnabled = FEATURE_USE_DEADMAN == 1
+                            ? primaryButtonQueue->payload.pressed
+                            : transactionQueue->payload.moving || FEATURE_PUSH_TO_START == 0;
+
+    uint8_t status = thumbwheel.update(throttleEnabled, accelEnabled);
+    throttleQueue->payload.val = status == ThrottleStatus::STATUS_OK ? thumbwheel.get() : 127;
+    throttleQueue->payload.status = status;
+
+    throttleQueue->sendPayload(printQueues);
+  }
+
+  static void _printRawThrottle(uint8_t t, uint16_t raw, uint16_t centre)
+  {
+    Serial.printf("throttle:%d  |  raw:%d  |  centre:%d\n", t, raw, centre);
+  };
+
   void handlePrimaryButton(PrimaryButtonState &payload)
   {
-    using namespace nsThrottleTask;
-    bool oldPressed = primaryButton.pressed;
-    primaryButton.event_id = payload.event_id;
-    primaryButton.pressed = payload.pressed;
-
+#if FEATURE_USE_DEADMAN == 0
     bool buttonReleased = oldPressed != payload.pressed && payload.pressed == false;
     if (buttonReleased)
       thumbwheel.centre();
+#endif
   }
 
   void handleTransaction(Transaction &transaction)
   {
-    m_transaction = transaction;
   }
 };
 

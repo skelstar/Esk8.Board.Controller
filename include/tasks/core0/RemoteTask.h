@@ -16,7 +16,6 @@ public:
 
 private:
   BatteryLib *battery;
-  BatteryInfo remote;
 
   Queue1::Manager<BatteryInfo> *remoteBatteryQueue = nullptr;
 
@@ -51,12 +50,12 @@ public:
   {
     battery->update();
 
-    remote.charging = battery->isCharging;
-    remote.percent = battery->chargePercent;
+    remoteBatteryQueue->payload.charging = battery->isCharging;
+    remoteBatteryQueue->payload.percent = battery->chargePercent;
     // round to one decimal place
-    remote.volts = floorf(battery->getVolts() * 10) / 10;
+    remoteBatteryQueue->payload.volts = floorf(battery->getVolts() * 10) / 10;
 
-    remoteBatteryQueue->send(&remote);
+    remoteBatteryQueue->sendPayload();
   }
 
   void cleanup()

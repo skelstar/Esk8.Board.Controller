@@ -7,6 +7,13 @@
 
 #define DIGITALPRIMARYBUTTON_TASK
 
+namespace nsDigitalPrimaryButtonTask
+{
+  // prototypes
+  void doubleClickHandler(Button2 &btn);
+  void tripleClickHandler(Button2 &btn);
+}
+
 class DigitalPrimaryButtonTask : public TaskBase
 {
 public:
@@ -18,32 +25,38 @@ public:
     _core = CORE_0;
   }
 
+  void setLastEvent(PrimaryButtonEvent ev)
+  {
+    primaryButtonQueue->payload.lastEvent = ev;
+  }
+
 private:
   Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
 
   // QwiicButton qwiicButton;
   Button2 primaryButton;
 
-  PrimaryButtonState state;
-
   void _initialise()
   {
     primaryButton.begin(PRIMARY_BUTTON_PIN);
+    primaryButton.setDoubleClickHandler(nsDigitalPrimaryButtonTask::doubleClickHandler);
+    primaryButton.setTripleClickHandler(nsDigitalPrimaryButtonTask::tripleClickHandler);
 
     primaryButtonQueue = createQueueManager<PrimaryButtonState>("(DigitalPrimaryButtonTask)primaryButtonQueue");
 
-    state.pressed = 0;
+    primaryButtonQueue->payload.pressed = 0;
+    primaryButtonQueue->payload.lastEvent = PrimaryButtonEvent::EV_NONE;
   }
 
   void doWork()
   {
     primaryButton.loop();
 
-    bool wasPressed = state.pressed;
-    state.pressed = primaryButton.isPressed();
+    bool wasPressed = primaryButtonQueue->payload.pressed;
+    primaryButtonQueue->payload.pressed = primaryButton.isPressed();
 
-    if (wasPressed != state.pressed)
-      primaryButtonQueue->send(&state, printSendToQueue ? QueueBase::printSend : nullptr);
+    if (wasPressed != primaryButtonQueue->payload.pressed)
+      primaryButtonQueue->sendPayload();
   }
 
   void cleanup()
@@ -61,5 +74,15 @@ namespace nsDigitalPrimaryButtonTask
   void task1(void *parameters)
   {
     digitalPrimaryButtonTask.task(parameters);
+  }
+
+  void doubleClickHandler(Button2 &btn)
+  {
+    digitalPrimaryButtonTask.setLastEvent(PrimaryButtonEvent::EV_DOUBLE_CLICK);
+  }
+
+  void tripleClickHandler(Button2 &btn)
+  {
+    digitalPrimaryButtonTask.setLastEvent(PrimaryButtonEvent::EV_DOUBLE_CLICK);
   }
 }

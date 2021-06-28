@@ -26,10 +26,16 @@ private:
   Queue1::Manager<Transaction> *transactionQueue = nullptr;
   Queue1::Manager<NintendoButtonEvent> *nintendoClassicQueue = nullptr;
   Queue1::Manager<ThrottleState> *throttleQueue = nullptr;
+  Queue1::Manager<PrimaryButtonState> *primaryButtonQueue = nullptr;
 
   Transaction transaction;
 
-  elapsedMillis since_checked_online = 0;
+  bool _g_PrimaryButtonPressed = false,
+       _g_PrimaryButtonHeld = false;
+
+  elapsedMillis since_checked_online = 0,
+                sinceTaskStarted,
+                sincePrimaryButtonPressed;
 
 public:
   DisplayTask() : TaskBase("DisplayTask", 10000)
@@ -49,8 +55,11 @@ private:
     nintendoClassicQueue->printMissedPacket = false;
     throttleQueue = createQueueManager<ThrottleState>("(DisplayTask)ThrottleQueue");
     throttleQueue->printMissedPacket = false;
+    primaryButtonQueue = createQueueManager<PrimaryButtonState>("(DisplayTask)PrimaryButtonQueue");
+    primaryButtonQueue->printMissedPacket = false;
 
     throttleQueue->read(); // clear queue
+    primaryButtonQueue->read();
     transactionQueue->read();
   }
   //--------------------------------
@@ -70,17 +79,19 @@ private:
     Display::addTransitions();
 
     Display::_fsm.run_machine();
+
+    sinceTaskStarted = 0;
   }
 
   const unsigned long BATTERY_CHECK_INTERVAL = 5 * SECONDS;
-  elapsedMillis sinceCheckedBattery;
+  elapsedMillis sinceCheckedBattery = BATTERY_CHECK_INTERVAL - 100;
 
   //===================================================================
   void doWork()
   {
     // transaction
     if (transactionQueue->hasValue())
-      handlePacketState(transaction);
+      handleTransaction(transactionQueue->payload);
 
     // nintendo classic
     if (nintendoClassicQueue->hasValue())
@@ -97,6 +108,10 @@ private:
     // throttle
     if (throttleQueue->hasValue())
       handleThrottleResponse(throttleQueue->payload);
+
+    // primary button
+    if (primaryButtonQueue->hasValue())
+      handlePrimaryButton(primaryButtonQueue->payload);
 
     Display::_fsm.run_machine();
   }
@@ -128,12 +143,31 @@ private:
       Serial.printf(PRINT_FSM_TRIGGER_FORMAT, "DISP", millis(), Display::getTrigger(ev));
   }
 
-  void handlePacketState(Transaction &transaction)
+  void handleTransaction(Transaction &transaction)
   {
+    // for some reason the battery votls were 0v in first packet
+    // TODO try and work out why
+    if (transaction.packet_id == 1)
+      return;
+
     manageRunningState(transaction);
+
+    if (sinceTaskStarted < 1000 && _g_PrimaryButtonPressed)
+    {
+      Display::fsm_mgr.trigger(Display::Trigger::TR_PRIMARY_BUTTON_HELD_ON_STARTUP);
+    }
 
     if (transaction.connected(RESPONSE_WINDOW) == true)
     {
+      Display::_g_BoardBattery = transaction.batteryVolts;
+
+      if (!Display::_g_Connected)
+      {
+        // force redraw of battery
+        sinceCheckedBattery = BATTERY_CHECK_INTERVAL + 100;
+        Display::_g_Connected = true;
+      }
+
       // check version
       if (transaction.version != (float)VERSION_BOARD_COMPAT &&
           transaction.version > 0.0 &&
@@ -161,9 +195,6 @@ private:
         Display::fsm_mgr.trigger(Display::TR_DISCONNECTED);
       }
     }
-
-    transaction = transactionQueue->payload;
-    Display::_g_BoardBattery = transaction.batteryVolts;
   }
 
   void handleNintendoButtonEvent(const NintendoButtonEvent &payload)
@@ -209,6 +240,28 @@ private:
 
     if (throttleState.status == ThrottleStatus::STATUS_OK && IN_STATE(Display::ST_MAGNET_NOT_DETECTED))
       Display::fsm_mgr.trigger(Display::TR_MAGNET_DETECTED);
+  }
+
+  void handlePrimaryButton(const PrimaryButtonState &primaryButton)
+  {
+    bool pressed = !_g_PrimaryButtonPressed && primaryButton.pressed,
+         released = _g_PrimaryButtonPressed && !primaryButton.pressed,
+         held = sincePrimaryButtonPressed > 1000;
+
+    if (pressed)
+    {
+      Display::fsm_mgr.trigger(Display::TR_PRIMARY_BUTTON_PRESSED);
+      sincePrimaryButtonPressed = 0;
+    }
+    else if (released)
+    {
+      _g_PrimaryButtonHeld = false;
+    }
+    else if (held && !_g_PrimaryButtonHeld)
+    {
+      Display::fsm_mgr.trigger(Display::TR_PRIMARY_BUTTON_HELD);
+    }
+    _g_PrimaryButtonPressed = primaryButton.pressed;
   }
 
   void manageRunningState(Transaction &transaction)
